@@ -1,7 +1,7 @@
 #!/bin/bash
 
 marketplace() {
-  local secret=$(kubectl get secret sapcp-operator-secret  -n "$1" -o json)
+  local secret=$(kubectl get secret sapbtp-operator-secret  -n "$1" -o json)
   local url=$(jq -r .data.url <<< "$secret" | base64 --decode)
   local token=$(_token "$secret")
 
@@ -28,7 +28,7 @@ marketplace() {
 
 
 plans() {
-  local secret=$(kubectl get secret sapcp-operator-secret  -n "$1" -o json)
+  local secret=$(kubectl get secret sapbtp-operator-secret  -n "$1" -o json)
   local url=$(jq -r .data.url <<< "$secret" | base64 --decode)
   local token=$(_token "$secret")
   local plans=$(curl -f -Ss -L  -H "Authorization: Bearer ${token}" "$url/v1/service_plans")
@@ -40,7 +40,7 @@ plans() {
 }
 
 services() {
-  local secret=$(kubectl get secret sapcp-operator-secret  -n "$1" -o json)
+  local secret=$(kubectl get secret sapbtp-operator-secret  -n "$1" -o json)
   local url=$(jq -r .data.url <<< "$secret" | base64 --decode)
   local token=$(_token "$secret")
   local services=$(curl -f -Ss -L  -H "Authorization: Bearer ${token}" "$url/v1/service_offerings")
@@ -62,12 +62,12 @@ _token() {
 
 }
 
-usage="kubectl extension to access SAPCP services
+usage="kubectl extension to access SAPBTP services
 namespace parameter indicates the namespace where SM secret can be found
 Usage:
-  kubectl sapcp marketplace -n <namespace>
-  kubectl sapcp plans -n <namespace>
-  kubectl sapcp services -n <namespace>
+  kubectl sapbtp marketplace -n <namespace>
+  kubectl sapbtp plans -n <namespace>
+  kubectl sapbtp services -n <namespace>
 
 "
 

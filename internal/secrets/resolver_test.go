@@ -74,7 +74,7 @@ var _ = Describe("Secrets Resolver", func() {
 	validateSecretNotResolved := func() {
 		_, err := resolver.GetSecretForResource(ctx, testNamespace)
 		Expect(err).To(HaveOccurred())
-		Expect(err.Error()).To(ContainSubstring("cannot find sapcp operator secret"))
+		Expect(err.Error()).To(ContainSubstring("cannot find sapbtp operator secret"))
 	}
 
 	BeforeEach(func() {

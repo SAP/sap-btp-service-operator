@@ -14,7 +14,7 @@ import (
 //TODO + revisit the name based approach for managed secret, replace with label based mechanism + admission webhook for secrets to avoid duplications
 
 const (
-	SAPCPOperatorSecretName = "sapcp-operator-secret"
+	SAPCPOperatorSecretName = "sapbtp-operator-secret"
 )
 
 type SecretResolver struct {
@@ -63,7 +63,7 @@ func (sr *SecretResolver) GetSecretForResource(ctx context.Context, namespace st
 
 	if !found {
 		// secret not found anywhere
-		return nil, fmt.Errorf("cannot find sapcp operator secret")
+		return nil, fmt.Errorf("cannot find sapbtp operator secret")
 	}
 
 	if err := validateSAPCPOperatorSecret(secretForResource); err != nil {

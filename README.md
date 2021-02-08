@@ -3,17 +3,17 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/sm-operator/sapcp-operator/blob/master/LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/sm-operator/sapcp-operator)](https://goreportcard.com/report/github.com/sm-operator/sapcp-operator)
 
-# SAP Cloud Platform Service Operator
+# SAP Business Technology Platform Service Operator
 
 
-With the SAP Cloud Platform (SAP CP) Operator, you can provision and bind SAP CP services to your Kubernetes cluster in a Kubernetes-native way. The SAP CP Service Operator is based on the [Kubernetes custom resource definition (CRD) API](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/) so that your applications can create, update, and delete SAP CP services from within the cluster by calling Kubnernetes APIs.
+With the SAP Business Technology Platform (SAP BTP) Operator, you can provision and bind SAP BTP services to your Kubernetes cluster in a Kubernetes-native way. The SAP BTP Service Operator is based on the [Kubernetes custom resource definition (CRD) API](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/) so that your applications can create, update, and delete SAP CP services from within the cluster by calling Kubnernetes APIs.
 
 ## Table of content
 * [Prerequisites](#prerequisites)
 * [Setup Operator](#setup)
 * [Local Setup](#local-setup)
-* [SAP CP kubectl extension](#sapcp-kubectl-extension-experimental)
-* [Using the SAP CP Service Operator](#using-the-sapcp-operator)
+* [SAP BTP kubectl extension](#sapbtp-kubectl-extension-experimental)
+* [Using the SAP BTP Service Operator](#using-the-sapbtp-operator)
     * [Creating a service instance](#step-1-creating-a-service-instance)
     * [Binding the service instance](#step-2-binding-the-service-instance)
 * [Reference documentation](#reference-documentation)
@@ -26,13 +26,13 @@ With the SAP Cloud Platform (SAP CP) Operator, you can provision and bind SAP CP
 - [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) v1.17 or higher
 - [helm](https://helm.sh/) v3.0 or higher
 
-[Back to top](#sapcp-operator)
+[Back to top](#sap-business-technology-platform-service-operator)
 
 ## Setup
 1. Install [cert-manager](https://cert-manager.io/docs/installation/kubernetes)
 
-1. Obtain access credentials for the SAP CP Service Operator:
-   1. Using SAP CP Cockpit or CLI, create an instance of the Service Management (`service-manager`) service, plan `service-operator-access`
+1. Obtain access credentials for the SAP BTP Service Operator:
+   1. Using SAP BTP Cockpit or CLI, create an instance of the Service Management (`service-manager`) service, plan `service-operator-access`
       
       More information about creating service instances is available here: 
       [Cockpit](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/bf71f6a7b7754dbd9dfc2569791ccc96.html), 
@@ -57,26 +57,26 @@ With the SAP Cloud Platform (SAP CP) Operator, you can provision and bind SAP CP
         }
        ```  
    
-1. Deploy the sapcp-service-operator in the cluster using the obtained access credentials:
+1. Deploy the sapbtp-service-operator in the cluster using the obtained access credentials:
     ```bash
     helm upgrade --install sapcp-operator https://github.com/sm-operator/sapcp-operator/releases/download/<release>/sapcp-operator-<release>.tgz \
         --create-namespace \
-        --namespace=sapcp-operator \
+        --namespace=sapbtp-operator \
         --set manager.secret.clientid=<clientid> \
         --set manager.secret.clientsecret=<clientsecret> \
         --set manager.secret.url=<sm_url> \
         --set manager.secret.tokenurl=<url>
     ```
 
-    The list of available releases is available here: [sapcp-operator releases](https://github.com/sm-operator/sapcp-operator/releases)
+    The list of available releases is available here: [sapbtp-operator releases](https://github.com/sm-operator/sapcp-operator/releases)
 
-[Back to top](#sapcp-operator)
+[Back to top](#sap-business-technology-platform-service-operator)
 
-## Using the SAP CP Service Operator
+## Using the SAP BTP Service Operator
 
 #### Step 1: Create a service instance
 
-1.  To create an instance of a SAP CP service, first create a `ServiceInstance` custom resource file:
+1.  To create an instance of a SAP BTP service, first create a `ServiceInstance` custom resource file:
 
 ```yaml
     apiVersion: services.cloud.sap.com/v1alpha1
@@ -88,8 +88,8 @@ With the SAP Cloud Platform (SAP CP) Operator, you can provision and bind SAP CP
         servicePlanName: <plan>
    ```
 
-   *   `<offering>` is the name of the SAP CP service that you want to create. 
-       You can find the list of available services in the SAP CP Cockpit, see [Service Marketplace](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/55b31ea23c474f6ba2f64ee4848ab1b3.html).
+   *   `<offering>` is the name of the SAP BTP service that you want to create. 
+       You can find the list of available services in the SAP BTP Cockpit, see [Service Marketplace](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/55b31ea23c474f6ba2f64ee4848ab1b3.html).
    *   `<plan>` is the plan of the selected service offering that you want to create.
 
 2.  Apply the custom resource file in your cluster to create the instance.
@@ -107,7 +107,7 @@ With the SAP Cloud Platform (SAP CP) Operator, you can provision and bind SAP CP
     NAME                  STATUS   AGE
     my-service-instance   Created  19s
     ```
-[Back to top](#sapcp-operator)
+[Back to top](#sap-business-technology-platform-service-operator)
 
 #### Step 2: Create a Service Binding
 
@@ -147,7 +147,7 @@ With the SAP Cloud Platform (SAP CP) Operator, you can provision and bind SAP CP
     
     See [Using Secrets](https://kubernetes.io/docs/concepts/configuration/secret/#using-secrets) for the different options to use the credentials from your application running in the Kubernetes cluster, 
 
-[Back to top](#sapcp-operator)
+[Back to top](#sap-business-technology-platform-service-operator)
 
 ## Reference documentation
 
@@ -155,16 +155,16 @@ With the SAP Cloud Platform (SAP CP) Operator, you can provision and bind SAP CP
 #### Spec
 | Property         | Type     | Comments                                                                                                   |
 |:-----------------|:---------|:-----------------------------------------------------------------------------------------------------------|
-| serviceOfferingName`*`   | `string`   | The SAP CP service offering name |
+| serviceOfferingName`*`   | `string`   | The SAP BTP service offering name |
 | servicePlanName`*` | `string`   |  The plan to use for the service instance |
 | servicePlanID   |  `string`   |  The plan ID in case service offering and plan name are ambiguous |
-| externalName       | `string`   |  The name for the service instance in SAP CP, defaults to the binding `metadata.name` if not specified |
+| externalName       | `string`   |  The name for the service instance in SAP BTP, defaults to the binding `metadata.name` if not specified |
 | parameters       |  `[]object`  |  Provisioning parameters for the instance, check the documentation of the specific service you are using for details |
 
 #### Status
 | Property         | Type     | Comments                                                                                                   |
 |:-----------------|:---------|:-----------------------------------------------------------------------------------------------------------|
-| instanceID   | `string`   | The service instance ID in SAP CP Service Management |
+| instanceID   | `string`   | The service instance ID in SAP BTP Service Management |
 | operationURL | `string`   |  URL of ongoing operation for the service instance |
 | operationType   |  `string`   |  The operation type (CREATE/UPDATE/DELETE) for ongoing operation |
 | conditions       | `[]condition`   |  An array of conditions describing the status of the service instance. <br>The possible conditions types are:<br>- `Ready`: set to `true` if the instance is ready and usable<br>- `Failed`: set to `true` when an operation on the service instance fails, in this case the error details will be available in the condition message  
@@ -176,37 +176,37 @@ With the SAP Cloud Platform (SAP CP) Operator, you can provision and bind SAP CP
 | Parameter             | Type       | Comments                                                                                                   |
 |:-----------------|:---------|:-----------------------------------------------------------------------------------------------------------|
 | serviceInstanceName`*`   | `string`   | The Kubernetes name of the service instance to bind, should be in the namespace of the binding |
-| externalName       | `string`   |  The name for the service binding in SAP CP Service Management, defaults to the binding `metadata.name` if not specified |
+| externalName       | `string`   |  The name for the service binding in SAP BTP Service Management, defaults to the binding `metadata.name` if not specified |
 | secretName       | `string`   |  The name of the secret where credentials will be stored, defaults to the binding `metadata.name` if not specified |
 | parameters       |  `[]object`  |  Parameters for the binding |
 
 #### Status
 | Property         | Type     | Comments                                                                                                   |
 |:-----------------|:---------|:-----------------------------------------------------------------------------------------------------------|
-| instanceID   | `string`   | The ID of the bound instance in SAP CP Service Management |
-| bindingID   | `string`   | The service binding ID in SAP CP Service Management |
+| instanceID   | `string`   | The ID of the bound instance in SAP BTP Service Management |
+| bindingID   | `string`   | The service binding ID in SAP BTP Service Management |
 | operationURL | `string`   |  URL of ongoing operation for the service binding |
 | operationType   |  `string`   |  The operation type (CREATE/UPDATE/DELETE) for ongoing operation |
 | conditions       | `[]condition`   |  An array of conditions describing the status of the service instance. <br>The possible conditions types are:<br>- `Ready`: set to `true` if the binding is ready and usable<br>- `Failed`: set to `true` when an operation on the service binding fails, in this case the error details will be available in the condition message  
 
-[Back to top](#sapcp-operator)
+[Back to top](#sap-business-technology-platform-service-operator)
 
 ## Support
 Feel free to open new issues for feature requests, bugs or general feedback on the GitHub issues page of this project. 
-The SAP CP Service Operator project maintainers will respond to the best of their abilities. 
+The SAP BTP Service Operator project maintainers will respond to the best of their abilities. 
 
 ## Contributions
 We currently do not accept community contributions. 
 
-## SAP CP kubectl Plugin (Experimental) 
-The SAP CP kubectl plugin extends kubectl with commands for getting the available services in your SAP CP account, 
+## SAP BTP kubectl Plugin (Experimental) 
+The SAP BTP kubectl plugin extends kubectl with commands for getting the available services in your SAP BTP account, 
 using the access credentials stored in the cluster.
 
 ### Prerequisites
 - [jq](https://stedolan.github.io/jq/)
 
 ### Limitations
-- The SAP CP kubectl plugin is currently based on `bash`. If using Windows, you should use the SAP CP plugin commands from a linux shell (e.g. [Cygwin](https://www.cygwin.com/)).  
+- The SAP BTP kubectl plugin is currently based on `bash`. If using Windows, you should use the SAP BTP plugin commands from a linux shell (e.g. [Cygwin](https://www.cygwin.com/)).  
 
 ### Installation
 - Download https://github.com/sm-operator/sapcp-operator/releases/download/${release}/kubectl-sapcp
@@ -214,13 +214,13 @@ using the access credentials stored in the cluster.
 
 #### Usage
 ```
-  kubectl sapcp marketplace -n <namespace>
-  kubectl sapcp plans -n <namespace>
-  kubectl sapcp services -n <namespace>
+  kubectl sapbtp marketplace -n <namespace>
+  kubectl sapbtp plans -n <namespace>
+  kubectl sapbtp services -n <namespace>
 ```
 
-Use the `namespace` parameter to specify the location of the secret containing the SAP CP access credentials, usually the namespace in which you installed the operator. 
+Use the `namespace` parameter to specify the location of the secret containing the SAP BTP access credentials, usually the namespace in which you installed the operator. 
 If not specified the `default` namespace is used. 
 
 
-[Back to top](#sapcp-operator)
+[Back to top](#sap-business-technology-platform-service-operator)
