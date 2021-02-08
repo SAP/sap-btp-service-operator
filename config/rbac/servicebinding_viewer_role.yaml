@@ -1,0 +1,20 @@
+# permissions for end users to view servicebindings.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: servicebinding-viewer-role
+rules:
+- apiGroups:
+  - services.cloud.sap.com
+  resources:
+  - servicebindings
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - services.cloud.sap.com
+  resources:
+  - servicebindings/status
+  verbs:
+  - get

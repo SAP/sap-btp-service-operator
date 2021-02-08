@@ -1,0 +1,15 @@
+# Default values for sapcp-operator-charts.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+manager:
+  image:
+    repository: ghcr.io/sm-operator/sapcp-operator/controller
+    tag: master
+  secret:
+    clientid:
+    clientsecret:
+    url:
+    tokenurl:
+cluster:
+  id:

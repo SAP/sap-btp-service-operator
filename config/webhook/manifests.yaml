@@ -1,0 +1,70 @@
+
+---
+apiVersion: admissionregistration.k8s.io/v1beta1
+kind: MutatingWebhookConfiguration
+metadata:
+  creationTimestamp: null
+  name: mutating-webhook-configuration
+webhooks:
+- clientConfig:
+    caBundle: Cg==
+    service:
+      name: webhook-service
+      namespace: system
+      path: /mutate-services-cloud-sap-com-v1alpha1-servicebinding
+  failurePolicy: Fail
+  name: mservicebinding.kb.io
+  rules:
+  - apiGroups:
+    - services.cloud.sap.com
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - servicebindings
+- clientConfig:
+    caBundle: Cg==
+    service:
+      name: webhook-service
+      namespace: system
+      path: /mutate-services-cloud-sap-com-v1alpha1-serviceinstance
+  failurePolicy: Fail
+  name: mserviceinstance.kb.io
+  rules:
+  - apiGroups:
+    - services.cloud.sap.com
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - serviceinstances
+
+---
+apiVersion: admissionregistration.k8s.io/v1beta1
+kind: ValidatingWebhookConfiguration
+metadata:
+  creationTimestamp: null
+  name: validating-webhook-configuration
+webhooks:
+- clientConfig:
+    caBundle: Cg==
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-services-cloud-sap-com-v1alpha1-servicebinding
+  failurePolicy: Fail
+  name: vservicebinding.kb.io
+  rules:
+  - apiGroups:
+    - services.cloud.sap.com
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - servicebindings

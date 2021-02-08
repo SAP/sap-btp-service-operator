@@ -1,0 +1,24 @@
+# permissions for end users to edit serviceinstances.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: serviceinstance-editor-role
+rules:
+- apiGroups:
+  - services.cloud.sap.com
+  resources:
+  - serviceinstances
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - services.cloud.sap.com
+  resources:
+  - serviceinstances/status
+  verbs:
+  - get

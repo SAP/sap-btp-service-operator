@@ -1,0 +1,109 @@
+#!/bin/bash
+
+marketplace() {
+  local secret=$(kubectl get secret sapcp-operator-secret  -n "$1" -o json)
+  local url=$(jq -r .data.url <<< "$secret" | base64 --decode)
+  local token=$(_token "$secret")
+
+  local services=$(curl -f -Ss -L  -H "Authorization: Bearer ${token}" "$url/v1/service_offerings")
+  local plans=$(curl -f -Ss -L  -H "Authorization: Bearer ${token}" "$url/v1/service_plans")
+  local number_of_services=$(jq -r '.num_items' <<< "$services")
+
+  echo "MARKETPLACE"
+  echo "-----------"
+  for ((n=0;n<number_of_services;n++))
+  do
+      service="$(jq -r ".items | .[$n]" <<< "$services")"
+      service_id=$(jq -r ' .id' <<< "$service")
+      service_name=$(jq -r ' .name' <<< "$service")
+
+      plans_by_id="$(jq -r ".items[] | select(.service_offering_id==\"${service_id}\") | .name" <<< "${plans}")"
+
+      plans_by_id_formated=$(tr '\n' ' ' <<< "$plans_by_id")
+      echo "$service_name --> $plans_by_id_formated"
+
+  done
+
+}
+
+
+plans() {
+  local secret=$(kubectl get secret sapcp-operator-secret  -n "$1" -o json)
+  local url=$(jq -r .data.url <<< "$secret" | base64 --decode)
+  local token=$(_token "$secret")
+  local plans=$(curl -f -Ss -L  -H "Authorization: Bearer ${token}" "$url/v1/service_plans")
+
+  echo "ID  NAME  SERVICE_OFFERING_ID"
+  echo "--  ----  -------------------"
+  jq -r ".items[]| \"\(.id) \(.name) \(.service_offering_id) \"" <<< "$plans"
+
+}
+
+services() {
+  local secret=$(kubectl get secret sapcp-operator-secret  -n "$1" -o json)
+  local url=$(jq -r .data.url <<< "$secret" | base64 --decode)
+  local token=$(_token "$secret")
+  local services=$(curl -f -Ss -L  -H "Authorization: Bearer ${token}" "$url/v1/service_offerings")
+
+  echo "ID  NAME"
+  echo "--  -----"
+  jq -r ".items[]| \"\(.id) \(.name)\"" <<< "$services"
+
+}
+
+_token() {
+  secret=$1
+  local url=$(jq -r .data.url <<< "$secret" | base64 --decode)
+  local clientid=$(jq -r .data.clientid <<< "$secret" | base64 --decode)
+  local clientsecret=$(jq -r .data.clientsecret <<< "$secret" | base64 --decode)
+  local token_url=$(jq -r .data.tokenurl <<< "$secret" | base64 --decode)
+  local token=$(curl -X POST -d '{}' -Ss -u "${clientid}:${clientsecret}" "${token_url}/oauth/token?grant_type=client_credentials" | jq -r .access_token)
+  echo "$token"
+
+}
+
+usage="kubectl extension to access SAPCP services
+namespace parameter indicates the namespace where SM secret can be found
+Usage:
+  kubectl sapcp marketplace -n <namespace>
+  kubectl sapcp plans -n <namespace>
+  kubectl sapcp services -n <namespace>
+
+"
+
+if [ "$#" -lt 1 ]; then
+  echo "$usage"
+  exit 1
+fi
+
+namespace="default"
+command=$1
+shift
+
+while test $# -gt 0; do
+  case "$1" in
+    -n)
+      shift
+      if test $# -gt 0; then
+        export namespace=$1
+      else
+        echo "no namespace specified"
+        exit 1
+      fi
+      shift
+      ;;
+    *)
+    echo "$usage"
+    exit 1
+  esac
+done
+
+if [[ "$command" == "marketplace" ]]; then
+  marketplace "$namespace"
+elif  [[ "$command" == "plans" ]]; then
+   plans "$namespace"
+elif  [[ "$command" == "services" ]]; then
+   services "$namespace"
+else
+  echo "$usage"
+fi

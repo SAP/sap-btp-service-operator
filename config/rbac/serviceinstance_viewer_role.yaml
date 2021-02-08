@@ -1,0 +1,20 @@
+# permissions for end users to view serviceinstances.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: serviceinstance-viewer-role
+rules:
+- apiGroups:
+  - services.cloud.sap.com
+  resources:
+  - serviceinstances
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - services.cloud.sap.com
+  resources:
+  - serviceinstances/status
+  verbs:
+  - get

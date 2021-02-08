@@ -1,0 +1,24 @@
+# permissions for end users to edit servicebindings.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: servicebinding-editor-role
+rules:
+- apiGroups:
+  - services.cloud.sap.com
+  resources:
+  - servicebindings
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - services.cloud.sap.com
+  resources:
+  - servicebindings/status
+  verbs:
+  - get
