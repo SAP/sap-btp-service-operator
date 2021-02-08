@@ -11,14 +11,13 @@ With the SAP Business Technology Platform (SAP BTP) Operator, you can provision 
 ## Table of content
 * [Prerequisites](#prerequisites)
 * [Setup Operator](#setup)
-* [Local Setup](#local-setup)
-* [SAP BTP kubectl extension](#sapbtp-kubectl-extension-experimental)
-* [Using the SAP BTP Service Operator](#using-the-sapbtp-operator)
-    * [Creating a service instance](#step-1-creating-a-service-instance)
-    * [Binding the service instance](#step-2-binding-the-service-instance)
+* [SAP BTP kubectl extension](#sap-btp-kubectl-plugin-experimental)
+* [Using the SAP BTP Service Operator](#using-the-sap-btp-service-operator)
+    * [Creating a service instance](#step-1-create-a-service-instance)
+    * [Binding the service instance](#step-2-create-a-service-binding)
 * [Reference documentation](#reference-documentation)
-    * [Service instance properties](#service-instance-properties)
-    * [Binding properties](#binding-properties)    
+    * [Service instance properties](#service-instance)
+    * [Binding properties](#service-binding)    
 
 ## Prerequisites
 - SAP Cloud Platform [Global Account](https://help.sap.com/viewer/65de2977205c403bbc107264b8eccf4b/Cloud/en-US/d61c2819034b48e68145c45c36acba6e.html) and [Subaccount](https://help.sap.com/viewer/65de2977205c403bbc107264b8eccf4b/Cloud/en-US/55d0b6d8b96846b8ae93b85194df0944.html) 
