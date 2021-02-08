@@ -3,7 +3,7 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/sm-operator/sapcp-operator/blob/master/LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/sm-operator/sapcp-operator)](https://goreportcard.com/report/github.com/sm-operator/sapcp-operator)
 
-# SAP Cloud Platform Service Operator
+# SAP Cloud  Platform Service Operator
 
 
 With the SAP Cloud Platform (SAP CP) Operator, you can provision and bind SAP CP services to your Kubernetes cluster in a Kubernetes-native way. The SAP CP Service Operator is based on the [Kubernetes custom resource definition (CRD) API](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/) so that your applications can create, update, and delete SAP CP services from within the cluster by calling Kubnernetes APIs.
