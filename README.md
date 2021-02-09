@@ -58,7 +58,7 @@ With the SAP Business Technology Platform (SAP BTP) Operator, you can provision 
    
 1. Deploy the sapbtp-service-operator in the cluster using the obtained access credentials:
     ```bash
-    helm upgrade --install sapcp-operator https://github.com/sm-operator/sapcp-operator/releases/download/<release>/sapcp-operator-<release>.tgz \
+    helm upgrade --install sapbtp-operator https://github.com/sm-operator/sapcp-operator/releases/download/<release>/sapcp-operator-<release>.tgz \
         --create-namespace \
         --namespace=sapbtp-operator \
         --set manager.secret.clientid=<clientid> \
