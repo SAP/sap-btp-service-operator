@@ -6,7 +6,7 @@
 # SAP Business Technology Platform Service Operator
 
 
-With the SAP Business Technology Platform (SAP BTP) Operator, you can provision and bind SAP BTP services to your Kubernetes cluster in a Kubernetes-native way. The SAP BTP Service Operator is based on the [Kubernetes custom resource definition (CRD) API](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/) so that your applications can create, update, and delete SAP CP services from within the cluster by calling Kubnernetes APIs.
+With the SAP Business Technology Platform (SAP BTP) Operator, you can provision and bind SAP BTP services to your Kubernetes cluster in a Kubernetes-native way. The SAP BTP Service Operator is based on the [Kubernetes custom resource definition (CRD) API](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/) so that your applications can create, update, and delete SAP BTP services from within the cluster by calling Kubnernetes APIs.
 
 ## Table of content
 * [Prerequisites](#prerequisites)
