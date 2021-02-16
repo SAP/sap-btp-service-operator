@@ -1,0 +1,8 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: SAP BTP Service Operator
+Upstream-Contact: Pavel Maliy <pavel.maliy@sap.com>
+Source: https://github.com/SAP/sap-btp-service-operator
+
+Files: *
+Copyright: 2021 SAP SE or an SAP affiliate company and OwnID contributors
+License: Apache-2.0
