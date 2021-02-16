@@ -1,4 +1,4 @@
-module github.com/sm-operator/sapcp-operator
+module github.com/SAP/sap-btp-service-operator
 
 go 1.13
 

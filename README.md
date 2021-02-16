@@ -1,7 +1,7 @@
-[![Coverage Status](https://coveralls.io/repos/github/sm-operator/sapcp-operator/badge.svg?branch=master&killcache=1)](https://coveralls.io/github/sm-operator/sapcp-operator?branch=master)
-[![Build Status](https://github.com/sm-operator/sapcp-operator/workflows/Go/badge.svg)](https://github.com/sm-operator/sapcp-operator/actions)
+[![Coverage Status](https://coveralls.io/repos/github/SAP/sap-btp-service-operator/badge.svg?branch=master&killcache=1)](https://coveralls.io/github/SAP/sap-btp-service-operator?branch=master)
+[![Build Status](https://github.com/SAP/sap-btp-service-operator/workflows/Go/badge.svg)](https://github.com/SAP/sap-btp-service-operator/actions)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/SAP/sap-btp-service-operator/blob/master/LICENSE)
-[![Go Report Card](https://goreportcard.com/badge/github.com/sm-operator/sapcp-operator)](https://goreportcard.com/report/github.com/sm-operator/sapcp-operator)
+[![Go Report Card](https://goreportcard.com/badge/github.com/SAP/sap-btp-service-operator)](https://goreportcard.com/report/github.com/SAP/sap-btp-service-operator)
 [![REUSE status](https://api.reuse.software/badge/github.com/SAP/sap-btp-service-operator)](https://api.reuse.software/info/github.com/SAP/sap-btp-service-operator)
 
 # SAP Business Technology Platform Service Operator
@@ -59,7 +59,7 @@ With the SAP Business Technology Platform (SAP BTP) Operator, you can provision 
    
 1. Deploy the sapbtp-service-operator in the cluster using the obtained access credentials:
     ```bash
-    helm upgrade --install sapbtp-operator https://github.com/sm-operator/sapcp-operator/releases/download/<release>/sapcp-operator-<release>.tgz \
+    helm upgrade --install sapbtp-operator https://github.com/SAP/sap-btp-service-operator/releases/download/<release>/sapcp-operator-<release>.tgz \
         --create-namespace \
         --namespace=sapbtp-operator \
         --set manager.secret.clientid=<clientid> \
@@ -68,7 +68,7 @@ With the SAP Business Technology Platform (SAP BTP) Operator, you can provision 
         --set manager.secret.tokenurl=<url>
     ```
 
-    The list of available releases is available here: [sapbtp-operator releases](https://github.com/sm-operator/sapcp-operator/releases)
+    The list of available releases is available here: [sapbtp-operator releases](https://github.com/SAP/sap-btp-service-operator/releases)
 
 [Back to top](#sap-business-technology-platform-service-operator)
 
@@ -209,7 +209,7 @@ using the access credentials stored in the cluster.
 - The SAP BTP kubectl plugin is currently based on `bash`. If using Windows, you should use the SAP BTP plugin commands from a linux shell (e.g. [Cygwin](https://www.cygwin.com/)).  
 
 ### Installation
-- Download https://github.com/sm-operator/sapcp-operator/releases/download/${release}/kubectl-sapcp
+- Download https://github.com/SAP/sap-btp-service-operator/releases/download/${release}/kubectl-sapcp
 - Move the executable file to anywhere on your `PATH`
 
 #### Usage

@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/sm-operator/sapcp-operator/internal/auth"
+	"github.com/SAP/sap-btp-service-operator/internal/auth"
 )
 
 type FakeHTTPClient struct {
@@ -32,15 +32,16 @@ func (fake *FakeHTTPClient) Do(arg1 *http.Request) (*http.Response, error) {
 	fake.doArgsForCall = append(fake.doArgsForCall, struct {
 		arg1 *http.Request
 	}{arg1})
+	stub := fake.DoStub
+	fakeReturns := fake.doReturns
 	fake.recordInvocation("Do", []interface{}{arg1})
 	fake.doMutex.Unlock()
-	if fake.DoStub != nil {
-		return fake.DoStub(arg1)
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.doReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 

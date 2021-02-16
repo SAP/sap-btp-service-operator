@@ -20,8 +20,8 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"github.com/sm-operator/sapcp-operator/internal/config"
-	"github.com/sm-operator/sapcp-operator/internal/smclient"
+	"github.com/SAP/sap-btp-service-operator/internal/config"
+	"github.com/SAP/sap-btp-service-operator/internal/smclient"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"net"
@@ -33,11 +33,11 @@ import (
 
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	"github.com/sm-operator/sapcp-operator/internal/smclient/smclientfakes"
+	"github.com/SAP/sap-btp-service-operator/internal/smclient/smclientfakes"
 
+	servicesv1alpha1 "github.com/SAP/sap-btp-service-operator/api/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	servicesv1alpha1 "github.com/sm-operator/sapcp-operator/api/v1alpha1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"

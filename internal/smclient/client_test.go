@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/Peripli/service-manager/pkg/web"
+	"github.com/SAP/sap-btp-service-operator/internal/smclient/types"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/sm-operator/sapcp-operator/internal/smclient/types"
 	"net/http"
 )
 

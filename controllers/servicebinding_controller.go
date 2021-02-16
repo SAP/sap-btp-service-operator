@@ -22,10 +22,10 @@ import (
 
 	smTypes "github.com/Peripli/service-manager/pkg/types"
 	"github.com/Peripli/service-manager/pkg/web"
+	"github.com/SAP/sap-btp-service-operator/api/v1alpha1"
+	"github.com/SAP/sap-btp-service-operator/internal/smclient"
+	smclientTypes "github.com/SAP/sap-btp-service-operator/internal/smclient/types"
 	"github.com/go-logr/logr"
-	"github.com/sm-operator/sapcp-operator/api/v1alpha1"
-	"github.com/sm-operator/sapcp-operator/internal/smclient"
-	smclientTypes "github.com/sm-operator/sapcp-operator/internal/smclient/types"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

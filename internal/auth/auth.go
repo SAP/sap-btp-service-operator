@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/sm-operator/sapcp-operator/internal/httputil"
+	"github.com/SAP/sap-btp-service-operator/internal/httputil"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
 )

@@ -3,10 +3,10 @@ package secrets_test
 import (
 	"context"
 	"fmt"
+	"github.com/SAP/sap-btp-service-operator/internal/secrets"
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/sm-operator/sapcp-operator/internal/secrets"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"

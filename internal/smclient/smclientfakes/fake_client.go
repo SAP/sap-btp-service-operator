@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/sm-operator/sapcp-operator/internal/smclient"
-	"github.com/sm-operator/sapcp-operator/internal/smclient/types"
+	"github.com/SAP/sap-btp-service-operator/internal/smclient"
+	"github.com/SAP/sap-btp-service-operator/internal/smclient/types"
 )
 
 type FakeClient struct {

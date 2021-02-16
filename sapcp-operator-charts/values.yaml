@@ -4,7 +4,7 @@
 
 manager:
   image:
-    repository: ghcr.io/sm-operator/sapcp-operator/controller
+    repository: ghcr.io/SAP/sap-btp-service-operator/controller
     tag: master
   secret:
     clientid:

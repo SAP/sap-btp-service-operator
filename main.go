@@ -20,10 +20,10 @@ import (
 	"flag"
 	"os"
 
-	"github.com/sm-operator/sapcp-operator/internal/secrets"
+	"github.com/SAP/sap-btp-service-operator/internal/secrets"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/sm-operator/sapcp-operator/internal/config"
+	"github.com/SAP/sap-btp-service-operator/internal/config"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -31,8 +31,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	servicesv1alpha1 "github.com/sm-operator/sapcp-operator/api/v1alpha1"
-	"github.com/sm-operator/sapcp-operator/controllers"
+	servicesv1alpha1 "github.com/SAP/sap-btp-service-operator/api/v1alpha1"
+	"github.com/SAP/sap-btp-service-operator/controllers"
 	// +kubebuilder:scaffold:imports
 )
 

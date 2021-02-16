@@ -29,9 +29,9 @@ import (
 	"github.com/Peripli/service-manager/pkg/log"
 	"github.com/Peripli/service-manager/pkg/util"
 	"github.com/Peripli/service-manager/pkg/web"
-	"github.com/sm-operator/sapcp-operator/internal/auth"
-	"github.com/sm-operator/sapcp-operator/internal/httputil"
-	"github.com/sm-operator/sapcp-operator/internal/smclient/types"
+	"github.com/SAP/sap-btp-service-operator/internal/auth"
+	"github.com/SAP/sap-btp-service-operator/internal/httputil"
+	"github.com/SAP/sap-btp-service-operator/internal/smclient/types"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
 )
