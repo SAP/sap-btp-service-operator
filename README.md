@@ -223,3 +223,6 @@ If not specified the `default` namespace is used.
 
 
 [Back to top](#sap-business-technology-platform-service-operator)
+
+## Licence
+This project is licensed under Apache 2.0 except as noted otherwise in the [license](./LICENSE) file.
