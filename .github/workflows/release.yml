@@ -19,7 +19,7 @@ jobs:
           username: ${{ secrets.OPERATOR_USER }}
           password: ${{ secrets.OPERATOR_PAT }}
           registry: ghcr.io
-          repository: SAP/sap-btp-service-operator/controller
+          repository: sap/sap-btp-service-operator/controller
           tag_with_ref: true
 
       - name: Install kustomize
