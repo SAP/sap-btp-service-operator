@@ -570,9 +570,9 @@ func (r *ServiceBindingReconciler) validateSecretNameIsAvailable(ctx context.Con
 	}
 	if otherBindingName, ok := currentSecret.Labels["binding"]; otherBindingName != binding.Name || !ok {
 		if len(otherBindingName) > 0 {
-			return fmt.Errorf("secret %s belongs to another binding %s", binding.Spec.SecretName, otherBindingName)
+			return fmt.Errorf("secret %s belongs to another binding %s, choose a differnet name", binding.Spec.SecretName, otherBindingName)
 		}
-		return fmt.Errorf("the specified secret name '%s' is already taken", binding.Spec.SecretName)
+		return fmt.Errorf("the specified secret name '%s' is already taken, choose a differnet name", binding.Spec.SecretName)
 	}
 	return nil
 }
