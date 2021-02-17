@@ -167,21 +167,6 @@ var _ = Describe("ServiceBinding controller", func() {
 		fakeClient = &smclientfakes.FakeClient{}
 		fakeClient.ProvisionReturns("12345678", "", nil)
 		fakeClient.BindReturns(&smclientTypes.ServiceBinding{ID: fakeBindingID, Credentials: json.RawMessage("{\"secret_key\": \"secret_value\"}")}, "", nil)
-		fakeClient.ListBindingsReturnsOnCall(0, nil, nil)
-		fakeClient.ListBindingsReturnsOnCall(1, &smclientTypes.ServiceBindings{
-			ServiceBindings: []smclientTypes.ServiceBinding{
-				{
-					ID:          fakeBindingID,
-					Name:        "fake-binding-external-name",
-					Credentials: json.RawMessage("{\"secret_key\": \"secret_value\"}"),
-					LastOperation: &smTypes.Operation{
-						Type:        smTypes.CREATE,
-						State:       smTypes.SUCCEEDED,
-						Description: "fake-description",
-					},
-				},
-			},
-		}, nil)
 
 		smInstance := &smclientTypes.ServiceInstance{ID: fakeInstanceID, Ready: true, LastOperation: &smTypes.Operation{State: smTypes.SUCCEEDED, Type: smTypes.UPDATE}}
 		fakeClient.GetInstanceByIDReturns(smInstance, nil)
@@ -412,9 +397,10 @@ var _ = Describe("ServiceBinding controller", func() {
 
 				When("bind polling returns error", func() {
 					JustBeforeEach(func() {
-						fakeClient.GetBindingByIDReturns(&smclientTypes.ServiceBinding{ID: fakeBindingID, LastOperation: &smTypes.Operation{State: smTypes.SUCCEEDED, Type: smTypes.CREATE}}, nil)
-						fakeClient.StatusReturns(nil, fmt.Errorf("no polling for you"))
 						fakeClient.BindReturns(nil, "/v1/service_bindings/id/operations/1234", nil)
+						fakeClient.StatusReturnsOnCall(0, nil, fmt.Errorf("no polling for you"))
+						fakeClient.StatusReturnsOnCall(1, &smclientTypes.Operation{ResourceID: fakeBindingID, State: string(smTypes.SUCCEEDED), Type: string(smTypes.CREATE)}, nil)
+						fakeClient.GetBindingByIDReturns(&smclientTypes.ServiceBinding{ID: fakeBindingID, LastOperation: &smTypes.Operation{State: smTypes.SUCCEEDED, Type: smTypes.CREATE}}, nil)
 					})
 					It("should eventually succeed", func() {
 						createdBinding, err := createBindingWithoutAssertions(context.Background(), bindingName, bindingTestNamespace, instanceName, "")
@@ -423,7 +409,7 @@ var _ = Describe("ServiceBinding controller", func() {
 							err := k8sClient.Get(context.Background(), types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}, createdBinding)
 							Expect(err).ToNot(HaveOccurred())
 							return isReady(createdBinding)
-						}, timeout, interval).Should(BeTrue())
+						}, timeout/2, interval).Should(BeTrue())
 					})
 				})
 			})
