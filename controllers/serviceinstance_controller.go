@@ -33,7 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const instanceFinalizerName string = "storage.finalizers.peripli.io.service-manager.serviceInstance"
+const instanceFinalizerName string = "services.cloud.sap.com/instance-finalizer"
 
 // ServiceInstanceReconciler reconciles a ServiceInstance object
 type ServiceInstanceReconciler struct {

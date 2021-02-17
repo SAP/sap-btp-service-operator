@@ -36,7 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-const bindingFinalizerName string = "storage.finalizers.peripli.io.service-manager.serviceBinding"
+const bindingFinalizerName string = "services.cloud.sap.com/binding-finalizer"
 
 // ServiceBindingReconciler reconciles a ServiceBinding object
 type ServiceBindingReconciler struct {
