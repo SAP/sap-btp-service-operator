@@ -26,7 +26,7 @@ With the SAP BTP service operator, you can provision and consume SAP BTP service
 - [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) v1.17 or higher
 - [helm](https://helm.sh/) v3.0 or higher
 
-[Back to top](#sap-business-technology-platform-service-operator)
+[Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
 ## Setup
 1. Install [cert-manager](https://cert-manager.io/docs/installation/kubernetes)
@@ -70,7 +70,7 @@ With the SAP BTP service operator, you can provision and consume SAP BTP service
 
     The list of available releases is available here: [sapbtp-operator releases](https://github.com/SAP/sap-btp-service-operator/releases)
 
-[Back to top](#sap-business-technology-platform-service-operator)
+[Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
 ## Using the SAP BTP Service Operator
 
@@ -107,7 +107,7 @@ With the SAP BTP service operator, you can provision and consume SAP BTP service
     NAME                  STATUS   AGE
     my-service-instance   Created  19s
     ```
-[Back to top](#sap-business-technology-platform-service-operator)
+[Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
 #### Step 2: Create a Service Binding
 
@@ -147,7 +147,7 @@ With the SAP BTP service operator, you can provision and consume SAP BTP service
     
     See [Using Secrets](https://kubernetes.io/docs/concepts/configuration/secret/#using-secrets) for the different options to use the credentials from your application running in the Kubernetes cluster, 
 
-[Back to top](#sap-business-technology-platform-service-operator)
+[Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
 ## Reference documentation
 
@@ -189,7 +189,7 @@ With the SAP BTP service operator, you can provision and consume SAP BTP service
 | operationType   |  `string`   |  The operation type (CREATE/UPDATE/DELETE) for ongoing operation |
 | conditions       | `[]condition`   |  An array of conditions describing the status of the service instance. <br>The possible conditions types are:<br>- `Ready`: set to `true` if the binding is ready and usable<br>- `Failed`: set to `true` when an operation on the service binding fails, in this case the error details will be available in the condition message  
 
-[Back to top](#sap-business-technology-platform-service-operator)
+[Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
 ## Support
 Feel free to open new issues for feature requests, bugs or general feedback on the GitHub issues page of this project. 
@@ -223,7 +223,7 @@ Use the `namespace` parameter to specify the location of the secret containing t
 If not specified the `default` namespace is used. 
 
 
-[Back to top](#sap-business-technology-platform-service-operator)
+[Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
 ## Licence
 This project is licensed under Apache 2.0 except as noted otherwise in the [license](./LICENSE) file.
