@@ -176,11 +176,11 @@ var _ = AfterSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 })
 
-func isReady(resource servicesv1alpha1.SAPCPResource) bool {
+func isReady(resource servicesv1alpha1.SAPBTPResource) bool {
 	return len(resource.GetConditions()) == 1 && resource.GetConditions()[0].Status == metav1.ConditionTrue
 }
 
-func isFailed(resource servicesv1alpha1.SAPCPResource) bool {
+func isFailed(resource servicesv1alpha1.SAPBTPResource) bool {
 	return (len(resource.GetConditions()) == 2 && resource.GetConditions()[1].Status == metav1.ConditionTrue) ||
 		len(resource.GetConditions()) == 1 && resource.GetConditions()[0].Status == metav1.ConditionFalse && resource.GetConditions()[0].Reason == Blocked
 }

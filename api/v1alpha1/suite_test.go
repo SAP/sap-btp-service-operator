@@ -10,7 +10,7 @@ import (
 
 func TestServer(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "SAPCP Resource Suite")
+	RunSpecs(t, "SAPBTP Resource Suite")
 }
 
 func getBinding() *ServiceBinding {

@@ -125,7 +125,7 @@ func (sb *ServiceBinding) SetObservedGeneration(newObserved int64) {
 	sb.Status.ObservedGeneration = newObserved
 }
 
-func (sb *ServiceBinding) DeepClone() SAPCPResource {
+func (sb *ServiceBinding) DeepClone() SAPBTPResource {
 	return sb.DeepCopy()
 }
 

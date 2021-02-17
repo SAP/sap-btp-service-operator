@@ -42,7 +42,7 @@ data:
   CLUSTER_ID: "$clusterid"
   MANAGEMENT_NAMESPACE: "$management_namespace"
 metadata:
-  name: sapcp-operator-config
+  name: sapbtp-operator-config
   namespace: operators
 EOT
 }
@@ -59,7 +59,7 @@ store_secret() {
 apiVersion: v1
 kind: Secret
 metadata:
-  name: sapcp-operator-secret
+  name: sapbtp-operator-secret
   namespace: $management_namespace
 type: Opaque
 data:

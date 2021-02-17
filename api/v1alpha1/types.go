@@ -22,7 +22,7 @@ const (
 )
 
 // +kubebuilder:object:generate=false
-type SAPCPResource interface {
+type SAPBTPResource interface {
 	client.Object
 	SetConditions([]metav1.Condition)
 	GetConditions() []metav1.Condition
@@ -32,5 +32,5 @@ type SAPCPResource interface {
 	SetStatus(status interface{})
 	GetObservedGeneration() int64
 	SetObservedGeneration(int64)
-	DeepClone() SAPCPResource
+	DeepClone() SAPBTPResource
 }

@@ -1,5 +1,0 @@
-apiVersion: v2
-appVersion: "master"
-name: sapcp-operator
-description: A Helm chart for SAPCP Operator for Kubernetes
-version: 0.1.0

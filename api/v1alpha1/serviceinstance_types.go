@@ -122,7 +122,7 @@ func (in *ServiceInstance) SetObservedGeneration(newObserved int64) {
 	in.Status.ObservedGeneration = newObserved
 }
 
-func (in *ServiceInstance) DeepClone() SAPCPResource {
+func (in *ServiceInstance) DeepClone() SAPBTPResource {
 	return in.DeepCopy()
 }
 

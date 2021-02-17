@@ -37,9 +37,9 @@ jobs:
 
       - name: Run chart-releaser
         run: |
-          sed -i -e 's/tag: master/tag: '${TAG_NAME:-master}'/g' ./sapcp-operator-charts/values.yaml | sh
+          sed -i -e 's/tag: master/tag: '${TAG_NAME:-master}'/g' ./sapbtp-operator-charts/values.yaml | sh
           mkdir out
-          helm package --app-version ${TAG_NAME} --version ${TAG_NAME} -d ./out sapcp-operator-charts
+          helm package --app-version ${TAG_NAME} --version ${TAG_NAME} -d ./out sapbtp-operator-charts
           mv ./hack/kubectl-sapbtp ./out/kubectl-sapbtp
 
       - name: Upload binaries to release

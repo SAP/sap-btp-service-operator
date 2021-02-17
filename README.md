@@ -59,7 +59,7 @@ With the SAP BTP service operator, you can provision and consume SAP BTP service
    
 1. Deploy the sapbtp-service-operator in the cluster using the obtained access credentials:
     ```bash
-    helm upgrade --install sapbtp-operator https://github.com/SAP/sap-btp-service-operator/releases/download/<release>/sapcp-operator-<release>.tgz \
+    helm upgrade --install sapbtp-operator https://github.com/SAP/sap-btp-service-operator/releases/download/<release>/sapbtp-operator-<release>.tgz \
         --create-namespace \
         --namespace=sapbtp-operator \
         --set manager.secret.clientid=<clientid> \
@@ -209,7 +209,7 @@ using the access credentials stored in the cluster.
 - The SAP BTP kubectl plugin is currently based on `bash`. If using Windows, you should use the SAP BTP plugin commands from a linux shell (e.g. [Cygwin](https://www.cygwin.com/)).  
 
 ### Installation
-- Download https://github.com/SAP/sap-btp-service-operator/releases/download/${release}/kubectl-sapcp
+- Download https://github.com/SAP/sap-btp-service-operator/releases/download/${release}/kubectl-sapbtp
 - Move the executable file to anywhere on your `PATH`
 
 #### Usage

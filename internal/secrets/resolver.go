@@ -14,7 +14,7 @@ import (
 //TODO + revisit the name based approach for managed secret, replace with label based mechanism + admission webhook for secrets to avoid duplications
 
 const (
-	SAPCPOperatorSecretName = "sapbtp-operator-secret"
+	SAPBTPOperatorSecretName = "sapbtp-operator-secret"
 )
 
 type SecretResolver struct {
@@ -66,7 +66,7 @@ func (sr *SecretResolver) GetSecretForResource(ctx context.Context, namespace st
 		return nil, fmt.Errorf("cannot find sapbtp operator secret")
 	}
 
-	if err := validateSAPCPOperatorSecret(secretForResource); err != nil {
+	if err := validateSAPBTPOperatorSecret(secretForResource); err != nil {
 		sr.Log.Error(err, "failed to validate secret", "secretName", secretForResource.Name, "secretNamespace", secretForResource.Namespace)
 		return nil, err
 	}
@@ -74,7 +74,7 @@ func (sr *SecretResolver) GetSecretForResource(ctx context.Context, namespace st
 	return secretForResource, nil
 }
 
-func validateSAPCPOperatorSecret(secret *v1.Secret) error {
+func validateSAPBTPOperatorSecret(secret *v1.Secret) error {
 	secretData := secret.Data
 	if secretData == nil {
 		return fmt.Errorf("invalid secret - secret data is missing")
@@ -91,18 +91,18 @@ func validateSAPCPOperatorSecret(secret *v1.Secret) error {
 
 func (sr *SecretResolver) getSecretFromNamespace(ctx context.Context, namespace string) (*v1.Secret, error) {
 	secret := &v1.Secret{}
-	err := sr.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: SAPCPOperatorSecretName}, secret)
+	err := sr.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: SAPBTPOperatorSecretName}, secret)
 	return secret, err
 }
 
 func (sr *SecretResolver) getSecretForNamespace(ctx context.Context, namespace string) (*v1.Secret, error) {
 	secret := &v1.Secret{}
-	err := sr.Client.Get(ctx, types.NamespacedName{Namespace: sr.ManagementNamespace, Name: fmt.Sprintf("%s-%s", namespace, SAPCPOperatorSecretName)}, secret)
+	err := sr.Client.Get(ctx, types.NamespacedName{Namespace: sr.ManagementNamespace, Name: fmt.Sprintf("%s-%s", namespace, SAPBTPOperatorSecretName)}, secret)
 	return secret, err
 }
 
 func (sr *SecretResolver) getClusterSecret(ctx context.Context) (*v1.Secret, error) {
 	secret := &v1.Secret{}
-	err := sr.Client.Get(ctx, types.NamespacedName{Namespace: sr.ManagementNamespace, Name: SAPCPOperatorSecretName}, secret)
+	err := sr.Client.Get(ctx, types.NamespacedName{Namespace: sr.ManagementNamespace, Name: SAPBTPOperatorSecretName}, secret)
 	return secret, err
 }

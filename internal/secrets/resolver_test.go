@@ -31,9 +31,9 @@ var _ = Describe("Secrets Resolver", func() {
 	createSecret := func(namePrefix string, namespace string) *corev1.Secret {
 		var name string
 		if namePrefix == "" {
-			name = secrets.SAPCPOperatorSecretName
+			name = secrets.SAPBTPOperatorSecretName
 		} else {
-			name = fmt.Sprintf("%s-%s", namePrefix, secrets.SAPCPOperatorSecretName)
+			name = fmt.Sprintf("%s-%s", namePrefix, secrets.SAPBTPOperatorSecretName)
 		}
 
 		expectedClientID = uuid.New().String()

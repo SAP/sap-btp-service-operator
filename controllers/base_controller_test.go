@@ -69,7 +69,7 @@ var _ = Describe("Base controller", func() {
 			Expect(k8sClient.Create(context.Background(), namespace)).Should(Succeed())
 			secret = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      secrets.SAPCPOperatorSecretName,
+					Name:      secrets.SAPBTPOperatorSecretName,
 					Namespace: managementNamespace,
 				},
 				Data: map[string][]byte{

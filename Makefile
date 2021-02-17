@@ -45,15 +45,15 @@ uninstall: manifests
 
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
 deploy: manifests helm-charts
-	helm upgrade --install sapcp-operator ./sapcp-operator-charts \
+	helm upgrade --install sapbtp-operator ./sapbtp-operator-charts \
         --create-namespace \
-        --namespace=sapcp-operator \
+        --namespace=sapbtp-operator \
         --values=hack/override_values.yaml \
 		--set manager.image.repository=controller \
 		--set manager.image.tag=latest
 
 undeploy:
-	helm uninstall sapcp-operator -n sapcp-operator
+	helm uninstall sapbtp-operator -n sapbtp-operator
 
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen
@@ -106,5 +106,5 @@ lint-deps:
 
 helm-charts:
 	cd config/default && kustomize edit set namespace releasenamespace
-	kustomize build config/default > ./sapcp-operator-charts/templates/sap-operator.yml
-	$(SED) 's/releasenamespace/{{.Release.Namespace}}/g' ./sapcp-operator-charts/templates/sap-operator.yml
+	kustomize build config/default > ./sapbtp-operator-charts/templates/sap-operator.yml
+	$(SED) 's/releasenamespace/{{.Release.Namespace}}/g' ./sapbtp-operator-charts/templates/sap-operator.yml

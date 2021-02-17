@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   labels:
     control-plane: controller-manager
-  name: sapcp-operator-controller-manager
+  name: sapbtp-operator-controller-manager
   namespace: {{.Release.Namespace}}
 spec:
   replicas: 1
@@ -33,7 +33,7 @@ spec:
             - /manager
           envFrom:
             - configMapRef:
-                name: sapcp-operator-config
+                name: sapbtp-operator-config
           image: {{.Values.manager.image.repository}}:{{.Values.manager.image.tag}}
           imagePullPolicy: IfNotPresent
           name: manager
