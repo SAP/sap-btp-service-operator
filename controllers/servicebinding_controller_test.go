@@ -237,13 +237,18 @@ var _ = Describe("ServiceBinding controller", func() {
 
 			When("secret name is already taken", func() {
 				ctx := context.Background()
+				var secret *v1.Secret
 				JustBeforeEach(func() {
-					Expect(k8sClient.Create(ctx, &v1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "mysecret", Namespace: bindingTestNamespace}})).Should(Succeed())
+					secret = &v1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "mysecret", Namespace: bindingTestNamespace}}
+					Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
 					By("Verify secret created")
 					Eventually(func() bool {
 						err := k8sClient.Get(ctx, types.NamespacedName{Name: "mysecret", Namespace: bindingTestNamespace}, &v1.Secret{})
 						return err == nil
 					}, timeout, interval).Should(BeTrue())
+				})
+				JustAfterEach(func() {
+					Expect(k8sClient.Delete(ctx, secret)).Should(Succeed())
 				})
 				It("should fail the request and allow the user to replace secret name", func() {
 					binding := newBinding("newbinding", bindingTestNamespace)
@@ -253,11 +258,11 @@ var _ = Describe("ServiceBinding controller", func() {
 					_ = k8sClient.Create(ctx, binding)
 					bindingLookupKey := types.NamespacedName{Name: binding.Name, Namespace: binding.Namespace}
 					Eventually(func() bool {
-						err := k8sClient.Get(ctx, bindingLookupKey, binding)
-						if err != nil {
+						if err := k8sClient.Get(ctx, bindingLookupKey, binding); err != nil {
 							return false
 						}
-						return isFailed(binding) && strings.Contains(binding.Status.Conditions[0].Message, "belongs to another binding")
+						return isInProgress(binding) && binding.GetConditions()[0].Reason == Blocked &&
+							strings.Contains(binding.GetConditions()[0].Message, "already taken")
 					}, timeout, interval).Should(BeTrue())
 
 					binding.Spec.SecretName = "mynewsecret"
