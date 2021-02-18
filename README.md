@@ -9,6 +9,9 @@
 
 With the SAP BTP service operator, you can provision and consume SAP BTP services in your Kubernetes cluster in a Kubernetes-native way. The SAP BTP service operator is based on the Kubernetes operator pattern to consume SAP BTP services from within the cluster using Kubernetes native tools.
 
+## Note
+This feature is still under development, review, and testing. 
+
 ## Table of content
 * [Prerequisites](#prerequisites)
 * [Setup Operator](#setup)
