@@ -311,11 +311,7 @@ func (r *BaseReconciler) markAsNonTransientError(ctx context.Context, operationT
 	setFailureConditions(operationType, message, object)
 	log.Info(fmt.Sprintf("operation %s of %s encountered a non transient error, giving up operation :(", operationType, object.GetControllerName()))
 	object.SetObservedGeneration(object.GetGeneration())
-	err := r.updateStatusWithRetries(ctx, object, log)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	return ctrl.Result{}, nil
+	return ctrl.Result{}, r.updateStatusWithRetries(ctx, object, log)
 }
 
 func (r *BaseReconciler) markAsTransientError(ctx context.Context, operationType smTypes.OperationCategory, message string, object servicesv1alpha1.SAPBTPResource, log logr.Logger) (ctrl.Result, error) {

@@ -54,11 +54,6 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	// TODO optimize log - use withValue where possible
 	log := r.Log.WithValues("servicebinding", req.NamespacedName)
 
-	if r.Config.SuspendReconcile {
-		log.Info("operator is suspended")
-		return ctrl.Result{}, nil
-	}
-
 	serviceBinding := &v1alpha1.ServiceBinding{}
 	if err := r.Get(ctx, req.NamespacedName, serviceBinding); err != nil {
 		if !apierrors.IsNotFound(err) {
@@ -70,6 +65,12 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	serviceBinding = serviceBinding.DeepCopy()
+
+	if r.Config.SuspendReconcile {
+		log.Info("operator is suspended")
+		setBlockedCondition("operator is suspended", serviceBinding)
+		return ctrl.Result{}, nil
+	}
 
 	smClient, err := r.getSMClient(ctx, log, serviceBinding)
 	if err != nil {
@@ -142,11 +143,12 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 
 		binding, err := r.getBindingForRecovery(smClient, serviceBinding, log)
-		if binding == nil {
-			log.Info("getBindingForRecovery returned nil")
-		}
 		if err != nil {
 			log.Error(err, "failed to list bindings from SM")
+			if isTransientError(err, log) {
+				return r.markAsTransientError(ctx, smTypes.CREATE, err.Error(), serviceBinding, log)
+			}
+			return r.markAsNonTransientError(ctx, smTypes.CREATE, err.Error(), serviceBinding, log)
 		}
 		if binding != nil {
 			// Recovery - restore binding from SM

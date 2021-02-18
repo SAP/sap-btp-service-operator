@@ -47,11 +47,6 @@ type ServiceInstanceReconciler struct {
 func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("serviceinstance", req.NamespacedName)
 
-	if r.Config.SuspendReconcile {
-		log.Info("operator is suspended")
-		return ctrl.Result{}, nil
-	}
-
 	serviceInstance := &servicesv1alpha1.ServiceInstance{}
 	if err := r.Get(ctx, req.NamespacedName, serviceInstance); err != nil {
 		if !apierrors.IsNotFound(err) {
@@ -63,6 +58,12 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	serviceInstance = serviceInstance.DeepCopy()
+
+	if r.Config.SuspendReconcile {
+		log.Info("operator is suspended")
+		setBlockedCondition("operator is suspended", serviceInstance)
+		return ctrl.Result{}, nil
+	}
 
 	smClient, err := r.getSMClient(ctx, log, serviceInstance)
 	if err != nil {
@@ -103,11 +104,10 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		instance, err := r.getInstanceForRecovery(smClient, serviceInstance, log)
 		if err != nil {
 			log.Error(err, "failed to check instance recovery")
-			setFailureConditions(smTypes.CREATE, err.Error(), serviceInstance)
-			if err := r.updateStatusWithRetries(ctx, serviceInstance, log); err != nil {
-				return ctrl.Result{}, err
+			if isTransientError(err, log) {
+				return r.markAsTransientError(ctx, smTypes.CREATE, err.Error(), serviceInstance, log)
 			}
-			return ctrl.Result{Requeue: true, RequeueAfter: r.Config.SyncPeriod}, nil
+			return r.markAsNonTransientError(ctx, smTypes.CREATE, err.Error(), serviceInstance, log)
 		}
 		if instance != nil {
 			log.Info(fmt.Sprintf("found existing instance in SM with id %s, updating status", instance.ID))
