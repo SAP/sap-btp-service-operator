@@ -3,6 +3,7 @@
 # Declare variables to be passed into your templates.
 
 manager:
+  suspend_reconcile: false
   image:
     repository: ghcr.io/sap/sap-btp-service-operator/controller
     tag: master
