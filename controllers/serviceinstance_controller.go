@@ -47,6 +47,11 @@ type ServiceInstanceReconciler struct {
 func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("serviceinstance", req.NamespacedName)
 
+	if r.Config.Suspend {
+		log.Info("operator is suspended")
+		return ctrl.Result{}, nil
+	}
+
 	serviceInstance := &servicesv1alpha1.ServiceInstance{}
 	if err := r.Get(ctx, req.NamespacedName, serviceInstance); err != nil {
 		if !apierrors.IsNotFound(err) {

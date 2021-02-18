@@ -54,6 +54,11 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	// TODO optimize log - use withValue where possible
 	log := r.Log.WithValues("servicebinding", req.NamespacedName)
 
+	if r.Config.Suspend {
+		log.Info("operator is suspended")
+		return ctrl.Result{}, nil
+	}
+
 	serviceBinding := &v1alpha1.ServiceBinding{}
 	if err := r.Get(ctx, req.NamespacedName, serviceBinding); err != nil {
 		if !apierrors.IsNotFound(err) {
