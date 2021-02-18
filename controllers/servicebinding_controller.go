@@ -68,8 +68,12 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	if r.Config.SuspendReconcile {
 		log.Info("operator is suspended")
-		setBlockedCondition("operator is suspended", serviceBinding)
-		return ctrl.Result{}, r.updateStatusWithRetries(ctx, serviceBinding, log)
+		var err error
+		if len(serviceBinding.Status.Conditions) == 0 {
+			setBlockedCondition("operator is suspended", serviceBinding)
+			err = r.updateStatusWithRetries(ctx, serviceBinding, log)
+		}
+		return ctrl.Result{}, err
 	}
 
 	smClient, err := r.getSMClient(ctx, log, serviceBinding)
