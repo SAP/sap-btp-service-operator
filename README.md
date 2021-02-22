@@ -45,7 +45,7 @@ This feature is still under development, review, and testing.
       
       [Creating a SAP Cloud Service Management Service Instance Using Service Management Control (SMCTL) CLI ](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/b327b66b711746b085ec5d2ea16e608e.html)  
    
-   b. Create a binding to the created service instance:
+   b. Create a binding to the created service instance
       
       For more information about creating service bindings, see:
             [Creating Service Bindings Using the SAP BTP Cockpit](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/55b31ea23c474f6ba2f64ee4848ab1b3.html) or 
