@@ -5,9 +5,9 @@ import (
 	"fmt"
 	smTypes "github.com/Peripli/service-manager/pkg/types"
 	"github.com/SAP/sap-btp-service-operator/api/v1alpha1"
-	"github.com/SAP/sap-btp-service-operator/internal/smclient"
-	"github.com/SAP/sap-btp-service-operator/internal/smclient/smclientfakes"
-	smclientTypes "github.com/SAP/sap-btp-service-operator/internal/smclient/types"
+	"github.com/SAP/sap-btp-service-operator/client/sm"
+	"github.com/SAP/sap-btp-service-operator/client/sm/smfakes"
+	smclientTypes "github.com/SAP/sap-btp-service-operator/client/sm/types"
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -116,7 +116,7 @@ var _ = Describe("ServiceInstance controller", func() {
 		fakeInstanceName = "ic-test-" + uuid.New().String()
 		defaultLookupKey = types.NamespacedName{Name: fakeInstanceName, Namespace: testNamespace}
 
-		fakeClient = &smclientfakes.FakeClient{}
+		fakeClient = &smfakes.FakeClient{}
 		fakeClient.ProvisionReturns(fakeInstanceID, "", nil)
 		fakeClient.DeprovisionReturns("", nil)
 		fakeClient.GetInstanceByIDReturns(&smclientTypes.ServiceInstance{ID: fakeInstanceID, Ready: true, LastOperation: &smTypes.Operation{State: smTypes.SUCCEEDED, Type: smTypes.CREATE}}, nil)
@@ -202,7 +202,7 @@ var _ = Describe("ServiceInstance controller", func() {
 				Context("with 400 status", func() {
 					JustBeforeEach(func() {
 						errMessage = "failed to provision instance"
-						fakeClient.ProvisionReturns("", "", &smclient.ServiceManagerError{
+						fakeClient.ProvisionReturns("", "", &sm.ServiceManagerError{
 							StatusCode: http.StatusBadRequest,
 							Message:    errMessage,
 						})
@@ -221,7 +221,7 @@ var _ = Describe("ServiceInstance controller", func() {
 				Context("with 429 status eventually succeeds", func() {
 					JustBeforeEach(func() {
 						errMessage = "failed to provision instance"
-						fakeClient.ProvisionReturnsOnCall(0, "", "", &smclient.ServiceManagerError{
+						fakeClient.ProvisionReturnsOnCall(0, "", "", &sm.ServiceManagerError{
 							StatusCode: http.StatusTooManyRequests,
 							Message:    errMessage,
 						})
@@ -497,7 +497,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					JustBeforeEach(func() {
 						fakeClient.UpdateInstanceReturnsOnCall(0, nil, "/v1/service_instances/id/operations/1234", nil)
 						fakeClient.UpdateInstanceReturnsOnCall(1, nil, "", nil)
-						fakeClient.StatusReturns(nil, &smclient.ServiceManagerError{StatusCode: http.StatusNotFound})
+						fakeClient.StatusReturns(nil, &sm.ServiceManagerError{StatusCode: http.StatusNotFound})
 						smInstance := &smclientTypes.ServiceInstance{ID: fakeInstanceID, Ready: true, LastOperation: &smTypes.Operation{State: smTypes.SUCCEEDED, Type: smTypes.UPDATE}}
 						fakeClient.GetInstanceByIDReturns(smInstance, nil)
 						fakeClient.ListInstancesReturns(&smclientTypes.ServiceInstances{
