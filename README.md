@@ -40,17 +40,16 @@ This feature is still under development, review, and testing.
    a. Using the SAP BTP Cockpit or CLI, create an instance of the SAP Cloud Service Management service (technical name: `service-manager`) with the plan:
     `service-operator-access`
       
-      For more information about creating service instances, see:
+      For more information about creating service instances, see 
       [Creating SAP Cloud Service Management Service Instances Using the SAP BTP Cockpit](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/bf71f6a7b7754dbd9dfc2569791ccc96.html) or 
-      
-      [Creating a SAP Cloud Service Management Service Instance Using Service Management Control (SMCTL) CLI ](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/b327b66b711746b085ec5d2ea16e608e.html)  
+       [Creating a SAP Cloud Service Management Service Instance Using Service Management Control (SMCTL) CLI ](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/b327b66b711746b085ec5d2ea16e608e.html)  
    
    b. Create a binding to the created service instance
       
-      For more information about creating service bindings, see:
+   For more information about creating service bindings, see
             [Creating Service Bindings Using the SAP BTP Cockpit](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/55b31ea23c474f6ba2f64ee4848ab1b3.html) or 
             
-            [Creating Service Bindings Using Service Management Control (SMCTL) CLI](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/f53ff2634e0a46d6bfc72ec075418dcd.html) 
+  [Creating Service Bindings Using Service Management Control (SMCTL) CLI](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/f53ff2634e0a46d6bfc72ec075418dcd.html) 
    
    c. Retrieve the generated access credentials from the created binding:
    
