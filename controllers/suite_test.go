@@ -20,8 +20,9 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"github.com/SAP/sap-btp-service-operator/client/sm"
+	"github.com/SAP/sap-btp-service-operator/client/sm/smfakes"
 	"github.com/SAP/sap-btp-service-operator/internal/config"
-	"github.com/SAP/sap-btp-service-operator/internal/smclient"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"net"
@@ -32,8 +33,6 @@ import (
 	"time"
 
 	ctrl "sigs.k8s.io/controller-runtime"
-
-	"github.com/SAP/sap-btp-service-operator/internal/smclient/smclientfakes"
 
 	servicesv1alpha1 "github.com/SAP/sap-btp-service-operator/api/v1alpha1"
 	. "github.com/onsi/ginkgo"
@@ -59,7 +58,7 @@ const (
 var cfg *rest.Config
 var k8sClient client.Client
 var testEnv *envtest.Environment
-var fakeClient *smclientfakes.FakeClient
+var fakeClient *smfakes.FakeClient
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -106,14 +105,14 @@ var _ = BeforeSuite(func(done Done) {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
-	fakeClient = &smclientfakes.FakeClient{}
+	fakeClient = &smfakes.FakeClient{}
 	testConfig := config.Config{SyncPeriod: syncPeriod, PollInterval: pollInterval}
 	err = (&ServiceInstanceReconciler{
 		BaseReconciler: &BaseReconciler{
 			Client:   k8sManager.GetClient(),
 			Scheme:   k8sManager.GetScheme(),
 			Log:      ctrl.Log.WithName("controllers").WithName("ServiceInstance"),
-			SMClient: func() smclient.Client { return fakeClient },
+			SMClient: func() sm.Client { return fakeClient },
 			Config:   testConfig,
 		},
 	}).SetupWithManager(k8sManager)
@@ -127,7 +126,7 @@ var _ = BeforeSuite(func(done Done) {
 			Client:   k8sManager.GetClient(),
 			Scheme:   k8sManager.GetScheme(),
 			Log:      ctrl.Log.WithName("controllers").WithName("ServiceBinding"),
-			SMClient: func() smclient.Client { return fakeClient },
+			SMClient: func() sm.Client { return fakeClient },
 			Config:   testConfig,
 		},
 	}).SetupWithManager(k8sManager)

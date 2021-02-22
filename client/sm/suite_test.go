@@ -1,4 +1,4 @@
-package smclient
+package sm
 
 import (
 	"context"

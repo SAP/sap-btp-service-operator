@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/SAP/sap-btp-service-operator/client/sm"
 	"net/http"
 
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -17,7 +18,6 @@ import (
 	servicesv1alpha1 "github.com/SAP/sap-btp-service-operator/api/v1alpha1"
 	"github.com/SAP/sap-btp-service-operator/internal/config"
 	"github.com/SAP/sap-btp-service-operator/internal/secrets"
-	"github.com/SAP/sap-btp-service-operator/internal/smclient"
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -49,7 +49,7 @@ type BaseReconciler struct {
 	client.Client
 	Log            logr.Logger
 	Scheme         *runtime.Scheme
-	SMClient       func() smclient.Client
+	SMClient       func() sm.Client
 	Config         config.Config
 	SecretResolver *secrets.SecretResolver
 }
@@ -66,7 +66,7 @@ func getParameters(sapResource servicesv1alpha1.SAPBTPResource) (json.RawMessage
 	return instanceParameters, nil
 }
 
-func (r *BaseReconciler) getSMClient(ctx context.Context, log logr.Logger, object servicesv1alpha1.SAPBTPResource) (smclient.Client, error) {
+func (r *BaseReconciler) getSMClient(ctx context.Context, log logr.Logger, object servicesv1alpha1.SAPBTPResource) (sm.Client, error) {
 	if r.SMClient != nil {
 		return r.SMClient(), nil
 	}
@@ -87,7 +87,7 @@ func (r *BaseReconciler) getSMClient(ctx context.Context, log logr.Logger, objec
 	}
 
 	secretData := secret.Data
-	cl := smclient.NewClient(ctx, &smclient.ClientConfig{
+	cl := sm.NewClient(ctx, &sm.ClientConfig{
 		ClientID:     string(secretData["clientid"]),
 		ClientSecret: string(secretData["clientsecret"]),
 		URL:          string(secretData["url"]),
@@ -300,7 +300,7 @@ func isDelete(object metav1.ObjectMeta) bool {
 }
 
 func isTransientError(err error, log logr.Logger) bool {
-	if smError, ok := err.(*smclient.ServiceManagerError); ok {
+	if smError, ok := err.(*sm.ServiceManagerError); ok {
 		log.Info(fmt.Sprintf("SM returned error status code %d", smError.StatusCode))
 		return smError.StatusCode == http.StatusTooManyRequests || smError.StatusCode == http.StatusServiceUnavailable || smError.StatusCode == http.StatusGatewayTimeout
 	}

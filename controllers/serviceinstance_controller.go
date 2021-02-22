@@ -19,14 +19,14 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"github.com/SAP/sap-btp-service-operator/client/sm"
 
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	smTypes "github.com/Peripli/service-manager/pkg/types"
 	"github.com/Peripli/service-manager/pkg/web"
 	servicesv1alpha1 "github.com/SAP/sap-btp-service-operator/api/v1alpha1"
-	"github.com/SAP/sap-btp-service-operator/internal/smclient"
-	"github.com/SAP/sap-btp-service-operator/internal/smclient/types"
+	"github.com/SAP/sap-btp-service-operator/client/sm/types"
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -118,7 +118,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	return r.updateInstance(ctx, smClient, serviceInstance, log)
 }
 
-func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient smclient.Client, serviceInstance *servicesv1alpha1.ServiceInstance, log logr.Logger) (ctrl.Result, error) {
+func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client, serviceInstance *servicesv1alpha1.ServiceInstance, log logr.Logger) (ctrl.Result, error) {
 	log.Info(fmt.Sprintf("resource is in progress, found operation url %s", serviceInstance.Status.OperationURL))
 	status, statusErr := smClient.Status(serviceInstance.Status.OperationURL, nil)
 	if statusErr != nil {
@@ -172,7 +172,7 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient smclient.
 	return ctrl.Result{}, r.updateStatusWithRetries(ctx, serviceInstance, log)
 }
 
-func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient smclient.Client, serviceInstance *servicesv1alpha1.ServiceInstance, log logr.Logger) (ctrl.Result, error) {
+func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient sm.Client, serviceInstance *servicesv1alpha1.ServiceInstance, log logr.Logger) (ctrl.Result, error) {
 	log.Info("Creating instance in SM")
 	instanceParameters, err := getParameters(serviceInstance)
 	if err != nil {
@@ -221,7 +221,7 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	return ctrl.Result{}, r.updateStatusWithRetries(ctx, serviceInstance, log)
 }
 
-func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient smclient.Client, serviceInstance *servicesv1alpha1.ServiceInstance, log logr.Logger) (ctrl.Result, error) {
+func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient sm.Client, serviceInstance *servicesv1alpha1.ServiceInstance, log logr.Logger) (ctrl.Result, error) {
 	var err error
 
 	log.Info(fmt.Sprintf("updating instance %s in SM", serviceInstance.Status.InstanceID))
@@ -261,7 +261,7 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 	return ctrl.Result{}, r.updateStatusWithRetries(ctx, serviceInstance, log)
 }
 
-func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient smclient.Client, serviceInstance *servicesv1alpha1.ServiceInstance, log logr.Logger) (ctrl.Result, error) {
+func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient sm.Client, serviceInstance *servicesv1alpha1.ServiceInstance, log logr.Logger) (ctrl.Result, error) {
 	if controllerutil.ContainsFinalizer(serviceInstance, instanceFinalizerName) {
 		if len(serviceInstance.Status.InstanceID) == 0 {
 			log.Info("No instance id found validating instance does not exists in SM before removing finalizer")
@@ -341,7 +341,7 @@ func (r *ServiceInstanceReconciler) resyncInstanceStatus(k8sInstance *servicesv1
 	case smTypes.PENDING:
 		fallthrough
 	case smTypes.IN_PROGRESS:
-		k8sInstance.Status.OperationURL = smclient.BuildOperationURL(smInstance.LastOperation.ID, smInstance.ID, web.ServiceInstancesURL)
+		k8sInstance.Status.OperationURL = sm.BuildOperationURL(smInstance.LastOperation.ID, smInstance.ID, web.ServiceInstancesURL)
 		k8sInstance.Status.OperationType = smInstance.LastOperation.Type
 		setInProgressCondition(smInstance.LastOperation.Type, smInstance.LastOperation.Description, k8sInstance)
 	case smTypes.SUCCEEDED:
@@ -357,8 +357,8 @@ func (r *ServiceInstanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *ServiceInstanceReconciler) getInstanceForRecovery(smClient smclient.Client, serviceInstance *servicesv1alpha1.ServiceInstance, log logr.Logger) (*types.ServiceInstance, error) {
-	parameters := smclient.Parameters{
+func (r *ServiceInstanceReconciler) getInstanceForRecovery(smClient sm.Client, serviceInstance *servicesv1alpha1.ServiceInstance, log logr.Logger) (*types.ServiceInstance, error) {
+	parameters := sm.Parameters{
 		FieldQuery: []string{
 			fmt.Sprintf("name eq '%s'", serviceInstance.Spec.ExternalName),
 			fmt.Sprintf("context/clusterid eq '%s'", r.Config.ClusterID),
