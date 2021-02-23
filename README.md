@@ -41,18 +41,21 @@ This feature is still under development, review, and testing.
     `service-operator-access`
       
       For more information about creating service instances, see:     
-      [Creating SAP Cloud Service Management Service Instances Using the SAP BTP Cockpit](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/bf71f6a7b7754dbd9dfc2569791ccc96.html) or  
-      [Creating a SAP Cloud Service Management Service Instance Using Service Management Control (SMCTL) CLI ](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/b327b66b711746b085ec5d2ea16e608e.html).  
+      * [Creating Service Instances Using the SAP BTP Cockpit](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/bf71f6a7b7754dbd9dfc2569791ccc96.html)
+        
+      * [Creating Service Instances using SMCTL](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/b327b66b711746b085ec5d2ea16e608e.html)  
    
    b. Create a binding to the created service instance
       
    For more information about creating service bindings, see:  
-            [Creating Service Bindings Using the SAP BTP Cockpit](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/55b31ea23c474f6ba2f64ee4848ab1b3.html) or  
-            [Creating Service Bindings Using Service Management Control (SMCTL) CLI](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/f53ff2634e0a46d6bfc72ec075418dcd.html). 
+      * [Creating Service Bindings Using the SAP BTP Cockpit](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/55b31ea23c474f6ba2f64ee4848ab1b3.html) 
+       
+      * [Creating Service Bindings Using SMCTL](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/f53ff2634e0a46d6bfc72ec075418dcd.html). 
    
    c. Retrieve the generated access credentials from the created binding:
    
-       The example of the credentials in the binding object
+      The example of the credentials in the binding object  
+      
        ```json
         {
             "clientid": "xxxxxxx",
@@ -94,9 +97,11 @@ This feature is still under development, review, and testing.
         servicePlanName: <plan>
    ```
 
-   *   `<offering>` is the name of the SAP BTP service that you want to create. 
-       To learn more about viewing and managing the available services for your subaccount in the SAP BTP cockpit, see [Service Marketplace](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/affcc245c332433ba71917ff715b9971.html).
-   *   `<plan>` is the plan of the selected service offering that you want to create.
+   *   `<offering>` - The name of the SAP BTP service that you want to create. 
+       To learn more about viewing and managing the available services for your subaccount in the SAP BTP cockpit, see [Service Marketplace](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/affcc245c332433ba71917ff715b9971.html). 
+        
+        Tip: Use the *Environment* filter to get all offerings that are relevant for Kubernetes.
+   *   `<plan>` - The plan of the selected service offering that you want to create.
 
 2.  Apply the custom-resource file in your cluster to create the instance.
 
@@ -161,19 +166,19 @@ This feature is still under development, review, and testing.
 #### Spec
 | Property         | Type     | Comments                                                                                                   |
 |:-----------------|:---------|:-----------------------------------------------------------------------------------------------------------|
-| serviceOfferingName`*`   | `string`   | The SAP BTP service offering name |
-| servicePlanName`*` | `string`   |  The plan to use for the service instance |
-| servicePlanID   |  `string`   |  The plan ID in case service offering and plan name are ambiguous |
-| externalName       | `string`   |  The name for the service instance in SAP BTP, defaults to the binding `metadata.name` if not specified |
-| parameters       |  `[]object`  |  Provisioning parameters for the instance, check the documentation of the specific service you are using for details |
+| serviceOfferingName`*` | `string`  | The name of the SAP BTP service offering. |
+| servicePlanName`*` | `string`   |  The plan to use for the service instance. |
+| servicePlanID   |  `string`   |  The plan ID in case service offering and plan name are ambiguous. |
+| externalName       | `string`   |  The name for the service instance in SAP BTP, defaults to the instance `metadata.name` if not specified. |
+| parameters       |  `[]object`  |  Some services support the provisioning of additional configuration parameters during the instance creation. For the list of supported                                  parameters, check the documentation of the particular service offering.|
 
 #### Status
 | Property         | Type     | Comments                                                                                                   |
 |:-----------------|:---------|:-----------------------------------------------------------------------------------------------------------|
-| instanceID   | `string`   | The service instance ID in SAP Cloud Service Management service |
-| operationURL | `string`   |  URL of ongoing operation for the service instance |
-| operationType   |  `string`   |  The operation type (CREATE/UPDATE/DELETE) for ongoing operation |
-| conditions       | `[]condition`   |  An array of conditions describing the status of the service instance. <br>The possible condition types are:<br>- `Ready`: set to `true`  if the instance is ready and usable<br>- `Failed`: set to `true` when an operation on the service instance fails, in this case the error details are available in the condition message.
+| instanceID   | `string`   | The service instance ID in SAP Cloud Service Management service. |
+| operationURL | `string`   |  The URL of the current operation performed on the service instance. |
+| operationType   |  `string`   |  The type of the current operation. Valid values are CREATE, UPDATE, or DELETE.  |
+| conditions       | `[]condition`   |  An array of conditions describing the status of the service instance. <br>The possible condition types are:<br>- `Ready`: set to `true`  if the instance is ready and usable<br>- `Failed`: set to `true` when an operation on the service instance fails. In this case, the details about the error are available in the        condition message.
 
 
 
@@ -181,19 +186,19 @@ This feature is still under development, review, and testing.
 #### Spec
 | Parameter             | Type       | Comments                                                                                                   |
 |:-----------------|:---------|:-----------------------------------------------------------------------------------------------------------|
-| serviceInstanceName`*`   | `string`   | The Kubernetes name of the service instance to bind, should be in the namespace of the binding |
-| externalName       | `string`   |  The name for the service binding in SAP Cloud Service Management service, defaults to the binding `metadata.name` if not specified |
+| serviceInstanceName`*`   | `string`   | The Kubernetes name of the service instance to bind, should be in the namespace of the binding. |
+| externalName       | `string`   |  The name for the service binding,, defaults to the binding `metadata.name` if not specified |
 | secretName       | `string`   |  The name of the secret where the credentials are stored, defaults to the binding `metadata.name` if not specified |
-| parameters       |  `[]object`  |  Parameters for the binding |
+| parameters       |  `[]object`  |  Some services support the provisioning of additional configuration parameters during the bind request. For the list of supported                                  parameters, check the documentation of the particular service offering. |
 
 #### Status
 | Property         | Type     | Comments                                                                                                   |
 |:-----------------|:---------|:-----------------------------------------------------------------------------------------------------------|
-| instanceID   | `string`   | The ID of the bound instance in SAP Cloud Service Management service |
-| bindingID   | `string`   | The service binding ID in SAP Cloud Service Management service|
-| operationURL | `string`   |  URL of the ongoing operation for the service binding |
-| operationType   |  `string`   |  The operation type (CREATE/UPDATE/DELETE) for ongoing operation |
-| conditions       | `[]condition`   |  An array of conditions describing the status of the service instance. <br>The possible conditions types are:<br>- `Ready`: set to `true` if the binding is ready and usable<br>- `Failed`: set to `true` when an operation on the service binding fails, in this case the error details are available in the condition message  
+| instanceID   | `string`   | The ID of the bound instance in the SAP Cloud Service Management service. |
+| bindingID   | `string`   | The service binding ID in SAP Cloud Service Management service.|
+| operationURL | `string`   |  The URL of the current operation performed on the service binding. |
+| operationType   |  `string`   |  The type of the current operation. Valid values are CREATE, UPDATE, or DELETE. |
+| conditions       | `[]condition`   |  An array of conditions describing the status of the service instance. <br>The possible conditions types are:<br>- `Ready`: set to `true` if the binding is ready and usable<br>- `Failed`: set to `true` when an operation on the service binding fails. In this case, the details about the error are available in the     condition message.  
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
