@@ -204,7 +204,7 @@ This feature is still under development, review, and testing.
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
 ## Support
-You're welcome to raise issues related feature requests, bugs, or give us general feedback on this project's GitHub Issues page. 
+You're welcome to raise issues related to feature requests, bugs, or give us general feedback on this project's GitHub Issues page. 
 The SAP BTP service operator project maintainers will respond to the best of their abilities. 
 
 ## Contributions
