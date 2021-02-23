@@ -528,7 +528,6 @@ func (r *ServiceBindingReconciler) deleteBindingSecret(ctx context.Context, bind
 func (r *ServiceBindingReconciler) getBindingForRecovery(smClient sm.Client, serviceBinding *v1alpha1.ServiceBinding, log logr.Logger) (*smclientTypes.ServiceBinding, error) {
 	parameters := sm.Parameters{
 		FieldQuery: []string{
-			fmt.Sprintf("name eq '%s'", serviceBinding.Spec.ExternalName),
 			fmt.Sprintf("context/clusterid eq '%s'", r.Config.ClusterID),
 			fmt.Sprintf("context/namespace eq '%s'", serviceBinding.Namespace)},
 		LabelQuery: []string{
