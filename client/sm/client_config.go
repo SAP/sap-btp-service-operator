@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package smclient
+package sm
 
 // ClientConfig contains the configuration of the Service Manager client
 type ClientConfig struct {

@@ -1,10 +1,10 @@
-package smclient
+package sm
 
 import (
 	"context"
 	"encoding/json"
 	"github.com/Peripli/service-manager/pkg/web"
-	"github.com/SAP/sap-btp-service-operator/internal/smclient/types"
+	"github.com/SAP/sap-btp-service-operator/client/sm/types"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"net/http"

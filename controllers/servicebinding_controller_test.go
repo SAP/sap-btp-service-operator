@@ -8,9 +8,9 @@ import (
 	smTypes "github.com/Peripli/service-manager/pkg/types"
 	"github.com/Peripli/service-manager/pkg/web"
 	"github.com/SAP/sap-btp-service-operator/api/v1alpha1"
-	"github.com/SAP/sap-btp-service-operator/internal/smclient"
-	"github.com/SAP/sap-btp-service-operator/internal/smclient/smclientfakes"
-	smclientTypes "github.com/SAP/sap-btp-service-operator/internal/smclient/types"
+	"github.com/SAP/sap-btp-service-operator/client/sm"
+	"github.com/SAP/sap-btp-service-operator/client/sm/smfakes"
+	smclientTypes "github.com/SAP/sap-btp-service-operator/client/sm/types"
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -164,7 +164,7 @@ var _ = Describe("ServiceBinding controller", func() {
 		guid := uuid.New().String()
 		instanceName = "test-instance-" + guid
 		bindingName = "test-binding-" + guid
-		fakeClient = &smclientfakes.FakeClient{}
+		fakeClient = &smfakes.FakeClient{}
 		fakeClient.ProvisionReturns("12345678", "", nil)
 		fakeClient.BindReturns(&smclientTypes.ServiceBinding{ID: fakeBindingID, Credentials: json.RawMessage("{\"secret_key\": \"secret_value\"}")}, "", nil)
 
@@ -312,7 +312,7 @@ var _ = Describe("ServiceBinding controller", func() {
 					When("SM returned transient error(429)", func() {
 						BeforeEach(func() {
 							errorMessage = "too many requests"
-							fakeClient.BindReturnsOnCall(0, nil, "", &smclient.ServiceManagerError{
+							fakeClient.BindReturnsOnCall(0, nil, "", &sm.ServiceManagerError{
 								StatusCode: http.StatusTooManyRequests,
 								Message:    errorMessage,
 							})
@@ -329,7 +329,7 @@ var _ = Describe("ServiceBinding controller", func() {
 					When("SM returned non transient error(400)", func() {
 						BeforeEach(func() {
 							errorMessage = "very bad request"
-							fakeClient.BindReturnsOnCall(0, nil, "", &smclient.ServiceManagerError{
+							fakeClient.BindReturnsOnCall(0, nil, "", &sm.ServiceManagerError{
 								StatusCode: http.StatusBadRequest,
 								Message:    errorMessage,
 							})
@@ -606,7 +606,7 @@ var _ = Describe("ServiceBinding controller", func() {
 
 			When("delete in SM fails with transient error", func() {
 				JustBeforeEach(func() {
-					fakeClient.UnbindReturnsOnCall(0, "", &smclient.ServiceManagerError{StatusCode: http.StatusTooManyRequests})
+					fakeClient.UnbindReturnsOnCall(0, "", &sm.ServiceManagerError{StatusCode: http.StatusTooManyRequests})
 					fakeClient.UnbindReturnsOnCall(1, "", nil)
 				})
 
@@ -618,7 +618,7 @@ var _ = Describe("ServiceBinding controller", func() {
 
 		Context("Async", func() {
 			JustBeforeEach(func() {
-				fakeClient.UnbindReturns(smclient.BuildOperationURL("an-operation-id", fakeBindingID, web.ServiceBindingsURL), nil)
+				fakeClient.UnbindReturns(sm.BuildOperationURL("an-operation-id", fakeBindingID, web.ServiceBindingsURL), nil)
 			})
 
 			When("polling ends with success", func() {
@@ -649,7 +649,7 @@ var _ = Describe("ServiceBinding controller", func() {
 			When("polling returns error", func() {
 
 				JustBeforeEach(func() {
-					fakeClient.UnbindReturnsOnCall(0, smclient.BuildOperationURL("an-operation-id", fakeBindingID, web.ServiceBindingsURL), nil)
+					fakeClient.UnbindReturnsOnCall(0, sm.BuildOperationURL("an-operation-id", fakeBindingID, web.ServiceBindingsURL), nil)
 					fakeClient.StatusReturns(nil, fmt.Errorf("no polling for you"))
 					fakeClient.GetBindingByIDReturns(&smclientTypes.ServiceBinding{ID: fakeBindingID, LastOperation: &smTypes.Operation{State: smTypes.SUCCEEDED, Type: smTypes.CREATE}}, nil)
 					fakeClient.UnbindReturnsOnCall(1, "", nil)
