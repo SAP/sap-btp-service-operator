@@ -38,7 +38,7 @@ This feature is still under development, review, and testing.
 
 2. Obtain the access credentials for the SAP BTP service operator:
 
-   a. Using the SAP BTP Cockpit or CLI, create an instance of the SAP Cloud Service Management service (technical name: `service-manager`) with the plan:
+   a. Using the SAP BTP cockpit or CLI, create an instance of the SAP Cloud Service Management service (technical name: `service-manager`) with the plan:
     `service-operator-access`
       
       For more information about creating service instances, see:     
