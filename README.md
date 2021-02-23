@@ -224,7 +224,7 @@ using the access credentials stored in the cluster.
 - Download https://github.com/SAP/sap-btp-service-operator/releases/download/${release}/kubectl-sapbtp
 - Move the executable file to any location in your `PATH`
 
-#### Usage
+### Usage
 ```
   kubectl sapbtp marketplace -n <namespace>
   kubectl sapbtp plans -n <namespace>
