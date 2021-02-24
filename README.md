@@ -104,13 +104,11 @@ This feature is still under development, review, and testing.
     ```
 
 3.  Check that your service status is **Created** in your cluster.
-    
-    //TODO update example output with all fields
-    
+        
     ```bash
     kubectl get serviceinstances
-    NAME                  STATUS   AGE
-    my-service-instance   Created  19s
+    NAME                  OFFERING          PLAN        STATUS    AGE
+    my-service-instance   <offering>.       <plan>      Created   44s
     ```
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
