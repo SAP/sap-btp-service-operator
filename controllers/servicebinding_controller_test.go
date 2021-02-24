@@ -30,7 +30,7 @@ const (
 	bindingTestNamespace = "test-namespace"
 )
 
-var _ = FDescribe("ServiceBinding controller", func() {
+var _ = Describe("ServiceBinding controller", func() {
 
 	// Define utility constants for object names and testing timeouts/durations and intervals.
 
@@ -218,7 +218,7 @@ var _ = FDescribe("ServiceBinding controller", func() {
 			When("referenced service instance does not exist", func() {
 				It("should fail", func() {
 					createBindingWithBlockedError(context.Background(), bindingName, bindingTestNamespace, "no-such-instance", "",
-						"unable to find service instance")
+						"couldn't find the service instance")
 				})
 			})
 
@@ -231,7 +231,7 @@ var _ = FDescribe("ServiceBinding controller", func() {
 				})
 				It("should fail", func() {
 					createBindingWithBlockedError(context.Background(), bindingName, otherNamespace, instanceName, "",
-						fmt.Sprintf("unable to find service instance"))
+						fmt.Sprintf("couldn't find the service instance"))
 				})
 			})
 
@@ -357,7 +357,7 @@ var _ = FDescribe("ServiceBinding controller", func() {
 							if err != nil {
 								return false
 							}
-							return isFailed(createdBinding) && strings.Contains(createdBinding.Status.Conditions[0].Message, "failed to store binding secret")
+							return isFailed(createdBinding) && strings.Contains(createdBinding.Status.Conditions[0].Message, "failed to create secret for service")
 						}, timeout, interval).Should(BeTrue())
 					})
 				})
