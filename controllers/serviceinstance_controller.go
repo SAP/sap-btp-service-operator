@@ -151,9 +151,9 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client
 			if err := r.updateStatusWithRetries(ctx, serviceInstance, log); err != nil {
 				return ctrl.Result{}, err
 			}
-			errMsg := "Async deprovision operation failed"
+			errMsg := "async deprovisioning operation failed"
 			if status.Errors != nil {
-				errMsg = fmt.Sprintf("Async deprovision operation failed, errors: %s", string(status.Errors))
+				errMsg = fmt.Sprintf("%s. Errors: %s", errMsg, string(status.Errors))
 			}
 			return ctrl.Result{}, fmt.Errorf(errMsg)
 		}

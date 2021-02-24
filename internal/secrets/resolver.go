@@ -14,7 +14,7 @@ import (
 //TODO + revisit the name based approach for managed secret, replace with label based mechanism + admission webhook for secrets to avoid duplications
 
 const (
-	SAPBTPOperatorSecretName = "sap-btp-service-operator-secret"
+	SAPBTPOperatorSecretName = "sap-btp-service-operator"
 )
 
 type SecretResolver struct {
@@ -63,7 +63,8 @@ func (sr *SecretResolver) GetSecretForResource(ctx context.Context, namespace st
 
 	if !found {
 		// secret not found anywhere
-		return nil, fmt.Errorf("cannot find sapbtp operator secret")
+		sr.Log.Info("secret not found")
+		return nil, fmt.Errorf("secret not found")
 	}
 
 	if err := validateSAPBTPOperatorSecret(secretForResource); err != nil {
@@ -77,12 +78,12 @@ func (sr *SecretResolver) GetSecretForResource(ctx context.Context, namespace st
 func validateSAPBTPOperatorSecret(secret *v1.Secret) error {
 	secretData := secret.Data
 	if secretData == nil {
-		return fmt.Errorf("invalid secret - secret data is missing")
+		return fmt.Errorf("invalid secret: data is missing. Check the fields and try again")
 	}
 
 	for _, field := range []string{"clientid", "clientsecret", "url", "tokenurl"} {
 		if len(secretData[field]) == 0 {
-			return fmt.Errorf("invalid secret - %s is missing", field)
+			return fmt.Errorf("invalid secret: '%s' field is missing", field)
 		}
 	}
 

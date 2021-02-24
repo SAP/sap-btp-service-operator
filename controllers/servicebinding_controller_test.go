@@ -30,7 +30,7 @@ const (
 	bindingTestNamespace = "test-namespace"
 )
 
-var _ = Describe("ServiceBinding controller", func() {
+var _ = FDescribe("ServiceBinding controller", func() {
 
 	// Define utility constants for object names and testing timeouts/durations and intervals.
 
@@ -510,7 +510,7 @@ var _ = Describe("ServiceBinding controller", func() {
 				createdBinding.Spec.ExternalName = "new-external-name"
 				err := k8sClient.Update(context.Background(), createdBinding)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("service binding spec cannot be modified after creation"))
+				Expect(err.Error()).To(ContainSubstring("updating service bindings is not supported"))
 			})
 		})
 
@@ -519,7 +519,7 @@ var _ = Describe("ServiceBinding controller", func() {
 				createdBinding.Spec.ServiceInstanceName = "new-instance-name"
 				err := k8sClient.Update(context.Background(), createdBinding)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("service binding spec cannot be modified after creation"))
+				Expect(err.Error()).To(ContainSubstring("updating service bindings is not supported"))
 			})
 		})
 
@@ -530,7 +530,7 @@ var _ = Describe("ServiceBinding controller", func() {
 				}
 				err := k8sClient.Update(context.Background(), createdBinding)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("service binding spec cannot be modified after creation"))
+				Expect(err.Error()).To(ContainSubstring("updating service bindings is not supported"))
 			})
 		})
 

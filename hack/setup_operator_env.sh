@@ -59,7 +59,7 @@ store_secret() {
 apiVersion: v1
 kind: Secret
 metadata:
-  name: sap-btp-service-operator-secret
+  name: sap-btp-service-operator
   namespace: $management_namespace
 type: Opaque
 data:
