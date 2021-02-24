@@ -14,7 +14,7 @@ import (
 //TODO + revisit the name based approach for managed secret, replace with label based mechanism + admission webhook for secrets to avoid duplications
 
 const (
-	SAPBTPOperatorSecretName = "sapbtp-operator-secret"
+	SAPBTPOperatorSecretName = "sap-btp-service-operator-secret"
 )
 
 type SecretResolver struct {
