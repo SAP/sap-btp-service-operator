@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   labels:
     control-plane: controller-manager
-  name: sapbtp-operator-controller-manager
+  name: sap-btp-operator-controller-manager
   namespace: {{.Release.Namespace}}
 spec:
   replicas: 1
