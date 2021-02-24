@@ -33,7 +33,7 @@ spec:
             - /manager
           envFrom:
             - configMapRef:
-                name: sapbtp-operator-config
+                name: sap-btp-operator-config
           image: {{.Values.manager.image.repository}}:{{.Values.manager.image.tag}}
           imagePullPolicy: IfNotPresent
           name: manager

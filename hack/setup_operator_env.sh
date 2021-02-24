@@ -42,7 +42,7 @@ data:
   CLUSTER_ID: "$clusterid"
   MANAGEMENT_NAMESPACE: "$management_namespace"
 metadata:
-  name: sapbtp-operator-config
+  name: sap-btp-operator-config
   namespace: operators
 EOT
 }

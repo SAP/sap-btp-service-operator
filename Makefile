@@ -45,15 +45,15 @@ uninstall: manifests
 
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
 deploy: manifests helm-charts
-	helm upgrade --install sapbtp-operator ./sapbtp-operator-charts \
+	helm upgrade --install sap-btp-operator ./sapbtp-operator-charts \
         --create-namespace \
-        --namespace=sapbtp-operator \
+        --namespace=sap-btp-operator \
         --values=hack/override_values.yaml \
 		--set manager.image.repository=controller \
 		--set manager.image.tag=latest
 
 undeploy:
-	helm uninstall sapbtp-operator -n sapbtp-operator
+	helm uninstall sap-btp-operator -n sap-btp-operator
 
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen
