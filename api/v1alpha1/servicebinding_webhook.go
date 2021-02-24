@@ -70,7 +70,7 @@ func (r *ServiceBinding) ValidateUpdate(old runtime.Object) error {
 	servicebindinglog.Info("validate update", "name", r.Name)
 
 	if r.specChanged(old) && r.Status.BindingID != "" {
-		return fmt.Errorf("service binding spec cannot be modified after creation")
+		return fmt.Errorf("updating service bindings is not supported")
 	}
 
 	return nil

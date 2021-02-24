@@ -218,7 +218,7 @@ var _ = Describe("ServiceBinding controller", func() {
 			When("referenced service instance does not exist", func() {
 				It("should fail", func() {
 					createBindingWithBlockedError(context.Background(), bindingName, bindingTestNamespace, "no-such-instance", "",
-						"unable to find service instance")
+						"couldn't find the service instance")
 				})
 			})
 
@@ -231,7 +231,7 @@ var _ = Describe("ServiceBinding controller", func() {
 				})
 				It("should fail", func() {
 					createBindingWithBlockedError(context.Background(), bindingName, otherNamespace, instanceName, "",
-						fmt.Sprintf("unable to find service instance"))
+						fmt.Sprintf("couldn't find the service instance"))
 				})
 			})
 
@@ -357,7 +357,7 @@ var _ = Describe("ServiceBinding controller", func() {
 							if err != nil {
 								return false
 							}
-							return isFailed(createdBinding) && strings.Contains(createdBinding.Status.Conditions[0].Message, "failed to store binding secret")
+							return isFailed(createdBinding) && strings.Contains(createdBinding.Status.Conditions[0].Message, "failed to create secret")
 						}, timeout, interval).Should(BeTrue())
 					})
 				})
@@ -510,7 +510,7 @@ var _ = Describe("ServiceBinding controller", func() {
 				createdBinding.Spec.ExternalName = "new-external-name"
 				err := k8sClient.Update(context.Background(), createdBinding)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("service binding spec cannot be modified after creation"))
+				Expect(err.Error()).To(ContainSubstring("updating service bindings is not supported"))
 			})
 		})
 
@@ -519,7 +519,7 @@ var _ = Describe("ServiceBinding controller", func() {
 				createdBinding.Spec.ServiceInstanceName = "new-instance-name"
 				err := k8sClient.Update(context.Background(), createdBinding)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("service binding spec cannot be modified after creation"))
+				Expect(err.Error()).To(ContainSubstring("updating service bindings is not supported"))
 			})
 		})
 
@@ -530,7 +530,7 @@ var _ = Describe("ServiceBinding controller", func() {
 				}
 				err := k8sClient.Update(context.Background(), createdBinding)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("service binding spec cannot be modified after creation"))
+				Expect(err.Error()).To(ContainSubstring("updating service bindings is not supported"))
 			})
 		})
 

@@ -97,7 +97,7 @@ func (client *serviceManagerClient) Provision(instance *types.ServiceInstance, s
 	var newInstance *types.ServiceInstance
 	var instanceID string
 	if len(serviceName) == 0 || len(planName) == 0 {
-		return "", "", fmt.Errorf("service name and plan name must be not empty for instance %s", instance.Name)
+		return "", "", fmt.Errorf("missing field values. Specify service name and plan name for the instance '%s'", instance.Name)
 	}
 
 	planID, err := client.getAndValidatePlanID(instance.ServicePlanID, serviceName, planName)
@@ -114,7 +114,7 @@ func (client *serviceManagerClient) Provision(instance *types.ServiceInstance, s
 	if len(location) > 0 {
 		instanceID = ExtractInstanceID(location)
 		if len(instanceID) == 0 {
-			return "", "", fmt.Errorf("failed to extract instance ID from operation URL %s", location)
+			return "", "", fmt.Errorf("failed to extract the service instance ID from the async operation URL: %s", location)
 		}
 	} else if newInstance != nil {
 		instanceID = newInstance.ID
@@ -324,7 +324,7 @@ func (client *serviceManagerClient) getAndValidatePlanID(planID string, serviceN
 
 	var commaSepOfferingIds string
 	if len(offerings.ServiceOfferings) == 0 {
-		return "", fmt.Errorf("service offering with name %s not found", serviceName)
+		return "", fmt.Errorf("couldn't find the service offering '%s'", serviceName)
 	}
 
 	serviceOfferingIds := make([]string, 0, len(offerings.ServiceOfferings))
@@ -342,7 +342,7 @@ func (client *serviceManagerClient) getAndValidatePlanID(planID string, serviceN
 		return "", err
 	}
 	if len(plans.ServicePlans) == 0 {
-		return "", fmt.Errorf("service plan %s not found for service offering %s", planName, serviceName)
+		return "", fmt.Errorf("couldn't find the service plan '%s' for the service offering '%s'", planName, serviceName)
 	} else if len(plans.ServicePlans) == 1 && len(planID) == 0 {
 		return plans.ServicePlans[0].ID, nil
 	} else {
@@ -354,9 +354,9 @@ func (client *serviceManagerClient) getAndValidatePlanID(planID string, serviceN
 	}
 
 	if len(planID) > 0 {
-		err = fmt.Errorf("provided plan ID %s does not match the provided offering name %s and plan name %s", planID, serviceName, planName)
+		err = fmt.Errorf("the provided plan ID '%s' doesn't match the provided offering name '%s' and plan name '%s", planID, serviceName, planName)
 	} else {
-		err = fmt.Errorf("ambiguity error, found more than one resource matching the provided offering name %s and plan name %s, provide the desired servicePlanID", serviceName, planName)
+		err = fmt.Errorf("ambiguity error: found more than one resource that matches the provided offering name '%s' and plan name '%s'. Please provide servicePlanID", serviceName, planName)
 	}
 	return "", err
 

@@ -73,18 +73,13 @@ func (r *BaseReconciler) getSMClient(ctx context.Context, log logr.Logger, objec
 	}
 
 	secret, err := r.SecretResolver.GetSecretForResource(ctx, object.GetNamespace())
-	if err != nil || secret == nil {
-		setBlockedCondition("Secret not found", object)
+	if err != nil {
+		setBlockedCondition("secret not found", object)
 		if err := r.updateStatusWithRetries(ctx, object, log); err != nil {
 			return nil, err
 		}
-		var secretResolveErr error
-		if err != nil {
-			secretResolveErr = fmt.Errorf("could not resolve SM secret: %s", err.Error())
-		} else {
-			secretResolveErr = fmt.Errorf("SM secret not found")
-		}
-		return nil, secretResolveErr
+
+		return nil, err
 	}
 
 	secretData := secret.Data
@@ -108,7 +103,7 @@ func (r *BaseReconciler) removeFinalizer(ctx context.Context, object servicesv1a
 			}
 			controllerutil.RemoveFinalizer(object, finalizerName)
 			if err := r.Update(ctx, object); err != nil {
-				return fmt.Errorf("failed to remove finalizer %s : %v", finalizerName, err)
+				return fmt.Errorf("failed to remove the finalizer '%s'. Error: %v", finalizerName, err)
 			}
 		}
 		log.Info(fmt.Sprintf("removed finalizer %s from %s", finalizerName, object.GetControllerName()))
@@ -126,10 +121,10 @@ func (r *BaseReconciler) addFinalizer(ctx context.Context, object servicesv1alph
 			}
 			controllerutil.AddFinalizer(object, finalizerName)
 			if err := r.Update(ctx, object); err != nil {
-				return fmt.Errorf("failed to add finalizer %s : %v", finalizerName, err)
+				return fmt.Errorf("failed to add the finalizer '%s'. Error: %v", finalizerName, err)
 			}
 		}
-		log.Info(fmt.Sprintf("added finalizer %s to %s", finalizerName, object.GetControllerName()))
+		log.Info(fmt.Sprintf("added finalizer '%s' to %s", finalizerName, object.GetControllerName()))
 		return nil
 	}
 	return nil

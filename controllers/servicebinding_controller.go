@@ -105,9 +105,9 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	if err != nil || serviceNotUsable(serviceInstance) {
 		var instanceErr error
 		if err != nil {
-			instanceErr = fmt.Errorf("unable to find service instance %s: %s", serviceBinding.Spec.ServiceInstanceName, err.Error())
+			instanceErr = fmt.Errorf("couldn't find the service instance '%s'. Error: %v", serviceBinding.Spec.ServiceInstanceName, err.Error())
 		} else {
-			instanceErr = fmt.Errorf("service instance %s is not usable, unable to create binding %s", serviceBinding.Spec.ServiceInstanceName, serviceBinding.Name)
+			instanceErr = fmt.Errorf("service instance '%s' is not usable", serviceBinding.Spec.ServiceInstanceName)
 		}
 
 		setBlockedCondition(instanceErr.Error(), serviceBinding)
@@ -121,7 +121,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	if isInProgress(serviceInstance) {
 		log.Info(fmt.Sprintf("Service instance with k8s name %s is not ready for binding yet", serviceInstance.Name))
 
-		setInProgressCondition(smTypes.CREATE, fmt.Sprintf("Referenced service instance with k8s name %s is not ready, cannot create binding yet", serviceBinding.Spec.ServiceInstanceName),
+		setInProgressCondition(smTypes.CREATE, fmt.Sprintf("creation in progress, waiting for service instance '%s' to be ready", serviceBinding.Spec.ServiceInstanceName),
 			serviceBinding)
 		if err := r.updateStatusWithRetries(ctx, serviceBinding, log); err != nil {
 			return ctrl.Result{}, err
@@ -461,7 +461,7 @@ func (r *ServiceBindingReconciler) storeBindingSecret(ctx context.Context, k8sBi
 		credentialsMap, err = normalizeCredentials(smBinding.Credentials)
 		if err != nil {
 			logger.Error(err, "Failed to store binding secret")
-			return fmt.Errorf("failed to store binding secret: %s", err.Error())
+			return fmt.Errorf("failed to create secret. Error: %v", err.Error())
 		}
 	}
 
@@ -573,7 +573,7 @@ func (r *ServiceBindingReconciler) validateSecretNameIsAvailable(ctx context.Con
 		if len(otherBindingName) > 0 {
 			return fmt.Errorf("secret %s belongs to another binding %s, choose a differnet name", binding.Spec.SecretName, otherBindingName)
 		}
-		return fmt.Errorf("the specified secret name '%s' is already taken, choose a differnet name", binding.Spec.SecretName)
+		return fmt.Errorf("the specified secret name '%s' is already taken. Choose another name and try again", binding.Spec.SecretName)
 	}
 	return nil
 }
