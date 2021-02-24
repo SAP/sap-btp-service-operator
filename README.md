@@ -108,7 +108,7 @@ This feature is still under development, review, and testing.
     ```bash
     kubectl get serviceinstances
     NAME                  OFFERING          PLAN        STATUS    AGE
-    my-service-instance   <offering>.       <plan>      Created   44s
+    my-service-instance   <offering>        <plan>      Created   44s
     ```
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
