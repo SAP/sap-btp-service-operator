@@ -121,7 +121,7 @@ func (r *BaseReconciler) addFinalizer(ctx context.Context, object servicesv1alph
 			}
 			controllerutil.AddFinalizer(object, finalizerName)
 			if err := r.Update(ctx, object); err != nil {
-				return fmt.Errorf("failed to add finalizer '%s'. Error: %v", finalizerName, err)
+				return fmt.Errorf("failed to add the finalizer '%s'. Error: %v", finalizerName, err)
 			}
 		}
 		log.Info(fmt.Sprintf("added finalizer '%s' to %s", finalizerName, object.GetControllerName()))
