@@ -357,7 +357,7 @@ var _ = Describe("ServiceBinding controller", func() {
 							if err != nil {
 								return false
 							}
-							return isFailed(createdBinding) && strings.Contains(createdBinding.Status.Conditions[0].Message, "failed to create secret for service")
+							return isFailed(createdBinding) && strings.Contains(createdBinding.Status.Conditions[0].Message, "failed to create secret")
 						}, timeout, interval).Should(BeTrue())
 					})
 				})
