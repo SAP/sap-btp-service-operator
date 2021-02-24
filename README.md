@@ -169,7 +169,7 @@ This feature is still under development, review, and testing.
 | servicePlanName`*` |`string`|The plan to use for the service instance.|
 | servicePlanID   |`string`|The plan ID in case service offering and plan name are ambiguous.|
 | externalName       |`string`|The name for the service instance in SAP BTP, defaults to the instance `metadata.name` if not specified. |
-| parameters       |`[]object`|Some services support the provisioning of additional configuration parameters during the instance creation. For the list of supported                                  parameters, check the documentation of the particular service offering.|
+| parameters       |`[]object`|Some services support the provisioning of additional configuration parameters during the instance creation.  For the list of supported parameters, check the documentation of the particular service offering.|
 
 #### Status
 | Parameter         | Type     | Description                                                                                                   |
