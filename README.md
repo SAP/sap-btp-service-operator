@@ -6,8 +6,9 @@
 
 # SAP Business Technology Platform (SAP BTP) Service Operator for Kubernetes
 
-
-With the SAP BTP service operator, you can provision and consume SAP BTP services in your Kubernetes cluster in a Kubernetes-native way. The SAP BTP service operator is based on the Kubernetes operator pattern to consume SAP BTP services from within the cluster using Kubernetes native tools.
+With the SAP BTP service operator, you can consume [SAP BTP services](https://platformx-d8bd51250.dispatcher.us2.hana.ondemand.com/protected/index.html#/viewServices?) from your Kubernetes cluster using Kubernetes-native tools. 
+SAP BTP service operator allows you to provision and manage service instances and service bindings of SAP BTP services so that your Kubernetes-native applications can access and use needed services from the cluster.  
+The SAP BTP service operator is based on the [Kubernetes Operator pattern](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/).
 
 ## Note
 This feature is still under development, review, and testing. 
@@ -25,6 +26,7 @@ This feature is still under development, review, and testing.
 
 ## Prerequisites
 - SAP BTP [Global Account](https://help.sap.com/viewer/65de2977205c403bbc107264b8eccf4b/Cloud/en-US/d61c2819034b48e68145c45c36acba6e.html) and [Subaccount](https://help.sap.com/viewer/65de2977205c403bbc107264b8eccf4b/Cloud/en-US/55d0b6d8b96846b8ae93b85194df0944.html) 
+- Service Management Control (SMCTL) Command Line Interface. See [Using the SMCTL](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/0107f3f8c1954a4e96802f556fc807e3.html).
 - [Kubernetes cluster](https://kubernetes.io/) running version 1.17 or higher 
 - [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) v1.17 or higher
 - [helm](https://helm.sh/) v3.0 or higher
@@ -36,22 +38,25 @@ This feature is still under development, review, and testing.
 
 2. Obtain the access credentials for the SAP BTP service operator:
 
-   a. Using the SAP BTP Cockpit or CLI, create an instance of the SAP Cloud Service Management service (technical name: `service-manager`) with the plan:
+   a. Using the SAP BTP cockpit or CLI, create an instance of the SAP Cloud Service Management service (technical name: `service-manager`) with the plan:
     `service-operator-access`
       
-      For more information about creating service instances, see:
-      [Cockpit](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/bf71f6a7b7754dbd9dfc2569791ccc96.html), 
-      [CLI](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/b327b66b711746b085ec5d2ea16e608e.html)  
+      For more information about creating service instances, see:     
+      * [Creating Service Instances Using the SAP BTP Cockpit](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/bf71f6a7b7754dbd9dfc2569791ccc96.html)
+        
+      * [Creating Service Instances using SMCTL](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/b327b66b711746b085ec5d2ea16e608e.html)  
    
-   b. Create a binding to the created service instance:
+   b. Create a binding to the created service instance.
       
-      For more information about creating service bindings, see:
-            [Cockpit](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/bf71f6a7b7754dbd9dfc2569791ccc96.html), 
-            [CLI](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/f53ff2634e0a46d6bfc72ec075418dcd.html) 
+   For more information about creating service bindings, see:  
+      * [Creating Service Bindings Using the SAP BTP Cockpit](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/55b31ea23c474f6ba2f64ee4848ab1b3.html) 
+       
+      * [Creating Service Bindings Using SMCTL](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/f53ff2634e0a46d6bfc72ec075418dcd.html). 
    
    c. Retrieve the generated access credentials from the created binding:
    
-       The example of the credentials in the binding object
+      The example of the credentials in the binding object
+      
        ```json
         {
             "clientid": "xxxxxxx",
@@ -75,13 +80,13 @@ This feature is still under development, review, and testing.
 
     The list of available releases: [sapbtp-operator releases](https://github.com/SAP/sap-btp-service-operator/releases)
 
-[Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
+[Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes).
 
 ## Using the SAP BTP Service Operator
 
 #### Step 1: Create a service instance
 
-1.  To create an instance of a SAP BTP service, first create a `ServiceInstance` custom-resource file:
+1.  To create an instance of a service offered by SAP BTP, first create a `ServiceInstance` custom-resource file:
 
 ```yaml
     apiVersion: services.cloud.sap.com/v1alpha1
@@ -93,9 +98,11 @@ This feature is still under development, review, and testing.
         servicePlanName: <plan>
    ```
 
-   *   `<offering>` is the name of the SAP BTP service that you want to create. 
-       You can find the list of available services in the SAP BTP cockpit, see [Service Marketplace](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/55b31ea23c474f6ba2f64ee4848ab1b3.html).
-   *   `<plan>` is the plan of the selected service offering that you want to create.
+   *   `<offering>` - The name of the SAP BTP service that you want to create. 
+       To learn more about viewing and managing the available services for your subaccount in the SAP BTP cockpit, see [Service Marketplace](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/affcc245c332433ba71917ff715b9971.html). 
+        
+        Tip: Use the *Environment* filter to get all offerings that are relevant for Kubernetes.
+   *   `<plan>` - The plan of the selected service offering that you want to create.
 
 2.  Apply the custom-resource file in your cluster to create the instance.
 
@@ -103,8 +110,8 @@ This feature is still under development, review, and testing.
     kubectl apply -f path/to/my-service-instance.yaml
     ```
 
-3.  Check that your service status is **Created** in your cluster.
-        
+3.  Check that the status of the service in your cluster is **Created**.
+
     ```bash
     kubectl get serviceinstances
     NAME                  OFFERING          PLAN        STATUS    AGE
@@ -114,7 +121,7 @@ This feature is still under development, review, and testing.
 
 #### Step 2: Create a Service Binding
 
-1.  To get access credentials to your service instance and make them available in the cluster so that your applications can use it, create a `ServiceBinding` custom resource, and set the `serviceInstanceName` field to the name of the `ServiceInstance` resource you created.
+1.  To get access credentials to your service instance and make it available in the cluster so that your applications can use it, create a `ServiceBinding` custom resource, and set the `serviceInstanceName` field to the name of the `ServiceInstance` resource you created.
 
     ```yaml
     apiVersion: services.cloud.sap.com/v1alpha1
@@ -148,7 +155,7 @@ This feature is still under development, review, and testing.
     my-binding   Opaque   5      32s
     ```
     
-    See [Using Secrets](https://kubernetes.io/docs/concepts/configuration/secret/#using-secrets) for the different options to use the credentials from your application running in the Kubernetes cluster, 
+    See [Using Secrets](https://kubernetes.io/docs/concepts/configuration/secret/#using-secrets) to learn about different options on how to use the credentials from your application running in the Kubernetes cluster, 
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
@@ -156,74 +163,75 @@ This feature is still under development, review, and testing.
 
 ### Service Instance
 #### Spec
-| Property         | Type     | Comments                                                                                                   |
+| Parameter         | Type     | Description                                                                                                   |
 |:-----------------|:---------|:-----------------------------------------------------------------------------------------------------------|
-| serviceOfferingName`*`   | `string`   | The SAP BTP service offering name |
-| servicePlanName`*` | `string`   |  The plan to use for the service instance |
-| servicePlanID   |  `string`   |  The plan ID in case service offering and plan name are ambiguous |
-| externalName       | `string`   |  The name for the service instance in SAP BTP, defaults to the binding `metadata.name` if not specified |
-| parameters       |  `[]object`  |  Provisioning parameters for the instance, check the documentation of the specific service you are using for details |
+| serviceOfferingName`*` | `string` | The name of the SAP BTP service offering. |
+| servicePlanName`*` | `string` |  The plan to use for the service instance.   |
+| servicePlanID   |  `string`  | The plan ID in case service offering and plan name are ambiguous. |
+| externalName       | `string` | The name for the service instance in SAP BTP, defaults to the instance `metadata.name` if not specified. |
+| parameters       | `[]object` | Some services support the provisioning of additional configuration parameters during the instance creation.<br/>For the list of supported parameters, check the documentation of the particular service offering. |
 
 #### Status
-| Property         | Type     | Comments                                                                                                   |
+| Parameter         | Type     | Description                                                                                                   |
 |:-----------------|:---------|:-----------------------------------------------------------------------------------------------------------|
-| instanceID   | `string`   | The service instance ID in SAP Cloud Service Management service |
-| operationURL | `string`   |  URL of ongoing operation for the service instance |
-| operationType   |  `string`   |  The operation type (CREATE/UPDATE/DELETE) for ongoing operation |
-| conditions       | `[]condition`   |  An array of conditions describing the status of the service instance. <br>The possible condition types are:<br>- `Ready`: set to `true`  if the instance is ready and usable<br>- `Failed`: set to `true` when an operation on the service instance fails, in this case the error details are available in the condition message.
+| instanceID   | `string` | The service instance ID in SAP Cloud Service Management service.  |
+| operationURL | `string` | The URL of the current operation performed on the service instance.  |
+| operationType   |  `string`| The type of the current operation. Possible values are CREATE, UPDATE, or DELETE. |
+| conditions       |  `[]condition`   | An array of conditions describing the status of the service instance.<br/>The possible condition types are:<br>- `Ready`: set to `true`  if the instance is ready and usable<br/>- `Failed`: set to `true` when an operation on the service instance fails.<br/> In the case of failure, the details about the error are available in the condition message.
 
 
 
 ### Service Binding 
 #### Spec
-| Parameter             | Type       | Comments                                                                                                   |
+| Parameter             | Type       | Description                                                                                                   |
 |:-----------------|:---------|:-----------------------------------------------------------------------------------------------------------|
-| serviceInstanceName`*`   | `string`   | The Kubernetes name of the service instance to bind, should be in the namespace of the binding |
-| externalName       | `string`   |  The name for the service binding in SAP Cloud Service Management service, defaults to the binding `metadata.name` if not specified |
-| secretName       | `string`   |  The name of the secret where the credentials are stored, defaults to the binding `metadata.name` if not specified |
-| parameters       |  `[]object`  |  Parameters for the binding |
+| serviceInstanceName`*`   | `string`   |  The Kubernetes name of the service instance to bind, should be in the namespace of the binding. |
+| externalName       | `string`   |  The name for the service binding in SAP BTP, defaults to the binding `metadata.name` if not specified. |
+| secretName       | `string`   |  The name of the secret where the credentials are stored, defaults to the binding `metadata.name` if not specified. |
+| parameters       |  `[]object`  |  Some services support the provisioning of additional configuration parameters during the bind request.<br/>For the list of supported                                  parameters, check the documentation of the particular service offering.|
 
 #### Status
-| Property         | Type     | Comments                                                                                                   |
+| Parameter         | Type     | Description                                                                                                   |
 |:-----------------|:---------|:-----------------------------------------------------------------------------------------------------------|
-| instanceID   | `string`   | The ID of the bound instance in SAP Cloud Service Management service |
-| bindingID   | `string`   | The service binding ID in SAP Cloud Service Management service|
-| operationURL | `string`   |  URL of the ongoing operation for the service binding |
-| operationType   |  `string`   |  The operation type (CREATE/UPDATE/DELETE) for ongoing operation |
-| conditions       | `[]condition`   |  An array of conditions describing the status of the service instance. <br>The possible conditions types are:<br>- `Ready`: set to `true` if the binding is ready and usable<br>- `Failed`: set to `true` when an operation on the service binding fails, in this case the error details are available in the condition message  
+| instanceID   |  `string`  | The ID of the bound instance in the SAP Cloud Service Management service. |
+| bindingID   |  `string`  | The service binding ID in SAP Cloud Service Management service. |
+| operationURL |`string`| The URL of the current operation performed on the service binding. |
+| operationType| `string `| The type of the current operation. Possible values are CREATE, UPDATE, or DELETE. |
+| conditions| `[]condition` | An array of conditions describing the status of the service instance.<br/>The possible conditions types are:<br/>- `Ready`: set to `true` if the binding is ready and usable<br/>- `Failed`: set to `true` when an operation on the service binding fails.<br/> In the case of failure, the details about the error are available in the condition message.
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
 ## Support
-You're welcome to open new issues for feature requests, bugs, or general feedback on this project's GitHub issues page. 
+You're welcome to raise issues related to feature requests, bugs, or give us general feedback on this project's GitHub Issues page. 
 The SAP BTP service operator project maintainers will respond to the best of their abilities. 
 
 ## Contributions
 We currently do not accept community contributions. 
 
 ## SAP BTP kubectl Plugin (Experimental) 
-The SAP BTP kubectl plugin extends kubectl with commands for getting the available services in your SAP BTP account, 
+The SAP BTP kubectl plugin extends kubectl with commands for getting the available services in your SAP BTP account by
 using the access credentials stored in the cluster.
 
 ### Prerequisites
 - [jq](https://stedolan.github.io/jq/)
 
 ### Limitations
-- The SAP BTP kubectl plugin is currently based on `bash`. If using Windows, you should use the SAP BTP plugin commands from a linux shell (e.g. [Cygwin](https://www.cygwin.com/)).  
+- The SAP BTP kubectl plugin is currently based on `bash`. If you're using Windows, you should utilize the SAP BTP plugin commands from a linux shell (e.g. [Cygwin](https://www.cygwin.com/)).  
 
 ### Installation
 - Download https://github.com/SAP/sap-btp-service-operator/releases/download/${release}/kubectl-sapbtp
-- Move the executable file to anywhere on your `PATH`
+- Move the executable file to any location in your `PATH`
 
-#### Usage
+### Usage
 ```
   kubectl sapbtp marketplace -n <namespace>
   kubectl sapbtp plans -n <namespace>
   kubectl sapbtp services -n <namespace>
 ```
 
-Use the `namespace` parameter to specify the location of the secret containing the SAP BTP access credentials, usually it is the namespace in which you installed the operator. 
-If not specified the `default` namespace is used. 
+Use the `namespace` parameter to specify the location of the secret containing the SAP BTP access credentials.  
+Usually it is the namespace in which you installed the operator. 
+If not specified, the `default` namespace is used. 
 
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
