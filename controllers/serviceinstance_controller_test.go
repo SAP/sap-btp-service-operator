@@ -12,6 +12,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -42,6 +43,14 @@ var _ = Describe("ServiceInstance controller", func() {
 		ServiceOfferingName: fakeOfferingName,
 		Parameters: &runtime.RawExtension{
 			Raw: []byte(`{"key": "value"}`),
+		},
+		ParametersFrom: []v1alpha1.ParametersFromSource{
+			{
+				SecretKeyRef: &v1alpha1.SecretKeyReference{
+					Name: "param-secret",
+					Key:  "secret-parameter",
+				},
+			},
 		},
 	}
 
@@ -120,6 +129,18 @@ var _ = Describe("ServiceInstance controller", func() {
 		fakeClient.ProvisionReturns(fakeInstanceID, "", nil)
 		fakeClient.DeprovisionReturns("", nil)
 		fakeClient.GetInstanceByIDReturns(&smclientTypes.ServiceInstance{ID: fakeInstanceID, Ready: true, LastOperation: &smTypes.Operation{State: smTypes.SUCCEEDED, Type: smTypes.CREATE}}, nil)
+		credentialsMap := make(map[string][]byte)
+		credentialsMap["secret-parameter"] = []byte("{\"secret-key\":\"secret-value\"}")
+		secret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "param-secret",
+				Namespace: testNamespace,
+			},
+			Data: credentialsMap,
+		}
+		err := k8sClient.Create(context.Background(), secret)
+		Expect(err).ToNot(HaveOccurred())
+
 	})
 
 	AfterEach(func() {
@@ -187,13 +208,13 @@ var _ = Describe("ServiceInstance controller", func() {
 
 		Context("Sync", func() {
 			When("provision request to SM succeeds", func() {
-				It("should provision instance of the provided offering and plan name successfully", func() {
+				FIt("should provision instance of the provided offering and plan name successfully", func() {
 					serviceInstance = createInstance(ctx, instanceSpec)
 					Expect(serviceInstance.Status.InstanceID).To(Equal(fakeInstanceID))
 					Expect(serviceInstance.Spec.ExternalName).To(Equal(fakeInstanceExternalName))
 					Expect(serviceInstance.Name).To(Equal(fakeInstanceName))
 					Expect(string(serviceInstance.Spec.Parameters.Raw)).To(ContainSubstring("\"key\":\"value\""))
-
+					smInstance, _, _, _ := fakeClient.ProvisionArgsForCall(0)
 				})
 			})
 

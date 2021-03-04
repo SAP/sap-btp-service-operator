@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -53,18 +52,6 @@ type BaseReconciler struct {
 	SMClient       func() sm.Client
 	Config         config.Config
 	SecretResolver *secrets.SecretResolver
-}
-
-func getParameters(sapResource servicesv1alpha1.SAPBTPResource) (json.RawMessage, error) {
-	var instanceParameters json.RawMessage
-	if sapResource.GetParameters() != nil {
-		parametersJSON, err := sapResource.GetParameters().MarshalJSON()
-		if err != nil {
-			return nil, err
-		}
-		instanceParameters = parametersJSON
-	}
-	return instanceParameters, nil
 }
 
 func (r *BaseReconciler) getSMClient(ctx context.Context, log logr.Logger, object servicesv1alpha1.SAPBTPResource) (sm.Client, error) {

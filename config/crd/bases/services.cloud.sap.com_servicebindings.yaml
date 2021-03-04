@@ -58,9 +58,40 @@ spec:
                 description: The name of the binding in Service Manager
                 type: string
               parameters:
-                description: Parameters for the binding
+                description: "Provisioning parameters for the binding. \n The Parameters
+                  field is NOT secret or secured in any way and should NEVER be used
+                  to hold sensitive information. To set parameters that contain secret
+                  information, you should ALWAYS store that information in a Secret
+                  and use the ParametersFrom field."
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
+              parametersFrom:
+                description: List of sources to populate parameters. If a top-level
+                  parameter name exists in multiples sources among `Parameters` and
+                  `ParametersFrom` fields, it is considered to be a user error in
+                  the specification
+                items:
+                  description: ParametersFromSource represents the source of a set
+                    of Parameters
+                  properties:
+                    secretKeyRef:
+                      description: The Secret key to select from. The value must be
+                        a JSON object.
+                      properties:
+                        key:
+                          description: The key of the secret to select from.  Must
+                            be a valid secret key.
+                          type: string
+                        name:
+                          description: The name of the secret in the pod's namespace
+                            to select from.
+                          type: string
+                      required:
+                      - key
+                      - name
+                      type: object
+                  type: object
+                type: array
               secretName:
                 description: SecretName is the name of the secret where credentials
                   will be stored
@@ -70,6 +101,35 @@ spec:
                   be in the namespace of the binding
                 minLength: 1
                 type: string
+              userInfo:
+                description: UserInfo contains information about the user that last
+                  modified this instance. This field is set by the API server and
+                  not settable by the end-user. User-provided values for this field
+                  are not saved.
+                properties:
+                  extra:
+                    additionalProperties:
+                      description: ExtraValue masks the value so protobuf can generate
+                      items:
+                        type: string
+                      type: array
+                    description: Any additional information provided by the authenticator.
+                    type: object
+                  groups:
+                    description: The names of groups this user is a part of.
+                    items:
+                      type: string
+                    type: array
+                  uid:
+                    description: A unique value that identifies this user across time.
+                      If this user is deleted and another user by the same name is
+                      added, they will have different UIDs.
+                    type: string
+                  username:
+                    description: The name that uniquely identifies this user among
+                      all active users.
+                    type: string
+                type: object
             required:
             - serviceInstanceName
             type: object

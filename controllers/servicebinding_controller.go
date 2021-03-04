@@ -175,7 +175,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient sm.Client, serviceInstance *v1alpha1.ServiceInstance, serviceBinding *v1alpha1.ServiceBinding, log logr.Logger) (ctrl.Result, error) {
 	log.Info("Creating smBinding in SM")
 	serviceBinding.Status.InstanceID = serviceInstance.Status.InstanceID
-	bindingParameters, err := getParameters(serviceBinding)
+	_, bindingParameters, err := buildParameters(r.Client, serviceBinding.Namespace, serviceBinding.Spec.ParametersFrom, serviceBinding.Spec.Parameters)
 	if err != nil {
 		log.Error(err, "failed to parse smBinding parameters")
 		return r.markAsNonTransientError(ctx, smTypes.CREATE, err.Error(), serviceBinding, log)

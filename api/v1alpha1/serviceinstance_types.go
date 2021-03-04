@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"github.com/Peripli/service-manager/pkg/types"
+	v1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -45,10 +46,28 @@ type ServiceInstanceSpec struct {
 	// The name of the instance in Service Manager
 	ExternalName string `json:"externalName,omitempty"`
 
-	// Provisioning parameters for the instance
+	// Provisioning parameters for the instance.
+	//
+	// The Parameters field is NOT secret or secured in any way and should
+	// NEVER be used to hold sensitive information. To set parameters that
+	// contain secret information, you should ALWAYS store that information
+	// in a Secret and use the ParametersFrom field.
 	// +optional
 	// +kubebuilder:pruning:PreserveUnknownFields
 	Parameters *runtime.RawExtension `json:"parameters,omitempty"`
+
+	// List of sources to populate parameters.
+	// If a top-level parameter name exists in multiples sources among
+	// `Parameters` and `ParametersFrom` fields, it is
+	// considered to be a user error in the specification
+	// +optional
+	ParametersFrom []ParametersFromSource `json:"parametersFrom,omitempty"`
+
+	// UserInfo contains information about the user that last modified this
+	// instance. This field is set by the API server and not settable by the
+	// end-user. User-provided values for this field are not saved.
+	// +optional
+	UserInfo *v1.UserInfo `json:"userInfo,omitempty"`
 }
 
 // ServiceInstanceStatus defines the observed state of ServiceInstance
