@@ -44,7 +44,7 @@ type ServiceBindingSpec struct {
 	// +optional
 	SecretName string `json:"secretName"`
 
-	// Provisioning parameters for the binding.
+	// Parameters for the binding.
 	//
 	// The Parameters field is NOT secret or secured in any way and should
 	// NEVER be used to hold sensitive information. To set parameters that

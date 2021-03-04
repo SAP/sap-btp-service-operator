@@ -58,9 +58,9 @@ spec:
                 description: The name of the binding in Service Manager
                 type: string
               parameters:
-                description: "Provisioning parameters for the binding. \n The Parameters
-                  field is NOT secret or secured in any way and should NEVER be used
-                  to hold sensitive information. To set parameters that contain secret
+                description: "Parameters for the binding. \n The Parameters field
+                  is NOT secret or secured in any way and should NEVER be used to
+                  hold sensitive information. To set parameters that contain secret
                   information, you should ALWAYS store that information in a Secret
                   and use the ParametersFrom field."
                 type: object
