@@ -3,6 +3,9 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"strings"
+
 	smTypes "github.com/Peripli/service-manager/pkg/types"
 	"github.com/SAP/sap-btp-service-operator/api/v1alpha1"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
@@ -14,11 +17,10 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"net/http"
-	"strings"
 )
 
 // +kubebuilder:docs-gen:collapse=Imports
@@ -129,18 +131,14 @@ var _ = Describe("ServiceInstance controller", func() {
 		fakeClient.ProvisionReturns(fakeInstanceID, "", nil)
 		fakeClient.DeprovisionReturns("", nil)
 		fakeClient.GetInstanceByIDReturns(&smclientTypes.ServiceInstance{ID: fakeInstanceID, Ready: true, LastOperation: &smTypes.Operation{State: smTypes.SUCCEEDED, Type: smTypes.CREATE}}, nil)
-		credentialsMap := make(map[string][]byte)
-		credentialsMap["secret-parameter"] = []byte("{\"secret-key\":\"secret-value\"}")
-		secret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "param-secret",
-				Namespace: testNamespace,
-			},
-			Data: credentialsMap,
-		}
-		err := k8sClient.Create(context.Background(), secret)
-		Expect(err).ToNot(HaveOccurred())
 
+		secret := &corev1.Secret{}
+		err := k8sClient.Get(ctx, types.NamespacedName{Namespace: testNamespace, Name: "param-secret"}, secret)
+		if apierrors.IsNotFound(err) {
+			createParamsSecret(testNamespace)
+		} else {
+			Expect(err).ToNot(HaveOccurred())
+		}
 	})
 
 	AfterEach(func() {
@@ -208,13 +206,16 @@ var _ = Describe("ServiceInstance controller", func() {
 
 		Context("Sync", func() {
 			When("provision request to SM succeeds", func() {
-				FIt("should provision instance of the provided offering and plan name successfully", func() {
+				It("should provision instance of the provided offering and plan name successfully", func() {
 					serviceInstance = createInstance(ctx, instanceSpec)
 					Expect(serviceInstance.Status.InstanceID).To(Equal(fakeInstanceID))
 					Expect(serviceInstance.Spec.ExternalName).To(Equal(fakeInstanceExternalName))
 					Expect(serviceInstance.Name).To(Equal(fakeInstanceName))
 					Expect(string(serviceInstance.Spec.Parameters.Raw)).To(ContainSubstring("\"key\":\"value\""))
 					smInstance, _, _, _ := fakeClient.ProvisionArgsForCall(0)
+					params := smInstance.Parameters
+					Expect(params).To(ContainSubstring("\"key\":\"value\""))
+					Expect(params).To(ContainSubstring("\"secret-key\":\"secret-value\""))
 				})
 			})
 
@@ -748,3 +749,17 @@ var _ = Describe("ServiceInstance controller", func() {
 		})
 	})
 })
+
+func createParamsSecret(namespace string) {
+	credentialsMap := make(map[string][]byte)
+	credentialsMap["secret-parameter"] = []byte("{\"secret-key\":\"secret-value\"}")
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "param-secret",
+			Namespace: namespace,
+		},
+		Data: credentialsMap,
+	}
+	err := k8sClient.Create(context.Background(), secret)
+	Expect(err).ToNot(HaveOccurred())
+}

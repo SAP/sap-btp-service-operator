@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
+	"strings"
+
 	smTypes "github.com/Peripli/service-manager/pkg/types"
 	"github.com/Peripli/service-manager/pkg/web"
 	"github.com/SAP/sap-btp-service-operator/api/v1alpha1"
@@ -14,13 +17,12 @@ import (
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"net/http"
-	"strings"
 )
 
 // +kubebuilder:docs-gen:collapse=Imports
@@ -58,6 +60,14 @@ var _ = Describe("ServiceBinding controller", func() {
 		binding.Spec.ExternalName = externalName
 		binding.Spec.Parameters = &runtime.RawExtension{
 			Raw: []byte(`{"key": "value"}`),
+		}
+		binding.Spec.ParametersFrom = []v1alpha1.ParametersFromSource{
+			{
+				SecretKeyRef: &v1alpha1.SecretKeyReference{
+					Name: "param-secret",
+					Key:  "secret-parameter",
+				},
+			},
 		}
 
 		if err := k8sClient.Create(ctx, binding); err != nil {
@@ -120,6 +130,10 @@ var _ = Describe("ServiceBinding controller", func() {
 		Expect(createdBinding.Spec.SecretName).To(Not(BeEmpty()))
 		Expect(int(createdBinding.Status.ObservedGeneration)).To(Equal(1))
 		Expect(string(createdBinding.Spec.Parameters.Raw)).To(ContainSubstring("\"key\":\"value\""))
+		smBinding, _ := fakeClient.BindArgsForCall(0)
+		params := smBinding.Parameters
+		Expect(params).To(ContainSubstring("\"key\":\"value\""))
+		Expect(params).To(ContainSubstring("\"secret-key\":\"secret-value\""))
 		return createdBinding
 	}
 
@@ -170,6 +184,13 @@ var _ = Describe("ServiceBinding controller", func() {
 
 		smInstance := &smclientTypes.ServiceInstance{ID: fakeInstanceID, Ready: true, LastOperation: &smTypes.Operation{State: smTypes.SUCCEEDED, Type: smTypes.UPDATE}}
 		fakeClient.GetInstanceByIDReturns(smInstance, nil)
+		secret := &corev1.Secret{}
+		err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: bindingTestNamespace, Name: "param-secret"}, secret)
+		if apierrors.IsNotFound(err) {
+			createParamsSecret(bindingTestNamespace)
+		} else {
+			Expect(err).ToNot(HaveOccurred())
+		}
 	})
 
 	AfterEach(func() {
