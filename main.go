@@ -18,8 +18,9 @@ package main
 
 import (
 	"flag"
-	"github.com/SAP/sap-btp-service-operator/api/v1alpha1/webhooks"
 	"os"
+
+	"github.com/SAP/sap-btp-service-operator/api/v1alpha1/webhooks"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/SAP/sap-btp-service-operator/internal/secrets"
