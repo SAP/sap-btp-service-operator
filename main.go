@@ -111,7 +111,6 @@ func main() {
 			setupLog.Error(err, "unable to create webhook", "webhook", "ServiceBinding")
 			os.Exit(1)
 		}
-		mgr.GetWebhookServer().Register()
 	}
 	// +kubebuilder:scaffold:builder
 
