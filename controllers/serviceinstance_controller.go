@@ -175,12 +175,11 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client
 
 func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient sm.Client, serviceInstance *servicesv1alpha1.ServiceInstance, log logr.Logger) (ctrl.Result, error) {
 	log.Info("Creating instance in SM")
-	instanceParameters, err := getParameters(serviceInstance)
+	_, instanceParameters, err := buildParameters(r.Client, serviceInstance.Namespace, serviceInstance.Spec.ParametersFrom, serviceInstance.Spec.Parameters)
 	if err != nil {
 		//if parameters are invalid there is nothing we can do, the user should fix it according to the error message in the condition
 		log.Error(err, "failed to parse instance parameters")
-		setFailureConditions(smTypes.CREATE, fmt.Sprintf("failed to parse instance parameters: %s", err.Error()), serviceInstance)
-		return ctrl.Result{}, nil
+		return r.markAsNonTransientError(ctx, smTypes.CREATE, err.Error(), serviceInstance, log)
 	}
 
 	smInstanceID, operationURL, provisionErr := smClient.Provision(&types.ServiceInstance{
@@ -226,7 +225,7 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 	var err error
 
 	log.Info(fmt.Sprintf("updating instance %s in SM", serviceInstance.Status.InstanceID))
-	instanceParameters, err := getParameters(serviceInstance)
+	_, instanceParameters, err := buildParameters(r.Client, serviceInstance.Namespace, serviceInstance.Spec.ParametersFrom, serviceInstance.Spec.Parameters)
 	if err != nil {
 		log.Error(err, "failed to parse instance parameters")
 		return r.markAsNonTransientError(ctx, smTypes.UPDATE, fmt.Sprintf("failed to parse parameters: %v", err.Error()), serviceInstance, log)
