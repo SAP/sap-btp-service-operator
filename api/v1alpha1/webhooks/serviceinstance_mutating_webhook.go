@@ -3,9 +3,10 @@ package webhooks
 import (
 	"context"
 	"encoding/json"
+	"net/http"
+
 	"github.com/SAP/sap-btp-service-operator/api/v1alpha1"
 	v1 "k8s.io/api/authentication/v1"
-	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
