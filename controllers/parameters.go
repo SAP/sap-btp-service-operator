@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -21,7 +22,7 @@ import (
 // The third return value is any error that caused the function to fail.
 func buildParameters(kubeClient client.Client, namespace string, parametersFrom []v1alpha1.ParametersFromSource, parameters *runtime.RawExtension) (map[string]interface{}, []byte, error) {
 	params := make(map[string]interface{})
-	if parametersFrom != nil {
+	if len(parametersFrom) > 0 {
 		for _, p := range parametersFrom {
 			fps, err := fetchParametersFromSource(kubeClient, namespace, &p)
 			if err != nil {
@@ -52,7 +53,7 @@ func buildParameters(kubeClient client.Client, namespace string, parametersFrom 
 		params = nil
 	}
 
-	parametersRaw, err := json.Marshal(params)
+	parametersRaw, err := MarshalRawParameters(params)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -91,7 +92,7 @@ func UnmarshalRawParameters(in []byte) (map[string]interface{}, error) {
 
 // MarshalRawParameters marshals the specified map of parameters into JSON
 func MarshalRawParameters(in map[string]interface{}) ([]byte, error) {
-	if in == nil || len(in) == 0 {
+	if len(in) == 0 {
 		return nil, nil
 	}
 	return json.Marshal(in)
