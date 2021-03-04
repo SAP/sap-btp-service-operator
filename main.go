@@ -18,7 +18,9 @@ package main
 
 import (
 	"flag"
+	"github.com/SAP/sap-btp-service-operator/api/v1alpha1/webhooks"
 	"os"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/SAP/sap-btp-service-operator/internal/secrets"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -103,10 +105,9 @@ func main() {
 		os.Exit(1)
 	}
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-		if err = (&servicesv1alpha1.ServiceInstance{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "ServiceInstance")
-			os.Exit(1)
-		}
+
+		mgr.GetWebhookServer().Register("/mutate-services-cloud-sap-com-v1alpha1-serviceinstance", &webhook.Admission{Handler: &webhooks.ServiceInstanceDefaulter{Client: mgr.GetClient()}})
+		mgr.GetWebhookServer().Register("/mutate-services-cloud-sap-com-v1alpha1-servicebinding", &webhook.Admission{Handler: &webhooks.ServiceBindingDefaulter{Client: mgr.GetClient()}})
 		if err = (&servicesv1alpha1.ServiceBinding{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "ServiceBinding")
 			os.Exit(1)
