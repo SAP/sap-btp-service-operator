@@ -2,9 +2,10 @@ package controllers
 
 import (
 	"encoding/json"
+	"strings"
+
 	"github.com/go-logr/logr"
 	v1 "k8s.io/api/authentication/v1"
-	"strings"
 )
 
 func normalizeCredentials(credentialsJSON json.RawMessage) (map[string][]byte, error) {
