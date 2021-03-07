@@ -36,24 +36,6 @@ func (r *ServiceBinding) SetupWebhookWithManager(mgr ctrl.Manager) error {
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 
-// +kubebuilder:webhook:path=/mutate-services-cloud-sap-com-v1alpha1-servicebinding,mutating=true,failurePolicy=fail,groups=services.cloud.sap.com,resources=servicebindings,verbs=create;update,versions=v1alpha1,name=mservicebinding.kb.io
-
-var _ webhook.Defaulter = &ServiceBinding{}
-
-// Default implements webhook.Defaulter so a webhook will be registered for the type
-func (r *ServiceBinding) Default() {
-	servicebindinglog.Info("default", "name", r.Name)
-
-	if len(r.Spec.ExternalName) == 0 {
-		servicebindinglog.Info("externalName not provided, defaulting to k8s name", "name", r.Name)
-		r.Spec.ExternalName = r.Name
-	}
-	if len(r.Spec.SecretName) == 0 {
-		servicebindinglog.Info("secretName not provided, defaulting to k8s name", "name", r.Name)
-		r.Spec.SecretName = r.Name
-	}
-}
-
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
 // +kubebuilder:webhook:verbs=create;update,path=/validate-services-cloud-sap-com-v1alpha1-servicebinding,mutating=false,failurePolicy=fail,groups=services.cloud.sap.com,resources=servicebindings,versions=v1alpha1,name=vservicebinding.kb.io
 

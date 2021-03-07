@@ -130,7 +130,7 @@ var _ = Describe("ServiceBinding controller", func() {
 		Expect(createdBinding.Spec.SecretName).To(Not(BeEmpty()))
 		Expect(int(createdBinding.Status.ObservedGeneration)).To(Equal(1))
 		Expect(string(createdBinding.Spec.Parameters.Raw)).To(ContainSubstring("\"key\":\"value\""))
-		smBinding, _ := fakeClient.BindArgsForCall(0)
+		smBinding, _, _ := fakeClient.BindArgsForCall(0)
 		params := smBinding.Parameters
 		Expect(params).To(ContainSubstring("\"key\":\"value\""))
 		Expect(params).To(ContainSubstring("\"secret-key\":\"secret-value\""))
@@ -309,6 +309,7 @@ var _ = Describe("ServiceBinding controller", func() {
 					ctx := context.Background()
 					createdBinding = createBinding(ctx, bindingName, bindingTestNamespace, instanceName, "binding-external-name")
 					Expect(createdBinding.Spec.ExternalName).To(Equal("binding-external-name"))
+					Expect(createdBinding.Spec.UserInfo).NotTo(BeNil())
 
 					By("Verify binding secret created")
 					bindingSecret := getSecret(ctx, createdBinding.Spec.SecretName, createdBinding.Namespace)

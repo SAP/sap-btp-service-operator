@@ -11,7 +11,7 @@ var _ = Describe("Service Binding Webhook Test", func() {
 	BeforeEach(func() {
 		binding = getBinding()
 	})
-	Context("Defaulter", func() {
+	/*Context("Defaulter", func() {
 		When("No external name provided", func() {
 			BeforeEach(func() {
 				binding.Spec.ExternalName = ""
@@ -31,7 +31,7 @@ var _ = Describe("Service Binding Webhook Test", func() {
 				Expect(binding.Spec.SecretName).To(Equal(binding.Name))
 			})
 		})
-	})
+	})*/
 
 	Context("Validator", func() {
 		Context("Validate create", func() {
