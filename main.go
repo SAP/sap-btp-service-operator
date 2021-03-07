@@ -106,7 +106,6 @@ func main() {
 		os.Exit(1)
 	}
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-
 		mgr.GetWebhookServer().Register("/mutate-services-cloud-sap-com-v1alpha1-serviceinstance", &webhook.Admission{Handler: &webhooks.ServiceInstanceDefaulter{Client: mgr.GetClient()}})
 		mgr.GetWebhookServer().Register("/mutate-services-cloud-sap-com-v1alpha1-servicebinding", &webhook.Admission{Handler: &webhooks.ServiceBindingDefaulter{Client: mgr.GetClient()}})
 		if err = (&servicesv1alpha1.ServiceBinding{}).SetupWebhookWithManager(mgr); err != nil {
