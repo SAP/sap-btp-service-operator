@@ -4,7 +4,7 @@
 
 manager:
   secret:
-    clientid: sb-f23290e6-9556-4cc9-a8f9-bebc0498ec24!b13842|service-manager!b3
-    clientsecret: bogcQ8/hNBKu6r3PnNGwMsC2/Rs=
-    url: https://service-manager.cfapps.stagingaws.hanavlab.ondemand.com
-    tokenurl: https://elvis.authentication.stagingaws.hanavlab.ondemand.com
+    clientid: <REPLACE_ME>
+    clientsecret: <REPLACE_ME>
+    url: <REPLACE_ME>
+    tokenurl: <REPLACE_ME>
