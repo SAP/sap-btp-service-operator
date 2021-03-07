@@ -309,6 +309,7 @@ var _ = Describe("ServiceBinding controller", func() {
 					ctx := context.Background()
 					createdBinding = createBinding(ctx, bindingName, bindingTestNamespace, instanceName, "binding-external-name")
 					Expect(createdBinding.Spec.ExternalName).To(Equal("binding-external-name"))
+					Expect(createdBinding.Spec.UserInfo).NotTo(BeNil())
 
 					By("Verify binding secret created")
 					bindingSecret := getSecret(ctx, createdBinding.Spec.SecretName, createdBinding.Namespace)

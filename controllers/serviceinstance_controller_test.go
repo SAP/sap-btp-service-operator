@@ -212,6 +212,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					Expect(serviceInstance.Spec.ExternalName).To(Equal(fakeInstanceExternalName))
 					Expect(serviceInstance.Name).To(Equal(fakeInstanceName))
 					Expect(string(serviceInstance.Spec.Parameters.Raw)).To(ContainSubstring("\"key\":\"value\""))
+					Expect(serviceInstance.Spec.UserInfo).NotTo(BeNil())
 					smInstance, _, _, _ := fakeClient.ProvisionArgsForCall(0)
 					params := smInstance.Parameters
 					Expect(params).To(ContainSubstring("\"key\":\"value\""))
@@ -392,6 +393,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						serviceInstance = updateInstance(ctx, serviceInstance)
 						Expect(serviceInstance.Spec.ExternalName).To(Equal(newSpec.ExternalName))
 						Expect(serviceInstance.Status.Conditions[0].Reason).To(Equal(Updated))
+						Expect(serviceInstance.Spec.UserInfo).NotTo(BeNil())
 					})
 				})
 			})
