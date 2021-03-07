@@ -213,7 +213,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					Expect(serviceInstance.Name).To(Equal(fakeInstanceName))
 					Expect(string(serviceInstance.Spec.Parameters.Raw)).To(ContainSubstring("\"key\":\"value\""))
 					Expect(serviceInstance.Spec.UserInfo).NotTo(BeNil())
-					smInstance, _, _, _ := fakeClient.ProvisionArgsForCall(0)
+					smInstance, _, _, _, _ := fakeClient.ProvisionArgsForCall(0)
 					params := smInstance.Parameters
 					Expect(params).To(ContainSubstring("\"key\":\"value\""))
 					Expect(params).To(ContainSubstring("\"secret-key\":\"secret-value\""))

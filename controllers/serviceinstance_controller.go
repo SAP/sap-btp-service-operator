@@ -191,7 +191,7 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 			k8sNameLabel:   []string{serviceInstance.Name},
 			clusterIDLabel: []string{r.Config.ClusterID},
 		},
-	}, serviceInstance.Spec.ServiceOfferingName, serviceInstance.Spec.ServicePlanName, nil)
+	}, serviceInstance.Spec.ServiceOfferingName, serviceInstance.Spec.ServicePlanName, nil, serviceInstance.Spec.UserInfo.Username)
 
 	if provisionErr != nil {
 		log.Error(provisionErr, "failed to create service instance", "serviceOfferingName", serviceInstance.Spec.ServiceOfferingName,
@@ -235,7 +235,7 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 		Name:          serviceInstance.Spec.ExternalName,
 		ServicePlanID: serviceInstance.Spec.ServicePlanID,
 		Parameters:    instanceParameters,
-	}, serviceInstance.Spec.ServiceOfferingName, serviceInstance.Spec.ServicePlanName, nil)
+	}, serviceInstance.Spec.ServiceOfferingName, serviceInstance.Spec.ServicePlanName, nil, serviceInstance.Spec.UserInfo.Username)
 	if err != nil {
 		log.Error(err, fmt.Sprintf("failed to update service instance with ID %s", serviceInstance.Status.InstanceID))
 		if isTransientError(err, log) {
@@ -281,7 +281,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 		}
 
 		log.Info(fmt.Sprintf("Deleting instance with id %v from SM", serviceInstance.Status.InstanceID))
-		operationURL, deprovisionErr := smClient.Deprovision(serviceInstance.Status.InstanceID, nil)
+		operationURL, deprovisionErr := smClient.Deprovision(serviceInstance.Status.InstanceID, nil, serviceInstance.Spec.UserInfo.Username)
 		if deprovisionErr != nil {
 			if isTransientError(deprovisionErr, log) {
 				return r.markAsTransientError(ctx, smTypes.DELETE, deprovisionErr.Error(), serviceInstance, log)

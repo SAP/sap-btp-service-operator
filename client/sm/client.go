@@ -36,21 +36,24 @@ import (
 	"golang.org/x/oauth2/clientcredentials"
 )
 
-const tokenURLSuffix = "/oauth/token"
+const (
+	tokenURLSuffix            = "/oauth/token"
+	originatingIdentityHeader = "X-Originating-Identity"
+)
 
 // Client should be implemented by SM clients
 //go:generate counterfeiter . Client
 type Client interface {
 	ListInstances(*Parameters) (*types.ServiceInstances, error)
 	GetInstanceByID(string, *Parameters) (*types.ServiceInstance, error)
-	UpdateInstance(id string, updatedInstance *types.ServiceInstance, serviceName string, planName string, q *Parameters) (*types.ServiceInstance, string, error)
-	Provision(*types.ServiceInstance, string, string, *Parameters) (string, string, error)
-	Deprovision(string, *Parameters) (string, error)
+	UpdateInstance(id string, updatedInstance *types.ServiceInstance, serviceName string, planName string, q *Parameters, user string) (*types.ServiceInstance, string, error)
+	Provision(instance *types.ServiceInstance, serviceName string, planName string, q *Parameters, user string) (string, string, error)
+	Deprovision(id string, q *Parameters, user string) (string, error)
 
 	ListBindings(*Parameters) (*types.ServiceBindings, error)
 	GetBindingByID(string, *Parameters) (*types.ServiceBinding, error)
-	Bind(*types.ServiceBinding, *Parameters) (*types.ServiceBinding, string, error)
-	Unbind(string, *Parameters) (string, error)
+	Bind(binding *types.ServiceBinding, q *Parameters, user string) (*types.ServiceBinding, string, error)
+	Unbind(id string, q *Parameters, user string) (string, error)
 
 	ListOfferings(*Parameters) (*types.ServiceOfferings, error)
 	ListPlans(*Parameters) (*types.ServicePlans, error)
@@ -93,7 +96,7 @@ func NewClient(ctx context.Context, config *ClientConfig, httpClient auth.HTTPCl
 }
 
 // Provision provisions a new service instance in service manager
-func (client *serviceManagerClient) Provision(instance *types.ServiceInstance, serviceName string, planName string, q *Parameters) (string, string, error) {
+func (client *serviceManagerClient) Provision(instance *types.ServiceInstance, serviceName string, planName string, q *Parameters, user string) (string, string, error) {
 	var newInstance *types.ServiceInstance
 	var instanceID string
 	if len(serviceName) == 0 || len(planName) == 0 {
@@ -107,7 +110,7 @@ func (client *serviceManagerClient) Provision(instance *types.ServiceInstance, s
 
 	instance.ServicePlanID = planID
 
-	location, err := client.register(instance, web.ServiceInstancesURL, q, &newInstance)
+	location, err := client.register(instance, web.ServiceInstancesURL, q, user, &newInstance)
 	if err != nil {
 		return "", "", err
 	}
@@ -123,9 +126,9 @@ func (client *serviceManagerClient) Provision(instance *types.ServiceInstance, s
 }
 
 // Bind creates binding to an instance in service manager
-func (client *serviceManagerClient) Bind(binding *types.ServiceBinding, q *Parameters) (*types.ServiceBinding, string, error) {
+func (client *serviceManagerClient) Bind(binding *types.ServiceBinding, q *Parameters, user string) (*types.ServiceBinding, string, error) {
 	var newBinding *types.ServiceBinding
-	location, err := client.register(binding, web.ServiceBindingsURL, q, &newBinding)
+	location, err := client.register(binding, web.ServiceBindingsURL, q, user, &newBinding)
 	if err != nil {
 		return nil, "", err
 	}
@@ -171,15 +174,15 @@ func (client *serviceManagerClient) Status(url string, q *Parameters) (*types.Op
 	return operation, err
 }
 
-func (client *serviceManagerClient) Deprovision(id string, q *Parameters) (string, error) {
-	return client.delete(web.ServiceInstancesURL+"/"+id, q)
+func (client *serviceManagerClient) Deprovision(id string, q *Parameters, user string) (string, error) {
+	return client.delete(web.ServiceInstancesURL+"/"+id, q, user)
 }
 
-func (client *serviceManagerClient) Unbind(id string, q *Parameters) (string, error) {
-	return client.delete(web.ServiceBindingsURL+"/"+id, q)
+func (client *serviceManagerClient) Unbind(id string, q *Parameters, user string) (string, error) {
+	return client.delete(web.ServiceBindingsURL+"/"+id, q, user)
 }
 
-func (client *serviceManagerClient) UpdateInstance(id string, updatedInstance *types.ServiceInstance, serviceName string, planName string, q *Parameters) (*types.ServiceInstance, string, error) {
+func (client *serviceManagerClient) UpdateInstance(id string, updatedInstance *types.ServiceInstance, serviceName string, planName string, q *Parameters, user string) (*types.ServiceInstance, string, error) {
 	var result *types.ServiceInstance
 
 	planID, err := client.getAndValidatePlanID(updatedInstance.ServicePlanID, serviceName, planName)
@@ -187,7 +190,7 @@ func (client *serviceManagerClient) UpdateInstance(id string, updatedInstance *t
 		return nil, "", err
 	}
 	updatedInstance.ServicePlanID = planID
-	location, err := client.update(updatedInstance, web.ServiceInstancesURL, id, q, &result)
+	location, err := client.update(updatedInstance, web.ServiceInstancesURL, id, q, user, &result)
 	if err != nil {
 		return nil, "", err
 	}
@@ -213,14 +216,14 @@ func (client *serviceManagerClient) ListPlans(q *Parameters) (*types.ServicePlan
 	return plans, err
 }
 
-func (client *serviceManagerClient) register(resource interface{}, url string, q *Parameters, result interface{}) (string, error) {
+func (client *serviceManagerClient) register(resource interface{}, url string, q *Parameters, user string, result interface{}) (string, error) {
 	requestBody, err := json.Marshal(resource)
 	if err != nil {
 		return "", err
 	}
 
 	buffer := bytes.NewBuffer(requestBody)
-	response, err := client.Call(http.MethodPost, url, buffer, q)
+	response, err := client.callWithUser(http.MethodPost, url, buffer, q, user)
 	if err != nil {
 		return "", err
 	}
@@ -235,8 +238,8 @@ func (client *serviceManagerClient) register(resource interface{}, url string, q
 	}
 }
 
-func (client *serviceManagerClient) delete(url string, q *Parameters) (string, error) {
-	response, err := client.Call(http.MethodDelete, url, nil, q)
+func (client *serviceManagerClient) delete(url string, q *Parameters, user string) (string, error) {
+	response, err := client.callWithUser(http.MethodDelete, url, nil, q, user)
 	if err != nil {
 		return "", err
 	}
@@ -266,13 +269,13 @@ func (client *serviceManagerClient) get(result interface{}, url string, q *Param
 	return httputil.UnmarshalResponse(response, &result)
 }
 
-func (client *serviceManagerClient) update(resource interface{}, url string, id string, q *Parameters, result interface{}) (string, error) {
+func (client *serviceManagerClient) update(resource interface{}, url string, id string, q *Parameters, user string, result interface{}) (string, error) {
 	requestBody, err := json.Marshal(resource)
 	if err != nil {
 		return "", err
 	}
 	buffer := bytes.NewBuffer(requestBody)
-	response, err := client.Call(http.MethodPatch, url+"/"+id, buffer, q)
+	response, err := client.callWithUser(http.MethodPatch, url+"/"+id, buffer, q, user)
 	if err != nil {
 		return "", err
 	}
@@ -296,6 +299,10 @@ func handleFailedResponse(response *http.Response) error {
 }
 
 func (client *serviceManagerClient) Call(method string, smpath string, body io.Reader, q *Parameters) (*http.Response, error) {
+	return client.callWithUser(method, smpath, body, q, "")
+}
+
+func (client *serviceManagerClient) callWithUser(method string, smpath string, body io.Reader, q *Parameters, user string) (*http.Response, error) {
 	fullURL := httputil.NormalizeURL(client.Config.URL) + BuildURL(smpath, q)
 
 	req, err := http.NewRequest(method, fullURL, body)
@@ -303,6 +310,9 @@ func (client *serviceManagerClient) Call(method string, smpath string, body io.R
 		return nil, err
 	}
 	req.Header.Add("Content-Type", "application/json")
+	if len(user) > 0 {
+		req.Header.Add(originatingIdentityHeader, user)
+	}
 
 	log.C(client.Context).Debugf("Sending request %s %s", req.Method, req.URL)
 	resp, err := client.HTTPClient.Do(req)
