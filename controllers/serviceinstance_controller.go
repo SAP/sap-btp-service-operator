@@ -360,6 +360,7 @@ func (r *ServiceInstanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 func (r *ServiceInstanceReconciler) getInstanceForRecovery(smClient sm.Client, serviceInstance *servicesv1alpha1.ServiceInstance, log logr.Logger) (*types.ServiceInstance, error) {
 	parameters := sm.Parameters{
 		FieldQuery: []string{
+			fmt.Sprintf("name eq '%s'", serviceInstance.Spec.ExternalName),
 			fmt.Sprintf("context/clusterid eq '%s'", r.Config.ClusterID),
 			fmt.Sprintf("context/namespace eq '%s'", serviceInstance.Namespace)},
 		LabelQuery: []string{
