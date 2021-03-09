@@ -109,6 +109,6 @@ while test $# -gt 0; do
   esac
 done
 
-
+kubectl create namespace operators --dry-run=client -o yaml | kubectl apply -f -
 store_configmap "$namespace"
 store_secret "$clientid" "$clientsecret" "$url" "$tokenurl" "$namespace"
