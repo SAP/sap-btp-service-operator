@@ -59,15 +59,15 @@ This feature is still under development, review, and testing.
    
    &ensp;&ensp; The example of the credentials in the binding object
       
-       
-      ``` {
+       ```json
+       {
             "clientid": "xxxxxxx",
             "clientsecret": "xxxxxxx",
             "url": "https://mysubaccount.authentication.eu10.hana.ondemand.com",
             "xsappname": "b15166|service-manager!b1234",
             "sm_url": "https://service-manager.cfapps.eu10.hana.ondemand.com"
-          } ```  
-       
+        } 
+        ``` 
    
 #### 3. Deploy the SAP BTP service operator in your cluster using the obtained access credentials:
 
@@ -107,7 +107,9 @@ This feature is still under development, review, and testing.
      
    &ensp;&ensp; To learn more about viewing and managing the available services for your subaccount in the SAP BTP cockpit,<br/>see [Service Marketplace](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/affcc245c332433ba71917ff715b9971.html).<br/>
       
-   **Tip**<br/>Use the *Environment* filter to get all offerings that are relevant for Kubernetes.*
+   >**Tip**
+   >
+   > Use the *Environment* filter to get all offerings that are relevant for Kubernetes.
      
       
         
