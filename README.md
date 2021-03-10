@@ -34,9 +34,9 @@ This feature is still under development, review, and testing.
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
 ## Setup
-**1. Install [cert-manager](https://cert-manager.io/docs/installation/kubernetes)**
+#### 1. Install [cert-manager](https://cert-manager.io/docs/installation/kubernetes)
 
-**2. Obtain the access credentials for the SAP BTP service operator:**
+#### 2. Obtain the access credentials for the SAP BTP service operator:**
 
    a. Using the SAP BTP cockpit or SMCTL CLI, create an instance of the SAP Cloud Service Management service <br/>(technical name: `service-manager`) with the plan:
     `service-operator-access`
@@ -69,7 +69,7 @@ This feature is still under development, review, and testing.
         }
         ```  
    
-**3. Deploy the SAP BTP service operator in your cluster using the obtained access credentials:**
+#### 3. Deploy the SAP BTP service operator in your cluster using the obtained access credentials:**
 
       ```bash
          helm upgrade --install sap-btp-operator https://github.com/SAP/sap-btp-service-operator/releases/download/<release>/sap-btp-operator-<release>.tgz \
