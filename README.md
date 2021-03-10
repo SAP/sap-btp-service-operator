@@ -101,14 +101,14 @@ This feature is still under development, review, and testing.
         serviceOfferingName: <offering>
         servicePlanName: <plan>
       ```
-    Where:
+     Where:
     
    *  `<offering>` is the name of the SAP BTP service that you want to create. 
      
-    To learn more about viewing and managing the available services for your subaccount in the SAP BTP cockpit,<br/>see [Service Marketplace](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/affcc245c332433ba71917ff715b9971.html).<br/>
+   To learn more about viewing and managing the available services for your subaccount in the SAP BTP cockpit,<br/>see [Service Marketplace](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/affcc245c332433ba71917ff715b9971.html).<br/>
       
-   **Tip**<br/>
-     Use the *Environment* filter to get all offerings that are relevant for Kubernetes.
+   &ensp; ***Tip**<br/>Use the **Environment** filter to get all offerings that are relevant for Kubernetes.*
+     
       
         
    *  `<plan>` is the plan of the selected service offering that you want to create.<br/>
