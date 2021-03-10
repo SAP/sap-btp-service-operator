@@ -38,26 +38,26 @@ This feature is still under development, review, and testing.
 
 #### 2. Obtain the access credentials for the SAP BTP service operator:
 
-   a. Using the SAP BTP cockpit or SMCTL CLI, create an instance of the SAP Cloud Service Management service <br/>(technical name: `service-manager`) with the plan:
+   &ensp; a. Using the SAP BTP cockpit or SMCTL CLI, create an instance of the SAP Cloud Service Management service <br/>(technical name: `service-manager`) with the plan:
     `service-operator-access`
       
-   &ensp; For more information about creating service instances, see:
+   &ensp;&ensp; For more information about creating service instances, see:
        
-   &ensp;&ensp; * [Creating Service Instances Using the SAP BTP Cockpit](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/bf71f6a7b7754dbd9dfc2569791ccc96.html)
+   &ensp;&ensp;&ensp; * [Creating Service Instances Using the SAP BTP Cockpit](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/bf71f6a7b7754dbd9dfc2569791ccc96.html)
         
-   &ensp;&ensp; * [Creating Service Instances using SMCTL](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/b327b66b711746b085ec5d2ea16e608e.html)  
+  &ensp; &ensp;&ensp; * [Creating Service Instances using SMCTL](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/b327b66b711746b085ec5d2ea16e608e.html)  
    
-   b. Create a binding to the created service instance.
+   &ensp;b. Create a binding to the created service instance.
       
-   &ensp; For more information about creating service bindings, see: 
+   &ensp;&ensp; For more information about creating service bindings, see: 
        
-   &ensp;&ensp; * [Creating Service Bindings Using the SAP BTP Cockpit](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/55b31ea23c474f6ba2f64ee4848ab1b3.html) 
+   &ensp;&ensp;&ensp; * [Creating Service Bindings Using the SAP BTP Cockpit](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/55b31ea23c474f6ba2f64ee4848ab1b3.html) 
        
-   &ensp;&ensp; * [Creating Service Bindings Using SMCTL](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/f53ff2634e0a46d6bfc72ec075418dcd.html). 
+   &ensp;&ensp;&ensp; * [Creating Service Bindings Using SMCTL](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/f53ff2634e0a46d6bfc72ec075418dcd.html). 
    
-   c. Retrieve the generated access credentials from the created binding:
+   &ensp;c. Retrieve the generated access credentials from the created binding:
    
-   &ensp; The example of the credentials in the binding object
+   &ensp;&ensp; The example of the credentials in the binding object
       
        
       ``` {
@@ -101,13 +101,13 @@ This feature is still under development, review, and testing.
         serviceOfferingName: <offering>
         servicePlanName: <plan>
       ```
-     Where:
+     &ensp; Where:
     
-   *  `<offering>` is the name of the SAP BTP service that you want to create. 
+   &ensp; *  `<offering>` is the name of the SAP BTP service that you want to create. 
      
-   To learn more about viewing and managing the available services for your subaccount in the SAP BTP cockpit,<br/>see [Service Marketplace](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/affcc245c332433ba71917ff715b9971.html).<br/>
+   &ensp;&ensp; To learn more about viewing and managing the available services for your subaccount in the SAP BTP cockpit,<br/>see [Service Marketplace](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/affcc245c332433ba71917ff715b9971.html).<br/>
       
-   &ensp; ***Tip**<br/>Use the **Environment** filter to get all offerings that are relevant for Kubernetes.*
+   **Tip**<br/>Use the *Environment* filter to get all offerings that are relevant for Kubernetes.*
      
       
         
