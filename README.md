@@ -34,14 +34,14 @@ This feature is still under development, review, and testing.
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
 ## Setup
-1. Install [cert-manager](https://cert-manager.io/docs/installation/kubernetes)
+**1. Install [cert-manager](https://cert-manager.io/docs/installation/kubernetes)**
 
-2. Obtain the access credentials for the SAP BTP service operator:
+**2. Obtain the access credentials for the SAP BTP service operator:**
 
    a. Using the SAP BTP cockpit or SMCTL CLI, create an instance of the SAP Cloud Service Management service <br/>(technical name: `service-manager`) with the plan:
     `service-operator-access`
       
-      For more information about creating service instances, see: 
+      For more information about creating service instances, see:
        
       * [Creating Service Instances Using the SAP BTP Cockpit](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/bf71f6a7b7754dbd9dfc2569791ccc96.html)
         
@@ -69,7 +69,7 @@ This feature is still under development, review, and testing.
         }
         ```  
    
-3. Deploy the SAP BTP service operator in your cluster using the obtained access credentials:
+**3. Deploy the SAP BTP service operator in your cluster using the obtained access credentials:**
 
       ```bash
          helm upgrade --install sap-btp-operator https://github.com/SAP/sap-btp-service-operator/releases/download/<release>/sap-btp-operator-<release>.tgz \
@@ -105,9 +105,9 @@ This feature is still under development, review, and testing.
     
   * `  <offering>` - is the name of the SAP BTP service that you want to create. 
      
-      To learn more about viewing and managing the available services for your subaccount in the SAP BTP cockpit, see [Service Marketplace]  (https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/affcc245c332433ba71917ff715b9971.html). 
-       **Tip**
-      '''Use the *Environment* filter to get all offerings that are relevant for Kubernetes.'''<br/>
+      To learn more about viewing and managing the available services for your subaccount in the SAP BTP cockpit, see [Service Marketplace]  (https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/affcc245c332433ba71917ff715b9971.html).< 
+       **Tip**<br/>
+      Use the *Environment* filter to get all offerings that are relevant for Kubernetes.<br/><br/>
       
         
   *   `<plan>` - is the plan of the selected service offering that you want to create.
