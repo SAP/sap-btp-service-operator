@@ -69,7 +69,7 @@ This feature is still under development, review, and testing.
         }
         ```  
    
-#### 3. Deploy the SAP BTP service operator in your cluster using the obtained access credentials:**
+#### 3. Deploy the SAP BTP service operator in your cluster using the obtained access credentials:
 
       ```bash
          helm upgrade --install sap-btp-operator https://github.com/SAP/sap-btp-service-operator/releases/download/<release>/sap-btp-operator-<release>.tgz \
