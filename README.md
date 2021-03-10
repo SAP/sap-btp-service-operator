@@ -41,19 +41,19 @@ This feature is still under development, review, and testing.
    a. Using the SAP BTP cockpit or SMCTL CLI, create an instance of the SAP Cloud Service Management service <br/>(technical name: `service-manager`) with the plan:
     `service-operator-access`
       
-      For more information about creating service instances, see:
+   For more information about creating service instances, see:
        
-      * [Creating Service Instances Using the SAP BTP Cockpit](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/bf71f6a7b7754dbd9dfc2569791ccc96.html)
+   * [Creating Service Instances Using the SAP BTP Cockpit](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/bf71f6a7b7754dbd9dfc2569791ccc96.html)
         
       * [Creating Service Instances using SMCTL](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/b327b66b711746b085ec5d2ea16e608e.html)  
    
    b. Create a binding to the created service instance.
       
-      For more information about creating service bindings, see: 
+   For more information about creating service bindings, see: 
        
-      * [Creating Service Bindings Using the SAP BTP Cockpit](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/55b31ea23c474f6ba2f64ee4848ab1b3.html) 
+   * [Creating Service Bindings Using the SAP BTP Cockpit](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/55b31ea23c474f6ba2f64ee4848ab1b3.html) 
        
-      * [Creating Service Bindings Using SMCTL](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/f53ff2634e0a46d6bfc72ec075418dcd.html). 
+     * [Creating Service Bindings Using SMCTL](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/f53ff2634e0a46d6bfc72ec075418dcd.html). 
    
    c. Retrieve the generated access credentials from the created binding:
    
@@ -129,7 +129,7 @@ This feature is still under development, review, and testing.
 
 #### Step 2: Create a Service Binding
 
-1.  To get access credentials to your service instance and make it available in the cluster so that your applications can use it, create a `ServiceBinding` custom resource,<br/>then set the `serviceInstanceName` field to the name of the `ServiceInstance` resource you created.
+1.  To get access credentials to your service instance and make it available in the cluster so that your applications can use it, create a `ServiceBinding` custom resource, then set the `serviceInstanceName` field to the name of the `ServiceInstance` resource you created.
 
     ```yaml
     apiVersion: services.cloud.sap.com/v1alpha1
