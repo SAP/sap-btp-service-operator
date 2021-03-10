@@ -105,7 +105,7 @@ This feature is still under development, review, and testing.
     
   * `  <offering>` - is the name of the SAP BTP service that you want to create. 
      
-      To learn more about viewing and managing the available services for your subaccount in the SAP BTP cockpit, see [Service Marketplace]  (https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/affcc245c332433ba71917ff715b9971.html).< 
+      To learn more about viewing and managing the available services for your subaccount in the SAP BTP cockpit, see [Service Marketplace]  (https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/affcc245c332433ba71917ff715b9971.html).
        **Tip**<br/>
       Use the *Environment* filter to get all offerings that are relevant for Kubernetes.<br/><br/>
       
@@ -129,7 +129,7 @@ This feature is still under development, review, and testing.
 
 #### Step 2: Create a Service Binding
 
-1.  To get access credentials to your service instance and make it available in the cluster so that your applications can use it, create a `ServiceBinding` custom resource, then set the `serviceInstanceName` field to the name of the `ServiceInstance` resource you created.
+1.  To get access credentials to your service instance and make it available in the cluster so that your applications can use it, create a `ServiceBinding` custom resource, then     set the `serviceInstanceName` field to the name of the `ServiceInstance` resource you created.
 
     ```yaml
     apiVersion: services.cloud.sap.com/v1alpha1
