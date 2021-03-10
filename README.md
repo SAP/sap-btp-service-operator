@@ -57,7 +57,7 @@ This feature is still under development, review, and testing.
    
    c. Retrieve the generated access credentials from the created binding:
    
-      The example of the credentials in the binding object
+   The example of the credentials in the binding object
       
        
        ``` {
