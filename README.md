@@ -4,10 +4,10 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/SAP/sap-btp-service-operator)](https://goreportcard.com/report/github.com/SAP/sap-btp-service-operator)
 [![REUSE status](https://api.reuse.software/badge/github.com/SAP/sap-btp-service-operator)](https://api.reuse.software/info/github.com/SAP/sap-btp-service-operator)
 
-# SAP Business Technology Platform (SAP BTP) Service Operator for Kubernetes
+# SAP BTP Service Operator for Kubernetes
 
-With the SAP BTP service operator, you can consume [SAP BTP services](https://platformx-d8bd51250.dispatcher.us2.hana.ondemand.com/protected/index.html#/viewServices?) from your Kubernetes cluster using Kubernetes-native tools. 
-SAP BTP service operator allows you to provision and manage service instances and service bindings of SAP BTP services so that your Kubernetes-native applications can access and use needed services from the cluster.  
+With the SAP BTP (Business Technology Platform) service operator, you can consume [SAP BTP services](https://platformx-d8bd51250.dispatcher.us2.hana.ondemand.com/protected/index.html#/viewServices?) from your Kubernetes cluster using Kubernetes-native tools. 
+SAP BTP service operator allows you to provision and manage service instances and service bindings of SAP BTP services so that your Kubernetes-native applications can access and use them from the cluster.  
 The SAP BTP service operator is based on the [Kubernetes Operator pattern](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/).
 
 ## Note
@@ -16,17 +16,17 @@ This feature is still under development, review, and testing.
 ## Table of content
 * [Prerequisites](#prerequisites)
 * [Setup Operator](#setup)
-* [SAP BTP kubectl extension](#sap-btp-kubectl-plugin-experimental)
+* [SAP BTP kubectl Extension](#sap-btp-kubectl-plugin-experimental)
 * [Using the SAP BTP Service Operator](#using-the-sap-btp-service-operator)
     * [Creating a service instance](#step-1-create-a-service-instance)
     * [Binding the service instance](#step-2-create-a-service-binding)
-* [Reference documentation](#reference-documentation)
+* [Reference Documentation](#reference-documentation)
     * [Service instance properties](#service-instance)
     * [Binding properties](#service-binding)    
 
 ## Prerequisites
 - SAP BTP [Global Account](https://help.sap.com/viewer/65de2977205c403bbc107264b8eccf4b/Cloud/en-US/d61c2819034b48e68145c45c36acba6e.html) and [Subaccount](https://help.sap.com/viewer/65de2977205c403bbc107264b8eccf4b/Cloud/en-US/55d0b6d8b96846b8ae93b85194df0944.html) 
-- Service Management Control (SMCTL) Command Line Interface. See [Using the SMCTL](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/0107f3f8c1954a4e96802f556fc807e3.html).
+- Service Management Control (SMCTL) command-line interface. See [Using the SMCTL](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/0107f3f8c1954a4e96802f556fc807e3.html).
 - [Kubernetes cluster](https://kubernetes.io/) running version 1.17 or higher 
 - [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) v1.17 or higher
 - [helm](https://helm.sh/) v3.0 or higher
@@ -38,17 +38,19 @@ This feature is still under development, review, and testing.
 
 2. Obtain the access credentials for the SAP BTP service operator:
 
-   a. Using the SAP BTP cockpit or CLI, create an instance of the SAP Cloud Service Management service (technical name: `service-manager`) with the plan:
+   a. Using the SAP BTP cockpit or SMCTL CLI, create an instance of the SAP Cloud Service Management service (technical name: `service-manager`) with the plan:
     `service-operator-access`
       
-      For more information about creating service instances, see:     
+      For more information about creating service instances, see: 
+       
       * [Creating Service Instances Using the SAP BTP Cockpit](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/bf71f6a7b7754dbd9dfc2569791ccc96.html)
         
       * [Creating Service Instances using SMCTL](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/b327b66b711746b085ec5d2ea16e608e.html)  
    
    b. Create a binding to the created service instance.
       
-   For more information about creating service bindings, see:  
+      For more information about creating service bindings, see: 
+       
       * [Creating Service Bindings Using the SAP BTP Cockpit](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/55b31ea23c474f6ba2f64ee4848ab1b3.html) 
        
       * [Creating Service Bindings Using SMCTL](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/f53ff2634e0a46d6bfc72ec075418dcd.html). 
@@ -57,7 +59,7 @@ This feature is still under development, review, and testing.
    
       The example of the credentials in the binding object
       
-       ```json
+        ```
         {
             "clientid": "xxxxxxx",
             "clientsecret": "xxxxxxx",
@@ -65,20 +67,21 @@ This feature is still under development, review, and testing.
             "xsappname": "b15166|service-manager!b1234",
             "sm_url": "https://service-manager.cfapps.eu10.hana.ondemand.com"
         }
-       ```  
+        ```  
    
-3. Deploy the the SAP BTP service operator in the cluster using the obtained access credentials:
-    ```bash
-    helm upgrade --install sap-btp-operator https://github.com/SAP/sap-btp-service-operator/releases/download/<release>/sap-btp-operator-<release>.tgz \
+3. Deploy the SAP BTP service operator in your cluster using the obtained access credentials:
+
+      ```bash
+         helm upgrade --install sap-btp-operator https://github.com/SAP/sap-btp-service-operator/releases/download/<release>/sap-btp-operator-<release>.tgz \
         --create-namespace \
         --namespace=sap-btp-operator \
         --set manager.secret.clientid=<clientid> \
         --set manager.secret.clientsecret=<clientsecret> \
         --set manager.secret.url=<sm_url> \
         --set manager.secret.tokenurl=<url>
-    ```
+       ```
 
-    The list of available releases: [sapbtp-operator releases](https://github.com/SAP/sap-btp-service-operator/releases)
+  The list of available releases: [sapbtp-operator releases](https://github.com/SAP/sap-btp-service-operator/releases)
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes).
 
@@ -87,36 +90,39 @@ This feature is still under development, review, and testing.
 #### Step 1: Create a service instance
 
 1.  To create an instance of a service offered by SAP BTP, first create a `ServiceInstance` custom-resource file:
-
-```yaml
-    apiVersion: services.cloud.sap.com/v1alpha1
-    kind: ServiceInstance
-    metadata:
+     
+      ```yaml
+       apiVersion: services.cloud.sap.com/v1alpha1
+       kind: ServiceInstance
+       metadata:
         name: my-service-instance
-    spec:
+       spec:
         serviceOfferingName: <offering>
-        servicePlanName: <plan>
-   ```
-
-   *   `<offering>` - The name of the SAP BTP service that you want to create. 
-       To learn more about viewing and managing the available services for your subaccount in the SAP BTP cockpit, see [Service Marketplace](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/affcc245c332433ba71917ff715b9971.html). 
+        servicePlanName: <plan> ```
+  
+    
+    * `<offering>` - The name of the SAP BTP service that you want to create. 
+     
+      To learn more about viewing and managing the available services for your subaccount in the SAP BTP cockpit, see [Service Marketplace]  (https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/affcc245c332433ba71917ff715b9971.html). 
         
-        Tip: Use the *Environment* filter to get all offerings that are relevant for Kubernetes.
+       ## Tip
+        Use the *Environment* filter to get all offerings that are relevant for Kubernetes.
+        
    *   `<plan>` - The plan of the selected service offering that you want to create.
 
 2.  Apply the custom-resource file in your cluster to create the instance.
 
-    ```bash
-    kubectl apply -f path/to/my-service-instance.yaml
-    ```
+       ```bash
+       kubectl apply -f path/to/my-service-instance.yaml
+       ```
 
 3.  Check that the status of the service in your cluster is **Created**.
 
-    ```bash
-    kubectl get serviceinstances
-    NAME                  OFFERING          PLAN        STATUS    AGE
-    my-service-instance   <offering>        <plan>      Created   44s
-    ```
+       ```bash
+       kubectl get serviceinstances
+       NAME                  OFFERING          PLAN        STATUS    AGE
+       my-service-instance   <offering>        <plan>      Created   44s
+       ```
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
 #### Step 2: Create a Service Binding
@@ -132,7 +138,7 @@ This feature is still under development, review, and testing.
         serviceInstanceName: my-service-instance
     ```
 
-2.  Apply the custom resource file in your cluster to create the binding.
+2.  Apply the custom-resource file in your cluster to create the binding.
 
     ```bash
     kubectl apply -f path/to/my-binding.yaml
@@ -155,7 +161,7 @@ This feature is still under development, review, and testing.
     my-binding   Opaque   5      32s
     ```
     
-    See [Using Secrets](https://kubernetes.io/docs/concepts/configuration/secret/#using-secrets) to learn about different options on how to use the credentials from your application running in the Kubernetes cluster, 
+    See [Using Secrets](https://kubernetes.io/docs/concepts/configuration/secret/#using-secrets) to learn about different options about how to use the credentials from your application running in the Kubernetes cluster, 
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
@@ -185,7 +191,7 @@ This feature is still under development, review, and testing.
 #### Spec
 | Parameter             | Type       | Description                                                                                                   |
 |:-----------------|:---------|:-----------------------------------------------------------------------------------------------------------|
-| serviceInstanceName`*`   | `string`   |  The Kubernetes name of the service instance to bind, should be in the namespace of the binding. |
+| serviceInstanceName`*`   | `string`   |  The name of the service instance for which you are creating the binding, should be in the binding's namespace. |
 | externalName       | `string`   |  The name for the service binding in SAP BTP, defaults to the binding `metadata.name` if not specified. |
 | secretName       | `string`   |  The name of the secret where the credentials are stored, defaults to the binding `metadata.name` if not specified. |
 | parameters       |  `[]object`  |  Some services support the provisioning of additional configuration parameters during the bind request.<br/>For the list of supported                                  parameters, check the documentation of the particular service offering.|
@@ -238,3 +244,4 @@ If not specified, the `default` namespace is used.
 
 ## Licence
 This project is licensed under Apache 2.0 except as noted otherwise in the [license](./LICENSE) file.
+
