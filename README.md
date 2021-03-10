@@ -38,7 +38,7 @@ This feature is still under development, review, and testing.
 
 2. Obtain the access credentials for the SAP BTP service operator:
 
-   a. Using the SAP BTP cockpit or SMCTL CLI, create an instance of the SAP Cloud Service Management service (technical name: `service-manager`) with the plan:
+   a. Using the SAP BTP cockpit or SMCTL CLI, create an instance of the SAP Cloud Service Management service<br/>(technical name: `service-manager`) with the plan:
     `service-operator-access`
       
       For more information about creating service instances, see: 
@@ -59,8 +59,8 @@ This feature is still under development, review, and testing.
    
       The example of the credentials in the binding object
       
-        ```
-        {
+       
+        ``` {
             "clientid": "xxxxxxx",
             "clientsecret": "xxxxxxx",
             "url": "https://mysubaccount.authentication.eu10.hana.ondemand.com",
@@ -98,17 +98,17 @@ This feature is still under development, review, and testing.
         name: my-service-instance
        spec:
         serviceOfferingName: <offering>
-        servicePlanName: <plan> ```
+        servicePlanName: <plan>```
   
     
-    * `<offering>` - The name of the SAP BTP service that you want to create. 
+  * `<offering>` - The name of the SAP BTP service that you want to create. 
      
       To learn more about viewing and managing the available services for your subaccount in the SAP BTP cockpit, see [Service Marketplace]  (https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/affcc245c332433ba71917ff715b9971.html). 
         
        ## Tip
-        Use the *Environment* filter to get all offerings that are relevant for Kubernetes.
+       Use the *Environment* filter to get all offerings that are relevant for Kubernetes.
         
-   *   `<plan>` - The plan of the selected service offering that you want to create.
+  *   `<plan>` - The plan of the selected service offering that you want to create.
 
 2.  Apply the custom-resource file in your cluster to create the instance.
 
@@ -127,7 +127,7 @@ This feature is still under development, review, and testing.
 
 #### Step 2: Create a Service Binding
 
-1.  To get access credentials to your service instance and make it available in the cluster so that your applications can use it, create a `ServiceBinding` custom resource, and set the `serviceInstanceName` field to the name of the `ServiceInstance` resource you created.
+1.  To get access credentials to your service instance and make it available in the cluster so that your applications can use it, create a `ServiceBinding` custom resource,<br/>then set the `serviceInstanceName` field to the name of the `ServiceInstance` resource you created.
 
     ```yaml
     apiVersion: services.cloud.sap.com/v1alpha1
