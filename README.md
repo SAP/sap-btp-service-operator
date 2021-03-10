@@ -6,7 +6,7 @@
 
 # SAP BTP Service Operator for Kubernetes
 
-With the SAP BTP (Business Technology Platform) service operator, you can consume [SAP BTP services](https://platformx-d8bd51250.dispatcher.us2.hana.ondemand.com/protected/index.html#/viewServices?) from your Kubernetes cluster using Kubernetes-native tools. 
+With the SAP BTP (SAP Business Technology Platform) service operator, you can consume [SAP BTP services](https://platformx-d8bd51250.dispatcher.us2.hana.ondemand.com/protected/index.html#/viewServices?) from your Kubernetes cluster using Kubernetes-native tools. 
 SAP BTP service operator allows you to provision and manage service instances and service bindings of SAP BTP services so that your Kubernetes-native applications can access and use them from the cluster.  
 The SAP BTP service operator is based on the [Kubernetes Operator pattern](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/).
 
@@ -111,7 +111,7 @@ This feature is still under development, review, and testing.
      Use the *Environment* filter to get all offerings that are relevant for Kubernetes.
       
         
-   *  `<plan>` is the plan of the selected service offering that you want to create.
+   *  `<plan>` is the plan of the selected service offering that you want to create.<br/>
 
 2.  Apply the custom-resource file in your cluster to create the instance.
 
