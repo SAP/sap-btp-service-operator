@@ -59,7 +59,7 @@ This feature is still under development, review, and testing.
    
    &ensp;&ensp; The example of the credentials in the binding object
       
-       ```json
+       ```
        {
             "clientid": "xxxxxxx",
             "clientsecret": "xxxxxxx",
