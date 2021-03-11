@@ -45,9 +45,9 @@ This feature is still under development, review, and testing.
        
    &ensp;&ensp;&ensp; * [Creating Service Instances Using the SAP BTP Cockpit](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/bf71f6a7b7754dbd9dfc2569791ccc96.html)
         
-  &ensp;&ensp;&ensp; * [Creating Service Instances using SMCTL](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/b327b66b711746b085ec5d2ea16e608e.html)  
+   &ensp;&ensp;&ensp; * [Creating Service Instances using SMCTL](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/b327b66b711746b085ec5d2ea16e608e.html)  
    
-   &ensp;b. Create a binding to the created service instance.
+   &ensp; b. Create a binding to the created service instance.
       
    &ensp;&ensp; For more information about creating service bindings, see: 
        
@@ -55,7 +55,7 @@ This feature is still under development, review, and testing.
        
    &ensp;&ensp;&ensp; * [Creating Service Bindings Using SMCTL](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/f53ff2634e0a46d6bfc72ec075418dcd.html). 
    
-   &ensp;c. Retrieve the generated access credentials from the created binding:
+   &ensp; c. Retrieve the generated access credentials from the created binding:
    
    &ensp;&ensp; The example of the credentials in the binding object
       
@@ -105,11 +105,11 @@ This feature is still under development, review, and testing.
     
    &ensp; *  `<offering>` is the name of the SAP BTP service that you want to create. 
      
-   &ensp;&ensp; To learn more about viewing and managing the available services for your subaccount in the SAP BTP cockpit,<br/>see [Service Marketplace](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/affcc245c332433ba71917ff715b9971.html).<br/>
+   &ensp;&ensp; To learn more about viewing and managing the available services for your subaccount in the SAP BTP cockpit,&ensp; <br/>see [Service Marketplace](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/affcc245c332433ba71917ff715b9971.html).<br/>
       
-   >**Tip**
-   >
-   > Use the *Environment* filter to get all offerings that are relevant for Kubernetes.
+   &ensp; >**Tip**
+   &ensp; >
+   &ensp; > Use the *Environment* filter to get all offerings that are relevant for Kubernetes.
      
       
         
