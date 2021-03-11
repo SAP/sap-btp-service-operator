@@ -107,9 +107,9 @@ This feature is still under development, review, and testing.
      
    &ensp;&ensp; To learn more about viewing and managing the available services for your subaccount in the SAP BTP cockpit, see [Service Marketplace](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/affcc245c332433ba71917ff715b9971.html).<br/>
       
-   &ensp; >**Tip**
-   &ensp; >
-   &ensp; > Use the *Environment* filter to get all offerings that are relevant for Kubernetes.
+   > **Tip**
+   >
+   > Use the *Environment* filter to get all offerings that are relevant for Kubernetes.
      
       
         
