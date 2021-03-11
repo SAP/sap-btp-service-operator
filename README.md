@@ -38,14 +38,14 @@ This feature is still under development, review, and testing.
 
 #### 2. Obtain the access credentials for the SAP BTP service operator:
 
-   &ensp; a. Using the SAP BTP cockpit or SMCTL CLI, create an instance of the SAP Cloud Service Management service <br/>(technical name: `service-manager`) with the plan:
+   &ensp; a. Using the SAP BTP cockpit or SMCTL CLI, create an instance of the SAP Cloud Service Management service (technical name: `service-manager`) with the plan:
     `service-operator-access`
       
    &ensp;&ensp; For more information about creating service instances, see:
        
    &ensp;&ensp;&ensp; * [Creating Service Instances Using the SAP BTP Cockpit](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/bf71f6a7b7754dbd9dfc2569791ccc96.html)
         
-  &ensp; &ensp;&ensp; * [Creating Service Instances using SMCTL](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/b327b66b711746b085ec5d2ea16e608e.html)  
+  &ensp;&ensp;&ensp; * [Creating Service Instances using SMCTL](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/b327b66b711746b085ec5d2ea16e608e.html)  
    
    &ensp;b. Create a binding to the created service instance.
       
