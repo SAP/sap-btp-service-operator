@@ -12,7 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-// +kubebuilder:webhook:path=/mutate-services-cloud-sap-com-v1alpha1-serviceinstance,mutating=true,failurePolicy=fail,groups=services.cloud.sap.com,resources=serviceinstances,verbs=create;update,versions=v1alpha1,name=mserviceinstance.kb.io,sideEffects=None
+// +kubebuilder:webhook:path=/mutate-services-cloud-sap-com-v1alpha1-serviceinstance,mutating=true,failurePolicy=fail,groups=services.cloud.sap.com,resources=serviceinstances,verbs=create;update,versions=v1alpha1,name=mserviceinstance.kb.io,sideEffects=None,admissionReviewVersions=v1beta1;v1
 
 var instancelog = logf.Log.WithName("serviceinstance-resource")
 

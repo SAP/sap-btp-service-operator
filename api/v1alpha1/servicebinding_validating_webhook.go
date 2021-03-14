@@ -37,7 +37,7 @@ func (r *ServiceBinding) SetupWebhookWithManager(mgr ctrl.Manager) error {
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
-// +kubebuilder:webhook:verbs=create;update,path=/validate-services-cloud-sap-com-v1alpha1-servicebinding,mutating=false,failurePolicy=fail,groups=services.cloud.sap.com,resources=servicebindings,versions=v1alpha1,name=vservicebinding.kb.io
+// +kubebuilder:webhook:verbs=create;update,path=/validate-services-cloud-sap-com-v1alpha1-servicebinding,mutating=false,failurePolicy=fail,groups=services.cloud.sap.com,resources=servicebindings,versions=v1alpha1,name=vservicebinding.kb.io,sideEffects=None,admissionReviewVersions=v1beta1;v1
 
 var _ webhook.Validator = &ServiceBinding{}
 
