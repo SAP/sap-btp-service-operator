@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	v1auth "k8s.io/api/authentication/v1"
 	"net/http"
 	"strings"
 
@@ -54,6 +55,29 @@ var _ = Describe("ServiceBinding controller", func() {
 		}
 	}
 
+	createBindingCustom := func(ctx context.Context, binding *v1alpha1.ServiceBinding, wait bool) (*v1alpha1.ServiceBinding, error) {
+		if err := k8sClient.Create(ctx, binding); err != nil {
+			return nil, err
+		}
+
+		bindingLookupKey := types.NamespacedName{Name: binding.Name, Namespace: binding.Namespace}
+		createdBinding = &v1alpha1.ServiceBinding{}
+
+		Eventually(func() bool {
+			err := k8sClient.Get(ctx, bindingLookupKey, createdBinding)
+			if err != nil {
+				return false
+			}
+
+			if wait {
+				return isReady(createdBinding) || isFailed(createdBinding)
+			} else {
+				return len(createdBinding.Status.Conditions) > 0 && createdBinding.Status.Conditions[0].Message != "Pending"
+			}
+		}, timeout*2, interval).Should(BeTrue())
+		return createdBinding, nil
+	}
+
 	createBindingWithoutAssertionsAndWait := func(ctx context.Context, name string, namespace string, instanceName string, externalName string, wait bool) (*v1alpha1.ServiceBinding, error) {
 		binding := newBinding(name, namespace)
 		binding.Spec.ServiceInstanceName = instanceName
@@ -70,26 +94,7 @@ var _ = Describe("ServiceBinding controller", func() {
 			},
 		}
 
-		if err := k8sClient.Create(ctx, binding); err != nil {
-			return nil, err
-		}
-
-		bindingLookupKey := types.NamespacedName{Name: name, Namespace: namespace}
-		createdBinding = &v1alpha1.ServiceBinding{}
-
-		Eventually(func() bool {
-			err := k8sClient.Get(ctx, bindingLookupKey, createdBinding)
-			if err != nil {
-				return false
-			}
-
-			if wait {
-				return isReady(createdBinding) || isFailed(createdBinding)
-			} else {
-				return len(createdBinding.Status.Conditions) > 0 && createdBinding.Status.Conditions[0].Message != "Pending"
-			}
-		}, timeout*2, interval).Should(BeTrue())
-		return createdBinding, nil
+		return createBindingCustom(ctx, binding, wait)
 	}
 
 	createBindingWithoutAssertions := func(ctx context.Context, name string, namespace string, instanceName string, externalName string) (*v1alpha1.ServiceBinding, error) {
@@ -516,6 +521,19 @@ var _ = Describe("ServiceBinding controller", func() {
 						err := k8sClient.Get(context.Background(), types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}, createdBinding)
 						return err == nil && isReady(createdBinding)
 					}, timeout, interval).Should(BeTrue())
+				})
+			})
+
+			When("user info provided", func() {
+				It("should not be overridden", func() {
+					var err error
+					binding := newBinding(bindingName, bindingTestNamespace)
+					binding.Spec.ServiceInstanceName = instanceName
+					binding.Spec.UserInfo = &v1auth.UserInfo{UID: "12345678"}
+					createdBinding, err = createBindingCustom(context.Background(), binding, true)
+					Expect(err).To(BeNil())
+					Expect(createdBinding.Status.BindingID).To(Equal(fakeBindingID))
+					Expect(createdBinding.Spec.UserInfo.UID).To(Equal("12345678"))
 				})
 			})
 		})

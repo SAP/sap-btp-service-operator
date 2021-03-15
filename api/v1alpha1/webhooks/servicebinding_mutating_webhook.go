@@ -39,11 +39,13 @@ func (s *ServiceBindingDefaulter) Handle(_ context.Context, req admission.Reques
 		binding.Spec.SecretName = binding.Name
 	}
 
-	binding.Spec.UserInfo = &v1.UserInfo{
-		Username: req.UserInfo.Username,
-		UID:      req.UserInfo.UID,
-		Groups:   req.UserInfo.Groups,
-		Extra:    req.UserInfo.Extra,
+	if binding.Spec.UserInfo == nil {
+		binding.Spec.UserInfo = &v1.UserInfo{
+			Username: req.UserInfo.Username,
+			UID:      req.UserInfo.UID,
+			Groups:   req.UserInfo.Groups,
+			Extra:    req.UserInfo.Extra,
+		}
 	}
 
 	marshaledInstance, err := json.Marshal(binding)

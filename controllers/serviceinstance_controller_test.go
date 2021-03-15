@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	v1 "k8s.io/api/authentication/v1"
 	"net/http"
 	"strings"
 
@@ -361,6 +362,19 @@ var _ = Describe("ServiceInstance controller", func() {
 				Expect(serviceInstance.Status.InstanceID).To(Equal(fakeInstanceID))
 				Expect(serviceInstance.Spec.ExternalName).To(Equal(fakeInstanceName))
 				Expect(serviceInstance.Name).To(Equal(fakeInstanceName))
+			})
+		})
+
+		When("user info is provided (migration case)", func() {
+			It("succeeds and uses the k8s name as external name", func() {
+				withUserInfo := v1alpha1.ServiceInstanceSpec{
+					ServicePlanName:     "a-plan-name",
+					ServiceOfferingName: "an-offering-name",
+					UserInfo:            &v1.UserInfo{UID: "12345678"},
+				}
+				serviceInstance = createInstance(ctx, withUserInfo)
+				Expect(serviceInstance.Status.InstanceID).To(Equal(fakeInstanceID))
+				Expect(serviceInstance.Spec.UserInfo.UID).To(Equal("12345678"))
 			})
 		})
 	})

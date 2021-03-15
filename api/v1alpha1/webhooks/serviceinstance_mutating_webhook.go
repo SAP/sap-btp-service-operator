@@ -34,11 +34,14 @@ func (s *ServiceInstanceDefaulter) Handle(_ context.Context, req admission.Reque
 		instancelog.Info("externalName not provided, defaulting to k8s name", "name", instance.Name)
 		instance.Spec.ExternalName = instance.Name
 	}
-	instance.Spec.UserInfo = &v1.UserInfo{
-		Username: req.UserInfo.Username,
-		UID:      req.UserInfo.UID,
-		Groups:   req.UserInfo.Groups,
-		Extra:    req.UserInfo.Extra,
+
+	if instance.Spec.UserInfo == nil {
+		instance.Spec.UserInfo = &v1.UserInfo{
+			Username: req.UserInfo.Username,
+			UID:      req.UserInfo.UID,
+			Groups:   req.UserInfo.Groups,
+			Extra:    req.UserInfo.Extra,
+		}
 	}
 
 	marshaledInstance, err := json.Marshal(instance)
