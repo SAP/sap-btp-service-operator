@@ -100,10 +100,6 @@ This feature is still under development, review, and testing.
         parameters:
           key1: val1
           key2: val2
-        parametersFrom:
-        - secretKeyRef:
-            name: mysecret
-            key: secret-parameter
    ```
 
    *   `<offering>` - The name of the SAP BTP service that you want to create. 
@@ -142,11 +138,7 @@ This feature is still under development, review, and testing.
         secretName: mySecret
         parameters:
           key1: val1
-          key2: val2
-        parametersFrom:
-        - secretKeyRef:
-            name: mysecret
-            key: secret-parameter      
+          key2: val2      
   ```
 
 2.  Apply the custom resource file in your cluster to create the binding.
