@@ -94,8 +94,16 @@ This feature is still under development, review, and testing.
     metadata:
         name: my-service-instance
     spec:
-        serviceOfferingName: <offering>
-        servicePlanName: <plan>
+        serviceOfferingName: sample-service
+        servicePlanName: sample-plan
+        externalName: my-service-instance-external
+        parameters:
+          key1: val1
+          key2: val2
+        parametersFrom:
+        - secretKeyRef:
+            name: mysecret
+            key: secret-parameter
    ```
 
    *   `<offering>` - The name of the SAP BTP service that you want to create. 
@@ -123,14 +131,23 @@ This feature is still under development, review, and testing.
 
 1.  To get access credentials to your service instance and make it available in the cluster so that your applications can use it, create a `ServiceBinding` custom resource, and set the `serviceInstanceName` field to the name of the `ServiceInstance` resource you created.
 
-    ```yaml
+  ```yaml
     apiVersion: services.cloud.sap.com/v1alpha1
     kind: ServiceBinding
     metadata:
         name: my-binding
     spec:
         serviceInstanceName: my-service-instance
-    ```
+        externalName: my-binding-external
+        secretName: mySecret
+        parameters:
+          key1: val1
+          key2: val2
+        parametersFrom:
+        - secretKeyRef:
+            name: mysecret
+            key: secret-parameter      
+  ```
 
 2.  Apply the custom resource file in your cluster to create the binding.
 
