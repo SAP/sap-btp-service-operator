@@ -34,7 +34,7 @@ func (s *ServiceBindingDefaulter) Handle(_ context.Context, req admission.Reques
 
 	if binding.DeletionTimestamp.IsZero() && !controllerutil.ContainsFinalizer(binding, v1alpha1.FinalizerName) {
 		controllerutil.AddFinalizer(binding, v1alpha1.FinalizerName)
-		bindinglog.Info(fmt.Sprintf("added finalizer '%s' to service instance", v1alpha1.FinalizerName))
+		bindinglog.Info(fmt.Sprintf("added finalizer '%s' to service binding", v1alpha1.FinalizerName))
 	}
 
 	// mutate the fields
