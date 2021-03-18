@@ -26,15 +26,13 @@ import (
 
 	smTypes "github.com/Peripli/service-manager/pkg/types"
 	"github.com/Peripli/service-manager/pkg/web"
-	servicesv1alpha1 "github.com/SAP/sap-btp-service-operator/api/v1alpha1"
+	"github.com/SAP/sap-btp-service-operator/api/v1alpha1"
 	"github.com/SAP/sap-btp-service-operator/client/sm/types"
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-const instanceFinalizerName string = "services.cloud.sap.com/instance-finalizer"
 
 // ServiceInstanceReconciler reconciles a ServiceInstance object
 type ServiceInstanceReconciler struct {
@@ -48,7 +46,7 @@ type ServiceInstanceReconciler struct {
 func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("serviceinstance", req.NamespacedName)
 
-	serviceInstance := &servicesv1alpha1.ServiceInstance{}
+	serviceInstance := &v1alpha1.ServiceInstance{}
 	if err := r.Get(ctx, req.NamespacedName, serviceInstance); err != nil {
 		if !apierrors.IsNotFound(err) {
 			log.Error(err, "unable to fetch ServiceInstance")
@@ -59,6 +57,13 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	serviceInstance = serviceInstance.DeepCopy()
+
+	if len(serviceInstance.GetConditions()) == 0 {
+		err := r.init(ctx, log, serviceInstance)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	}
 
 	smClient, err := r.getSMClient(ctx, log, serviceInstance)
 	if err != nil {
@@ -76,13 +81,6 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	if isDelete(serviceInstance.ObjectMeta) {
 		return r.deleteInstance(ctx, smClient, serviceInstance, log)
-	}
-	// The object is not being deleted, so if it does not have our finalizer,
-	// then lets init it
-	if !controllerutil.ContainsFinalizer(serviceInstance, instanceFinalizerName) {
-		if err := r.init(ctx, instanceFinalizerName, log, serviceInstance); err != nil {
-			return ctrl.Result{}, err
-		}
 	}
 
 	if serviceInstance.Generation == serviceInstance.Status.ObservedGeneration && !isInProgress(serviceInstance) {
@@ -119,14 +117,14 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	return r.updateInstance(ctx, smClient, serviceInstance, log)
 }
 
-func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client, serviceInstance *servicesv1alpha1.ServiceInstance, log logr.Logger) (ctrl.Result, error) {
+func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client, serviceInstance *v1alpha1.ServiceInstance, log logr.Logger) (ctrl.Result, error) {
 	log.Info(fmt.Sprintf("resource is in progress, found operation url %s", serviceInstance.Status.OperationURL))
 	status, statusErr := smClient.Status(serviceInstance.Status.OperationURL, nil)
 	if statusErr != nil {
 		log.Info(fmt.Sprintf("failed to fetch operation, got error from SM: %s", statusErr.Error()), "operationURL", serviceInstance.Status.OperationURL)
 		setFailureConditions(serviceInstance.Status.OperationType, statusErr.Error(), serviceInstance)
 		// if failed to read operation status we cleanup the status to trigger re-sync from SM
-		freshStatus := servicesv1alpha1.ServiceInstanceStatus{Conditions: serviceInstance.GetConditions()}
+		freshStatus := v1alpha1.ServiceInstanceStatus{Conditions: serviceInstance.GetConditions()}
 		if isDelete(serviceInstance.ObjectMeta) {
 			freshStatus.InstanceID = serviceInstance.Status.InstanceID
 		}
@@ -161,7 +159,7 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client
 		setSuccessConditions(smTypes.OperationCategory(status.Type), serviceInstance)
 		if serviceInstance.Status.OperationType == smTypes.DELETE {
 			// delete was successful - remove our finalizer from the list and update it.
-			if err := r.removeFinalizer(ctx, serviceInstance, instanceFinalizerName, log); err != nil {
+			if err := r.removeFinalizer(ctx, serviceInstance, v1alpha1.FinalizerName, log); err != nil {
 				return ctrl.Result{}, err
 			}
 		}
@@ -173,7 +171,7 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client
 	return ctrl.Result{}, r.updateStatusWithRetries(ctx, serviceInstance, log)
 }
 
-func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient sm.Client, serviceInstance *servicesv1alpha1.ServiceInstance, log logr.Logger) (ctrl.Result, error) {
+func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient sm.Client, serviceInstance *v1alpha1.ServiceInstance, log logr.Logger) (ctrl.Result, error) {
 	log.Info("Creating instance in SM")
 	_, instanceParameters, err := buildParameters(r.Client, serviceInstance.Namespace, serviceInstance.Spec.ParametersFrom, serviceInstance.Spec.Parameters)
 	if err != nil {
@@ -221,7 +219,7 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	return ctrl.Result{}, r.updateStatusWithRetries(ctx, serviceInstance, log)
 }
 
-func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient sm.Client, serviceInstance *servicesv1alpha1.ServiceInstance, log logr.Logger) (ctrl.Result, error) {
+func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient sm.Client, serviceInstance *v1alpha1.ServiceInstance, log logr.Logger) (ctrl.Result, error) {
 	var err error
 
 	log.Info(fmt.Sprintf("updating instance %s in SM", serviceInstance.Status.InstanceID))
@@ -261,8 +259,8 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 	return ctrl.Result{}, r.updateStatusWithRetries(ctx, serviceInstance, log)
 }
 
-func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient sm.Client, serviceInstance *servicesv1alpha1.ServiceInstance, log logr.Logger) (ctrl.Result, error) {
-	if controllerutil.ContainsFinalizer(serviceInstance, instanceFinalizerName) {
+func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient sm.Client, serviceInstance *v1alpha1.ServiceInstance, log logr.Logger) (ctrl.Result, error) {
+	if controllerutil.ContainsFinalizer(serviceInstance, v1alpha1.FinalizerName) {
 		if len(serviceInstance.Status.InstanceID) == 0 {
 			log.Info("No instance id found validating instance does not exists in SM before removing finalizer")
 
@@ -277,7 +275,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 				return ctrl.Result{}, r.updateStatusWithRetries(ctx, serviceInstance, log)
 			}
 			log.Info("instance does not exists in SM, removing finalizer")
-			return ctrl.Result{}, r.removeFinalizer(ctx, serviceInstance, instanceFinalizerName, log)
+			return ctrl.Result{}, r.removeFinalizer(ctx, serviceInstance, v1alpha1.FinalizerName, log)
 		}
 
 		log.Info(fmt.Sprintf("Deleting instance with id %v from SM", serviceInstance.Status.InstanceID))
@@ -314,7 +312,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 		}
 
 		// remove our finalizer from the list and update it.
-		if err := r.removeFinalizer(ctx, serviceInstance, instanceFinalizerName, log); err != nil {
+		if err := r.removeFinalizer(ctx, serviceInstance, v1alpha1.FinalizerName, log); err != nil {
 			return ctrl.Result{}, err
 		}
 
@@ -325,7 +323,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 	return ctrl.Result{}, nil
 }
 
-func (r *ServiceInstanceReconciler) resyncInstanceStatus(k8sInstance *servicesv1alpha1.ServiceInstance, smInstance *types.ServiceInstance) {
+func (r *ServiceInstanceReconciler) resyncInstanceStatus(k8sInstance *v1alpha1.ServiceInstance, smInstance *types.ServiceInstance) {
 	//set observed generation to 0 because we dont know which generation the current state in SM represents,
 	//unless the generation is 1 and SM is in the same state as operator
 	if k8sInstance.Generation == 1 {
@@ -353,11 +351,11 @@ func (r *ServiceInstanceReconciler) resyncInstanceStatus(k8sInstance *servicesv1
 
 func (r *ServiceInstanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&servicesv1alpha1.ServiceInstance{}).
+		For(&v1alpha1.ServiceInstance{}).
 		Complete(r)
 }
 
-func (r *ServiceInstanceReconciler) getInstanceForRecovery(smClient sm.Client, serviceInstance *servicesv1alpha1.ServiceInstance, log logr.Logger) (*types.ServiceInstance, error) {
+func (r *ServiceInstanceReconciler) getInstanceForRecovery(smClient sm.Client, serviceInstance *v1alpha1.ServiceInstance, log logr.Logger) (*types.ServiceInstance, error) {
 	parameters := sm.Parameters{
 		FieldQuery: []string{
 			fmt.Sprintf("name eq '%s'", serviceInstance.Spec.ExternalName),

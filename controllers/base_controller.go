@@ -157,10 +157,7 @@ func (r *BaseReconciler) updateStatus(ctx context.Context, object servicesv1alph
 	return nil
 }
 
-func (r *BaseReconciler) init(ctx context.Context, finalizer string, log logr.Logger, obj servicesv1alpha1.SAPBTPResource) error {
-	if err := r.addFinalizer(ctx, obj, finalizer, log); err != nil {
-		return err
-	}
+func (r *BaseReconciler) init(ctx context.Context, log logr.Logger, obj servicesv1alpha1.SAPBTPResource) error {
 	setInProgressCondition(smTypes.CREATE, "Pending", obj)
 	if err := r.updateStatusWithRetries(ctx, obj, log); err != nil {
 		return err
