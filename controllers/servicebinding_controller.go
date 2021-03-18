@@ -37,8 +37,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-const bindingFinalizerName string = "services.cloud.sap.com/binding-finalizer"
-
 // ServiceBindingReconciler reconciles a ServiceBinding object
 type ServiceBindingReconciler struct {
 	*BaseReconciler
@@ -67,6 +65,13 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 	serviceBinding = serviceBinding.DeepCopy()
 
+	if len(serviceBinding.GetConditions()) == 0 {
+		err := r.init(ctx, log, serviceBinding)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
 	smClient, err := r.getSMClient(ctx, log, serviceBinding)
 	if err != nil {
 		setFailureConditions(smTypes.CREATE, err.Error(), serviceBinding)
@@ -83,13 +88,6 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	if isDelete(serviceBinding.ObjectMeta) {
 		return r.delete(ctx, smClient, serviceBinding, log)
-	}
-	// The object is not being deleted, so if it does not have our finalizer,
-	// then lets init it
-	if !controllerutil.ContainsFinalizer(serviceBinding, bindingFinalizerName) {
-		if err := r.init(ctx, bindingFinalizerName, log, serviceBinding); err != nil {
-			return ctrl.Result{}, err
-		}
 	}
 
 	if serviceBinding.GetObservedGeneration() > 0 && !isInProgress(serviceBinding) {
@@ -246,7 +244,7 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 }
 
 func (r *ServiceBindingReconciler) delete(ctx context.Context, smClient sm.Client, serviceBinding *v1alpha1.ServiceBinding, log logr.Logger) (ctrl.Result, error) {
-	if controllerutil.ContainsFinalizer(serviceBinding, bindingFinalizerName) {
+	if controllerutil.ContainsFinalizer(serviceBinding, v1alpha1.FinalizerName) {
 		if len(serviceBinding.Status.BindingID) == 0 {
 			log.Info("No binding id found validating binding does not exists in SM before removing finalizer")
 			smBinding, err := r.getBindingForRecovery(smClient, serviceBinding, log)
@@ -266,7 +264,7 @@ func (r *ServiceBindingReconciler) delete(ctx context.Context, smClient sm.Clien
 			}
 
 			log.Info("Binding does not exists in SM, removing finalizer")
-			if err := r.removeFinalizer(ctx, serviceBinding, bindingFinalizerName, log); err != nil {
+			if err := r.removeFinalizer(ctx, serviceBinding, v1alpha1.FinalizerName, log); err != nil {
 				return ctrl.Result{}, err
 			}
 			return ctrl.Result{}, nil
@@ -550,7 +548,7 @@ func (r *ServiceBindingReconciler) removeBindingFromKubernetes(ctx context.Conte
 	}
 
 	// remove our finalizer from the list and update it.
-	if err := r.removeFinalizer(ctx, serviceBinding, bindingFinalizerName, log); err != nil {
+	if err := r.removeFinalizer(ctx, serviceBinding, v1alpha1.FinalizerName, log); err != nil {
 		return ctrl.Result{}, err
 	}
 
