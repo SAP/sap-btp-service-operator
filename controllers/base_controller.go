@@ -99,24 +99,6 @@ func (r *BaseReconciler) removeFinalizer(ctx context.Context, object servicesv1a
 	return nil
 }
 
-func (r *BaseReconciler) addFinalizer(ctx context.Context, object servicesv1alpha1.SAPBTPResource, finalizerName string, log logr.Logger) error {
-	if !controllerutil.ContainsFinalizer(object, finalizerName) {
-		controllerutil.AddFinalizer(object, finalizerName)
-		if err := r.Update(ctx, object); err != nil {
-			if err := r.Get(ctx, apimachinerytypes.NamespacedName{Name: object.GetName(), Namespace: object.GetNamespace()}, object); err != nil {
-				return client.IgnoreNotFound(err)
-			}
-			controllerutil.AddFinalizer(object, finalizerName)
-			if err := r.Update(ctx, object); err != nil {
-				return fmt.Errorf("failed to add the finalizer '%s'. Error: %v", finalizerName, err)
-			}
-		}
-		log.Info(fmt.Sprintf("added finalizer '%s' to %s", finalizerName, object.GetControllerName()))
-		return nil
-	}
-	return nil
-}
-
 func (r *BaseReconciler) updateStatusWithRetries(ctx context.Context, object servicesv1alpha1.SAPBTPResource, log logr.Logger) error {
 	logFailedAttempt := func(retries int, err error) {
 		log.Info(fmt.Sprintf("failed to update status of %s attempt #%v, %s", object.GetControllerName(), retries, err.Error()))
