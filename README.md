@@ -91,8 +91,7 @@ This feature is still under development, review, and testing.
 
 1.  To create an instance of a service offered by SAP BTP, first create a `ServiceInstance` custom-resource file:
      
-      ```
-      yaml
+      ```yaml
        apiVersion: services.cloud.sap.com/v1alpha1
        kind: ServiceInstance
        metadata:
