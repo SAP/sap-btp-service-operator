@@ -18,15 +18,11 @@ func normalizeCredentials(credentialsJSON json.RawMessage) (map[string][]byte, e
 	normalized := make(map[string][]byte)
 	for propertyName, value := range credentialsMap {
 		keyString := strings.Replace(propertyName, " ", "_", -1)
-		// need to re-marshal as json might have complex types, which need to be flattened in strings
-		jString, err := json.Marshal(value)
+		normalizedValue, err := serialize(value)
 		if err != nil {
-			return normalized, err
+			return nil, err
 		}
-		// need to remove quotes from flattened objects
-		strVal := strings.TrimPrefix(string(jString), "\"")
-		strVal = strings.TrimSuffix(strVal, "\"")
-		normalized[keyString] = []byte(strVal)
+		normalized[keyString] = normalizedValue
 	}
 	return normalized, nil
 }
@@ -42,4 +38,18 @@ func buildUserInfo(userInfo *v1.UserInfo, log logr.Logger) string {
 	}
 
 	return string(userInfoStr)
+}
+
+func serialize(value interface{}) ([]byte, error) {
+	if byteArrayVal, ok := value.([]byte); ok {
+		return byteArrayVal, nil
+	}
+	if strVal, ok := value.(string); ok {
+		return []byte(strVal), nil
+	}
+	data, err := json.Marshal(value)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
 }
