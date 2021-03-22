@@ -13,3 +13,8 @@ make deploy
 ### Run tests
 `make test`
 </br></br>
+
+### Read Logs
+```
+podName=$(kubectl get pods -A | grep -o "sap-btp-operator-controller-manager-\w*-\w*"); kubectl logs $podName -n sap-btp-operator -c manager
+```

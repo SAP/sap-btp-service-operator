@@ -3,7 +3,10 @@ package webhooks
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
+
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/SAP/sap-btp-service-operator/api/v1alpha1"
 	v1 "k8s.io/api/authentication/v1"
@@ -12,7 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-// +kubebuilder:webhook:path=/mutate-services-cloud-sap-com-v1alpha1-serviceinstance,mutating=true,failurePolicy=fail,groups=services.cloud.sap.com,resources=serviceinstances,verbs=create;update,versions=v1alpha1,name=mserviceinstance.kb.io,sideEffects=None
+// +kubebuilder:webhook:path=/mutate-services-cloud-sap-com-v1alpha1-serviceinstance,mutating=true,failurePolicy=fail,groups=services.cloud.sap.com,resources=serviceinstances,verbs=create;update,versions=v1alpha1,name=mserviceinstance.kb.io,sideEffects=None,admissionReviewVersions=v1beta1;v1
 
 var instancelog = logf.Log.WithName("serviceinstance-resource")
 
@@ -27,6 +30,11 @@ func (s *ServiceInstanceDefaulter) Handle(_ context.Context, req admission.Reque
 	err := s.decoder.Decode(req, instance)
 	if err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
+	}
+
+	if instance.DeletionTimestamp.IsZero() && !controllerutil.ContainsFinalizer(instance, v1alpha1.FinalizerName) {
+		controllerutil.AddFinalizer(instance, v1alpha1.FinalizerName)
+		instancelog.Info(fmt.Sprintf("added finalizer '%s' to service instance", v1alpha1.FinalizerName))
 	}
 
 	// mutate the fields

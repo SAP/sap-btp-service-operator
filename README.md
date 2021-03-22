@@ -100,6 +100,10 @@ This feature is still under development, review, and testing.
        spec:
         serviceOfferingName: <offering>
         servicePlanName: <plan>
+        externalName: my-service-instance-external
+        parameters:
+          key1: val1
+          key2: val2
       ```
      &ensp; Where:
     
@@ -110,8 +114,7 @@ This feature is still under development, review, and testing.
    > **Tip**
    >
    > Use the *Environment* filter to get all offerings that are relevant for Kubernetes.
-     
-      
+           
         
    *  `<plan>` is the plan of the selected service offering that you want to create.<br/>
 
@@ -134,14 +137,19 @@ This feature is still under development, review, and testing.
 
 1.  To get access credentials to your service instance and make it available in the cluster so that your applications can use it, create a `ServiceBinding` custom resource, then     set the `serviceInstanceName` field to the name of the `ServiceInstance` resource you created.
 
-    ```yaml
+  ```yaml
     apiVersion: services.cloud.sap.com/v1alpha1
     kind: ServiceBinding
     metadata:
         name: my-binding
     spec:
         serviceInstanceName: my-service-instance
-    ```
+        externalName: my-binding-external
+        secretName: mySecret
+        parameters:
+          key1: val1
+          key2: val2      
+  ```
 
 2.  Apply the custom-resource file in your cluster to create the binding.
 
