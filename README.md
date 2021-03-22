@@ -179,6 +179,8 @@ This feature is still under development, review, and testing.
 | servicePlanID   |  `string`  | The plan ID in case service offering and plan name are ambiguous. |
 | externalName       | `string` | The name for the service instance in SAP BTP, defaults to the instance `metadata.name` if not specified. |
 | parameters       | `[]object` | Some services support the provisioning of additional configuration parameters during the instance creation.<br/>For the list of supported parameters, check the documentation of the particular service offering. |
+| parametersFrom | `[]object` | List of sources to populate parameters. |
+| userInfo | `object` | Contains information about the user that last modified this service instance. | 
 
 #### Status
 | Parameter         | Type     | Description                                                                                                   |
@@ -198,6 +200,8 @@ This feature is still under development, review, and testing.
 | externalName       | `string`   |  The name for the service binding in SAP BTP, defaults to the binding `metadata.name` if not specified. |
 | secretName       | `string`   |  The name of the secret where the credentials are stored, defaults to the binding `metadata.name` if not specified. |
 | parameters       |  `[]object`  |  Some services support the provisioning of additional configuration parameters during the bind request.<br/>For the list of supported                                  parameters, check the documentation of the particular service offering.|
+| parametersFrom | `[]object` | List of sources to populate parameters. |
+| userInfo | `object`  | Contains information about the user that last modified this service binding. | 
 
 #### Status
 | Parameter         | Type     | Description                                                                                                   |
