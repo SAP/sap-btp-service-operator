@@ -180,7 +180,7 @@ var _ = Describe("ServiceBinding controller", func() {
 		bindingName = "test-binding-" + guid
 		fakeClient = &smfakes.FakeClient{}
 		fakeClient.ProvisionReturns("12345678", "", nil)
-		fakeClient.BindReturns(&smclientTypes.ServiceBinding{ID: fakeBindingID, Credentials: json.RawMessage("{\"secret_key\": \"secret_value\"}")}, "", nil)
+		fakeClient.BindReturns(&smclientTypes.ServiceBinding{ID: fakeBindingID, Credentials: json.RawMessage(`{"secret_key": "secret_value", "escaped": "{\"escaped_key\":\"escaped_val\"}"}`)}, "", nil)
 
 		smInstance := &smclientTypes.ServiceInstance{ID: fakeInstanceID, Ready: true, LastOperation: &smTypes.Operation{State: smTypes.SUCCEEDED, Type: smTypes.UPDATE}}
 		fakeClient.GetInstanceByIDReturns(smInstance, nil)
@@ -314,6 +314,7 @@ var _ = Describe("ServiceBinding controller", func() {
 					By("Verify binding secret created")
 					bindingSecret := getSecret(ctx, createdBinding.Spec.SecretName, createdBinding.Namespace)
 					validateSecretData(bindingSecret, "secret_key", "secret_value")
+					validateSecretData(bindingSecret, "escaped", `{"escaped_key":"escaped_val"}`)
 				})
 
 				When("bind call to SM returns error", func() {
