@@ -587,8 +587,7 @@ func (r *ServiceBindingReconciler) maintain(ctx context.Context, binding *v1alph
 		if apierrors.IsNotFound(err) && !isDelete(binding.ObjectMeta) {
 			log.Info(fmt.Sprintf("secret not found recovering binding %s", binding.Name))
 			binding.Status.BindingID = ""
-			binding.Status.ObservedGeneration = 0
-			setFailureConditions(smTypes.CREATE, "secret not found", binding)
+			setInProgressCondition(smTypes.CREATE, "recreating deleted secret", binding)
 			shouldUpdateStatus = true
 		} else {
 			return ctrl.Result{}, err
