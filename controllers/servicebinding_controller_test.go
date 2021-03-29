@@ -297,7 +297,7 @@ var _ = Describe("ServiceBinding controller", func() {
 					}, timeout, interval).Should(BeTrue())
 
 					By("Verify binding secret created")
-					bindingSecret := getSecret(ctx, binding.Spec.SecretName, binding.Namespace)
+					bindingSecret := getSecret(ctx, binding.Spec.SecretName, binding.Namespace, true)
 					Expect(bindingSecret).ToNot(BeNil())
 				})
 			})
@@ -312,8 +312,25 @@ var _ = Describe("ServiceBinding controller", func() {
 					Expect(createdBinding.Spec.UserInfo).NotTo(BeNil())
 
 					By("Verify binding secret created")
-					bindingSecret := getSecret(ctx, createdBinding.Spec.SecretName, createdBinding.Namespace)
+					bindingSecret := getSecret(ctx, createdBinding.Spec.SecretName, createdBinding.Namespace, true)
 					validateSecretData(bindingSecret, "secret_key", "secret_value")
+				})
+
+				When("secret deleted by user", func() {
+					It("should recreate the secret", func() {
+						ctx := context.Background()
+						createdBinding = createBinding(ctx, bindingName, bindingTestNamespace, instanceName, "binding-external-name")
+						secretLookupKey := types.NamespacedName{Name: createdBinding.Spec.SecretName, Namespace: createdBinding.Namespace}
+						bindingSecret := getSecret(ctx, secretLookupKey.Name, secretLookupKey.Namespace, true)
+						err := k8sClient.Delete(ctx, bindingSecret)
+						Expect(err).ToNot(HaveOccurred())
+
+						Eventually(func() bool {
+							sec := getSecret(ctx, secretLookupKey.Name, secretLookupKey.Namespace, false)
+							return len(sec.Name) > 0
+
+						}, timeout*2, interval).Should(BeTrue())
+					})
 				})
 
 				When("bind call to SM returns error", func() {
@@ -763,10 +780,12 @@ func validateSecretData(secret *v1.Secret, expectedKey string, expectedValue str
 	Expect(string(secret.Data[expectedKey])).To(Equal(expectedValue))
 }
 
-func getSecret(ctx context.Context, name, namespace string) *v1.Secret {
+func getSecret(ctx context.Context, name, namespace string, failOnError bool) *v1.Secret {
 	secret := &v1.Secret{}
 	err := k8sClient.Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, secret)
-	Expect(err).ToNot(HaveOccurred())
+	if failOnError {
+		Expect(err).ToNot(HaveOccurred())
+	}
 
 	return secret
 }

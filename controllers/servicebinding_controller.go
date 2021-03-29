@@ -19,7 +19,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-
 	"github.com/SAP/sap-btp-service-operator/client/sm"
 
 	smTypes "github.com/Peripli/service-manager/pkg/types"
@@ -50,7 +49,6 @@ type ServiceBindingReconciler struct {
 // +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;create;update
 
 func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	// TODO optimize log - use withValue where possible
 	log := r.Log.WithValues("servicebinding", req.NamespacedName)
 
 	serviceBinding := &v1alpha1.ServiceBinding{}
@@ -92,7 +90,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	if serviceBinding.GetObservedGeneration() > 0 && !isInProgress(serviceBinding) {
 		log.Info("Binding already created")
-		return ctrl.Result{}, nil
+		return r.maintain(ctx, serviceBinding, log)
 	}
 
 	log.Info(fmt.Sprintf("Current generation is %v and observed is %v", serviceBinding.Generation, serviceBinding.GetObservedGeneration()))
@@ -424,6 +422,7 @@ func (r *ServiceBindingReconciler) getServiceInstanceForBinding(ctx context.Cont
 func (r *ServiceBindingReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.ServiceBinding{}).
+		Owns(&corev1.Secret{}).
 		Complete(r)
 }
 
@@ -574,4 +573,30 @@ func (r *ServiceBindingReconciler) validateSecretNameIsAvailable(ctx context.Con
 		return fmt.Errorf("the specified secret name '%s' is already taken. Choose another name and try again", binding.Spec.SecretName)
 	}
 	return nil
+}
+
+func (r *ServiceBindingReconciler) maintain(ctx context.Context, binding *v1alpha1.ServiceBinding, log logr.Logger) (ctrl.Result, error) {
+	shouldUpdateStatus := false
+	if binding.Generation != binding.Status.ObservedGeneration {
+		binding.SetObservedGeneration(binding.Generation)
+		shouldUpdateStatus = true
+	}
+
+	if _, err := r.getSecret(ctx, binding.Namespace, binding.Spec.SecretName); err != nil {
+		if apierrors.IsNotFound(err) && !isDelete(binding.ObjectMeta) {
+			log.Info(fmt.Sprintf("secret not found recovering binding %s", binding.Name))
+			binding.Status.BindingID = ""
+			binding.Status.ObservedGeneration = 0
+			setFailureConditions(smTypes.CREATE, "secret not found", binding)
+			shouldUpdateStatus = true
+		} else {
+			return ctrl.Result{}, err
+		}
+	}
+
+	if shouldUpdateStatus {
+		log.Info(fmt.Sprintf("maintanance required for binding %s", binding.Name))
+		return ctrl.Result{}, r.updateStatusWithRetries(ctx, binding, log)
+	}
+	return ctrl.Result{}, nil
 }
