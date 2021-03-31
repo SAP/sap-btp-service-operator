@@ -198,6 +198,8 @@ func setInProgressConditions(operationType smTypes.OperationCategory, message st
 	}
 	lastOpCondition := metav1.Condition{Type: servicesv1alpha1.ConditionLastOpSuccess, Status: metav1.ConditionFalse, Reason: getConditionReason(operationType, smTypes.IN_PROGRESS), Message: message}
 	meta.SetStatusCondition(&conditions, lastOpCondition)
+	meta.SetStatusCondition(&conditions, getReadyCondition(object))
+
 	object.SetConditions(conditions)
 }
 
@@ -217,6 +219,8 @@ func setSuccessConditions(operationType smTypes.OperationCategory, object servic
 	}
 	lastOpCondition := metav1.Condition{Type: servicesv1alpha1.ConditionLastOpSuccess, Status: metav1.ConditionTrue, Reason: getConditionReason(operationType, smTypes.SUCCEEDED), Message: message}
 	meta.SetStatusCondition(&conditions, lastOpCondition)
+	meta.SetStatusCondition(&conditions, getReadyCondition(object))
+
 	object.SetConditions(conditions)
 }
 
@@ -238,11 +242,16 @@ func setFailureConditions(operationType smTypes.OperationCategory, errorMessage 
 	}
 
 	conditions := object.GetConditions()
+	if len(conditions) > 0 {
+		meta.RemoveStatusCondition(&conditions, servicesv1alpha1.ConditionReady)
+	}
 	lastOpCondition := metav1.Condition{Type: servicesv1alpha1.ConditionLastOpSuccess, Status: metav1.ConditionFalse, Reason: reason, Message: message}
 	meta.SetStatusCondition(&conditions, lastOpCondition)
 
 	failedCondition := metav1.Condition{Type: servicesv1alpha1.ConditionFailed, Status: metav1.ConditionTrue, Reason: reason, Message: message}
 	meta.SetStatusCondition(&conditions, failedCondition)
+	meta.SetStatusCondition(&conditions, getReadyCondition(object))
+
 	object.SetConditions(conditions)
 }
 
@@ -254,6 +263,7 @@ func setBlockedCondition(message string, object servicesv1alpha1.SAPBTPResource)
 	}
 	lastOpBlockedCondition := metav1.Condition{Type: servicesv1alpha1.ConditionLastOpSuccess, Status: metav1.ConditionFalse, Reason: Blocked, Message: message}
 	meta.SetStatusCondition(&conditions, lastOpBlockedCondition)
+	meta.SetStatusCondition(&conditions, getReadyCondition(object))
 	object.SetConditions(conditions)
 }
 
@@ -272,7 +282,7 @@ func isTransientError(err error, log logr.Logger) bool {
 func (r *BaseReconciler) markAsNonTransientError(ctx context.Context, operationType smTypes.OperationCategory, nonTransientErr error, object servicesv1alpha1.SAPBTPResource, log logr.Logger) (ctrl.Result, error) {
 	setFailureConditions(operationType, nonTransientErr.Error(), object)
 	if operationType != smTypes.DELETE {
-		log.Info(fmt.Sprintf("operation %s of %s encountered a non transient error, giving up operation :(", operationType, object.GetControllerName()))
+		log.Info(fmt.Sprintf("operation %s of %s encountered a non transient error %s, giving up operation :(", operationType, object.GetControllerName(), nonTransientErr.Error()))
 	}
 	object.SetObservedGeneration(object.GetGeneration())
 	err := r.updateStatusWithRetries(ctx, object, log)
@@ -287,7 +297,7 @@ func (r *BaseReconciler) markAsNonTransientError(ctx context.Context, operationT
 
 func (r *BaseReconciler) markAsTransientError(ctx context.Context, operationType smTypes.OperationCategory, transientErr error, object servicesv1alpha1.SAPBTPResource, log logr.Logger) (ctrl.Result, error) {
 	setInProgressConditions(operationType, transientErr.Error(), object)
-	log.Info(fmt.Sprintf("operation %s of %s encountered a transient error, retrying operation :)", operationType, object.GetControllerName()))
+	log.Info(fmt.Sprintf("operation %s of %s encountered a transient error %s, retrying operation :)", operationType, object.GetControllerName(), transientErr.Error()))
 	if err := r.updateStatusWithRetries(ctx, object, log); err != nil {
 		return ctrl.Result{}, err
 	}
@@ -296,10 +306,17 @@ func (r *BaseReconciler) markAsTransientError(ctx context.Context, operationType
 
 func isInProgress(object servicesv1alpha1.SAPBTPResource) bool {
 	conditions := object.GetConditions()
-	if len(conditions) == 0 {
-		return false
+	return meta.IsStatusConditionPresentAndEqual(conditions, servicesv1alpha1.ConditionLastOpSuccess, metav1.ConditionFalse) &&
+		!meta.IsStatusConditionPresentAndEqual(conditions, servicesv1alpha1.ConditionFailed, metav1.ConditionTrue)
+}
+
+func getReadyCondition(object servicesv1alpha1.SAPBTPResource) metav1.Condition {
+	status := metav1.ConditionFalse
+	reason := "ProvisionFailed"
+	if object.IsReady() {
+		status = metav1.ConditionTrue
+		reason = "ProvisionSucceeded"
 	}
-	return len(conditions) == 1 &&
-		conditions[0].Type == servicesv1alpha1.ConditionLastOpSuccess &&
-		conditions[0].Status == metav1.ConditionFalse
+
+	return metav1.Condition{Type: servicesv1alpha1.ConditionReady, Status: status, Reason: reason, Message: reason}
 }

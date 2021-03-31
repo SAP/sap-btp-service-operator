@@ -215,9 +215,9 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 		return r.handleSecretError(ctx, smTypes.CREATE, err, serviceBinding, log)
 	}
 
-	setSuccessConditions(smTypes.CREATE, serviceBinding)
 	serviceBinding.Status.BindingID = smBinding.ID
 	serviceBinding.Status.Ready = true
+	setSuccessConditions(smTypes.CREATE, serviceBinding)
 	log.Info("Updating binding", "bindingID", smBinding.ID)
 
 	return ctrl.Result{}, r.updateStatusWithRetries(ctx, serviceBinding, log)
@@ -333,6 +333,7 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, smClient sm.Client,
 				return r.handleSecretError(ctx, smTypes.CREATE, err, serviceBinding, log)
 			}
 			serviceBinding.Status.Ready = true
+			setSuccessConditions(smTypes.OperationCategory(status.Type), serviceBinding)
 		case smTypes.DELETE:
 			return r.removeBindingFromKubernetes(ctx, serviceBinding, log)
 		}
@@ -581,7 +582,6 @@ func (r *ServiceBindingReconciler) handleSecretError(ctx context.Context, op smT
 	log.Error(err, fmt.Sprintf("failed to store secret %s for binding %s", binding.Spec.SecretName, binding.Name))
 	if apierrors.ReasonForError(err) == metav1.StatusReasonUnknown {
 		return r.markAsNonTransientError(ctx, op, err, binding, log)
-	} else {
-		return r.markAsTransientError(ctx, op, err, binding, log)
 	}
+	return r.markAsTransientError(ctx, op, err, binding, log)
 }

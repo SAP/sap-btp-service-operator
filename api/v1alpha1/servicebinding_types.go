@@ -151,6 +151,10 @@ func (sb *ServiceBinding) DeepClone() SAPBTPResource {
 	return sb.DeepCopy()
 }
 
+func (sb *ServiceBinding) IsReady() bool {
+	return sb.Status.Ready
+}
+
 // +kubebuilder:object:root=true
 
 // ServiceBindingList contains a list of ServiceBinding

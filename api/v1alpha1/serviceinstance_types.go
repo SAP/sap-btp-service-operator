@@ -149,6 +149,10 @@ func (in *ServiceInstance) DeepClone() SAPBTPResource {
 	return in.DeepCopy()
 }
 
+func (in *ServiceInstance) IsReady() bool {
+	return in.Status.Ready
+}
+
 // +kubebuilder:object:root=true
 
 // ServiceInstanceList contains a list of ServiceInstance

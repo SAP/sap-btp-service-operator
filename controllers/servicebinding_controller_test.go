@@ -88,7 +88,7 @@ var _ = Describe("ServiceBinding controller", func() {
 			} else {
 				return len(createdBinding.Status.Conditions) > 0 && createdBinding.Status.Conditions[0].Message != "Pending"
 			}
-		}, timeout*2, interval).Should(BeTrue())
+		}, timeout, interval).Should(BeTrue())
 		return createdBinding, nil
 	}
 
@@ -101,7 +101,7 @@ var _ = Describe("ServiceBinding controller", func() {
 		if err != nil {
 			Expect(err.Error()).To(ContainSubstring(failureMessage))
 		} else {
-			Expect(len(createdBinding.Status.Conditions)).To(Equal(2))
+			Expect(len(createdBinding.Status.Conditions)).To(Equal(3))
 			Expect(createdBinding.Status.Conditions[1].Status).To(Equal(metav1.ConditionTrue))
 			Expect(createdBinding.Status.Conditions[1].Message).To(ContainSubstring(failureMessage))
 		}
@@ -112,7 +112,7 @@ var _ = Describe("ServiceBinding controller", func() {
 		if err != nil {
 			Expect(err.Error()).To(ContainSubstring(failureMessage))
 		} else {
-			Expect(len(createdBinding.Status.Conditions)).To(Equal(1))
+			Expect(len(createdBinding.Status.Conditions)).To(Equal(2))
 			Expect(createdBinding.Status.Conditions[0].Status).To(Equal(metav1.ConditionFalse))
 			Expect(createdBinding.Status.Conditions[0].Message).To(ContainSubstring(failureMessage))
 			Expect(createdBinding.Status.Conditions[0].Reason).To(Equal(Blocked))
@@ -201,7 +201,7 @@ var _ = Describe("ServiceBinding controller", func() {
 			Eventually(func() bool {
 				err := k8sClient.Get(context.Background(), types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}, createdBinding)
 				return apierrors.IsNotFound(err)
-			}, timeout*2, interval).Should(BeTrue())
+			}, timeout, interval).Should(BeTrue())
 			if len(secretName) > 0 {
 				Eventually(func() bool {
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Name: secretName, Namespace: bindingTestNamespace}, &v1.Secret{})
@@ -329,7 +329,7 @@ var _ = Describe("ServiceBinding controller", func() {
 							sec := getSecret(ctx, secretLookupKey.Name, secretLookupKey.Namespace, false)
 							return len(sec.Name) > 0
 
-						}, timeout*2, interval).Should(BeTrue())
+						}, timeout, interval).Should(BeTrue())
 					})
 				})
 
@@ -605,7 +605,7 @@ var _ = Describe("ServiceBinding controller", func() {
 				if err != nil {
 					return false
 				}
-				return len(createdBinding.Status.Conditions) == 2
+				return len(createdBinding.Status.Conditions) == 3
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(createdBinding.Status.Conditions[0].Reason).To(Equal(getConditionReason(smTypes.DELETE, smTypes.FAILED)))

@@ -159,6 +159,7 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client
 			}
 		} else if serviceInstance.Status.OperationType == smTypes.CREATE {
 			serviceInstance.Status.Ready = true
+			setSuccessConditions(smTypes.OperationCategory(status.Type), serviceInstance)
 		}
 	}
 
@@ -210,9 +211,9 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 		return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, nil
 	}
 	log.Info("Instance provisioned successfully")
-	setSuccessConditions(smTypes.CREATE, serviceInstance)
 	serviceInstance.Status.InstanceID = smInstanceID
 	serviceInstance.Status.Ready = true
+	setSuccessConditions(smTypes.CREATE, serviceInstance)
 	return ctrl.Result{}, r.updateStatusWithRetries(ctx, serviceInstance, log)
 }
 

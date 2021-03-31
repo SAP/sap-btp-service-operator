@@ -20,6 +20,9 @@ const (
 
 	// ConditionFailed represents information about a final failure that should not be retried.
 	ConditionFailed = "Failed"
+
+	// ConditionReady represents if the resource ready for usage.
+	ConditionReady = "Ready"
 )
 
 // +kubebuilder:object:generate=false
@@ -34,6 +37,7 @@ type SAPBTPResource interface {
 	GetObservedGeneration() int64
 	SetObservedGeneration(int64)
 	DeepClone() SAPBTPResource
+	IsReady() bool
 }
 
 // ParametersFromSource represents the source of a set of Parameters

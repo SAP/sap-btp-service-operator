@@ -55,9 +55,9 @@ var _ = Describe("Base controller", func() {
 
 	When("SM secret not exists", func() {
 		It("Should fail with failure condition", func() {
-			controller.getSMClient(ctx, controller.Log, serviceInstance)
+			_, _ = controller.getSMClient(ctx, controller.Log, serviceInstance)
 			Expect(serviceInstance.Status.Conditions[0].Reason).To(Equal(Blocked))
-			Expect(len(serviceInstance.Status.Conditions)).To(Equal(1))
+			Expect(len(serviceInstance.Status.Conditions)).To(Equal(2))
 		})
 	})
 

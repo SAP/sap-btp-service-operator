@@ -196,6 +196,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					BeforeEach(func() {
 						fakeClient.ProvisionReturns("", "", fmt.Errorf("provided plan id does not match the provided offeing name and plan name"))
 					})
+
 					It("provisioning should fail", func() {
 						serviceInstance = createInstance(ctx, instanceSpec)
 						Expect(serviceInstance.Status.Conditions[0].Message).To(ContainSubstring("provided plan id does not match"))
@@ -235,7 +236,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 					It("should have failure condition", func() {
 						serviceInstance = createInstance(ctx, instanceSpec)
-						Expect(len(serviceInstance.Status.Conditions)).To(Equal(2))
+						Expect(len(serviceInstance.Status.Conditions)).To(Equal(3))
 						Expect(serviceInstance.Status.Conditions[0].Status).To(Equal(metav1.ConditionFalse))
 						Expect(serviceInstance.Status.Conditions[0].Message).To(ContainSubstring(errMessage))
 					})
@@ -259,7 +260,7 @@ var _ = Describe("ServiceInstance controller", func() {
 							return isReady(serviceInstance)
 						}, timeout, interval).Should(BeTrue())
 
-						Expect(len(serviceInstance.Status.Conditions)).To(Equal(1))
+						Expect(len(serviceInstance.Status.Conditions)).To(Equal(2))
 						Expect(serviceInstance.Status.Conditions[0].Status).To(Equal(metav1.ConditionTrue))
 					})
 				})
@@ -745,7 +746,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						serviceInstance = createInstance(ctx, instanceSpec)
 						Expect(serviceInstance.Status.InstanceID).To(Equal(fakeInstanceID))
 						Expect(fakeClient.ProvisionCallCount()).To(Equal(0))
-						Expect(len(serviceInstance.Status.Conditions)).To(Equal(2))
+						Expect(len(serviceInstance.Status.Conditions)).To(Equal(3))
 						Expect(serviceInstance.Status.Conditions[0].Reason).To(Equal(CreateFailed))
 					})
 				})
