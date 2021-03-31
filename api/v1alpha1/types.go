@@ -15,7 +15,7 @@ const (
 )
 
 const (
-	// ConditionLastOpSuccess represents that a last operation CREATE/UPDATE/DELETE completes successfully.
+	// ConditionLastOpSuccess represents the status of last operation CREATE/UPDATE/DELETE.
 	ConditionLastOpSuccess = "LastOpSuccess"
 
 	// ConditionFailed represents information about a final failure that should not be retried.
