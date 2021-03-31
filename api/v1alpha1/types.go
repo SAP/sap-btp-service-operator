@@ -15,8 +15,8 @@ const (
 )
 
 const (
-	// ConditionReady represents that a given resource is in ready state.
-	ConditionReady = "Ready"
+	// ConditionLastOpSuccess represents that a last operation CREATE/UPDATE/DELETE completes successfully.
+	ConditionLastOpSuccess = "LastOpSuccess"
 
 	// ConditionFailed represents information about a final failure that should not be retried.
 	ConditionFailed = "Failed"

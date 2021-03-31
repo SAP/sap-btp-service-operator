@@ -114,7 +114,10 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	//Update
-	return r.updateInstance(ctx, smClient, serviceInstance, log)
+	if serviceInstance.Status.Ready {
+		return r.updateInstance(ctx, smClient, serviceInstance, log)
+	}
+	return ctrl.Result{}, nil
 }
 
 func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client, serviceInstance *v1alpha1.ServiceInstance, log logr.Logger) (ctrl.Result, error) {
@@ -162,6 +165,8 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client
 			if err := r.removeFinalizer(ctx, serviceInstance, v1alpha1.FinalizerName, log); err != nil {
 				return ctrl.Result{}, err
 			}
+		} else if serviceInstance.Status.OperationType == smTypes.CREATE {
+			serviceInstance.Status.Ready = true
 		}
 	}
 
@@ -215,7 +220,7 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	log.Info("Instance provisioned successfully")
 	setSuccessConditions(smTypes.CREATE, serviceInstance)
 	serviceInstance.Status.InstanceID = smInstanceID
-
+	serviceInstance.Status.Ready = true
 	return ctrl.Result{}, r.updateStatusWithRetries(ctx, serviceInstance, log)
 }
 
@@ -332,6 +337,9 @@ func (r *ServiceInstanceReconciler) resyncInstanceStatus(k8sInstance *v1alpha1.S
 		k8sInstance.SetObservedGeneration(0)
 	}
 
+	if smInstance.Ready {
+		k8sInstance.Status.Ready = true
+	}
 	k8sInstance.Status.InstanceID = smInstance.ID
 	k8sInstance.Status.OperationURL = ""
 	k8sInstance.Status.OperationType = ""

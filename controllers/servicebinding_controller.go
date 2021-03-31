@@ -237,6 +237,7 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 
 	setSuccessConditions(smTypes.CREATE, serviceBinding)
 	serviceBinding.Status.BindingID = smBinding.ID
+	serviceBinding.Status.Ready = true
 	log.Info("Updating binding", "bindingID", smBinding.ID)
 
 	return ctrl.Result{}, r.updateStatusWithRetries(ctx, serviceBinding, log)
@@ -360,6 +361,7 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, smClient sm.Client,
 				log.Error(err, fmt.Sprintf("binding %s succeeded but could not store secret", serviceBinding.Status.BindingID))
 				return ctrl.Result{}, err
 			}
+			serviceBinding.Status.Ready = true
 		case smTypes.DELETE:
 			return r.removeBindingFromKubernetes(ctx, serviceBinding, log)
 		}
@@ -428,6 +430,9 @@ func (r *ServiceBindingReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func (r *ServiceBindingReconciler) resyncBindingStatus(k8sBinding *v1alpha1.ServiceBinding, smBinding *smclientTypes.ServiceBinding, serviceInstanceID string) {
+	if smBinding.Ready {
+		k8sBinding.Status.Ready = true
+	}
 	k8sBinding.Status.ObservedGeneration = k8sBinding.Generation
 	k8sBinding.Status.BindingID = smBinding.ID
 	k8sBinding.Status.InstanceID = serviceInstanceID
