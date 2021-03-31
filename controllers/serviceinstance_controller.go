@@ -67,11 +67,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	smClient, err := r.getSMClient(ctx, log, serviceInstance)
 	if err != nil {
-		setFailureConditions(smTypes.CREATE, err.Error(), serviceInstance)
-		if err := r.updateStatusWithRetries(ctx, serviceInstance, log); err != nil {
-			return ctrl.Result{}, err
-		}
-		return ctrl.Result{}, err
+		return r.markAsTransientError(ctx, smTypes.CREATE, err, serviceInstance, log)
 	}
 
 	if len(serviceInstance.Status.OperationURL) > 0 {
@@ -97,11 +93,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		instance, err := r.getInstanceForRecovery(smClient, serviceInstance, log)
 		if err != nil {
 			log.Error(err, "failed to check instance recovery")
-			setFailureConditions(smTypes.CREATE, err.Error(), serviceInstance)
-			if err := r.updateStatusWithRetries(ctx, serviceInstance, log); err != nil {
-				return ctrl.Result{}, err
-			}
-			return ctrl.Result{Requeue: true, RequeueAfter: r.Config.SyncPeriod}, nil
+			return r.markAsTransientError(ctx, smTypes.CREATE, err, serviceInstance, log)
 		}
 		if instance != nil {
 			log.Info(fmt.Sprintf("found existing instance in SM with id %s, updating status", instance.ID))
@@ -125,7 +117,7 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client
 	status, statusErr := smClient.Status(serviceInstance.Status.OperationURL, nil)
 	if statusErr != nil {
 		log.Info(fmt.Sprintf("failed to fetch operation, got error from SM: %s", statusErr.Error()), "operationURL", serviceInstance.Status.OperationURL)
-		setFailureConditions(serviceInstance.Status.OperationType, statusErr.Error(), serviceInstance)
+		setInProgressConditions(serviceInstance.Status.OperationType, statusErr.Error(), serviceInstance)
 		// if failed to read operation status we cleanup the status to trigger re-sync from SM
 		freshStatus := v1alpha1.ServiceInstanceStatus{Conditions: serviceInstance.GetConditions()}
 		if isDelete(serviceInstance.ObjectMeta) {
@@ -182,7 +174,7 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	if err != nil {
 		//if parameters are invalid there is nothing we can do, the user should fix it according to the error message in the condition
 		log.Error(err, "failed to parse instance parameters")
-		return r.markAsNonTransientError(ctx, smTypes.CREATE, err.Error(), serviceInstance, log)
+		return r.markAsNonTransientError(ctx, smTypes.CREATE, err, serviceInstance, log)
 	}
 
 	smInstanceID, operationURL, provisionErr := smClient.Provision(&types.ServiceInstance{
@@ -200,9 +192,9 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 		log.Error(provisionErr, "failed to create service instance", "serviceOfferingName", serviceInstance.Spec.ServiceOfferingName,
 			"servicePlanName", serviceInstance.Spec.ServicePlanName)
 		if isTransientError(provisionErr, log) {
-			return r.markAsTransientError(ctx, smTypes.CREATE, provisionErr.Error(), serviceInstance, log)
+			return r.markAsTransientError(ctx, smTypes.CREATE, provisionErr, serviceInstance, log)
 		}
-		return r.markAsNonTransientError(ctx, smTypes.CREATE, provisionErr.Error(), serviceInstance, log)
+		return r.markAsNonTransientError(ctx, smTypes.CREATE, provisionErr, serviceInstance, log)
 	}
 
 	if operationURL != "" {
@@ -210,7 +202,7 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 		log.Info("Provision request is in progress")
 		serviceInstance.Status.OperationURL = operationURL
 		serviceInstance.Status.OperationType = smTypes.CREATE
-		setInProgressCondition(smTypes.CREATE, "", serviceInstance)
+		setInProgressConditions(smTypes.CREATE, "", serviceInstance)
 		if err := r.updateStatusWithRetries(ctx, serviceInstance, log); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -231,7 +223,7 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 	_, instanceParameters, err := buildParameters(r.Client, serviceInstance.Namespace, serviceInstance.Spec.ParametersFrom, serviceInstance.Spec.Parameters)
 	if err != nil {
 		log.Error(err, "failed to parse instance parameters")
-		return r.markAsNonTransientError(ctx, smTypes.UPDATE, fmt.Sprintf("failed to parse parameters: %v", err.Error()), serviceInstance, log)
+		return r.markAsNonTransientError(ctx, smTypes.UPDATE, fmt.Errorf("failed to parse parameters: %v", err.Error()), serviceInstance, log)
 	}
 
 	_, operationURL, err := smClient.UpdateInstance(serviceInstance.Status.InstanceID, &types.ServiceInstance{
@@ -242,16 +234,16 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 	if err != nil {
 		log.Error(err, fmt.Sprintf("failed to update service instance with ID %s", serviceInstance.Status.InstanceID))
 		if isTransientError(err, log) {
-			return r.markAsTransientError(ctx, smTypes.UPDATE, err.Error(), serviceInstance, log)
+			return r.markAsTransientError(ctx, smTypes.UPDATE, err, serviceInstance, log)
 		}
-		return r.markAsNonTransientError(ctx, smTypes.UPDATE, err.Error(), serviceInstance, log)
+		return r.markAsNonTransientError(ctx, smTypes.UPDATE, err, serviceInstance, log)
 	}
 
 	if operationURL != "" {
 		log.Info(fmt.Sprintf("Update request accepted, operation URL: %s", operationURL))
 		serviceInstance.Status.OperationURL = operationURL
 		serviceInstance.Status.OperationType = smTypes.UPDATE
-		setInProgressCondition(smTypes.UPDATE, "", serviceInstance)
+		setInProgressConditions(smTypes.UPDATE, "", serviceInstance)
 
 		if err := r.updateStatusWithRetries(ctx, serviceInstance, log); err != nil {
 			return ctrl.Result{}, err
@@ -276,7 +268,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 			if smInstance != nil {
 				log.Info("instance exists in SM continue with deletion")
 				serviceInstance.Status.InstanceID = smInstance.ID
-				setInProgressCondition(smTypes.DELETE, "delete after recovery", serviceInstance)
+				setInProgressConditions(smTypes.DELETE, "delete after recovery", serviceInstance)
 				return ctrl.Result{}, r.updateStatusWithRetries(ctx, serviceInstance, log)
 			}
 			log.Info("instance does not exists in SM, removing finalizer")
@@ -286,22 +278,15 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 		log.Info(fmt.Sprintf("Deleting instance with id %v from SM", serviceInstance.Status.InstanceID))
 		operationURL, deprovisionErr := smClient.Deprovision(serviceInstance.Status.InstanceID, nil, buildUserInfo(serviceInstance.Spec.UserInfo, log))
 		if deprovisionErr != nil {
-			if isTransientError(deprovisionErr, log) {
-				return r.markAsTransientError(ctx, smTypes.DELETE, deprovisionErr.Error(), serviceInstance, log)
-			}
-
-			setFailureConditions(smTypes.DELETE, fmt.Sprintf("failed to delete instance %s: %s", serviceInstance.Status.InstanceID, deprovisionErr.Error()), serviceInstance)
-			if err := r.updateStatusWithRetries(ctx, serviceInstance, log); err != nil {
-				return ctrl.Result{}, err
-			}
-			return ctrl.Result{}, deprovisionErr
+			// delete will proceed anyway
+			return r.markAsNonTransientError(ctx, smTypes.DELETE, deprovisionErr, serviceInstance, log)
 		}
 
 		if operationURL != "" {
 			log.Info("Deleting instance async")
 			serviceInstance.Status.OperationURL = operationURL
 			serviceInstance.Status.OperationType = smTypes.DELETE
-			setInProgressCondition(smTypes.DELETE, "", serviceInstance)
+			setInProgressConditions(smTypes.DELETE, "", serviceInstance)
 
 			if err := r.updateStatusWithRetries(ctx, serviceInstance, log); err != nil {
 				return ctrl.Result{}, err
@@ -349,7 +334,7 @@ func (r *ServiceInstanceReconciler) resyncInstanceStatus(k8sInstance *v1alpha1.S
 	case smTypes.IN_PROGRESS:
 		k8sInstance.Status.OperationURL = sm.BuildOperationURL(smInstance.LastOperation.ID, smInstance.ID, web.ServiceInstancesURL)
 		k8sInstance.Status.OperationType = smInstance.LastOperation.Type
-		setInProgressCondition(smInstance.LastOperation.Type, smInstance.LastOperation.Description, k8sInstance)
+		setInProgressConditions(smInstance.LastOperation.Type, smInstance.LastOperation.Description, k8sInstance)
 	case smTypes.SUCCEEDED:
 		setSuccessConditions(smInstance.LastOperation.Type, k8sInstance)
 	case smTypes.FAILED:

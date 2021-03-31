@@ -561,9 +561,11 @@ var _ = Describe("ServiceInstance controller", func() {
 				JustBeforeEach(func() {
 					fakeClient.DeprovisionReturns("", fmt.Errorf("failed to delete instance"))
 				})
+
 				JustAfterEach(func() {
 					fakeClient.DeprovisionReturns("", nil)
 				})
+
 				It("should not delete the k8s instance and should update the condition", func() {
 					deleteInstance(ctx, serviceInstance, false)
 					Eventually(func() bool {

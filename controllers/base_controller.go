@@ -140,7 +140,7 @@ func (r *BaseReconciler) updateStatus(ctx context.Context, object servicesv1alph
 }
 
 func (r *BaseReconciler) init(ctx context.Context, log logr.Logger, obj servicesv1alpha1.SAPBTPResource) error {
-	setInProgressCondition(smTypes.CREATE, "Pending", obj)
+	setInProgressConditions(smTypes.CREATE, "Pending", obj)
 	if err := r.updateStatusWithRetries(ctx, obj, log); err != nil {
 		return err
 	}
@@ -178,7 +178,7 @@ func getConditionReason(opType smTypes.OperationCategory, state smTypes.Operatio
 	return Unknown
 }
 
-func setInProgressCondition(operationType smTypes.OperationCategory, message string, object servicesv1alpha1.SAPBTPResource) {
+func setInProgressConditions(operationType smTypes.OperationCategory, message string, object servicesv1alpha1.SAPBTPResource) {
 	var defaultMessage string
 	if operationType == smTypes.CREATE {
 		defaultMessage = fmt.Sprintf("%s is being created", object.GetControllerName())
@@ -269,25 +269,29 @@ func isTransientError(err error, log logr.Logger) bool {
 	return false
 }
 
-func (r *BaseReconciler) markAsNonTransientError(ctx context.Context, operationType smTypes.OperationCategory, message string, object servicesv1alpha1.SAPBTPResource, log logr.Logger) (ctrl.Result, error) {
-	setFailureConditions(operationType, message, object)
-	log.Info(fmt.Sprintf("operation %s of %s encountered a non transient error, giving up operation :(", operationType, object.GetControllerName()))
+func (r *BaseReconciler) markAsNonTransientError(ctx context.Context, operationType smTypes.OperationCategory, nonTransientErr error, object servicesv1alpha1.SAPBTPResource, log logr.Logger) (ctrl.Result, error) {
+	setFailureConditions(operationType, nonTransientErr.Error(), object)
+	if operationType != smTypes.DELETE {
+		log.Info(fmt.Sprintf("operation %s of %s encountered a non transient error, giving up operation :(", operationType, object.GetControllerName()))
+	}
 	object.SetObservedGeneration(object.GetGeneration())
 	err := r.updateStatusWithRetries(ctx, object, log)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
+	if operationType == smTypes.DELETE {
+		return ctrl.Result{}, nonTransientErr
+	}
 	return ctrl.Result{}, nil
 }
 
-func (r *BaseReconciler) markAsTransientError(ctx context.Context, operationType smTypes.OperationCategory, message string, object servicesv1alpha1.SAPBTPResource, log logr.Logger) (ctrl.Result, error) {
-	setInProgressCondition(operationType, message, object)
+func (r *BaseReconciler) markAsTransientError(ctx context.Context, operationType smTypes.OperationCategory, transientErr error, object servicesv1alpha1.SAPBTPResource, log logr.Logger) (ctrl.Result, error) {
+	setInProgressConditions(operationType, transientErr.Error(), object)
+	log.Info(fmt.Sprintf("operation %s of %s encountered a transient error, retrying operation :)", operationType, object.GetControllerName()))
 	if err := r.updateStatusWithRetries(ctx, object, log); err != nil {
 		return ctrl.Result{}, err
 	}
-
-	log.Info(fmt.Sprintf("operation %s of %s encountered a transient error, will try again :)", operationType, object.GetControllerName()))
-	return ctrl.Result{Requeue: true, RequeueAfter: r.Config.LongPollInterval}, nil
+	return ctrl.Result{}, transientErr
 }
 
 func isInProgress(object servicesv1alpha1.SAPBTPResource) bool {
