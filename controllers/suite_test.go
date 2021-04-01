@@ -117,6 +117,7 @@ var _ = BeforeSuite(func(done Done) {
 			Log:      ctrl.Log.WithName("controllers").WithName("ServiceInstance"),
 			SMClient: func() sm.Client { return fakeClient },
 			Config:   testConfig,
+			Recorder: k8sManager.GetEventRecorderFor("ServiceInstance"),
 		},
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
@@ -133,6 +134,7 @@ var _ = BeforeSuite(func(done Done) {
 			Log:      ctrl.Log.WithName("controllers").WithName("ServiceBinding"),
 			SMClient: func() sm.Client { return fakeClient },
 			Config:   testConfig,
+			Recorder: k8sManager.GetEventRecorderFor("ServiceBinding"),
 		},
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())

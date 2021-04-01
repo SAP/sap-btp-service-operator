@@ -47,6 +47,7 @@ type ServiceBindingReconciler struct {
 // +kubebuilder:rbac:groups=services.cloud.sap.com,resources=serviceinstances,verbs=get;list
 // +kubebuilder:rbac:groups=services.cloud.sap.com,resources=serviceinstances/status,verbs=get
 // +kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,resources=events,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;create;update
 
 func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -459,6 +460,7 @@ func (r *ServiceBindingReconciler) storeBindingSecret(ctx context.Context, k8sBi
 			return err
 		}
 	}
+	r.Recorder.Event(k8sBinding, corev1.EventTypeNormal, "SecretCreated", "SecretCreated")
 	return nil
 }
 
@@ -566,6 +568,7 @@ func (r *ServiceBindingReconciler) maintain(ctx context.Context, binding *v1alph
 			binding.Status.BindingID = ""
 			setInProgressConditions(smTypes.CREATE, "recreating deleted secret", binding)
 			shouldUpdateStatus = true
+			r.Recorder.Event(binding, corev1.EventTypeWarning, "SecretDeleted", "SecretDeleted")
 		} else {
 			return ctrl.Result{}, err
 		}

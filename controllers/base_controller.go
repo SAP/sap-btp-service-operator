@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"k8s.io/client-go/tools/record"
+
 	"github.com/SAP/sap-btp-service-operator/client/sm"
 
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -52,6 +54,7 @@ type BaseReconciler struct {
 	SMClient       func() sm.Client
 	Config         config.Config
 	SecretResolver *secrets.SecretResolver
+	Recorder       record.EventRecorder
 }
 
 func (r *BaseReconciler) getSMClient(ctx context.Context, log logr.Logger, object servicesv1alpha1.SAPBTPResource) (sm.Client, error) {
