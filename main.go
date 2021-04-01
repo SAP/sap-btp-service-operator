@@ -88,6 +88,7 @@ func main() {
 			Scheme:         mgr.GetScheme(),
 			Config:         config.Get(),
 			SecretResolver: secretResolver,
+			Recorder:       mgr.GetEventRecorderFor("ServiceInstance"),
 		},
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ServiceInstance")
@@ -100,6 +101,7 @@ func main() {
 			Scheme:         mgr.GetScheme(),
 			Config:         config.Get(),
 			SecretResolver: secretResolver,
+			Recorder:       mgr.GetEventRecorderFor("ServiceBinding"),
 		},
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ServiceBinding")
