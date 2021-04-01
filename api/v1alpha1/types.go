@@ -37,7 +37,8 @@ type SAPBTPResource interface {
 	GetObservedGeneration() int64
 	SetObservedGeneration(int64)
 	DeepClone() SAPBTPResource
-	IsReady() bool
+	SetReady(metav1.ConditionStatus)
+	GetReady() metav1.ConditionStatus
 }
 
 // ParametersFromSource represents the source of a set of Parameters
