@@ -55,9 +55,9 @@ var _ = Describe("Base controller", func() {
 
 	When("SM secret not exists", func() {
 		It("Should fail with failure condition", func() {
-			controller.getSMClient(ctx, controller.Log, serviceInstance)
+			_, _ = controller.getSMClient(ctx, controller.Log, serviceInstance)
 			Expect(serviceInstance.Status.Conditions[0].Reason).To(Equal(Blocked))
-			Expect(len(serviceInstance.Status.Conditions)).To(Equal(1))
+			Expect(len(serviceInstance.Status.Conditions)).To(Equal(2))
 		})
 	})
 
@@ -66,7 +66,10 @@ var _ = Describe("Base controller", func() {
 		var secret *corev1.Secret
 		BeforeEach(func() {
 			namespace = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: managementNamespace}}
-			Expect(k8sClient.Create(context.Background(), namespace)).Should(Succeed())
+			err := k8sClient.Create(context.Background(), namespace)
+			if !apierrors.IsAlreadyExists(err) {
+				Expect(err).ToNot(HaveOccurred())
+			}
 			secret = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      secrets.SAPBTPOperatorSecretName,
@@ -79,7 +82,10 @@ var _ = Describe("Base controller", func() {
 					"tokenurl":     []byte("https://token.url"),
 				},
 			}
-			Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
+			err = k8sClient.Create(ctx, secret)
+			if !apierrors.IsAlreadyExists(err) {
+				Expect(err).ToNot(HaveOccurred())
+			}
 		})
 		AfterEach(func() {
 			Expect(k8sClient.Delete(ctx, secret)).Should(Succeed())

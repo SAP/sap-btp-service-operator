@@ -68,7 +68,6 @@ type ServiceBindingSpec struct {
 	UserInfo *v1.UserInfo `json:"userInfo,omitempty"`
 }
 
-//TODO review spec and status with UA
 // ServiceBindingStatus defines the observed state of ServiceBinding
 type ServiceBindingStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
@@ -93,12 +92,16 @@ type ServiceBindingStatus struct {
 
 	// Last generation that was acted on
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+
+	// Indicates whether binding is ready for usage
+	Ready metav1.ConditionStatus `json:"ready,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:JSONPath=".spec.serviceInstanceName",name="Instance",type=string
 // +kubebuilder:printcolumn:JSONPath=".status.conditions[0].reason",name="Status",type=string
+// +kubebuilder:printcolumn:JSONPath=".status.ready",name="Ready",type=string
 // +kubebuilder:printcolumn:JSONPath=".metadata.creationTimestamp",name="Age",type=date
 // +kubebuilder:printcolumn:JSONPath=".status.bindingID",name="ID",type=string,priority=1
 // +kubebuilder:printcolumn:JSONPath=".status.conditions[0].message",name="Message",type=string,priority=1
@@ -146,6 +149,14 @@ func (sb *ServiceBinding) SetObservedGeneration(newObserved int64) {
 
 func (sb *ServiceBinding) DeepClone() SAPBTPResource {
 	return sb.DeepCopy()
+}
+
+func (sb *ServiceBinding) GetReady() metav1.ConditionStatus {
+	return sb.Status.Ready
+}
+
+func (sb *ServiceBinding) SetReady(ready metav1.ConditionStatus) {
+	sb.Status.Ready = ready
 }
 
 // +kubebuilder:object:root=true

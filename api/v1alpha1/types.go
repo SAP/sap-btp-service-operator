@@ -15,11 +15,14 @@ const (
 )
 
 const (
-	// ConditionReady represents that a given resource is in ready state.
-	ConditionReady = "Ready"
+	// ConditionLastOpSucceeded represents whether the last operation CREATE/UPDATE/DELETE was successfull.
+	ConditionLastOpSucceeded = "LastOpSucceeded"
 
 	// ConditionFailed represents information about a final failure that should not be retried.
 	ConditionFailed = "Failed"
+
+	// ConditionReady represents if the resource ready for usage.
+	ConditionReady = "Ready"
 )
 
 // +kubebuilder:object:generate=false
@@ -34,6 +37,8 @@ type SAPBTPResource interface {
 	GetObservedGeneration() int64
 	SetObservedGeneration(int64)
 	DeepClone() SAPBTPResource
+	SetReady(metav1.ConditionStatus)
+	GetReady() metav1.ConditionStatus
 }
 
 // ParametersFromSource represents the source of a set of Parameters

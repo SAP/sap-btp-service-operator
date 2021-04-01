@@ -26,6 +26,9 @@ spec:
     - jsonPath: .status.conditions[0].reason
       name: Status
       type: string
+    - jsonPath: .status.ready
+      name: Ready
+      type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
@@ -177,6 +180,9 @@ spec:
                 type: string
               operationURL:
                 description: URL of ongoing operation for the service instance
+                type: string
+              ready:
+                description: Indicates whether instance is ready for usage
                 type: string
             required:
             - conditions

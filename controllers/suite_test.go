@@ -39,6 +39,7 @@ import (
 	servicesv1alpha1 "github.com/SAP/sap-btp-service-operator/api/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -177,10 +178,16 @@ var _ = AfterSuite(func() {
 })
 
 func isReady(resource servicesv1alpha1.SAPBTPResource) bool {
-	return len(resource.GetConditions()) == 1 && resource.GetConditions()[0].Status == metav1.ConditionTrue
+	return meta.IsStatusConditionPresentAndEqual(resource.GetConditions(), servicesv1alpha1.ConditionLastOpSucceeded, metav1.ConditionTrue)
 }
 
 func isFailed(resource servicesv1alpha1.SAPBTPResource) bool {
-	return (len(resource.GetConditions()) == 2 && resource.GetConditions()[1].Status == metav1.ConditionTrue) ||
-		len(resource.GetConditions()) == 1 && resource.GetConditions()[0].Status == metav1.ConditionFalse && resource.GetConditions()[0].Reason == Blocked
+	conditions := resource.GetConditions()
+	if len(conditions) == 0 {
+		return false
+	}
+	return meta.IsStatusConditionPresentAndEqual(resource.GetConditions(), servicesv1alpha1.ConditionFailed, metav1.ConditionTrue) ||
+		(resource.GetConditions()[0].Status == metav1.ConditionFalse &&
+			resource.GetConditions()[0].Type == servicesv1alpha1.ConditionLastOpSucceeded &&
+			resource.GetConditions()[0].Reason == Blocked)
 }
