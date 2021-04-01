@@ -14,8 +14,6 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-const managementNamespace = "test-management-namespace"
-
 var _ = Describe("Base controller", func() {
 	var serviceInstance *v1alpha1.ServiceInstance
 	var fakeInstanceName string
@@ -27,7 +25,7 @@ var _ = Describe("Base controller", func() {
 		fakeInstanceName = "ic-test-" + uuid.New().String()
 
 		resolver := &secrets.SecretResolver{
-			ManagementNamespace: managementNamespace,
+			ManagementNamespace: testNamespace,
 			Log:                 logf.Log.WithName("SecretResolver"),
 			Client:              k8sClient,
 		}
@@ -62,18 +60,12 @@ var _ = Describe("Base controller", func() {
 	})
 
 	When("SM secret is valid", func() {
-		var namespace *corev1.Namespace
 		var secret *corev1.Secret
 		BeforeEach(func() {
-			namespace = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: managementNamespace}}
-			err := k8sClient.Create(context.Background(), namespace)
-			if !apierrors.IsAlreadyExists(err) {
-				Expect(err).ToNot(HaveOccurred())
-			}
 			secret = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      secrets.SAPBTPOperatorSecretName,
-					Namespace: managementNamespace,
+					Namespace: testNamespace,
 				},
 				Data: map[string][]byte{
 					"clientid":     []byte("client-id"),
@@ -82,19 +74,20 @@ var _ = Describe("Base controller", func() {
 					"tokenurl":     []byte("https://token.url"),
 				},
 			}
-			err = k8sClient.Create(ctx, secret)
+			err := k8sClient.Create(ctx, secret)
 			if !apierrors.IsAlreadyExists(err) {
 				Expect(err).ToNot(HaveOccurred())
 			}
 		})
+
 		AfterEach(func() {
 			Expect(k8sClient.Delete(ctx, secret)).Should(Succeed())
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, types.NamespacedName{Name: secret.Name, Namespace: secret.Namespace}, secret)
 				return apierrors.IsNotFound(err)
 			}, timeout, interval).Should(BeTrue())
-			Expect(k8sClient.Delete(ctx, namespace)).Should(Succeed())
 		})
+
 		It("Should succeed", func() {
 			client, err := controller.getSMClient(ctx, controller.Log, serviceInstance)
 			Expect(err).To(BeNil())
