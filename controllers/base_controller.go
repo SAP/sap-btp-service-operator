@@ -196,7 +196,13 @@ func setInProgressConditions(operationType smTypes.OperationCategory, message st
 	if len(conditions) > 0 {
 		meta.RemoveStatusCondition(&conditions, servicesv1alpha1.ConditionFailed)
 	}
-	lastOpCondition := metav1.Condition{Type: servicesv1alpha1.ConditionLastOpDone, Status: metav1.ConditionFalse, Reason: getConditionReason(operationType, smTypes.IN_PROGRESS), Message: message}
+	lastOpCondition := metav1.Condition{
+		Type:               servicesv1alpha1.ConditionLastOpDone,
+		Status:             metav1.ConditionFalse,
+		Reason:             getConditionReason(operationType, smTypes.IN_PROGRESS),
+		Message:            message,
+		ObservedGeneration: object.GetGeneration(),
+	}
 	meta.SetStatusCondition(&conditions, lastOpCondition)
 	meta.SetStatusCondition(&conditions, getReadyCondition(object))
 
@@ -217,7 +223,13 @@ func setSuccessConditions(operationType smTypes.OperationCategory, object servic
 	if len(conditions) > 0 {
 		meta.RemoveStatusCondition(&conditions, servicesv1alpha1.ConditionFailed)
 	}
-	lastOpCondition := metav1.Condition{Type: servicesv1alpha1.ConditionLastOpDone, Status: metav1.ConditionTrue, Reason: getConditionReason(operationType, smTypes.SUCCEEDED), Message: message}
+	lastOpCondition := metav1.Condition{
+		Type:               servicesv1alpha1.ConditionLastOpDone,
+		Status:             metav1.ConditionTrue,
+		Reason:             getConditionReason(operationType, smTypes.SUCCEEDED),
+		Message:            message,
+		ObservedGeneration: object.GetGeneration(),
+	}
 	meta.SetStatusCondition(&conditions, lastOpCondition)
 	meta.SetStatusCondition(&conditions, getReadyCondition(object))
 
@@ -245,10 +257,22 @@ func setFailureConditions(operationType smTypes.OperationCategory, errorMessage 
 	if len(conditions) > 0 {
 		meta.RemoveStatusCondition(&conditions, servicesv1alpha1.ConditionReady)
 	}
-	lastOpCondition := metav1.Condition{Type: servicesv1alpha1.ConditionLastOpDone, Status: metav1.ConditionFalse, Reason: reason, Message: message}
+	lastOpCondition := metav1.Condition{
+		Type:               servicesv1alpha1.ConditionLastOpDone,
+		Status:             metav1.ConditionFalse,
+		Reason:             reason,
+		Message:            message,
+		ObservedGeneration: object.GetGeneration(),
+	}
 	meta.SetStatusCondition(&conditions, lastOpCondition)
 
-	failedCondition := metav1.Condition{Type: servicesv1alpha1.ConditionFailed, Status: metav1.ConditionTrue, Reason: reason, Message: message}
+	failedCondition := metav1.Condition{
+		Type:               servicesv1alpha1.ConditionFailed,
+		Status:             metav1.ConditionTrue,
+		Reason:             reason,
+		Message:            message,
+		ObservedGeneration: object.GetGeneration(),
+	}
 	meta.SetStatusCondition(&conditions, failedCondition)
 	meta.SetStatusCondition(&conditions, getReadyCondition(object))
 
@@ -261,7 +285,13 @@ func setBlockedCondition(message string, object servicesv1alpha1.SAPBTPResource)
 	if len(conditions) > 0 {
 		meta.RemoveStatusCondition(&conditions, servicesv1alpha1.ConditionFailed)
 	}
-	lastOpBlockedCondition := metav1.Condition{Type: servicesv1alpha1.ConditionLastOpDone, Status: metav1.ConditionFalse, Reason: Blocked, Message: message}
+	lastOpBlockedCondition := metav1.Condition{
+		Type:               servicesv1alpha1.ConditionLastOpDone,
+		Status:             metav1.ConditionFalse,
+		Reason:             Blocked,
+		Message:            message,
+		ObservedGeneration: object.GetGeneration(),
+	}
 	meta.SetStatusCondition(&conditions, lastOpBlockedCondition)
 	meta.SetStatusCondition(&conditions, getReadyCondition(object))
 	object.SetConditions(conditions)
