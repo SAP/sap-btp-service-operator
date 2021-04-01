@@ -57,18 +57,13 @@ type BaseReconciler struct {
 	Recorder       record.EventRecorder
 }
 
-func (r *BaseReconciler) getSMClient(ctx context.Context, log logr.Logger, object servicesv1alpha1.SAPBTPResource) (sm.Client, error) {
+func (r *BaseReconciler) getSMClient(ctx context.Context, object servicesv1alpha1.SAPBTPResource) (sm.Client, error) {
 	if r.SMClient != nil {
 		return r.SMClient(), nil
 	}
 
 	secret, err := r.SecretResolver.GetSecretForResource(ctx, object.GetNamespace())
 	if err != nil {
-		setBlockedCondition("secret not found", object)
-		if err := r.updateStatusWithRetries(ctx, object, log); err != nil {
-			return nil, err
-		}
-
 		return nil, err
 	}
 
