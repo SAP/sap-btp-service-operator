@@ -216,7 +216,7 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 	}
 
 	serviceBinding.Status.BindingID = smBinding.ID
-	serviceBinding.Status.Ready = true
+	serviceBinding.Status.Ready = metav1.ConditionTrue
 	setSuccessConditions(smTypes.CREATE, serviceBinding)
 	log.Info("Updating binding", "bindingID", smBinding.ID)
 
@@ -332,7 +332,7 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, smClient sm.Client,
 			if err := r.storeBindingSecret(ctx, serviceBinding, smBinding, log); err != nil {
 				return r.handleSecretError(ctx, smTypes.CREATE, err, serviceBinding, log)
 			}
-			serviceBinding.Status.Ready = true
+			serviceBinding.Status.Ready = metav1.ConditionTrue
 			setSuccessConditions(smTypes.OperationCategory(status.Type), serviceBinding)
 		case smTypes.DELETE:
 			return r.removeBindingFromKubernetes(ctx, serviceBinding, log)
@@ -403,7 +403,7 @@ func (r *ServiceBindingReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 func (r *ServiceBindingReconciler) resyncBindingStatus(k8sBinding *v1alpha1.ServiceBinding, smBinding *smclientTypes.ServiceBinding, serviceInstanceID string) {
 	if smBinding.Ready {
-		k8sBinding.Status.Ready = true
+		k8sBinding.Status.Ready = metav1.ConditionTrue
 	}
 	k8sBinding.Status.ObservedGeneration = k8sBinding.Generation
 	k8sBinding.Status.BindingID = smBinding.ID

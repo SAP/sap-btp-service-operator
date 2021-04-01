@@ -92,7 +92,7 @@ type ServiceInstanceStatus struct {
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
 	// Indicates whether instance is ready for usage
-	Ready bool `json:"ready,omitempty"`
+	Ready metav1.ConditionStatus `json:"ready,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -100,7 +100,7 @@ type ServiceInstanceStatus struct {
 // +kubebuilder:printcolumn:JSONPath=".spec.serviceOfferingName",name="Offering",type=string
 // +kubebuilder:printcolumn:JSONPath=".spec.servicePlanName",name="Plan",type=string
 // +kubebuilder:printcolumn:JSONPath=".status.conditions[0].reason",name="Status",type=string
-// +kubebuilder:printcolumn:JSONPath=".status.ready",name="Ready",type=boolean
+// +kubebuilder:printcolumn:JSONPath=".status.ready",name="Ready",type=string
 // +kubebuilder:printcolumn:JSONPath=".metadata.creationTimestamp",name="Age",type=date
 // +kubebuilder:printcolumn:JSONPath=".status.instanceID",name="ID",type=string,priority=1
 // +kubebuilder:printcolumn:JSONPath=".status.conditions[0].message",name="Message",type=string,priority=1
@@ -149,8 +149,12 @@ func (in *ServiceInstance) DeepClone() SAPBTPResource {
 	return in.DeepCopy()
 }
 
-func (in *ServiceInstance) IsReady() bool {
+func (in *ServiceInstance) GetReady() metav1.ConditionStatus {
 	return in.Status.Ready
+}
+
+func (in *ServiceInstance) SetReady(ready metav1.ConditionStatus) {
+	in.Status.Ready = ready
 }
 
 // +kubebuilder:object:root=true

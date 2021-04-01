@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/SAP/sap-btp-service-operator/client/sm"
 
@@ -106,7 +107,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	//Update
-	if serviceInstance.Status.Ready {
+	if serviceInstance.Status.Ready == metav1.ConditionTrue {
 		return r.updateInstance(ctx, smClient, serviceInstance, log)
 	}
 	return ctrl.Result{}, nil
@@ -158,7 +159,7 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client
 				return ctrl.Result{}, err
 			}
 		} else if serviceInstance.Status.OperationType == smTypes.CREATE {
-			serviceInstance.Status.Ready = true
+			serviceInstance.Status.Ready = metav1.ConditionTrue
 			setSuccessConditions(smTypes.OperationCategory(status.Type), serviceInstance)
 		}
 	}
@@ -212,7 +213,7 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	}
 	log.Info("Instance provisioned successfully")
 	serviceInstance.Status.InstanceID = smInstanceID
-	serviceInstance.Status.Ready = true
+	serviceInstance.Status.Ready = metav1.ConditionTrue
 	setSuccessConditions(smTypes.CREATE, serviceInstance)
 	return ctrl.Result{}, r.updateStatusWithRetries(ctx, serviceInstance, log)
 }
@@ -324,7 +325,7 @@ func (r *ServiceInstanceReconciler) resyncInstanceStatus(k8sInstance *v1alpha1.S
 	}
 
 	if smInstance.Ready {
-		k8sInstance.Status.Ready = true
+		k8sInstance.Status.Ready = metav1.ConditionTrue
 	}
 	k8sInstance.Status.InstanceID = smInstance.ID
 	k8sInstance.Status.OperationURL = ""

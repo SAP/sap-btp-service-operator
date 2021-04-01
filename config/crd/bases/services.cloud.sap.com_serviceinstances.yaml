@@ -28,7 +28,7 @@ spec:
       type: string
     - jsonPath: .status.ready
       name: Ready
-      type: boolean
+      type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
@@ -183,7 +183,7 @@ spec:
                 type: string
               ready:
                 description: Indicates whether instance is ready for usage
-                type: boolean
+                type: string
             required:
             - conditions
             type: object

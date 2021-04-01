@@ -140,6 +140,7 @@ func (r *BaseReconciler) updateStatus(ctx context.Context, object servicesv1alph
 }
 
 func (r *BaseReconciler) init(ctx context.Context, log logr.Logger, obj servicesv1alpha1.SAPBTPResource) error {
+	obj.SetReady(metav1.ConditionFalse)
 	setInProgressConditions(smTypes.CREATE, "Pending", obj)
 	if err := r.updateStatusWithRetries(ctx, obj, log); err != nil {
 		return err
@@ -254,9 +255,6 @@ func setFailureConditions(operationType smTypes.OperationCategory, errorMessage 
 	}
 
 	conditions := object.GetConditions()
-	if len(conditions) > 0 {
-		meta.RemoveStatusCondition(&conditions, servicesv1alpha1.ConditionReady)
-	}
 	lastOpCondition := metav1.Condition{
 		Type:               servicesv1alpha1.ConditionLastOpDone,
 		Status:             metav1.ConditionFalse,
@@ -343,10 +341,10 @@ func isInProgress(object servicesv1alpha1.SAPBTPResource) bool {
 func getReadyCondition(object servicesv1alpha1.SAPBTPResource) metav1.Condition {
 	status := metav1.ConditionFalse
 	reason := "ProvisionFailed"
-	if object.IsReady() {
+	if object.GetReady() == metav1.ConditionTrue {
 		status = metav1.ConditionTrue
 		reason = "Provisioned"
 	}
 
-	return metav1.Condition{Type: servicesv1alpha1.ConditionReady, Status: status, Reason: reason, Message: reason}
+	return metav1.Condition{Type: servicesv1alpha1.ConditionReady, Status: status, Reason: reason}
 }

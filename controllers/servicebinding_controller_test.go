@@ -102,8 +102,8 @@ var _ = Describe("ServiceBinding controller", func() {
 			Expect(err.Error()).To(ContainSubstring(failureMessage))
 		} else {
 			Expect(len(createdBinding.Status.Conditions)).To(Equal(3))
-			Expect(createdBinding.Status.Conditions[1].Status).To(Equal(metav1.ConditionTrue))
-			Expect(createdBinding.Status.Conditions[1].Message).To(ContainSubstring(failureMessage))
+			Expect(createdBinding.Status.Conditions[2].Status).To(Equal(metav1.ConditionTrue))
+			Expect(createdBinding.Status.Conditions[2].Message).To(ContainSubstring(failureMessage))
 		}
 	}
 
@@ -610,9 +610,11 @@ var _ = Describe("ServiceBinding controller", func() {
 
 			Expect(createdBinding.Status.Conditions[0].Reason).To(Equal(getConditionReason(smTypes.DELETE, smTypes.FAILED)))
 			Expect(createdBinding.Status.Conditions[0].Status).To(Equal(metav1.ConditionFalse))
-			Expect(createdBinding.Status.Conditions[1].Reason).To(Equal(getConditionReason(smTypes.DELETE, smTypes.FAILED)))
+			Expect(createdBinding.Status.Conditions[1].Reason).To(Equal("Provisioned"))
 			Expect(createdBinding.Status.Conditions[1].Status).To(Equal(metav1.ConditionTrue))
-			Expect(createdBinding.Status.Conditions[1].Message).To(ContainSubstring(errorMessage))
+			Expect(createdBinding.Status.Conditions[2].Reason).To(Equal(getConditionReason(smTypes.DELETE, smTypes.FAILED)))
+			Expect(createdBinding.Status.Conditions[2].Status).To(Equal(metav1.ConditionTrue))
+			Expect(createdBinding.Status.Conditions[2].Message).To(ContainSubstring(errorMessage))
 
 			err = k8sClient.Get(context.Background(), types.NamespacedName{Name: secretName, Namespace: bindingTestNamespace}, &v1.Secret{})
 			Expect(err).ToNot(HaveOccurred())
