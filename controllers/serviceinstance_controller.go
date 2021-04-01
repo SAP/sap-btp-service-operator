@@ -19,20 +19,18 @@ package controllers
 import (
 	"context"
 	"fmt"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/SAP/sap-btp-service-operator/client/sm"
-
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	smTypes "github.com/Peripli/service-manager/pkg/types"
 	"github.com/Peripli/service-manager/pkg/web"
 	"github.com/SAP/sap-btp-service-operator/api/v1alpha1"
+	"github.com/SAP/sap-btp-service-operator/client/sm"
 	"github.com/SAP/sap-btp-service-operator/client/sm/types"
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // ServiceInstanceReconciler reconciles a ServiceInstance object
