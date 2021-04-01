@@ -12,7 +12,7 @@ var _ = Describe("Service Binding Type Test", func() {
 	BeforeEach(func() {
 		binding = getBinding()
 		conditions := binding.GetConditions()
-		lastOpCondition := metav1.Condition{Type: ConditionLastOpDone, Status: metav1.ConditionTrue, Reason: "reason", Message: "message"}
+		lastOpCondition := metav1.Condition{Type: ConditionLastOpSucceeded, Status: metav1.ConditionTrue, Reason: "reason", Message: "message"}
 		meta.SetStatusCondition(&conditions, lastOpCondition)
 		binding.SetConditions(conditions)
 	})

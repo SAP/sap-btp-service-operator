@@ -12,7 +12,7 @@ var _ = Describe("Service Instance Type Test", func() {
 	BeforeEach(func() {
 		instance = getInstance()
 		conditions := instance.GetConditions()
-		lastOpCondition := metav1.Condition{Type: ConditionLastOpDone, Status: metav1.ConditionTrue, Reason: "reason", Message: "message"}
+		lastOpCondition := metav1.Condition{Type: ConditionLastOpSucceeded, Status: metav1.ConditionTrue, Reason: "reason", Message: "message"}
 		meta.SetStatusCondition(&conditions, lastOpCondition)
 		instance.SetConditions(conditions)
 	})

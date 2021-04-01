@@ -178,7 +178,7 @@ var _ = AfterSuite(func() {
 })
 
 func isReady(resource servicesv1alpha1.SAPBTPResource) bool {
-	return meta.IsStatusConditionPresentAndEqual(resource.GetConditions(), servicesv1alpha1.ConditionLastOpDone, metav1.ConditionTrue)
+	return meta.IsStatusConditionPresentAndEqual(resource.GetConditions(), servicesv1alpha1.ConditionLastOpSucceeded, metav1.ConditionTrue)
 }
 
 func isFailed(resource servicesv1alpha1.SAPBTPResource) bool {
@@ -188,6 +188,6 @@ func isFailed(resource servicesv1alpha1.SAPBTPResource) bool {
 	}
 	return meta.IsStatusConditionPresentAndEqual(resource.GetConditions(), servicesv1alpha1.ConditionFailed, metav1.ConditionTrue) ||
 		(resource.GetConditions()[0].Status == metav1.ConditionFalse &&
-			resource.GetConditions()[0].Type == servicesv1alpha1.ConditionLastOpDone &&
+			resource.GetConditions()[0].Type == servicesv1alpha1.ConditionLastOpSucceeded &&
 			resource.GetConditions()[0].Reason == Blocked)
 }
