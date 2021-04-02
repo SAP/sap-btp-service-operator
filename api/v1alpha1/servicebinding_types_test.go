@@ -5,6 +5,7 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 var _ = Describe("Service Binding Type Test", func() {
@@ -58,7 +59,27 @@ var _ = Describe("Service Binding Type Test", func() {
 	It("should update observed generation", func() {
 		Expect(binding.Status.ObservedGeneration).To(Equal(int64(0)))
 		binding.SetObservedGeneration(2)
+		Expect(binding.GetObservedGeneration()).To(Equal(int64(2)))
+	})
+
+	It("should update observed generation", func() {
+		Expect(binding.Status.ObservedGeneration).To(Equal(int64(0)))
+		binding.SetObservedGeneration(2)
 		Expect(binding.Status.ObservedGeneration).To(Equal(int64(2)))
+	})
+
+	It("should update ready", func() {
+		Expect(binding.Status.Ready).To(Equal(metav1.ConditionStatus("")))
+		binding.SetReady(metav1.ConditionTrue)
+		Expect(binding.GetReady()).To(Equal(metav1.ConditionTrue))
+	})
+
+	It("should get parameters", func() {
+		params := &runtime.RawExtension{
+			Raw: []byte("{\"key\":\"val\"}"),
+		}
+		binding.Spec.Parameters = params
+		Expect(binding.GetParameters()).To(Equal(params))
 	})
 
 	It("should update status", func() {
