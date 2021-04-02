@@ -28,9 +28,9 @@ import (
 // log is for logging in this package.
 var servicebindinglog = logf.Log.WithName("servicebinding-resource")
 
-func (r *ServiceBinding) SetupWebhookWithManager(mgr ctrl.Manager) error {
+func (sb *ServiceBinding) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
-		For(r).
+		For(sb).
 		Complete()
 }
 
@@ -42,35 +42,56 @@ func (r *ServiceBinding) SetupWebhookWithManager(mgr ctrl.Manager) error {
 var _ webhook.Validator = &ServiceBinding{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *ServiceBinding) ValidateCreate() error {
-	servicebindinglog.Info("validate create", "name", r.Name)
+func (sb *ServiceBinding) ValidateCreate() error {
+	servicebindinglog.Info("validate create", "name", sb.Name)
 	return nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *ServiceBinding) ValidateUpdate(old runtime.Object) error {
-	servicebindinglog.Info("validate update", "name", r.Name)
+func (sb *ServiceBinding) ValidateUpdate(old runtime.Object) error {
+	servicebindinglog.Info("validate update", "name", sb.Name)
 
-	if r.specChanged(old) && r.Status.BindingID != "" {
+	if sb.specChanged(old) && sb.Status.BindingID != "" {
 		return fmt.Errorf("updating service bindings is not supported")
 	}
 
 	return nil
 }
 
-func (r *ServiceBinding) specChanged(old runtime.Object) bool {
+func (sb *ServiceBinding) specChanged(old runtime.Object) bool {
 	oldBinding := old.(*ServiceBinding)
-	return r.Spec.ExternalName != oldBinding.Spec.ExternalName ||
-		r.Spec.ServiceInstanceName != oldBinding.Spec.ServiceInstanceName ||
+
+	if changed := sb.paramsFromChanged(oldBinding); changed {
+		return true
+	}
+
+	return sb.Spec.ExternalName != oldBinding.Spec.ExternalName ||
+		sb.Spec.ServiceInstanceName != oldBinding.Spec.ServiceInstanceName ||
 		// TODO + labels
 		//r.Spec.Labels != oldBinding.Spec.Labels ||
-		r.Spec.Parameters.String() != oldBinding.Spec.Parameters.String() ||
-		r.Spec.SecretName != oldBinding.Spec.SecretName
+		sb.Spec.Parameters.String() != oldBinding.Spec.Parameters.String() ||
+		sb.Spec.SecretName != oldBinding.Spec.SecretName
+}
+
+func (sb *ServiceBinding) paramsFromChanged(oldBinding *ServiceBinding) bool {
+	if len(sb.Spec.ParametersFrom) != len(oldBinding.Spec.ParametersFrom) {
+		return true
+	}
+	for i, paramFrom := range sb.Spec.ParametersFrom {
+		if paramFrom.SecretKeyRef != nil && oldBinding.Spec.ParametersFrom[i].SecretKeyRef != nil {
+			if *paramFrom.SecretKeyRef != *oldBinding.Spec.ParametersFrom[i].SecretKeyRef {
+				return true
+			}
+		} else if paramFrom.SecretKeyRef != oldBinding.Spec.ParametersFrom[i].SecretKeyRef {
+			return true
+		}
+	}
+	return false
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *ServiceBinding) ValidateDelete() error {
-	servicebindinglog.Info("validate delete", "name", r.Name)
+func (sb *ServiceBinding) ValidateDelete() error {
+	servicebindinglog.Info("validate delete", "name", sb.Name)
 
 	// TODO(user): fill in your validation logic upon object deletion.
 	return nil

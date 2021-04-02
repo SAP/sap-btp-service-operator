@@ -196,7 +196,7 @@ func setInProgressConditions(operationType smTypes.OperationCategory, message st
 		meta.RemoveStatusCondition(&conditions, servicesv1alpha1.ConditionFailed)
 	}
 	lastOpCondition := metav1.Condition{
-		Type:               servicesv1alpha1.ConditionLastOpSucceeded,
+		Type:               servicesv1alpha1.ConditionSucceeded,
 		Status:             metav1.ConditionFalse,
 		Reason:             getConditionReason(operationType, smTypes.IN_PROGRESS),
 		Message:            message,
@@ -223,7 +223,7 @@ func setSuccessConditions(operationType smTypes.OperationCategory, object servic
 		meta.RemoveStatusCondition(&conditions, servicesv1alpha1.ConditionFailed)
 	}
 	lastOpCondition := metav1.Condition{
-		Type:               servicesv1alpha1.ConditionLastOpSucceeded,
+		Type:               servicesv1alpha1.ConditionSucceeded,
 		Status:             metav1.ConditionTrue,
 		Reason:             getConditionReason(operationType, smTypes.SUCCEEDED),
 		Message:            message,
@@ -254,7 +254,7 @@ func setFailureConditions(operationType smTypes.OperationCategory, errorMessage 
 
 	conditions := object.GetConditions()
 	lastOpCondition := metav1.Condition{
-		Type:               servicesv1alpha1.ConditionLastOpSucceeded,
+		Type:               servicesv1alpha1.ConditionSucceeded,
 		Status:             metav1.ConditionFalse,
 		Reason:             reason,
 		Message:            message,
@@ -282,7 +282,7 @@ func setBlockedCondition(message string, object servicesv1alpha1.SAPBTPResource)
 		meta.RemoveStatusCondition(&conditions, servicesv1alpha1.ConditionFailed)
 	}
 	lastOpBlockedCondition := metav1.Condition{
-		Type:               servicesv1alpha1.ConditionLastOpSucceeded,
+		Type:               servicesv1alpha1.ConditionSucceeded,
 		Status:             metav1.ConditionFalse,
 		Reason:             Blocked,
 		Message:            message,
@@ -332,7 +332,7 @@ func (r *BaseReconciler) markAsTransientError(ctx context.Context, operationType
 
 func isInProgress(object servicesv1alpha1.SAPBTPResource) bool {
 	conditions := object.GetConditions()
-	return meta.IsStatusConditionPresentAndEqual(conditions, servicesv1alpha1.ConditionLastOpSucceeded, metav1.ConditionFalse) &&
+	return meta.IsStatusConditionPresentAndEqual(conditions, servicesv1alpha1.ConditionSucceeded, metav1.ConditionFalse) &&
 		!meta.IsStatusConditionPresentAndEqual(conditions, servicesv1alpha1.ConditionFailed, metav1.ConditionTrue)
 }
 

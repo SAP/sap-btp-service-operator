@@ -11,27 +11,6 @@ var _ = Describe("Service Binding Webhook Test", func() {
 	BeforeEach(func() {
 		binding = getBinding()
 	})
-	/*Context("Defaulter", func() {
-		When("No external name provided", func() {
-			BeforeEach(func() {
-				binding.Spec.ExternalName = ""
-			})
-			It("should add default", func() {
-				binding.Default()
-				Expect(binding.Spec.ExternalName).To(Equal(binding.Name))
-			})
-		})
-
-		When("No secret name provided", func() {
-			BeforeEach(func() {
-				binding.Spec.SecretName = ""
-			})
-			It("should add default", func() {
-				binding.Default()
-				Expect(binding.Spec.SecretName).To(Equal(binding.Name))
-			})
-		})
-	})*/
 
 	Context("Validator", func() {
 		Context("Validate create", func() {
@@ -49,7 +28,7 @@ var _ = Describe("Service Binding Webhook Test", func() {
 			})
 			When("Spec changed", func() {
 				When("Service instance name changed", func() {
-					It("should fail", func() {
+					It("should succeed", func() {
 						newBinding.Spec.ServiceInstanceName = "new-service-instance"
 						err := newBinding.ValidateUpdate(binding)
 						Expect(err).ToNot(HaveOccurred())
@@ -57,7 +36,7 @@ var _ = Describe("Service Binding Webhook Test", func() {
 				})
 
 				When("External name changed", func() {
-					It("should fail", func() {
+					It("should succeed", func() {
 						newBinding.Spec.ExternalName = "new-external-instance"
 						err := newBinding.ValidateUpdate(binding)
 						Expect(err).ToNot(HaveOccurred())
@@ -65,10 +44,18 @@ var _ = Describe("Service Binding Webhook Test", func() {
 				})
 
 				When("Parameters were changed", func() {
-					It("should fail", func() {
+					It("should succeed", func() {
 						newBinding.Spec.Parameters = &runtime.RawExtension{
 							Raw: []byte("params"),
 						}
+						err := newBinding.ValidateUpdate(binding)
+						Expect(err).ToNot(HaveOccurred())
+					})
+				})
+
+				When("ParametersFrom were changed", func() {
+					It("should succeed", func() {
+						newBinding.Spec.ParametersFrom[0].SecretKeyRef.Name = "newName"
 						err := newBinding.ValidateUpdate(binding)
 						Expect(err).ToNot(HaveOccurred())
 					})
@@ -120,6 +107,14 @@ var _ = Describe("Service Binding Webhook Test", func() {
 						newBinding.Spec.Parameters = &runtime.RawExtension{
 							Raw: []byte("params"),
 						}
+						err := newBinding.ValidateUpdate(binding)
+						Expect(err).To(HaveOccurred())
+					})
+				})
+
+				When("ParametersFrom were changed", func() {
+					It("should fail", func() {
+						newBinding.Spec.ParametersFrom[0].SecretKeyRef.Name = "newName"
 						err := newBinding.ValidateUpdate(binding)
 						Expect(err).To(HaveOccurred())
 					})
