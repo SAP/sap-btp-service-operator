@@ -5,6 +5,7 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 var _ = Describe("Service Instance Type Test", func() {
@@ -58,7 +59,21 @@ var _ = Describe("Service Instance Type Test", func() {
 	It("should update observed generation", func() {
 		Expect(instance.Status.ObservedGeneration).To(Equal(int64(0)))
 		instance.SetObservedGeneration(2)
-		Expect(instance.Status.ObservedGeneration).To(Equal(int64(2)))
+		Expect(instance.GetObservedGeneration()).To(Equal(int64(2)))
+	})
+
+	It("should update ready", func() {
+		Expect(instance.Status.Ready).To(Equal(metav1.ConditionStatus("")))
+		instance.SetReady(metav1.ConditionTrue)
+		Expect(instance.GetReady()).To(Equal(metav1.ConditionTrue))
+	})
+
+	It("should get parameters", func() {
+		params := &runtime.RawExtension{
+			Raw: []byte("{\"key\":\"val\"}"),
+		}
+		instance.Spec.Parameters = params
+		Expect(instance.GetParameters()).To(Equal(params))
 	})
 
 	It("should update status", func() {

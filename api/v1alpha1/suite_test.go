@@ -27,6 +27,14 @@ func getBinding() *ServiceBinding {
 			ServiceInstanceName: "service-instance-1",
 			ExternalName:        "my-service-binding-1",
 			Parameters:          &runtime.RawExtension{Raw: []byte(`{"key":"val"}`)},
+			ParametersFrom: []ParametersFromSource{
+				{
+					SecretKeyRef: &SecretKeyReference{
+						Name: "param-secret",
+						Key:  "secret-parameter",
+					},
+				},
+			},
 		},
 
 		Status: ServiceBindingStatus{},
@@ -49,6 +57,14 @@ func getInstance() *ServiceInstance {
 			ServicePlanID:       "service-plan-id-1",
 			ExternalName:        "my-service-instance-1",
 			Parameters:          &runtime.RawExtension{Raw: []byte(`{"key":"val"}`)},
+			ParametersFrom: []ParametersFromSource{
+				{
+					SecretKeyRef: &SecretKeyReference{
+						Name: "param-secret",
+						Key:  "secret-parameter",
+					},
+				},
+			},
 		},
 
 		Status: ServiceInstanceStatus{},
