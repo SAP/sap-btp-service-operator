@@ -192,7 +192,7 @@ This feature is still under development, review, and testing.
 | instanceID   | `string` | The service instance ID in SAP Cloud Service Management service.  |
 | operationURL | `string` | The URL of the current operation performed on the service instance.  |
 | operationType   |  `string`| The type of the current operation. Possible values are CREATE, UPDATE, or DELETE. |
-| conditions       |  `[]condition`   | An array of conditions describing the status of the service instance.<br/>The possible condition types are:<br>- `Ready`: set to `true`  if the instance is ready and usable<br/>- `Failed`: set to `true` when an operation on the service instance fails.<br/> In the case of failure, the details about the error are available in the condition message.
+| conditions       |  `[]condition`   | An array of conditions describing the status of the service instance.<br/>The possible condition types are:<br>- `Ready`: set to `true`  if the instance is ready and usable<br/>- `Failed`: set to `true` when an operation on the service instance fails.<br/> In the case of failure, the details about the error are available in the condition message.<br>- `LastOpSucceeded`: set to `true` when an operation on the service instance succeeded. In case of `false` operation considered as in progress unless `Failed` condition exists.
 
 
 
@@ -214,7 +214,7 @@ This feature is still under development, review, and testing.
 | bindingID   |  `string`  | The service binding ID in SAP Cloud Service Management service. |
 | operationURL |`string`| The URL of the current operation performed on the service binding. |
 | operationType| `string `| The type of the current operation. Possible values are CREATE, UPDATE, or DELETE. |
-| conditions| `[]condition` | An array of conditions describing the status of the service instance.<br/>The possible conditions types are:<br/>- `Ready`: set to `true` if the binding is ready and usable<br/>- `Failed`: set to `true` when an operation on the service binding fails.<br/> In the case of failure, the details about the error are available in the condition message.
+| conditions| `[]condition` | An array of conditions describing the status of the service instance.<br/>The possible conditions types are:<br/>- `Ready`: set to `true` if the binding is ready and usable<br/>- `Failed`: set to `true` when an operation on the service binding fails.<br/> In the case of failure, the details about the error are available in the condition message.<br>- `LastOpSucceeded`: set to `true` when an operation on the service binding succeeded. In case of `false` operation considered as in progress unless `Failed` condition exists.
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
