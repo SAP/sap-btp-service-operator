@@ -558,6 +558,27 @@ var _ = Describe("ServiceInstance controller", func() {
 				})
 			})
 
+			When("delete without instance id", func() {
+				JustBeforeEach(func() {
+					fakeClient.DeprovisionReturns("", nil)
+
+					fakeClient.ListInstancesReturns(&smclientTypes.ServiceInstances{
+						ServiceInstances: []smclientTypes.ServiceInstance{
+							{
+								ID: serviceInstance.Status.InstanceID,
+							},
+						},
+					}, nil)
+
+					serviceInstance.Status.InstanceID = ""
+					Expect(k8sClient.Status().Update(context.Background(), serviceInstance)).To(Succeed())
+				})
+
+				It("should delete the k8s instance", func() {
+					deleteInstance(ctx, serviceInstance, true)
+				})
+			})
+
 			When("delete in SM fails", func() {
 				JustBeforeEach(func() {
 					fakeClient.DeprovisionReturns("", fmt.Errorf("failed to delete instance"))

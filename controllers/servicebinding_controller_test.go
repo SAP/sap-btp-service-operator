@@ -636,6 +636,27 @@ var _ = Describe("ServiceBinding controller", func() {
 				})
 			})
 
+			When("delete without binding id", func() {
+				JustBeforeEach(func() {
+					fakeClient.UnbindReturns("", nil)
+
+					fakeClient.ListBindingsReturns(&smclientTypes.ServiceBindings{
+						ServiceBindings: []smclientTypes.ServiceBinding{
+							{
+								ID: createdBinding.Status.BindingID,
+							},
+						},
+					}, nil)
+
+					createdBinding.Status.BindingID = ""
+					Expect(k8sClient.Status().Update(context.Background(), createdBinding)).To(Succeed())
+				})
+
+				It("should delete the k8s binding and secret", func() {
+					validateBindingDeletion(createdBinding)
+				})
+			})
+
 			When("delete in SM fails with general error", func() {
 				errorMessage := "some-error"
 				JustBeforeEach(func() {
