@@ -17,7 +17,7 @@ import (
 
 // +kubebuilder:webhook:path=/mutate-services-cloud-sap-com-v1alpha1-servicebinding,mutating=true,failurePolicy=fail,groups=services.cloud.sap.com,resources=servicebindings,verbs=create;update,versions=v1alpha1,name=mservicebinding.kb.io,sideEffects=None,admissionReviewVersions=v1beta1;v1
 
-var bindinglog = logf.Log.WithName("servicebinding-resource")
+var bindinglog = logf.Log.WithName("servicebinding-webhook")
 
 type ServiceBindingDefaulter struct {
 	Client  client.Client
