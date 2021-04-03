@@ -459,6 +459,7 @@ func (r *ServiceBindingReconciler) storeBindingSecret(ctx context.Context, k8sBi
 		if !apierrors.IsAlreadyExists(err) {
 			return err
 		}
+		return nil
 	}
 	r.Recorder.Event(k8sBinding, corev1.EventTypeNormal, "SecretCreated", "SecretCreated")
 	return nil
