@@ -61,15 +61,15 @@ This feature is still under development, review, and testing.
    
       The example of the credentials in the binding object
       
-       ```json
-        {
-            "clientid": "xxxxxxx",
-            "clientsecret": "xxxxxxx",
-            "url": "https://mysubaccount.authentication.eu10.hana.ondemand.com",
-            "xsappname": "b15166|service-manager!b1234",
-            "sm_url": "https://service-manager.cfapps.eu10.hana.ondemand.com"
-        }
-       ```  
+    ```json
+     {
+         "clientid": "xxxxxxx",
+         "clientsecret": "xxxxxxx",
+         "url": "https://mysubaccount.authentication.eu10.hana.ondemand.com",
+         "xsappname": "b15166|service-manager!b1234",
+         "sm_url": "https://service-manager.cfapps.eu10.hana.ondemand.com"
+     }
+    ```  
    
 3. Deploy the the SAP BTP service operator in the cluster using the obtained access credentials:
     ```bash
