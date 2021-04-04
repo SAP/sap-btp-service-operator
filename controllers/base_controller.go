@@ -31,17 +31,20 @@ const (
 	k8sNameLabel   = "_k8sname"
 	clusterIDLabel = "_clusterid"
 
-	Created = "Created"
-	Updated = "Updated"
-	Deleted = "Deleted"
+	Created  = "Created"
+	Updated  = "Updated"
+	Deleted  = "Deleted"
+	Finished = "Finished"
 
 	CreateInProgress = "CreateInProgress"
 	UpdateInProgress = "UpdateInProgress"
 	DeleteInProgress = "DeleteInProgress"
+	InProgress       = "InProgress"
 
 	CreateFailed = "CreateFailed"
 	UpdateFailed = "UpdateFailed"
 	DeleteFailed = "DeleteFailed"
+	Failed       = "Failed"
 
 	Blocked = "Blocked"
 	Unknown = "Unknown"
@@ -155,6 +158,8 @@ func getConditionReason(opType smTypes.OperationCategory, state smTypes.Operatio
 			return Updated
 		} else if opType == smTypes.DELETE {
 			return Deleted
+		} else {
+			return Finished
 		}
 	case smTypes.IN_PROGRESS, smTypes.PENDING:
 		if opType == smTypes.CREATE {
@@ -163,6 +168,8 @@ func getConditionReason(opType smTypes.OperationCategory, state smTypes.Operatio
 			return UpdateInProgress
 		} else if opType == smTypes.DELETE {
 			return DeleteInProgress
+		} else {
+			return InProgress
 		}
 	case smTypes.FAILED:
 		if opType == smTypes.CREATE {
@@ -171,6 +178,8 @@ func getConditionReason(opType smTypes.OperationCategory, state smTypes.Operatio
 			return UpdateFailed
 		} else if opType == smTypes.DELETE {
 			return DeleteFailed
+		} else {
+			return Failed
 		}
 	}
 
@@ -178,17 +187,14 @@ func getConditionReason(opType smTypes.OperationCategory, state smTypes.Operatio
 }
 
 func setInProgressConditions(operationType smTypes.OperationCategory, message string, object servicesv1alpha1.SAPBTPResource) {
-	var defaultMessage string
-	if operationType == smTypes.CREATE {
-		defaultMessage = fmt.Sprintf("%s is being created", object.GetControllerName())
-	} else if operationType == smTypes.UPDATE {
-		defaultMessage = fmt.Sprintf("%s is being updated", object.GetControllerName())
-	} else if operationType == smTypes.DELETE {
-		defaultMessage = fmt.Sprintf("%s is being deleted", object.GetControllerName())
-	}
-
 	if len(message) == 0 {
-		message = defaultMessage
+		if operationType == smTypes.CREATE {
+			message = fmt.Sprintf("%s is being created", object.GetControllerName())
+		} else if operationType == smTypes.UPDATE {
+			message = fmt.Sprintf("%s is being updated", object.GetControllerName())
+		} else if operationType == smTypes.DELETE {
+			message = fmt.Sprintf("%s is being deleted", object.GetControllerName())
+		}
 	}
 
 	conditions := object.GetConditions()
@@ -277,20 +283,9 @@ func setFailureConditions(operationType smTypes.OperationCategory, errorMessage 
 
 //blocked condition marks to the user that action from his side is required, this is considered as in progress operation
 func setBlockedCondition(message string, object servicesv1alpha1.SAPBTPResource) {
-	conditions := object.GetConditions()
-	if len(conditions) > 0 {
-		meta.RemoveStatusCondition(&conditions, servicesv1alpha1.ConditionFailed)
-	}
-	lastOpBlockedCondition := metav1.Condition{
-		Type:               servicesv1alpha1.ConditionSucceeded,
-		Status:             metav1.ConditionFalse,
-		Reason:             Blocked,
-		Message:            message,
-		ObservedGeneration: object.GetGeneration(),
-	}
-	meta.SetStatusCondition(&conditions, lastOpBlockedCondition)
-	meta.SetStatusCondition(&conditions, getReadyCondition(object))
-	object.SetConditions(conditions)
+	setInProgressConditions(Unknown, message, object)
+	lastOpCondition := meta.FindStatusCondition(object.GetConditions(), servicesv1alpha1.ConditionSucceeded)
+	lastOpCondition.Reason = Blocked
 }
 
 func isDelete(object metav1.ObjectMeta) bool {

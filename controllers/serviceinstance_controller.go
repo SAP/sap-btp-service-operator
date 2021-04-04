@@ -20,6 +20,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/google/uuid"
+
 	smTypes "github.com/Peripli/service-manager/pkg/types"
 	"github.com/Peripli/service-manager/pkg/web"
 	"github.com/SAP/sap-btp-service-operator/api/v1alpha1"
@@ -44,7 +46,7 @@ type ServiceInstanceReconciler struct {
 // +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;create;update
 
 func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("serviceinstance", req.NamespacedName)
+	log := r.Log.WithValues("serviceinstance", req.NamespacedName).WithValues("correlation_id", uuid.New().String())
 
 	serviceInstance := &v1alpha1.ServiceInstance{}
 	if err := r.Get(ctx, req.NamespacedName, serviceInstance); err != nil {
@@ -67,7 +69,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	smClient, err := r.getSMClient(ctx, serviceInstance)
 	if err != nil {
-		return r.markAsTransientError(ctx, smTypes.CREATE, err, serviceInstance, log)
+		return r.markAsTransientError(ctx, Unknown, err, serviceInstance, log)
 	}
 
 	if len(serviceInstance.Status.OperationURL) > 0 {
@@ -93,7 +95,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		instance, err := r.getInstanceForRecovery(smClient, serviceInstance, log)
 		if err != nil {
 			log.Error(err, "failed to check instance recovery")
-			return r.markAsTransientError(ctx, smTypes.CREATE, err, serviceInstance, log)
+			return r.markAsTransientError(ctx, Unknown, err, serviceInstance, log)
 		}
 		if instance != nil {
 			log.Info(fmt.Sprintf("found existing instance in SM with id %s, updating status", instance.ID))

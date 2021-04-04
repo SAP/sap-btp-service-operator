@@ -20,6 +20,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/google/uuid"
+
 	"github.com/SAP/sap-btp-service-operator/client/sm"
 
 	smTypes "github.com/Peripli/service-manager/pkg/types"
@@ -51,7 +53,7 @@ type ServiceBindingReconciler struct {
 // +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;create;update
 
 func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("servicebinding", req.NamespacedName)
+	log := r.Log.WithValues("servicebinding", req.NamespacedName).WithValues("correlation_id", uuid.New().String())
 
 	serviceBinding := &v1alpha1.ServiceBinding{}
 	if err := r.Get(ctx, req.NamespacedName, serviceBinding); err != nil {
@@ -74,7 +76,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	smClient, err := r.getSMClient(ctx, serviceBinding)
 	if err != nil {
-		return r.markAsTransientError(ctx, smTypes.CREATE, err, serviceBinding, log)
+		return r.markAsTransientError(ctx, Unknown, err, serviceBinding, log)
 	}
 
 	if len(serviceBinding.Status.OperationURL) > 0 {
@@ -124,6 +126,10 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, nil
 	}
 
+	if !bindingAlreadyOwnedByInstance(serviceInstance, serviceBinding) {
+		return ctrl.Result{}, r.SetOwner(ctx, serviceInstance, serviceBinding, log)
+	}
+
 	if serviceBinding.Status.BindingID == "" {
 		err := r.validateSecretNameIsAvailable(ctx, serviceBinding)
 		if err != nil {
@@ -139,9 +145,6 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		if binding != nil {
 			// Recovery - restore binding from SM
 			log.Info(fmt.Sprintf("found existing smBinding in SM with id %s, updating status", binding.ID))
-			if err := r.SetOwner(ctx, serviceInstance, serviceBinding, log); err != nil {
-				return ctrl.Result{}, err
-			}
 
 			if binding.LastOperation.Type != smTypes.CREATE || binding.LastOperation.State == smTypes.SUCCEEDED {
 				// store secret unless binding is still being created or failed during creation
@@ -153,7 +156,9 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 			return ctrl.Result{}, r.updateStatusWithRetries(ctx, serviceBinding, log)
 		}
-		return r.createBinding(ctx, smClient, serviceInstance, serviceBinding, log)
+		if serviceBinding.Status.Ready != metav1.ConditionTrue {
+			return r.createBinding(ctx, smClient, serviceInstance, serviceBinding, log)
+		}
 	}
 
 	log.Error(fmt.Errorf("update binding is not allowed, this line should not be reached"), "")
@@ -167,10 +172,6 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 	if err != nil {
 		log.Error(err, "failed to parse smBinding parameters")
 		return r.markAsNonTransientError(ctx, smTypes.CREATE, err, serviceBinding, log)
-	}
-
-	if err := r.SetOwner(ctx, serviceInstance, serviceBinding, log); err != nil {
-		return ctrl.Result{}, err
 	}
 
 	smBinding, operationURL, bindErr := smClient.Bind(&smclientTypes.ServiceBinding{
@@ -347,11 +348,6 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, smClient sm.Client,
 }
 
 func (r *ServiceBindingReconciler) SetOwner(ctx context.Context, serviceInstance *v1alpha1.ServiceInstance, serviceBinding *v1alpha1.ServiceBinding, log logr.Logger) error {
-	if bindingAlreadyOwnedByInstance(serviceInstance, serviceBinding) {
-		log.Info("Binding already owned by instance", "bindingName", serviceBinding.Name, "instanceName", serviceInstance.Name)
-		return nil
-	}
-
 	log.Info("Binding instance as owner of binding", "bindingName", serviceBinding.Name, "instanceName", serviceInstance.Name)
 	if err := controllerutil.SetControllerReference(serviceInstance, serviceBinding, r.Scheme); err != nil {
 		log.Error(err, fmt.Sprintf("Could not update the smBinding %s owner instance reference", serviceBinding.Name))
