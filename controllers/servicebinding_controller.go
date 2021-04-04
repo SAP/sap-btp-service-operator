@@ -20,6 +20,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/google/uuid"
+
 	"github.com/SAP/sap-btp-service-operator/client/sm"
 
 	smTypes "github.com/Peripli/service-manager/pkg/types"
@@ -51,7 +53,7 @@ type ServiceBindingReconciler struct {
 // +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;create;update
 
 func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("servicebinding", req.NamespacedName)
+	log := r.Log.WithValues("servicebinding", req.NamespacedName).WithValues("correlation_id", uuid.New().String())
 
 	serviceBinding := &v1alpha1.ServiceBinding{}
 	if err := r.Get(ctx, req.NamespacedName, serviceBinding); err != nil {
@@ -153,7 +155,9 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 			return ctrl.Result{}, r.updateStatusWithRetries(ctx, serviceBinding, log)
 		}
-		return r.createBinding(ctx, smClient, serviceInstance, serviceBinding, log)
+		if serviceBinding.Status.Ready != metav1.ConditionTrue {
+			return r.createBinding(ctx, smClient, serviceInstance, serviceBinding, log)
+		}
 	}
 
 	log.Error(fmt.Errorf("update binding is not allowed, this line should not be reached"), "")
