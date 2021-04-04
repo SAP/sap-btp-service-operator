@@ -283,7 +283,7 @@ func setFailureConditions(operationType smTypes.OperationCategory, errorMessage 
 
 //blocked condition marks to the user that action from his side is required, this is considered as in progress operation
 func setBlockedCondition(message string, object servicesv1alpha1.SAPBTPResource) {
-	setInProgressConditions("", message, object)
+	setInProgressConditions(Unknown, message, object)
 	lastOpCondition := meta.FindStatusCondition(object.GetConditions(), servicesv1alpha1.ConditionSucceeded)
 	lastOpCondition.Reason = Blocked
 }
