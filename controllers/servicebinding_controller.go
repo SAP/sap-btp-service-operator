@@ -74,7 +74,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	smClient, err := r.getSMClient(ctx, serviceBinding)
 	if err != nil {
-		return r.markAsTransientError(ctx, smTypes.CREATE, err, serviceBinding, log)
+		return r.markAsTransientError(ctx, Unknown, err, serviceBinding, log)
 	}
 
 	if len(serviceBinding.Status.OperationURL) > 0 {

@@ -67,7 +67,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	smClient, err := r.getSMClient(ctx, serviceInstance)
 	if err != nil {
-		return r.markAsTransientError(ctx, smTypes.CREATE, err, serviceInstance, log)
+		return r.markAsTransientError(ctx, Unknown, err, serviceInstance, log)
 	}
 
 	if len(serviceInstance.Status.OperationURL) > 0 {
@@ -93,7 +93,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		instance, err := r.getInstanceForRecovery(smClient, serviceInstance, log)
 		if err != nil {
 			log.Error(err, "failed to check instance recovery")
-			return r.markAsTransientError(ctx, smTypes.CREATE, err, serviceInstance, log)
+			return r.markAsTransientError(ctx, Unknown, err, serviceInstance, log)
 		}
 		if instance != nil {
 			log.Info(fmt.Sprintf("found existing instance in SM with id %s, updating status", instance.ID))
