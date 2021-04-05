@@ -3,6 +3,7 @@ package v1alpha1
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	v1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"testing"
@@ -35,6 +36,11 @@ func getBinding() *ServiceBinding {
 					},
 				},
 			},
+			UserInfo: &v1.UserInfo{
+				Username: "test-user",
+				Groups:   []string{"test-group"},
+				Extra:    map[string]v1.ExtraValue{"key": {"val"}},
+			},
 		},
 
 		Status: ServiceBindingStatus{},
@@ -64,6 +70,11 @@ func getInstance() *ServiceInstance {
 						Key:  "secret-parameter",
 					},
 				},
+			},
+			UserInfo: &v1.UserInfo{
+				Username: "test-user",
+				Groups:   []string{"test-group"},
+				Extra:    map[string]v1.ExtraValue{"key": {"val"}},
 			},
 		},
 
