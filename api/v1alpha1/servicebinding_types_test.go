@@ -52,6 +52,15 @@ var _ = Describe("Service Binding Type Test", func() {
 		Expect(list).To(Equal(clonedList))
 	})
 
+	It("should deep copy object correctly", func() {
+		obj := binding.DeepCopyObject()
+		Expect(binding).To(Equal(obj.(*ServiceBinding)))
+
+		list := &ServiceBindingList{Items: []ServiceBinding{*binding}}
+		clonedList := list.DeepCopyObject()
+		Expect(list).To(Equal(clonedList))
+	})
+
 	It("should return controller name", func() {
 		Expect(binding.GetControllerName()).To(Equal(ServiceBindingController))
 	})
