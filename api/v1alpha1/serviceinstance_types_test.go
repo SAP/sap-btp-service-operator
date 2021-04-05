@@ -52,6 +52,15 @@ var _ = Describe("Service Instance Type Test", func() {
 		Expect(list).To(Equal(clonedList))
 	})
 
+	It("should deep copy object correctly", func() {
+		obj := instance.DeepCopyObject()
+		Expect(instance).To(Equal(obj.(*ServiceInstance)))
+
+		list := &ServiceInstanceList{Items: []ServiceInstance{*instance}}
+		clonedList := list.DeepCopyObject()
+		Expect(list).To(Equal(clonedList))
+	})
+
 	It("should return controller name", func() {
 		Expect(instance.GetControllerName()).To(Equal(ServiceInstanceController))
 	})
