@@ -318,11 +318,28 @@ var _ = Describe("ServiceBinding controller", func() {
 				})
 
 				When("secret deleted by user", func() {
+					fakeSmResponse := func(bindingID string) {
+						fakeClient.ListBindingsReturns(&smclientTypes.ServiceBindings{
+							ServiceBindings: []smclientTypes.ServiceBinding{
+								{
+									ID:          bindingID,
+									Credentials: json.RawMessage("{\"secret_key\": \"secret_value\"}"),
+									LastOperation: &smTypes.Operation{
+										Type:        smTypes.CREATE,
+										State:       smTypes.SUCCEEDED,
+										Description: "fake-description",
+									},
+								},
+							},
+						}, nil)
+					}
+
 					It("should recreate the secret", func() {
 						ctx := context.Background()
 						createdBinding = createBinding(ctx, bindingName, bindingTestNamespace, instanceName, "binding-external-name")
 						secretLookupKey := types.NamespacedName{Name: createdBinding.Spec.SecretName, Namespace: createdBinding.Namespace}
 						bindingSecret := getSecret(ctx, secretLookupKey.Name, secretLookupKey.Namespace, true)
+						fakeSmResponse(createdBinding.Status.BindingID)
 						err := k8sClient.Delete(ctx, bindingSecret)
 						Expect(err).ToNot(HaveOccurred())
 

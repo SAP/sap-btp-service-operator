@@ -159,6 +159,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		if serviceBinding.Status.Ready != metav1.ConditionTrue {
 			return r.createBinding(ctx, smClient, serviceInstance, serviceBinding, log)
 		}
+		return ctrl.Result{}, nil
 	}
 
 	log.Error(fmt.Errorf("update binding is not allowed, this line should not be reached"), "")
