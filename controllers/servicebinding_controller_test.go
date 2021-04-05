@@ -764,7 +764,7 @@ var _ = Describe("ServiceBinding controller", func() {
 
 			When("binding exists in SM", func() {
 				JustBeforeEach(func() {
-					fakeClient.ListBindingsReturnsOnCall(0,
+					fakeClient.ListBindingsReturns(
 						&smclientTypes.ServiceBindings{
 							ServiceBindings: []smclientTypes.ServiceBinding{*fakeBinding(testCase.lastOpState)},
 						}, nil)
