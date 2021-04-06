@@ -113,11 +113,31 @@ var _ = Describe("Service Binding Webhook Test", func() {
 				})
 
 				When("ParametersFrom were changed", func() {
-					It("should fail", func() {
+					It("should fail on changed name", func() {
 						newBinding.Spec.ParametersFrom[0].SecretKeyRef.Name = "newName"
 						err := newBinding.ValidateUpdate(binding)
 						Expect(err).To(HaveOccurred())
 					})
+
+					It("should fail on changed key", func() {
+						newBinding.Spec.ParametersFrom[0].SecretKeyRef.Key = "newName"
+						err := newBinding.ValidateUpdate(binding)
+						Expect(err).To(HaveOccurred())
+					})
+
+					It("should fail on nil array", func() {
+						newBinding.Spec.ParametersFrom = nil
+						err := newBinding.ValidateUpdate(binding)
+						Expect(err).To(HaveOccurred())
+					})
+
+					It("should fail on changed array", func() {
+						p := ParametersFromSource{}
+						newBinding.Spec.ParametersFrom[0] = p
+						err := newBinding.ValidateUpdate(binding)
+						Expect(err).To(HaveOccurred())
+					})
+
 				})
 			})
 

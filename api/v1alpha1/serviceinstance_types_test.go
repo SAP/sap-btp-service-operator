@@ -61,6 +61,36 @@ var _ = Describe("Service Instance Type Test", func() {
 		Expect(list).To(Equal(clonedList))
 	})
 
+	It("clone ParametersFromSource", func() {
+		params := ParametersFromSource{
+			SecretKeyRef: &SecretKeyReference{
+				Name: "param-secret",
+				Key:  "secret-parameter",
+			},
+		}
+
+		clonedParams := params.DeepCopy()
+		Expect(params.SecretKeyRef).To(Equal(clonedParams.SecretKeyRef))
+
+		clonedParams2 := &ParametersFromSource{}
+		params.DeepCopyInto(clonedParams2)
+		Expect(params.SecretKeyRef).To(Equal(clonedParams2.SecretKeyRef))
+	})
+
+	It("clone SecretKeyRef", func() {
+		secret := &SecretKeyReference{
+			Name: "param-secret",
+			Key:  "secret-parameter",
+		}
+
+		clonedSecret := secret.DeepCopy()
+		Expect(secret).To(Equal(clonedSecret))
+
+		clonedSecret2 := &SecretKeyReference{}
+		secret.DeepCopyInto(clonedSecret2)
+		Expect(secret).To(Equal(clonedSecret2))
+	})
+
 	It("should return controller name", func() {
 		Expect(instance.GetControllerName()).To(Equal(ServiceInstanceController))
 	})
