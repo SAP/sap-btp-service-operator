@@ -38,8 +38,8 @@ This feature is still under development, review, and testing.
 
 2. Obtain the access credentials for the SAP BTP service operator:
 
-   a. Using the SAP BTP cockpit or CLI, create an instance of the SAP Cloud Service Management service (technical name: `service-manager`) with the plan:
-    `service-operator-access`<br/>**Note**<br/> If you can't see the needed plan, you need to entitle your subaccount to use SAP Cloud Service Management service.
+   a. Using the SAP BTP cockpit or CLI, create an instance of the SAP Service Manager service (technical name: `service-manager`) with the plan:
+    `service-operator-access`<br/>**Note**<br/> If you can't see the needed plan, you need to entitle your subaccount to use SAP Service Manager service.
 
       For more information about how to entitle a service to a subaccount, see:
       * [Configure Entitlements and Quotas for Subaccounts](https://help.sap.com/viewer/65de2977205c403bbc107264b8eccf4b/Cloud/en-US/5ba357b4fa1e4de4b9fcc4ae771609da.html)  
@@ -189,7 +189,7 @@ This feature is still under development, review, and testing.
 #### Status
 | Parameter         | Type     | Description                                                                                                   |
 |:-----------------|:---------|:-----------------------------------------------------------------------------------------------------------|
-| instanceID   | `string` | The service instance ID in SAP Cloud Service Management service.  |
+| instanceID   | `string` | The service instance ID in SAP Service Manager service.  |
 | operationURL | `string` | The URL of the current operation performed on the service instance.  |
 | operationType   |  `string`| The type of the current operation. Possible values are CREATE, UPDATE, or DELETE. |
 | conditions       |  `[]condition`   | An array of conditions describing the status of the service instance.<br/>The possible condition types are:<br>- `Ready`: set to `true`  if the instance is ready and usable<br/>- `Failed`: set to `true` when an operation on the service instance fails.<br/> In the case of failure, the details about the error are available in the condition message.<br>- `Succeeded`: set to `true` when an operation on the service instance succeeded. In case of `false` operation considered as in progress unless `Failed` condition exists.
@@ -210,8 +210,8 @@ This feature is still under development, review, and testing.
 #### Status
 | Parameter         | Type     | Description                                                                                                   |
 |:-----------------|:---------|:-----------------------------------------------------------------------------------------------------------|
-| instanceID   |  `string`  | The ID of the bound instance in the SAP Cloud Service Management service. |
-| bindingID   |  `string`  | The service binding ID in SAP Cloud Service Management service. |
+| instanceID   |  `string`  | The ID of the bound instance in the SAP Service Manager service. |
+| bindingID   |  `string`  | The service binding ID in SAP Service Manager service. |
 | operationURL |`string`| The URL of the current operation performed on the service binding. |
 | operationType| `string `| The type of the current operation. Possible values are CREATE, UPDATE, or DELETE. |
 | conditions| `[]condition` | An array of conditions describing the status of the service instance.<br/>The possible conditions types are:<br/>- `Ready`: set to `true` if the binding is ready and usable<br/>- `Failed`: set to `true` when an operation on the service binding fails.<br/> In the case of failure, the details about the error are available in the condition message.<br>- `Succeeded`: set to `true` when an operation on the service binding succeeded. In case of `false` operation considered as in progress unless `Failed` condition exists.
