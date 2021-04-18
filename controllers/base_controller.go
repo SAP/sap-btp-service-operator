@@ -333,7 +333,7 @@ func isInProgress(object servicesv1alpha1.SAPBTPResource) bool {
 
 func getReadyCondition(object servicesv1alpha1.SAPBTPResource) metav1.Condition {
 	status := metav1.ConditionFalse
-	reason := "ProvisionFailed"
+	reason := "NotProvisioned"
 	if object.GetReady() == metav1.ConditionTrue {
 		status = metav1.ConditionTrue
 		reason = "Provisioned"
