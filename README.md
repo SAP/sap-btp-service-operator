@@ -131,6 +131,8 @@ This feature is still under development, review, and testing.
 
 1.  To get access credentials to your service instance and make it available in the cluster so that your applications can use it, create a `ServiceBinding` custom resource, and set the `serviceInstanceName` field to the name of the `ServiceInstance` resource you created.
 
+    The credentials are stored in a secret created in your cluster.
+
   ```yaml
     apiVersion: services.cloud.sap.com/v1alpha1
     kind: ServiceBinding
