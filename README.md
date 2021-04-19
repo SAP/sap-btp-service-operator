@@ -238,7 +238,7 @@ using the access credentials stored in the cluster.
 - The SAP BTP kubectl plugin is currently based on `bash`. If you're using Windows, you should utilize the SAP BTP plugin commands from a linux shell (e.g. [Cygwin](https://www.cygwin.com/)).  
 
 ### Installation
-- Download https://github.com/SAP/sap-btp-service-operator/releases/download/${release}/kubectl-sapbtp
+- Download https://github.com/SAP/sap-btp-service-operator/releases/download/v0.1.6/kubectl-sapbtp
 - Move the executable file to any location in your `PATH`
 
 ### Usage
