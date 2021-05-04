@@ -46,10 +46,10 @@ spec:
           resources:
             limits:
               cpu: 100m
-              memory: 30Mi
+              memory: {{.Values.manager.memory_limit}}
             requests:
               cpu: 100m
-              memory: 20Mi
+              memory: {{.Values.manager.req_memory_limit}}
           volumeMounts:
             - mountPath: /tmp/k8s-webhook-server/serving-certs
               name: cert
