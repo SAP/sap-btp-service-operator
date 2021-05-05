@@ -45,10 +45,10 @@ spec:
               protocol: TCP
           resources:
             limits:
-              cpu: 100m
+              cpu: {{.Values.manager.cpu_limit}}
               memory: {{.Values.manager.memory_limit}}
             requests:
-              cpu: 100m
+              cpu: {.Values.manager.req_cpu_limit}}
               memory: {{.Values.manager.req_memory_limit}}
           volumeMounts:
             - mountPath: /tmp/k8s-webhook-server/serving-certs
