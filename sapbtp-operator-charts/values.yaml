@@ -4,9 +4,9 @@
 
 manager:
   memory_limit: 200Mi
-  cpu_limit: 250m
-  req_cpu_limit: 100m
+  cpu_limit: 250m  
   req_memory_limit: 20Mi
+  req_cpu_limit: 100m
   image:
     repository: ghcr.io/sap/sap-btp-service-operator/controller
     tag: master
