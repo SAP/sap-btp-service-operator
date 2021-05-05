@@ -182,14 +182,3 @@ var _ = AfterSuite(func() {
 func isReady(resource servicesv1alpha1.SAPBTPResource) bool {
 	return meta.IsStatusConditionPresentAndEqual(resource.GetConditions(), servicesv1alpha1.ConditionSucceeded, metav1.ConditionTrue)
 }
-
-func isFailed(resource servicesv1alpha1.SAPBTPResource) bool {
-	conditions := resource.GetConditions()
-	if len(conditions) == 0 {
-		return false
-	}
-	return meta.IsStatusConditionPresentAndEqual(resource.GetConditions(), servicesv1alpha1.ConditionFailed, metav1.ConditionTrue) ||
-		(resource.GetConditions()[0].Status == metav1.ConditionFalse &&
-			resource.GetConditions()[0].Type == servicesv1alpha1.ConditionSucceeded &&
-			resource.GetConditions()[0].Reason == Blocked)
-}
