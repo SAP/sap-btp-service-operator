@@ -48,7 +48,7 @@ spec:
               cpu: {{.Values.manager.cpu_limit}}
               memory: {{.Values.manager.memory_limit}}
             requests:
-              cpu: {.Values.manager.req_cpu_limit}}
+              cpu: {{.Values.manager.req_cpu_limit}}
               memory: {{.Values.manager.req_memory_limit}}
           volumeMounts:
             - mountPath: /tmp/k8s-webhook-server/serving-certs
