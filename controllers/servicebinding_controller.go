@@ -89,7 +89,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	if serviceBinding.GetObservedGeneration() > 0 && !isInProgress(serviceBinding) {
-		log.Info("Binding already created")
+		log.Info("Binding in final state")
 		return r.maintain(ctx, serviceBinding, log)
 	}
 
@@ -560,15 +560,17 @@ func (r *ServiceBindingReconciler) maintain(ctx context.Context, binding *v1alph
 		shouldUpdateStatus = true
 	}
 
-	if _, err := r.getSecret(ctx, binding.Namespace, binding.Spec.SecretName); err != nil {
-		if apierrors.IsNotFound(err) && !isDelete(binding.ObjectMeta) {
-			log.Info(fmt.Sprintf("secret not found recovering binding %s", binding.Name))
-			binding.Status.BindingID = ""
-			setInProgressConditions(smTypes.CREATE, "recreating deleted secret", binding)
-			shouldUpdateStatus = true
-			r.Recorder.Event(binding, corev1.EventTypeWarning, "SecretDeleted", "SecretDeleted")
-		} else {
-			return ctrl.Result{}, err
+	if !isFailed(binding) {
+		if _, err := r.getSecret(ctx, binding.Namespace, binding.Spec.SecretName); err != nil {
+			if apierrors.IsNotFound(err) && !isDelete(binding.ObjectMeta) {
+				log.Info(fmt.Sprintf("secret not found recovering binding %s", binding.Name))
+				binding.Status.BindingID = ""
+				setInProgressConditions(smTypes.CREATE, "recreating deleted secret", binding)
+				shouldUpdateStatus = true
+				r.Recorder.Event(binding, corev1.EventTypeWarning, "SecretDeleted", "SecretDeleted")
+			} else {
+				return ctrl.Result{}, err
+			}
 		}
 	}
 
