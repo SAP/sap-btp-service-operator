@@ -3,7 +3,7 @@
 # Declare variables to be passed into your templates.
 
 manager:
-  memory_limit: 30Mi
+  memory_limit: 100Mi
   req_memory_limit: 20Mi
   image:
     repository: ghcr.io/sap/sap-btp-service-operator/controller
