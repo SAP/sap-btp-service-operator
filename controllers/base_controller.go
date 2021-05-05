@@ -331,6 +331,12 @@ func isInProgress(object servicesv1alpha1.SAPBTPResource) bool {
 		!meta.IsStatusConditionPresentAndEqual(conditions, servicesv1alpha1.ConditionFailed, metav1.ConditionTrue)
 }
 
+func isFailed(object servicesv1alpha1.SAPBTPResource) bool {
+	conditions := object.GetConditions()
+	return meta.IsStatusConditionPresentAndEqual(conditions, servicesv1alpha1.ConditionSucceeded, metav1.ConditionFalse) &&
+		meta.IsStatusConditionPresentAndEqual(conditions, servicesv1alpha1.ConditionFailed, metav1.ConditionTrue)
+}
+
 func getReadyCondition(object servicesv1alpha1.SAPBTPResource) metav1.Condition {
 	status := metav1.ConditionFalse
 	reason := "NotProvisioned"
