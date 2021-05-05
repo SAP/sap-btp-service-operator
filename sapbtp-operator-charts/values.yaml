@@ -3,7 +3,7 @@
 # Declare variables to be passed into your templates.
 
 manager:
-  memory_limit: 100Mi
+  memory_limit: 200Mi
   cpu_limit: 250m
   req_cpu_limit: 100m
   req_memory_limit: 20Mi
