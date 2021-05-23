@@ -18,10 +18,10 @@ package sm
 
 // ClientConfig contains the configuration of the Service Manager client
 type ClientConfig struct {
-	URL          string
-	TokenURL     string
-	ClientID     string
-	ClientSecret string
-
-	SSLDisabled bool
+	URL            string
+	TokenURL       string
+	ClientID       string
+	ClientSecret   string
+	TokenURLSuffix string
+	SSLDisabled    bool
 }
