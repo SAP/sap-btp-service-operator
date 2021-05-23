@@ -37,7 +37,6 @@ import (
 )
 
 const (
-	tokenURLSuffix            = "/oauth/token"
 	originatingIdentityHeader = "X-Originating-Identity"
 )
 
