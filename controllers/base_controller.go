@@ -72,11 +72,12 @@ func (r *BaseReconciler) getSMClient(ctx context.Context, object servicesv1alpha
 
 	secretData := secret.Data
 	cl := sm.NewClient(ctx, &sm.ClientConfig{
-		ClientID:     string(secretData["clientid"]),
-		ClientSecret: string(secretData["clientsecret"]),
-		URL:          string(secretData["url"]),
-		TokenURL:     string(secretData["tokenurl"]),
-		SSLDisabled:  false,
+		ClientID:       string(secretData["clientid"]),
+		ClientSecret:   string(secretData["clientsecret"]),
+		URL:            string(secretData["url"]),
+		TokenURL:       string(secretData["tokenurl"]),
+		TokenURLSuffix: string(secretData["tokenurlsuffix"]),
+		SSLDisabled:    false,
 	}, nil)
 
 	return cl, nil
