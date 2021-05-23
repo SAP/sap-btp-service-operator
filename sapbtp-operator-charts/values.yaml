@@ -15,5 +15,6 @@ manager:
     clientsecret:
     url:
     tokenurl:
+    tokenurlsuffix: "/oauth/token"
 cluster:
   id:
