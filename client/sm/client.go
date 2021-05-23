@@ -86,7 +86,7 @@ func NewClient(ctx context.Context, config *ClientConfig, httpClient auth.HTTPCl
 	ccConfig := &clientcredentials.Config{
 		ClientID:     config.ClientID,
 		ClientSecret: config.ClientSecret,
-		TokenURL:     config.TokenURL + tokenURLSuffix,
+		TokenURL:     config.TokenURL + config.TokenURLSuffix,
 		AuthStyle:    oauth2.AuthStyleInParams,
 	}
 
