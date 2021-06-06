@@ -13,7 +13,7 @@ The SAP BTP service operator is based on the [Kubernetes Operator pattern](https
 ## Note
 This feature is still under development, review, and testing. 
 
-## Table of content
+## Table of Contents
 * [Prerequisites](#prerequisites)
 * [Setup Operator](#setup)
 * [SAP BTP kubectl extension](#sap-btp-kubectl-plugin-experimental)
