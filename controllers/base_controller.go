@@ -2,8 +2,10 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"k8s.io/client-go/tools/record"
 
@@ -48,6 +50,8 @@ const (
 
 	Blocked = "Blocked"
 	Unknown = "Unknown"
+
+	smErrorAlreadyExists = "binding with same name exists"
 )
 
 type BaseReconciler struct {
@@ -297,6 +301,19 @@ func isTransientError(err error, log logr.Logger) bool {
 	if smError, ok := err.(*sm.ServiceManagerError); ok {
 		log.Info(fmt.Sprintf("SM returned error status code %d", smError.StatusCode))
 		return smError.StatusCode == http.StatusTooManyRequests || smError.StatusCode == http.StatusServiceUnavailable || smError.StatusCode == http.StatusGatewayTimeout
+	}
+	return false
+}
+
+func isAlreadyExistsError(err error) bool {
+	if smError, ok := err.(*sm.ServiceManagerError); ok {
+		if smError.StatusCode == http.StatusConflict {
+			msg := struct {
+				Description string `json:"description"`
+			}{}
+			json.Unmarshal([]byte(smError.Message), &msg)
+			return strings.HasPrefix(msg.Description, smErrorAlreadyExists)
+		}
 	}
 	return false
 }

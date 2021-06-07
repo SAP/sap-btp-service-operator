@@ -186,7 +186,7 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 		Parameters:        bindingParameters,
 	}, nil, buildUserInfo(serviceBinding.Spec.UserInfo, log))
 
-	if bindErr != nil {
+	if bindErr != nil && !isAlreadyExistsError(bindErr) {
 		log.Error(err, "failed to create service binding", "serviceInstanceID", serviceInstance.Status.InstanceID)
 		if isTransientError(bindErr, log) {
 			return r.markAsTransientError(ctx, smTypes.CREATE, bindErr, serviceBinding, log)
