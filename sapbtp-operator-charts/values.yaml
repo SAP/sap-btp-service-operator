@@ -4,17 +4,59 @@
 
 manager:
   memory_limit: 200Mi
-  cpu_limit: 250m  
+  cpu_limit: 250m
   req_memory_limit: 20Mi
   req_cpu_limit: 100m
   image:
     repository: ghcr.io/sap/sap-btp-service-operator/controller
-    tag: master
+    tag: v0.1.8
   secret:
     clientid:
     clientsecret:
     url:
     tokenurl:
     tokenurlsuffix: "/oauth/token"
+  # -- Container [security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container).
+  # See the [API reference](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#security-context-1) for details.
+  securityContext: {}
+    # capabilities:
+    #   drop:
+    #   - ALL
+    # readOnlyRootFilesystem: true
+    # runAsNonRoot: true
+    # runAsUser: 1000
 cluster:
   id:
+proxy:
+  image:
+    repository: gcr.io/kubebuilder/kube-rbac-proxy
+    tag: v0.5.0
+  # -- Container [security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container).
+  # See the [API reference](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#security-context-1) for details.
+  securityContext: {}
+    # capabilities:
+    #   drop:
+    #   - ALL
+    # readOnlyRootFilesystem: true
+    # runAsNonRoot: true
+    # runAsUser: 1000
+
+# -- Reference to one or more secrets to be used when [pulling images](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/#create-a-pod-that-uses-your-secret) (from private registries).
+imagePullSecrets: []
+
+# -- Annotations to be added to pods.
+podAnnotations: {}
+
+# -- Pod [security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod).
+# See the [API reference](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#security-context) for details.
+podSecurityContext: {}
+  # fsGroup: 2000
+
+rbac:
+  # -- Specifies whether RBAC resources should be created.
+  create: true
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
