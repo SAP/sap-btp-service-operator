@@ -490,21 +490,23 @@ func (r *ServiceBindingReconciler) deleteBindingSecret(ctx context.Context, bind
 }
 
 func (r *ServiceBindingReconciler) getBindingForRecovery(smClient sm.Client, serviceBinding *v1alpha1.ServiceBinding, log logr.Logger) (*smclientTypes.ServiceBinding, error) {
+	nameQuery := fmt.Sprintf("name eq '%s'", serviceBinding.Spec.ExternalName)
+	clusterIDQuery := fmt.Sprintf("context/clusterid eq '%s'", r.Config.ClusterID)
+	namespaceQuery := fmt.Sprintf("context/namespace eq '%s'", serviceBinding.Namespace)
+	k8sNameQuery := fmt.Sprintf("%s eq '%s'", k8sNameLabel, serviceBinding.Name)
 	parameters := sm.Parameters{
-		FieldQuery: []string{
-			fmt.Sprintf("name eq '%s'", serviceBinding.Spec.ExternalName),
-			fmt.Sprintf("context/clusterid eq '%s'", r.Config.ClusterID),
-			fmt.Sprintf("context/namespace eq '%s'", serviceBinding.Namespace)},
-		LabelQuery: []string{
-			fmt.Sprintf("%s eq '%s'", k8sNameLabel, serviceBinding.Name)},
+		FieldQuery:    []string{nameQuery, clusterIDQuery, namespaceQuery},
+		LabelQuery:    []string{k8sNameQuery},
 		GeneralParams: []string{"attach_last_operations=true"},
 	}
+	log.Info(fmt.Sprintf("binding recovery query: %s, %s, %s, %s", nameQuery, clusterIDQuery, namespaceQuery, k8sNameQuery))
 
 	bindings, err := smClient.ListBindings(&parameters)
 	if err != nil {
 		log.Error(err, "failed to list bindings in SM")
 		return nil, err
 	}
+	log.Info("found %d bindings", len(bindings.ServiceBindings))
 	if bindings != nil && len(bindings.ServiceBindings) == 1 {
 		return &bindings.ServiceBindings[0], nil
 	}
