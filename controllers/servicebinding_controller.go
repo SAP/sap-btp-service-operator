@@ -499,18 +499,19 @@ func (r *ServiceBindingReconciler) getBindingForRecovery(smClient sm.Client, ser
 		LabelQuery:    []string{k8sNameQuery},
 		GeneralParams: []string{"attach_last_operations=true"},
 	}
-	log.Info(fmt.Sprintf("binding recovery query: %s, %s, %s, %s", nameQuery, clusterIDQuery, namespaceQuery, k8sNameQuery))
+	log.Info(fmt.Sprintf("binding recovery query params: %s, %s, %s, %s", nameQuery, clusterIDQuery, namespaceQuery, k8sNameQuery))
 
 	bindings, err := smClient.ListBindings(&parameters)
 	if err != nil {
 		log.Error(err, "failed to list bindings in SM")
 		return nil, err
 	}
-	log.Info("found %d bindings", len(bindings.ServiceBindings))
-	if bindings != nil && len(bindings.ServiceBindings) == 1 {
-		return &bindings.ServiceBindings[0], nil
+	if bindings != nil {
+		log.Info("found %d bindings", len(bindings.ServiceBindings))
+		if len(bindings.ServiceBindings) == 1 {
+			return &bindings.ServiceBindings[0], nil
+		}
 	}
-
 	return nil, nil
 }
 
