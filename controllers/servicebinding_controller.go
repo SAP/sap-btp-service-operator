@@ -507,7 +507,7 @@ func (r *ServiceBindingReconciler) getBindingForRecovery(smClient sm.Client, ser
 		return nil, err
 	}
 	if bindings != nil {
-		log.Info("found %d bindings", len(bindings.ServiceBindings))
+		log.Info(fmt.Sprintf("found %d bindings", len(bindings.ServiceBindings)))
 		if len(bindings.ServiceBindings) == 1 {
 			return &bindings.ServiceBindings[0], nil
 		}
