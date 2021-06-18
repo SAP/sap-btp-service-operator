@@ -7,6 +7,7 @@ import (
 	v1admission "k8s.io/api/admission/v1"
 	v1 "k8s.io/api/authentication/v1"
 	"net/http"
+	"reflect"
 
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -71,7 +72,7 @@ func (s *ServiceInstanceDefaulter) setServiceInstanceUserInfo(req admission.Requ
 		if err != nil {
 			return err
 		}
-		if oldInstance.Generation != instance.Generation {
+		if !reflect.DeepEqual(oldInstance.Spec, instance.Spec) {
 			instance.Spec.UserInfo = userInfo
 		}
 	}
