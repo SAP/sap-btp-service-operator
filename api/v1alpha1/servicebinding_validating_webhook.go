@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"fmt"
+	"reflect"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -60,33 +61,7 @@ func (sb *ServiceBinding) ValidateUpdate(old runtime.Object) error {
 
 func (sb *ServiceBinding) specChanged(old runtime.Object) bool {
 	oldBinding := old.(*ServiceBinding)
-
-	if changed := sb.paramsFromChanged(oldBinding); changed {
-		return true
-	}
-
-	return sb.Spec.ExternalName != oldBinding.Spec.ExternalName ||
-		sb.Spec.ServiceInstanceName != oldBinding.Spec.ServiceInstanceName ||
-		// TODO + labels
-		//r.Spec.Labels != oldBinding.Spec.Labels ||
-		sb.Spec.Parameters.String() != oldBinding.Spec.Parameters.String() ||
-		sb.Spec.SecretName != oldBinding.Spec.SecretName
-}
-
-func (sb *ServiceBinding) paramsFromChanged(oldBinding *ServiceBinding) bool {
-	if len(sb.Spec.ParametersFrom) != len(oldBinding.Spec.ParametersFrom) {
-		return true
-	}
-	for i, paramFrom := range sb.Spec.ParametersFrom {
-		if paramFrom.SecretKeyRef != nil && oldBinding.Spec.ParametersFrom[i].SecretKeyRef != nil {
-			if *paramFrom.SecretKeyRef != *oldBinding.Spec.ParametersFrom[i].SecretKeyRef {
-				return true
-			}
-		} else if paramFrom.SecretKeyRef != oldBinding.Spec.ParametersFrom[i].SecretKeyRef {
-			return true
-		}
-	}
-	return false
+	return !reflect.DeepEqual(oldBinding.Spec, sb.Spec)
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
