@@ -4,12 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	v1admission "k8s.io/api/admission/v1"
+	v1 "k8s.io/api/authentication/v1"
 	"net/http"
 
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/SAP/sap-btp-service-operator/api/v1alpha1"
-	v1 "k8s.io/api/authentication/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -42,11 +43,10 @@ func (s *ServiceInstanceDefaulter) Handle(_ context.Context, req admission.Reque
 		instancelog.Info("externalName not provided, defaulting to k8s name", "name", instance.Name)
 		instance.Spec.ExternalName = instance.Name
 	}
-	instance.Spec.UserInfo = &v1.UserInfo{
-		Username: req.UserInfo.Username,
-		UID:      req.UserInfo.UID,
-		Groups:   req.UserInfo.Groups,
-		Extra:    req.UserInfo.Extra,
+
+	err = s.setServiceInstanceUserInfo(req, instance)
+	if err != nil {
+		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
 	marshaledInstance, err := json.Marshal(instance)
@@ -54,6 +54,28 @@ func (s *ServiceInstanceDefaulter) Handle(_ context.Context, req admission.Reque
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledInstance)
+}
+
+func (s *ServiceInstanceDefaulter) setServiceInstanceUserInfo(req admission.Request, instance *v1alpha1.ServiceInstance) error {
+	userInfo := &v1.UserInfo{
+		Username: req.UserInfo.Username,
+		UID:      req.UserInfo.UID,
+		Groups:   req.UserInfo.Groups,
+		Extra:    req.UserInfo.Extra,
+	}
+	if req.Operation == v1admission.Create || req.Operation == v1admission.Delete {
+		instance.Spec.UserInfo = userInfo
+	} else if req.Operation == v1admission.Update {
+		oldInstance := &v1alpha1.ServiceInstance{}
+		err := s.decoder.DecodeRaw(req.OldObject, oldInstance)
+		if err != nil {
+			return err
+		}
+		if oldInstance.Generation != instance.Generation {
+			instance.Spec.UserInfo = userInfo
+		}
+	}
+	return nil
 }
 
 func (s *ServiceInstanceDefaulter) InjectDecoder(d *admission.Decoder) error {

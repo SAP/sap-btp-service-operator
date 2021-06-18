@@ -9,6 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/SAP/sap-btp-service-operator/api/v1alpha1"
+	v1admission "k8s.io/api/admission/v1"
 	v1 "k8s.io/api/authentication/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -47,11 +48,13 @@ func (s *ServiceBindingDefaulter) Handle(_ context.Context, req admission.Reques
 		binding.Spec.SecretName = binding.Name
 	}
 
-	binding.Spec.UserInfo = &v1.UserInfo{
-		Username: req.UserInfo.Username,
-		UID:      req.UserInfo.UID,
-		Groups:   req.UserInfo.Groups,
-		Extra:    req.UserInfo.Extra,
+	if req.Operation == v1admission.Create || req.Operation == v1admission.Delete {
+		binding.Spec.UserInfo = &v1.UserInfo{
+			Username: req.UserInfo.Username,
+			UID:      req.UserInfo.UID,
+			Groups:   req.UserInfo.Groups,
+			Extra:    req.UserInfo.Extra,
+		}
 	}
 
 	marshaledInstance, err := json.Marshal(binding)
