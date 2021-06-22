@@ -380,7 +380,13 @@ func bindingAlreadyOwnedByInstance(instance *v1alpha1.ServiceInstance, binding *
 }
 
 func serviceNotUsable(instance *v1alpha1.ServiceInstance) bool {
-	return isDelete(instance.ObjectMeta) || instance.Status.Conditions[0].Reason == getConditionReason(smTypes.CREATE, smTypes.FAILED)
+	if isDelete(instance.ObjectMeta) {
+		return true
+	}
+	if len(instance.Status.Conditions) != 0 {
+		return instance.Status.Conditions[0].Reason == getConditionReason(smTypes.CREATE, smTypes.FAILED)
+	}
+	return false
 }
 
 func (r *ServiceBindingReconciler) getServiceInstanceForBinding(ctx context.Context, binding *v1alpha1.ServiceBinding) (*v1alpha1.ServiceInstance, error) {
