@@ -1,0 +1,7 @@
+apiVersion: v1
+data:
+  CLUSTER_ID: {{.Values.cluster.id}}
+  MANAGEMENT_NAMESPACE: {{.Release.Namespace}}
+kind: ConfigMap
+metadata:
+  name: sap-btp-operator-config

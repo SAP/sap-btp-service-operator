@@ -1,5 +1,5 @@
 apiVersion: v2
-appVersion: "master"
+appVersion: v0.1.8
 name: sap-btp-operator
 description: A Helm chart for SAP BTP Operator for Kubernetes
-version: 0.1.0
+version: 0.2.0
