@@ -1,0 +1,15 @@
+{{- if .Values.manager.certificates.certManagement }}
+{{- if not .Values.manager.certificates.certManagement.issuer }}
+---
+apiVersion: cert.gardener.cloud/v1alpha1
+kind: Issuer
+metadata:
+  name: issuer-ca
+  namespace: {{.Release.Namespace}}
+spec:
+  ca:
+    privateKeySecretRef:
+      name: issuer-ca-secret
+      namespace: default
+{{- end}}
+{{- end}}
