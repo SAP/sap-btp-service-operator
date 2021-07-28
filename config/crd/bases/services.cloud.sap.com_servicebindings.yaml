@@ -80,6 +80,9 @@ spec:
                       type: object
                   type: object
                 type: array
+              secretKey:
+                description: SecretKey is used as the key inside the secret to store the credentials returned by the broker encoded as json. If not specified the credentials returned by the broker will be used directly as the secrets data, which can cause problems when using complex data structures.
+                type: string
               secretName:
                 description: SecretName is the name of the secret where credentials will be stored
                 type: string

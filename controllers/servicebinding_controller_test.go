@@ -317,6 +317,29 @@ var _ = Describe("ServiceBinding controller", func() {
 					validateSecretData(bindingSecret, "escaped", `{"escaped_key":"escaped_val"}`)
 				})
 
+				It("should put the raw broker response into the secret if spec.secretKey is provided", func() {
+					ctx := context.Background()
+					binding := newBinding("binding-with-secretkey", bindingTestNamespace)
+					binding.Spec.ServiceInstanceName = instanceName
+					binding.Spec.SecretName = "mysecret"
+					secretKey := "mycredentials"
+					binding.Spec.SecretKey = &secretKey
+
+					_ = k8sClient.Create(ctx, binding)
+					bindingLookupKey := types.NamespacedName{Name: binding.Name, Namespace: binding.Namespace}
+					Eventually(func() bool {
+						err := k8sClient.Get(ctx, bindingLookupKey, binding)
+						if err != nil {
+							return false
+						}
+						return isReady(binding)
+					}, timeout, interval).Should(BeTrue())
+
+					bindingSecret := getSecret(ctx, binding.Spec.SecretName, bindingTestNamespace, true)
+					validateSecretData(bindingSecret, secretKey, `{"secret_key": "secret_value", "escaped": "{\"escaped_key\":\"escaped_val\"}"}`)
+					Expect(bindingSecret.Data).To(HaveLen(1))
+				})
+
 				When("secret deleted by user", func() {
 					fakeSmResponse := func(bindingID string) {
 						fakeClient.ListBindingsReturns(&smclientTypes.ServiceBindings{
@@ -592,6 +615,16 @@ var _ = Describe("ServiceBinding controller", func() {
 			})
 		})
 
+		When("secretKey is changed", func() {
+			It("should fail", func() {
+				secretKey := "not-nil"
+				createdBinding.Spec.SecretKey = &secretKey
+				err := k8sClient.Update(context.Background(), createdBinding)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("updating service bindings is not supported"))
+			})
+		})
+
 	})
 
 	Context("Delete", func() {
@@ -818,7 +851,7 @@ var _ = Describe("ServiceBinding controller", func() {
 
 func validateSecretData(secret *v1.Secret, expectedKey string, expectedValue string) {
 	Expect(secret.Data).ToNot(BeNil())
-	Expect(len(secret.Data[expectedKey])).ToNot(BeNil())
+	Expect(secret.Data).To(HaveKey(expectedKey))
 	Expect(string(secret.Data[expectedKey])).To(Equal(expectedValue))
 }
 

@@ -44,6 +44,13 @@ type ServiceBindingSpec struct {
 	// +optional
 	SecretName string `json:"secretName"`
 
+	// SecretKey is used as the key inside the secret to store the credentials
+	// returned by the broker encoded as json. If not specified the credentials
+	// returned by the broker will be used directly as the secrets data, which
+	// can cause problems when using complex data structures.
+	// +optional
+	SecretKey *string `json:"secretKey,omitempty"`
+
 	// Parameters for the binding.
 	//
 	// The Parameters field is NOT secret or secured in any way and should
