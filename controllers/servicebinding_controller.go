@@ -435,6 +435,10 @@ func (r *ServiceBindingReconciler) storeBindingSecret(ctx context.Context, k8sBi
 	if len(smBinding.Credentials) == 0 {
 		log.Info("Binding credentials are empty")
 		credentialsMap = make(map[string][]byte)
+	} else if k8sBinding.Spec.SecretKey != nil {
+		credentialsMap = map[string][]byte{
+			*k8sBinding.Spec.SecretKey: smBinding.Credentials,
+		}
 	} else {
 		var err error
 		credentialsMap, err = normalizeCredentials(smBinding.Credentials)
