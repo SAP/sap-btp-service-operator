@@ -67,7 +67,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 	}
 
-	smClient, err := r.getSMClient(ctx, serviceInstance)
+	smClient, err := r.getSMClient(ctx, serviceInstance, log)
 	if err != nil {
 		return r.markAsTransientError(ctx, Unknown, err, serviceInstance, log)
 	}

@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	v1 "k8s.io/api/core/v1"
 	"net/http"
 
 	"k8s.io/client-go/tools/record"
@@ -60,27 +61,39 @@ type BaseReconciler struct {
 	Recorder       record.EventRecorder
 }
 
-func (r *BaseReconciler) getSMClient(ctx context.Context, object servicesv1alpha1.SAPBTPResource) (sm.Client, error) {
+func (r *BaseReconciler) getSMClient(ctx context.Context, object servicesv1alpha1.SAPBTPResource, log logr.Logger) (sm.Client, error) {
 	if r.SMClient != nil {
 		return r.SMClient(), nil
 	}
 
-	secret, err := r.SecretResolver.GetSecretForResource(ctx, object.GetNamespace())
+	secret, err := r.SecretResolver.GetSecretForResource(ctx, object.GetNamespace(), secrets.SAPBTPOperatorSecretName)
 	if err != nil {
 		return nil, err
 	}
 
 	secretData := secret.Data
-	cl := sm.NewClient(ctx, &sm.ClientConfig{
+	cfg := &sm.ClientConfig{
 		ClientID:       string(secretData["clientid"]),
 		ClientSecret:   string(secretData["clientsecret"]),
 		URL:            string(secretData["url"]),
 		TokenURL:       string(secretData["tokenurl"]),
 		TokenURLSuffix: string(secretData["tokenurlsuffix"]),
 		SSLDisabled:    false,
-	}, nil)
+	}
 
-	return cl, nil
+	tls, err := r.SecretResolver.GetSecretForResource(ctx, object.GetNamespace(), secrets.SAPBTPOperatorTLSSecretName)
+	if client.IgnoreNotFound(err) != nil {
+		return nil, err
+	}
+
+	if tls != nil {
+		cfg.TLSCertKey = string(tls.Data[v1.TLSCertKey])
+		cfg.TLSPrivateKey = string(tls.Data[v1.TLSPrivateKeyKey])
+		log.Info("found tls configuration", "client", cfg.ClientID)
+	}
+
+	cl, err := sm.NewClient(ctx, cfg, nil)
+	return cl, err
 }
 
 func (r *BaseReconciler) removeFinalizer(ctx context.Context, object servicesv1alpha1.SAPBTPResource, finalizerName string, log logr.Logger) error {

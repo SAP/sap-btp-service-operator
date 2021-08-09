@@ -23,5 +23,7 @@ type ClientConfig struct {
 	ClientID       string
 	ClientSecret   string
 	TokenURLSuffix string
+	TLSCertKey     string
+	TLSPrivateKey  string
 	SSLDisabled    bool
 }
