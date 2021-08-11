@@ -550,7 +550,9 @@ var _ = Describe("Client test", func() {
 
 			Context("When invalid config is set", func() {
 				It("should return error", func() {
-					client = NewClient(context.TODO(), &ClientConfig{URL: "invalidURL"}, fakeAuthClient)
+					var err error
+					client, err = NewClient(context.TODO(), &ClientConfig{URL: "invalidURL"}, fakeAuthClient)
+					Expect(err).ToNot(HaveOccurred())
 					_, location, err := client.UpdateInstance(instance.ID, instance, serviceName, planName, params, "test-user")
 
 					Expect(err).Should(HaveOccurred())
@@ -803,11 +805,97 @@ var _ = Describe("Client test", func() {
 
 			Context("When invalid config is set", func() {
 				It("should return error", func() {
-					client = NewClient(context.TODO(), &ClientConfig{URL: "invalidURL"}, fakeAuthClient)
+					var err error
+					client, err = NewClient(context.TODO(), &ClientConfig{URL: "invalidURL"}, fakeAuthClient)
+					Expect(err).ToNot(HaveOccurred())
 					_, location, err := client.Bind(binding, params, "test-user")
 
 					Expect(err).Should(HaveOccurred())
 					Expect(location).Should(BeEmpty())
+				})
+			})
+
+			Context("When tls config is set", func() {
+				var certificate, key string
+				BeforeEach(func() {
+					certificate = `-----BEGIN CERTIFICATE-----
+MIIEVjCCAz6gAwIBAgIJAPgMH+mOpz2AMA0GCSqGSIb3DQEBCwUAMH4xCzAJBgNV
+BAYTAlVTMQswCQYDVQQIDAJOWTELMAkGA1UEBwwCTlkxDDAKBgNVBAoMA1NBUDEM
+MAoGA1UECwwDU0FQMSUwIwYJKoZIhvcNAQkBFhZtYXlhLnNpZ2FsQGV4YW1wbGUu
+Y29tMRIwEAYDVQQDDAlsb2NhbGhvc3QwHhcNMjEwNTIyMjMxNjI3WhcNMjIxMDA0
+MjMxNjI3WjB+MQswCQYDVQQGEwJVUzELMAkGA1UECAwCTlkxCzAJBgNVBAcMAk5Z
+MQwwCgYDVQQKDANTQVAxDDAKBgNVBAsMA1NBUDElMCMGCSqGSIb3DQEJARYWbWF5
+YS5zaWdhbEBleGFtcGxlLmNvbTESMBAGA1UEAwwJbG9jYWxob3N0MIIBIjANBgkq
+hkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzoozvGy0hXQGJmZ+Mmim3P+XSS35KRCr
+KIoJwAWN+t6XeIFTmkYFk1hiDa165bbet79mu20eayWpku5xXYkVVciuU4KZr4M/
+uO+cpgsbAzSiN53ddwwUjzgAs7WnYqA/0e9Dx1FSL0GVnU9HF7gvV6ym9qlDjB5f
+aG4plvwZPXixw6qERfDHFSNBtXdydoJyJd1EhGFbUw/JWM5lKqf+tr4b2XgN+nst
+/qBa8AQqV+hywkAyPvABAdRUHcErX6b5OUeKxbkkzOGqyWEAaPE/X/i9x5ROO5fP
+NzNEwngEkBLsjwXPkdNBtkc7Ydn3eW6rdnuybzcqS3pf2NNQBoMq0QIDAQABo4HW
+MIHTMIGcBgNVHSMEgZQwgZGhgYOkgYAwfjELMAkGA1UEBhMCVVMxCzAJBgNVBAgM
+Ak5ZMQswCQYDVQQHDAJOWTEMMAoGA1UECgwDU0FQMQwwCgYDVQQLDANTQVAxJTAj
+BgkqhkiG9w0BCQEWFm1heWEuc2lnYWxAZXhhbXBsZS5jb20xEjAQBgNVBAMMCWxv
+Y2FsaG9zdIIJAM5G4IskOWh3MAkGA1UdEwQCMAAwCwYDVR0PBAQDAgTwMBoGA1Ud
+EQQTMBGCCWxvY2FsaG9zdIcEfwAAATANBgkqhkiG9w0BAQsFAAOCAQEAb6+o3ciu
+7Za33Vs827Zj5P3qTI97GeFDB/7UJARZWNzrsg4nel+dPUsUBQNxvHluiMfvMKMw
+Hz2RUPP9HcwuNjdFC6ilcAhUYzP8ThP7oh/WrcjrdgRZlWOvlTsgU8r7wBngN2nd
+cIlo7rcSFszP2dG95z9DBDWkTBbOZ33JUm9osjGFYa3Nwxh9vT7VBtJg9U0QSN53
+Fee+9Sx5pYa72IbUf9c82uOW4yoYF6S+cP/1mQYDoh5iRoa5CvVIKY0Uieh6HvDs
+pJ7VeSGbzGIBJvd2du5gFGT1xcuS0ieq9paKxhOE4bmX0PGt5qssKsL3rMTWRm4I
+cHN4/LuuE/gO1g==
+-----END CERTIFICATE-----`
+					key = `-----BEGIN RSA PRIVATE KEY-----
+MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDOijO8bLSFdAYm
+Zn4yaKbc/5dJLfkpEKsoignABY363pd4gVOaRgWTWGINrXrltt63v2a7bR5rJamS
+7nFdiRVVyK5Tgpmvgz+475ymCxsDNKI3nd13DBSPOACztadioD/R70PHUVIvQZWd
+T0cXuC9XrKb2qUOMHl9obimW/Bk9eLHDqoRF8McVI0G1d3J2gnIl3USEYVtTD8lY
+zmUqp/62vhvZeA36ey3+oFrwBCpX6HLCQDI+8AEB1FQdwStfpvk5R4rFuSTM4arJ
+YQBo8T9f+L3HlE47l883M0TCeASQEuyPBc+R00G2Rzth2fd5bqt2e7JvNypLel/Y
+01AGgyrRAgMBAAECggEAPzqB0ho5PW2igFj6IzZ0ds1sJAQF9fNbYoK3r2hD6dwA
+5Ow6is0K4eu5wNQt/mr4Taozqgciu8yA2DFU1TylImjYLUqa/+cfN99qxk46C8Yu
+LvaOGObC2IFdfaaLwp6qSvuDdV5I2ZyrT8g4TGOfYqjBSFvTCO83aAHpi4ZLt8xQ
+1kdI5h1NiWMy7M0x0Y78IQWReH/luBhTkL+WfUAm3HaRyciI0kT5CUG8hd+tYcyZ
+WVSRnfHV+bB1pFPwul5M0SkI0cAfP2YgBRUQDiSeMd3lxMkayLIbKLPN76shuJpq
++L5NlZchTMi+RbpIXliLyF/gXyvBTeODLldxDPeoHQKBgQD6u3XtDLH90cTnI8z9
+glvW6bI//xpi+dky1cT3OPn+R6DQNHSWLosHgh6XpPXQ02DfrCXOkL5Sib5tsqMU
+IgNQQCknh3JRe+uzPoy4ehPUZgfftjZZy09Tt5E1Nq9TJJdkFzU1fUxUIuYdrRA3
+11kUEYfpO5o9tBSGaAyvTO3CFwKBgQDS4Q6J6PiCdoNkOmmq2rKPV8Izy3obzt7u
+saV924vHSavyaSc2lXGOcASXi3cKZpurWzycojg3Lwe0+hVwXTTqUq6Ci7q8Tb2W
+uyMFHr5uyQtMM6d7empzbI6/OtJ2S1a9PZNZwmVVNkH7PGes61OkA8psAN2Y+x46
+ShFEh7WTVwKBgQC4Sw/L1FgD86riJjtnXuj4V7/QMEcJ1xGhvuTOvo9qKuX2A4hq
+Vv2T4D1yQyr3elcrMNJ9OYDbFCnnYbVid/mtg+t8BZ+uawJ9No2ijwCCTxicg8cB
+S2Ica8IMtgw6dZvdUv2mOlnfQeOYjntsQBpWmOgoM8oUbofjnxkrxMTBswKBgD+l
+dYHiMr8NjfJ+Ps42W5Yv4olHbH9gHKDmNRCbZsCrV54+Zntu92sKHBixGyikd29s
+hgqwW08sfqL8p+PV/daLRehYy+9xdzs7GAK/mLJPM324SWBXPjHAHgVRd5wEeRV8
+tDBvH65sRdXSEWh7Ti8+haW7TSaTBDiLilKoswDZAoGBAOzvAvBt5Vl4PYu8Cw4g
+14HjEsgm/SnKd+fZsyogb7C1iE/Z2q37kz+4LnszDu7rg598bAoZwb116Zg6NtIY
+WAd64XYejR+b1HZ+bDfWBayBTTK2g5qPVUfrUF8UCqDlo5YG9On4O1QCnL/gERRA
+TSTAhYWEQVZqRKYQMYGHpNlU
+-----END RSA PRIVATE KEY-----`
+				})
+
+				It("should succeed", func() {
+					var err error
+					client, err = NewClient(context.TODO(), &ClientConfig{
+						URL:            "http://google.com",
+						ClientID:       "client",
+						TokenURLSuffix: "oauth/token",
+						TLSCertKey:     certificate,
+						TLSPrivateKey:  key,
+					}, nil)
+					Expect(err).ToNot(HaveOccurred())
+				})
+
+				It("should fail on bad certificate", func() {
+					var err error
+					client, err = NewClient(context.TODO(), &ClientConfig{
+						URL:            "http://google.com",
+						ClientID:       "client",
+						TokenURLSuffix: "oauth/token",
+						TLSCertKey:     "-----BEGIN CERTIFICATE-----aaa-----END CERTIFICATE-----",
+						TLSPrivateKey:  key,
+					}, nil)
+					Expect(err).To(HaveOccurred())
 				})
 			})
 		})

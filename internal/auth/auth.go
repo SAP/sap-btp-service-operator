@@ -20,3 +20,12 @@ func NewAuthClient(ccConfig *clientcredentials.Config, sslDisabled bool) HTTPCli
 	ctx := context.WithValue(context.Background(), oauth2.HTTPClient, httpClient)
 	return oauth2.NewClient(ctx, ccConfig.TokenSource(ctx))
 }
+
+func NewAuthClientWithTLS(ccConfig *clientcredentials.Config, tlsCertKey, tlsPrivateKey string) (HTTPClient, error) {
+	httpClient, err := httputil.BuildHTTPClientTLS(tlsCertKey, tlsPrivateKey)
+	if err != nil {
+		return nil, err
+	}
+	ctx := context.WithValue(context.Background(), oauth2.HTTPClient, httpClient)
+	return oauth2.NewClient(ctx, ccConfig.TokenSource(ctx)), nil
+}
