@@ -69,7 +69,19 @@ This feature is still under development, review, and testing.
          "xsappname": "b15166|service-manager!b1234",
          "sm_url": "https://service-manager.cfapps.eu10.hana.ondemand.com"
      }
-    ```  
+    ```
+    The example of the credentials in the binding object with credential type x509
+    
+    ```json
+    {
+         "clientid": "xxxxxxx",
+         "certificate": "-----BEGIN CERTIFICATE-----...-----END CERTIFICATE-----\n-----BEGIN CERTIFICATE-----..-----END CERTIFICATE-----\n-----BEGIN CERTIFICATE-----...-----END CERTIFICATE-----\n",
+         "key": "-----BEGIN RSA PRIVATE KEY-----...-----END RSA PRIVATE KEY-----\n",
+         "url": "https://mysubaccount.authentication.cert.eu10.hana.ondemand.com",
+         "xsappname": "b15166|service-manager!b1234",
+         "sm_url": "https://service-manager.cfapps.eu10.hana.ondemand.com"
+     }
+    ```
    
 3. Deploy the the SAP BTP service operator in the cluster using the obtained access credentials:
     ```bash
@@ -78,6 +90,17 @@ This feature is still under development, review, and testing.
         --namespace=sap-btp-operator \
         --set manager.secret.clientid=<clientid> \
         --set manager.secret.clientsecret=<clientsecret> \
+        --set manager.secret.url=<sm_url> \
+        --set manager.secret.tokenurl=<url>
+    ```
+    with credential type x509
+    ```bash
+    helm upgrade --install sap-btp-operator https://github.com/SAP/sap-btp-service-operator/releases/download/<release>/sap-btp-operator-<release>.tgz \
+        --create-namespace \
+        --namespace=sap-btp-operator \
+        --set manager.secret.clientid=<clientid> \
+        --set manager.secret.tls.crt="$(cat /path/to/cert)" \
+        --set manager.secret.tls.key="$(cat /path/to/key)" \
         --set manager.secret.url=<sm_url> \
         --set manager.secret.tokenurl=<url>
     ```
