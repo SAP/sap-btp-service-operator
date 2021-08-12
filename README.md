@@ -77,7 +77,7 @@ This feature is still under development, review, and testing.
          "clientid": "xxxxxxx",
          "certificate": "-----BEGIN CERTIFICATE-----...-----END CERTIFICATE-----\n-----BEGIN CERTIFICATE-----..-----END CERTIFICATE-----\n-----BEGIN CERTIFICATE-----...-----END CERTIFICATE-----\n",
          "key": "-----BEGIN RSA PRIVATE KEY-----...-----END RSA PRIVATE KEY-----\n",
-         "url": "https://mysubaccount.authentication.cert.eu10.hana.ondemand.com",
+         "certurl": "https://mysubaccount.authentication.cert.eu10.hana.ondemand.com",
          "xsappname": "b15166|service-manager!b1234",
          "sm_url": "https://service-manager.cfapps.eu10.hana.ondemand.com"
      }
