@@ -102,7 +102,7 @@ This feature is still under development, review, and testing.
         --set manager.secret.tls.crt="$(cat /path/to/cert)" \
         --set manager.secret.tls.key="$(cat /path/to/key)" \
         --set manager.secret.url=<sm_url> \
-        --set manager.secret.tokenurl=<url>
+        --set manager.secret.tokenurl=<certurl>
     ```
 
     The list of available releases: [sapbtp-operator releases](https://github.com/SAP/sap-btp-service-operator/releases)
