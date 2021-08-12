@@ -59,7 +59,7 @@ This feature is still under development, review, and testing.
    
    c. Retrieve the generated access credentials from the created binding:
    
-      The example of the credentials in the binding object
+      The example of the default binding object used if no credentials type is specified:
       
     ```json
      {
@@ -70,7 +70,7 @@ This feature is still under development, review, and testing.
          "sm_url": "https://service-manager.cfapps.eu10.hana.ondemand.com"
      }
     ```
-    The example of the credentials in the binding object with credential type X.509
+    The example of the binding object with X.509 credentials type if specified:
     
     ```json
     {
