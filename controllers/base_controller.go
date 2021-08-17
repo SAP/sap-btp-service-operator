@@ -115,50 +115,14 @@ func (r *BaseReconciler) removeFinalizer(ctx context.Context, object servicesv1a
 	return nil
 }
 
-func (r *BaseReconciler) updateStatusWithRetries(ctx context.Context, object servicesv1alpha1.SAPBTPResource, log logr.Logger) error {
-	logFailedAttempt := func(retries int, err error) {
-		log.Info(fmt.Sprintf("failed to update status of %s attempt #%v, %s", object.GetControllerName(), retries, err.Error()))
-	}
-
-	log.Info(fmt.Sprintf("updating %s status with retries", object.GetControllerName()))
-	var err error
-	if err = r.Status().Update(ctx, object); err != nil {
-		logFailedAttempt(1, err)
-		for i := 2; i <= 3; i++ {
-			if err = r.updateStatus(ctx, object, log); err == nil {
-				break
-			}
-			logFailedAttempt(i, err)
-		}
-	}
-
-	if err != nil {
-		log.Error(err, fmt.Sprintf("failed to update status of %s giving up!!", object.GetControllerName()))
-		return err
-	}
-
-	log.Info(fmt.Sprintf("updated %s status in k8s", object.GetControllerName()))
-	return nil
+func (r *BaseReconciler) updateStatus(ctx context.Context, object servicesv1alpha1.SAPBTPResource) error {
+	return r.Status().Update(ctx, object)
 }
 
-func (r *BaseReconciler) updateStatus(ctx context.Context, object servicesv1alpha1.SAPBTPResource, log logr.Logger) error {
-	status := object.GetStatus()
-	if err := r.Get(ctx, apimachinerytypes.NamespacedName{Name: object.GetName(), Namespace: object.GetNamespace()}, object); err != nil {
-		log.Error(err, fmt.Sprintf("failed to fetch latest %s, unable to update status", object.GetControllerName()))
-		return err
-	}
-	clonedObj := object.DeepClone()
-	clonedObj.SetStatus(status)
-	if err := r.Status().Update(ctx, clonedObj); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (r *BaseReconciler) init(ctx context.Context, log logr.Logger, obj servicesv1alpha1.SAPBTPResource) error {
+func (r *BaseReconciler) init(ctx context.Context, obj servicesv1alpha1.SAPBTPResource) error {
 	obj.SetReady(metav1.ConditionFalse)
 	setInProgressConditions(smTypes.CREATE, "Pending", obj)
-	if err := r.updateStatusWithRetries(ctx, obj, log); err != nil {
+	if err := r.updateStatus(ctx, obj); err != nil {
 		return err
 	}
 	return nil
@@ -321,7 +285,7 @@ func (r *BaseReconciler) markAsNonTransientError(ctx context.Context, operationT
 		log.Info(fmt.Sprintf("operation %s of %s encountered a non transient error %s, giving up operation :(", operationType, object.GetControllerName(), nonTransientErr.Error()))
 	}
 	object.SetObservedGeneration(object.GetGeneration())
-	err := r.updateStatusWithRetries(ctx, object, log)
+	err := r.updateStatus(ctx, object)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -334,7 +298,7 @@ func (r *BaseReconciler) markAsNonTransientError(ctx context.Context, operationT
 func (r *BaseReconciler) markAsTransientError(ctx context.Context, operationType smTypes.OperationCategory, transientErr error, object servicesv1alpha1.SAPBTPResource, log logr.Logger) (ctrl.Result, error) {
 	setInProgressConditions(operationType, transientErr.Error(), object)
 	log.Info(fmt.Sprintf("operation %s of %s encountered a transient error %s, retrying operation :)", operationType, object.GetControllerName(), transientErr.Error()))
-	if err := r.updateStatusWithRetries(ctx, object, log); err != nil {
+	if err := r.updateStatus(ctx, object); err != nil {
 		return ctrl.Result{}, err
 	}
 	return ctrl.Result{}, transientErr
