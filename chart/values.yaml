@@ -11,7 +11,7 @@ manager:
   req_cpu_limit: 100m
   image:
     repository: ghcr.io/sap/sap-btp-service-operator/controller
-    tag: v0.1.9
+    tag: v0.1.10
   secret:
     clientid:
     clientsecret:
