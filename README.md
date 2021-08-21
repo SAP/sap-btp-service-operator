@@ -70,7 +70,7 @@ This feature is still under development, review, and testing.
          "sm_url": "https://service-manager.cfapps.eu10.hana.ondemand.com"
      }
     ```
-    The example of the binding object with X.509 credentials type if specified:
+    The example of the binding object with the specified X.509 credentials type:
     
     ```json
     {
@@ -83,7 +83,9 @@ This feature is still under development, review, and testing.
      }
     ```
    
-3. Deploy the the SAP BTP service operator in the cluster using the obtained access credentials:
+3. Deploy the the SAP BTP service operator in the cluster using the obtained access credentials:<br>
+   
+   The example of the deployment that uses the default access credentials type:
     ```bash
     helm upgrade --install sap-btp-operator https://github.com/SAP/sap-btp-service-operator/releases/download/<release>/sap-btp-operator-<release>.tgz \
         --create-namespace \
@@ -93,7 +95,7 @@ This feature is still under development, review, and testing.
         --set manager.secret.url=<sm_url> \
         --set manager.secret.tokenurl=<url>
     ```
-    with the X.509 certificate credentials type:
+   The example of the deployment that uses the X.509 access credentials type:
     ```bash
     helm upgrade --install sap-btp-operator https://github.com/SAP/sap-btp-service-operator/releases/download/<release>/sap-btp-operator-<release>.tgz \
         --create-namespace \
@@ -104,6 +106,9 @@ This feature is still under development, review, and testing.
         --set manager.secret.url=<sm_url> \
         --set manager.secret.tokenurl=<certurl>
     ```
+    
+    *Note:<br>
+    If you are deploying the SAP BTP service operator in the cluster in which you also want to perform the migration from the SVCAT-based content to SAP BTP service operator-based content, add ```--set cluster.id=<clusterID>  ``` to your deployment script.*
 
     The list of available releases: [sapbtp-operator releases](https://github.com/SAP/sap-btp-service-operator/releases)
 
