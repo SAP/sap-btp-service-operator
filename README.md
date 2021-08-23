@@ -108,7 +108,7 @@ This feature is still under development, review, and testing.
     ```
     
     *Note:<br>
-    If you are deploying the SAP BTP service operator in the cluster in which you also want to perform the migration from the SVCAT-based content to SAP BTP service operator-based content, add ```--set cluster.id=<clusterID>  ``` to your deployment script.*
+    If you are deploying the SAP BTP service operator in the registered cluster based on the Service Catalog (svcat) and Service Manager agent so that you can migrate svcat-based content to service operator-based content, add ```--set cluster.id=<clusterID>  ``` to your deployment script.*
 
     The list of available releases: [sapbtp-operator releases](https://github.com/SAP/sap-btp-service-operator/releases)
 
