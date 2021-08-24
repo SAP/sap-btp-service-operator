@@ -24,7 +24,9 @@ jobs:
     - name: Get dependencies
       run: |
         go get -v -t -d ./...
-        ./hack/install-kubebuilder.sh
+     
+    - name: Install Kubebuilder  
+      uses: RyanSiu1995/kubebuilder-action@v1.2
 
     - name: Build
       run: go build -v ./...
