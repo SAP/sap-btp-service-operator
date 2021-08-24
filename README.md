@@ -86,7 +86,7 @@ This feature is still under development, review, and testing.
 3. Deploy the the SAP BTP service operator in the cluster using the obtained access credentials:<br>
    
    *Note:<br>
-    If you are deploying the SAP BTP service operator in the registered cluster based on the Service Catalog (svcat) and Service Manager agent so that you can migrate svcat-based content to service operator-based content, add ```--set cluster.id=<clusterID>  ``` to your deployment script.*
+    If you are deploying the SAP BTP service operator in the registered cluster based on the Service Catalog (svcat) and Service Manager agent so that you can migrate svcat-based content to service operator-based content, add ```--set cluster.id=<clusterID>  ``` to your deployment script.*<br>*For more information, see the step 2 of the Setup section of [Migration to SAP BTP service operator](https://github.com/SAP/sap-btp-service-operator-migration/blob/main/README.md).*
    
    The example of the deployment that uses the default access credentials type:
     ```bash
