@@ -22,7 +22,8 @@ This feature is still under development, review, and testing.
     * [Binding the service instance](#step-2-create-a-service-binding)
 * [Reference Documentation](#reference-documentation)
     * [Service instance properties](#service-instance)
-    * [Binding properties](#service-binding)    
+    * [Binding properties](#service-binding)
+    * [Passing parameters](#passing-parameters)
 
 ## Prerequisites
 - SAP BTP [Global Account](https://help.sap.com/viewer/65de2977205c403bbc107264b8eccf4b/Cloud/en-US/d61c2819034b48e68145c45c36acba6e.html) and [Subaccount](https://help.sap.com/viewer/65de2977205c403bbc107264b8eccf4b/Cloud/en-US/55d0b6d8b96846b8ae93b85194df0944.html) 
@@ -248,6 +249,84 @@ This feature is still under development, review, and testing.
 | conditions| `[]condition` | An array of conditions describing the status of the service instance.<br/>The possible conditions types are:<br/>- `Ready`: set to `true` if the binding is ready and usable<br/>- `Failed`: set to `true` when an operation on the service binding fails.<br/> In the case of failure, the details about the error are available in the condition message.<br>- `Succeeded`: set to `true` when an operation on the service binding succeeded. In case of `false` operation considered as in progress unless `Failed` condition exists.
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
+
+### Passing Parameters
+To set input parameters, you may use the `parameters` and `parametersFrom`
+fields in the `spec` field of the `ServiceInstance` or `ServiceBinding` resource:
+- `parameters` : can be used to specify a set of properties to be sent to the
+  broker. The data specified will be passed "as-is" to the broker without any
+  modifications - aside from converting it to JSON for transmission to the broker
+  in the case of the `spec` field being specified as `YAML`. Any valid `YAML` or
+  `JSON` constructs are supported. One only parameters field may be specified per
+  `spec`.
+- `parametersFrom` : can be used to specify which secret, and key in that secret,
+  which contains a `string` that represents the json to include in the set of
+  parameters to be sent to the broker. The `parametersFrom` field is a list which
+  supports multiple sources referenced per `spec`.
+
+You may use either, or both, of these fields as needed.
+
+If multiple sources in `parameters` and `parametersFrom` blocks are specified,
+the final payload is a result of merging all of them at the top level.
+If there are any duplicate properties defined at the top level, the specification
+is considered to be invalid, the further processing of the `ServiceInstance`/`ServiceBinding`
+resource stops and its `status` is marked with error condition.
+
+The format of the `spec` will be (in YAML format):
+```yaml
+spec:
+  ...
+  parameters:
+    name: value
+  parametersFrom:
+    - secretKeyRef:
+        name: my-secret
+        key: secret-parameter
+```
+or, in JSON format
+```json
+"spec": {
+  "parameters": {
+    "name": "value"
+  },
+  "parametersFrom": {
+    "secretKeyRef": {
+      "name": "my-secret",
+      "key": "secret-parameter"
+    }
+  }
+}
+```
+and the secret would need to have a key named secret-parameter:
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: my-secret
+type: Opaque
+stringData:
+  secret-parameter:
+    '{
+      "password": "letmein"
+    }'
+```
+The final JSON payload to be sent to the broker would then look like:
+```json
+{
+  "name": "value",
+  "password": "letmein"
+}
+```
+
+Multiple parameters could be listed in the secret - simply separate key/value pairs with a comma as in this example:
+```yaml
+  secret-parameter:
+    '{
+      "password": "letmein",
+      "key2": "value2",
+      "key3": "value3"
+    }'
+```
 
 ## Support
 You're welcome to raise issues related to feature requests, bugs, or give us general feedback on this project's GitHub Issues page. 
