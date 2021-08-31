@@ -257,7 +257,7 @@ fields in the `spec` field of the `ServiceInstance` or `ServiceBinding` resource
   broker. The data specified will be passed "as-is" to the broker without any
   modifications - aside from converting it to JSON for transmission to the broker
   in the case of the `spec` field being specified as `YAML`. Any valid `YAML` or
-  `JSON` constructs are supported. One only parameters field may be specified per
+  `JSON` constructs are supported. Only one parameters field may be specified per
   `spec`.
 - `parametersFrom` : can be used to specify which secret, and key in that secret,
   which contains a `string` that represents the json to include in the set of
