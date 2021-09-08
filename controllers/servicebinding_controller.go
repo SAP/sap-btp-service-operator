@@ -461,9 +461,10 @@ func (r *ServiceBindingReconciler) storeBindingSecret(ctx context.Context, k8sBi
 
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      k8sBinding.Spec.SecretName,
-			Labels:    map[string]string{"binding": k8sBinding.Name},
-			Namespace: k8sBinding.Namespace,
+			Name:        k8sBinding.Spec.SecretName,
+			Labels:      map[string]string{"binding": k8sBinding.Name},
+			Annotations: map[string]string{"servicebindings.services.cloud.sap.com/tags": string(tags)},
+			Namespace:   k8sBinding.Namespace,
 		},
 		Data: credentialsMap,
 	}
