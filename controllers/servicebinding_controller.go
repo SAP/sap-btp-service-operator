@@ -148,11 +148,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 			if binding.LastOperation.Type != smTypes.CREATE || binding.LastOperation.State == smTypes.SUCCEEDED {
 				// store secret unless binding is still being created or failed during creation
-				// Look for tags here?
 				if err := r.storeBindingSecret(ctx, serviceBinding, binding, log); err != nil {
-					return r.handleSecretError(ctx, binding.LastOperation.Type, err, serviceBinding, log)
-				}
-				if err := r.storeServiceTags(ctx, serviceBinding, smClient, log); err != nil {
 					return r.handleSecretError(ctx, binding.LastOperation.Type, err, serviceBinding, log)
 				}
 			}
@@ -461,13 +457,13 @@ func (r *ServiceBindingReconciler) storeBindingSecret(ctx context.Context, k8sBi
 
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        k8sBinding.Spec.SecretName,
-			Labels:      map[string]string{"binding": k8sBinding.Name},
-			Annotations: map[string]string{"servicebindings.services.cloud.sap.com/tags": string(tags)},
-			Namespace:   k8sBinding.Namespace,
+			Name:      k8sBinding.Spec.SecretName,
+			Labels:    map[string]string{"binding": k8sBinding.Name},
+			Namespace: k8sBinding.Namespace,
 		},
 		Data: credentialsMap,
 	}
+
 	if err := controllerutil.SetControllerReference(k8sBinding, secret, r.Scheme); err != nil {
 		logger.Error(err, "Failed to set secret owner")
 		return err
@@ -481,54 +477,6 @@ func (r *ServiceBindingReconciler) storeBindingSecret(ctx context.Context, k8sBi
 		return nil
 	}
 	r.Recorder.Event(k8sBinding, corev1.EventTypeNormal, "SecretCreated", "SecretCreated")
-	return nil
-}
-
-func (r *ServiceBindingReconciler) storeServiceTags(ctx context.Context, binding *v1alpha1.ServiceBinding, client sm.Client, log logr.Logger) error {
-	instance, err := r.getServiceInstanceForBinding(ctx, binding)
-	if err != nil {
-		return err
-	}
-
-	log.Info("retrieving catalog information", "instance", instance.Spec.ServiceOfferingName)
-	query := &sm.Parameters{
-		FieldQuery: []string{fmt.Sprintf("catalog_name eq '%s'", instance.Spec.ServiceOfferingName)},
-	}
-	offerings, err := client.ListOfferings(query)
-	if err != nil {
-		return err
-	}
-
-	tags := []byte{}
-	// There should only be one offering
-	for _, offering := range offerings.ServiceOfferings {
-		log.Info("retrieved tag", "name", string(offering.Tags))
-		tags = offering.Tags
-	}
-
-	configMap := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      binding.Spec.SecretName, // Probably add own configmap name
-			Labels:    map[string]string{"binding": binding.Name},
-			Namespace: binding.Namespace,
-		},
-		Data: map[string]string{
-			"tags": string(tags),
-		},
-	}
-	if err := controllerutil.SetControllerReference(binding, configMap, r.Scheme); err != nil {
-		log.Error(err, "Failed to set configmap owner")
-		return err
-	}
-
-	log.Info("Creating binding configmap")
-	if err := r.Create(ctx, configMap); err != nil {
-		if !apierrors.IsAlreadyExists(err) {
-			return err
-		}
-		return nil
-	}
-	r.Recorder.Event(binding, corev1.EventTypeNormal, "ConfigMapCreated", "ConfigMapCreated")
 	return nil
 }
 
