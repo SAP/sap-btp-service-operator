@@ -318,6 +318,7 @@ var _ = Describe("ServiceBinding controller", func() {
 					validateSecretData(bindingSecret, "secret_key", "secret_value")
 					validateSecretData(bindingSecret, "escaped", `{"escaped_key":"escaped_val"}`)
 					validateSecretData(bindingSecret, "plan", `a-plan-name`)
+					validateSecretData(bindingSecret, "label", `an-offering-name`)
 					Expect(bindingSecret.Data).To(HaveKey("instance_guid"))
 					Expect(bindingSecret.Data).To(HaveKey("instance_name"))
 
