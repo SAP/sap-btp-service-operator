@@ -19,7 +19,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-
 	"github.com/google/uuid"
 
 	"github.com/SAP/sap-btp-service-operator/client/sm"
@@ -148,7 +147,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 			if binding.LastOperation.Type != smTypes.CREATE || binding.LastOperation.State == smTypes.SUCCEEDED {
 				// store secret unless binding is still being created or failed during creation
-				if err := r.storeBindingSecret(ctx, serviceBinding, binding, log); err != nil {
+				if err := r.storeBindingSecret(ctx, serviceBinding, binding, smClient, log); err != nil {
 					return r.handleSecretError(ctx, binding.LastOperation.Type, err, serviceBinding, log)
 				}
 			}
@@ -214,7 +213,7 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 
 	log.Info("Binding created successfully")
 
-	if err := r.storeBindingSecret(ctx, serviceBinding, smBinding, log); err != nil {
+	if err := r.storeBindingSecret(ctx, serviceBinding, smBinding, smClient, log); err != nil {
 		return r.handleSecretError(ctx, smTypes.CREATE, err, serviceBinding, log)
 	}
 
@@ -332,7 +331,7 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, smClient sm.Client,
 				return ctrl.Result{}, err
 			}
 
-			if err := r.storeBindingSecret(ctx, serviceBinding, smBinding, log); err != nil {
+			if err := r.storeBindingSecret(ctx, serviceBinding, smBinding, smClient, log); err != nil {
 				return r.handleSecretError(ctx, smTypes.CREATE, err, serviceBinding, log)
 			}
 			serviceBinding.Status.Ready = metav1.ConditionTrue
@@ -428,7 +427,7 @@ func (r *ServiceBindingReconciler) resyncBindingStatus(k8sBinding *v1alpha1.Serv
 	}
 }
 
-func (r *ServiceBindingReconciler) storeBindingSecret(ctx context.Context, k8sBinding *v1alpha1.ServiceBinding, smBinding *smclientTypes.ServiceBinding, log logr.Logger) error {
+func (r *ServiceBindingReconciler) storeBindingSecret(ctx context.Context, k8sBinding *v1alpha1.ServiceBinding, smBinding *smclientTypes.ServiceBinding, smclient sm.Client, log logr.Logger) error {
 	logger := log.WithValues("bindingName", k8sBinding.Name, "secretName", k8sBinding.Spec.SecretName)
 
 	var credentialsMap map[string][]byte
@@ -446,6 +445,10 @@ func (r *ServiceBindingReconciler) storeBindingSecret(ctx context.Context, k8sBi
 			logger.Error(err, "Failed to store binding secret")
 			return fmt.Errorf("failed to create secret. Error: %v", err.Error())
 		}
+	}
+
+	if err := r.addInstanceInfo(ctx, k8sBinding, smclient, credentialsMap); err != nil {
+		log.Error(err, "failed to enrich binding with service instance info")
 	}
 
 	secret := &corev1.Secret{
@@ -600,4 +603,42 @@ func (r *ServiceBindingReconciler) handleSecretError(ctx context.Context, op smT
 		return r.markAsNonTransientError(ctx, op, err, binding, log)
 	}
 	return r.markAsTransientError(ctx, op, err, binding, log)
+}
+
+func (r *ServiceBindingReconciler) addInstanceInfo(ctx context.Context, binding *v1alpha1.ServiceBinding, smClient sm.Client, credentialsMap map[string][]byte) error {
+	instance, err := r.getServiceInstanceForBinding(ctx, binding)
+	if err != nil {
+		return err
+	}
+
+	credentialsMap["instance_name"] = []byte(binding.Spec.ServiceInstanceName)
+	credentialsMap["instance_guid"] = []byte(instance.Status.InstanceID)
+	credentialsMap["plan"] = []byte(instance.Spec.ServicePlanName)
+
+	planQuery := &sm.Parameters{
+		FieldQuery: []string{fmt.Sprintf("id eq '%s'", instance.Spec.ServicePlanID)},
+	}
+	plans, err := smClient.ListPlans(planQuery)
+	if err != nil {
+		return err
+	}
+
+	if plans == nil || len(plans.ServicePlans) != 1 {
+		return fmt.Errorf("could not find plan with id %s", instance.Spec.ServicePlanID)
+	}
+
+	offeringQuery := &sm.Parameters{
+		FieldQuery: []string{fmt.Sprintf("id eq '%s'", plans.ServicePlans[0].ServiceOfferingID)},
+	}
+
+	offerings, err := smClient.ListOfferings(offeringQuery)
+	if err != nil {
+		return err
+	}
+	if offerings == nil || len(offerings.ServiceOfferings) != 1 {
+		return fmt.Errorf("could not find offering with id %s", plans.ServicePlans[0].ServiceOfferingID)
+	}
+
+	credentialsMap["tags"] = offerings.ServiceOfferings[0].Tags
+	return nil
 }

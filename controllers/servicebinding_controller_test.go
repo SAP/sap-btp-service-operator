@@ -305,6 +305,7 @@ var _ = Describe("ServiceBinding controller", func() {
 
 		Context("Valid parameters", func() {
 			Context("Sync", func() {
+
 				It("Should create binding and store the binding credentials in a secret", func() {
 					ctx := context.Background()
 					createdBinding = createBinding(ctx, bindingName, bindingTestNamespace, instanceName, "binding-external-name")
@@ -315,6 +316,37 @@ var _ = Describe("ServiceBinding controller", func() {
 					bindingSecret := getSecret(ctx, createdBinding.Spec.SecretName, createdBinding.Namespace, true)
 					validateSecretData(bindingSecret, "secret_key", "secret_value")
 					validateSecretData(bindingSecret, "escaped", `{"escaped_key":"escaped_val"}`)
+					validateSecretData(bindingSecret, "plan", `a-plan-name`)
+					Expect(bindingSecret.Data).To(HaveKey("instance_guid"))
+					Expect(bindingSecret.Data).To(HaveKey("instance_name"))
+
+				})
+
+				Context("service tags exist", func() {
+					BeforeEach(func() {
+						fakeClient.ListPlansReturns(&smclientTypes.ServicePlans{
+							ServicePlans: []smclientTypes.ServicePlan{
+								{
+									ServiceOfferingID: "1234",
+								},
+							},
+						}, nil)
+
+						fakeClient.ListOfferingsReturns(&smclientTypes.ServiceOfferings{
+							ServiceOfferings: []smclientTypes.ServiceOffering{
+								{
+									Tags: []byte("[\"test\"]"),
+								},
+							},
+						}, nil)
+					})
+
+					It("should be added to secret", func() {
+						ctx := context.Background()
+						createdBinding = createBinding(ctx, bindingName, bindingTestNamespace, instanceName, "binding-external-name")
+						bindingSecret := getSecret(ctx, createdBinding.Spec.SecretName, createdBinding.Namespace, true)
+						validateSecretData(bindingSecret, "tags", "[\"test\"]")
+					})
 				})
 
 				It("should put the raw broker response into the secret if spec.secretKey is provided", func() {
@@ -337,7 +369,6 @@ var _ = Describe("ServiceBinding controller", func() {
 
 					bindingSecret := getSecret(ctx, binding.Spec.SecretName, bindingTestNamespace, true)
 					validateSecretData(bindingSecret, secretKey, `{"secret_key": "secret_value", "escaped": "{\"escaped_key\":\"escaped_val\"}"}`)
-					Expect(bindingSecret.Data).To(HaveLen(1))
 				})
 
 				When("secret deleted by user", func() {
