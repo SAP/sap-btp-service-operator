@@ -235,9 +235,12 @@ This feature is still under development, review, and testing.
 | serviceInstanceName`*`   | `string`   |  The Kubernetes name of the service instance to bind, should be in the namespace of the binding. |
 | externalName       | `string`   |  The name for the service binding in SAP BTP, defaults to the binding `metadata.name` if not specified. |
 | secretName       | `string`   |  The name of the secret where the credentials are stored, defaults to the binding `metadata.name` if not specified. |
+| secretKey | `string`  | The key inside the binding secret to store the credentials returned by the broker encoded as json to support complex data structures. |
 | parameters       |  `[]object`  |  Some services support the provisioning of additional configuration parameters during the bind request.<br/>For the list of supported                                  parameters, check the documentation of the particular service offering.|
 | parametersFrom | `[]object` | List of sources to populate parameters. |
-| userInfo | `object`  | Contains information about the user that last modified this service binding. | 
+| userInfo | `object`  | Contains information about the user that last modified this service binding. |
+| serviceOfferingTagsRequired | `boolean`  | Indicates whether service offering tags fetching is required, if set to true the tags will be stored in binding secret in key called `tags` |
+
 
 #### Status
 | Parameter         | Type     | Description                                                                                                   |
