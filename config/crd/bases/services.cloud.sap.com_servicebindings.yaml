@@ -90,6 +90,9 @@ spec:
                 description: The k8s name of the service instance to bind, should be in the namespace of the binding
                 minLength: 1
                 type: string
+              serviceOfferingTagsRequired:
+                description: ServiceOfferingTagsRequired indicates whether service offering tags fetching is required, if set to true the tags will be stored in binding secret in key called `tags`
+                type: boolean
               userInfo:
                 description: UserInfo contains information about the user that last modified this instance. This field is set by the API server and not settable by the end-user. User-provided values for this field are not saved.
                 properties:

@@ -58,6 +58,7 @@ var _ = Describe("ServiceBinding controller", func() {
 		binding := newBinding(name, namespace)
 		binding.Spec.ServiceInstanceName = instanceName
 		binding.Spec.ExternalName = externalName
+		binding.Spec.ServiceOfferingTagsRequired = true
 		binding.Spec.Parameters = &runtime.RawExtension{
 			Raw: []byte(`{"key": "value"}`),
 		}
