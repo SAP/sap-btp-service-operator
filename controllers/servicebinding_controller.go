@@ -615,6 +615,7 @@ func (r *ServiceBindingReconciler) addInstanceInfo(ctx context.Context, binding 
 	credentialsMap["instance_name"] = []byte(binding.Spec.ServiceInstanceName)
 	credentialsMap["instance_guid"] = []byte(instance.Status.InstanceID)
 	credentialsMap["plan"] = []byte(instance.Spec.ServicePlanName)
+        credentialsMap["label"] = []byte(instance.Spec.ServiceOfferingName)
 
 	if binding.Spec.ServiceOfferingTagsRequired {
 		smInstance, err := smClient.GetInstanceByID(instance.Status.InstanceID, nil)
