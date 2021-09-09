@@ -239,7 +239,7 @@ This feature is still under development, review, and testing.
 | parameters       |  `[]object`  |  Some services support the provisioning of additional configuration parameters during the bind request.<br/>For the list of supported                                  parameters, check the documentation of the particular service offering.|
 | parametersFrom | `[]object` | List of sources to populate parameters. |
 | userInfo | `object`  | Contains information about the user that last modified this service binding. |
-| serviceOfferingTagsRequired | `boolean`  | Indicates whether service offering tags fetching is required, if set to true the tags will be stored in binding secret in key called `tags` |
+| serviceOfferingTagsRequired | `boolean`  | Indicates whether service offering tags fetching is required, if set to true the tags will be stored in binding secret in key called `tags`. |
 
 
 #### Status
