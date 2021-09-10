@@ -343,11 +343,32 @@ var _ = Describe("ServiceBinding controller", func() {
 						}, nil)
 					})
 
-					It("should be added to secret", func() {
+					It("should create secret with tags", func() {
 						ctx := context.Background()
 						createdBinding = createBinding(ctx, bindingName, bindingTestNamespace, instanceName, "binding-external-name")
 						bindingSecret := getSecret(ctx, createdBinding.Spec.SecretName, createdBinding.Namespace, true)
 						validateSecretData(bindingSecret, "tags", "[\"test\"]")
+					})
+
+					When("get offering fails", func() {
+						BeforeEach(func() {
+							fakeClient.ListPlansReturns(&smclientTypes.ServicePlans{
+								ServicePlans: []smclientTypes.ServicePlan{
+									{
+										ServiceOfferingID: "1234",
+									},
+								},
+							}, nil)
+
+							fakeClient.ListOfferingsReturns(nil, fmt.Errorf("some failure"))
+						})
+
+						It("should create secret without tags", func() {
+							ctx := context.Background()
+							createdBinding = createBinding(ctx, bindingName, bindingTestNamespace, instanceName, "binding-external-name")
+							bindingSecret := getSecret(ctx, createdBinding.Spec.SecretName, createdBinding.Namespace, true)
+							Expect(bindingSecret.Data).ToNot(HaveKey("tags"))
+						})
 					})
 				})
 
