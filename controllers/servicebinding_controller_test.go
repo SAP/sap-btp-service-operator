@@ -318,18 +318,9 @@ var _ = Describe("ServiceBinding controller", func() {
 					validateSecretData(bindingSecret, "escaped", `{"escaped_key":"escaped_val"}`)
 					validateSecretData(bindingSecret, "plan", `a-plan-name`)
 					validateSecretData(bindingSecret, "label", `an-offering-name`)
+					validateSecretData(bindingSecret, "tags", "[\"test\"]")
 					Expect(bindingSecret.Data).To(HaveKey("instance_guid"))
 					Expect(bindingSecret.Data).To(HaveKey("instance_name"))
-
-				})
-
-				Context("service tags exist", func() {
-					It("should create secret with tags", func() {
-						ctx := context.Background()
-						createdBinding = createBinding(ctx, bindingName, bindingTestNamespace, instanceName, "binding-external-name")
-						bindingSecret := getSecret(ctx, createdBinding.Spec.SecretName, createdBinding.Namespace, true)
-						validateSecretData(bindingSecret, "tags", "[\"test\"]")
-					})
 
 				})
 
