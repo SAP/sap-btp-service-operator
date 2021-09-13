@@ -337,7 +337,9 @@ func (r *ServiceInstanceReconciler) resyncInstanceStatus(smClient sm.Client, k8s
 	k8sInstance.Status.OperationURL = ""
 	k8sInstance.Status.OperationType = ""
 	tags, err := getOfferingTags(smClient, smInstance.ServicePlanID)
-	log.Error(err, "could not recover offering tags")
+	if err != nil {
+		log.Error(err, "could not recover offering tags")
+	}
 	if len(tags) > 0 {
 		k8sInstance.Status.Tags = tags
 	}
