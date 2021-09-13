@@ -184,6 +184,10 @@ spec:
               ready:
                 description: Indicates whether instance is ready for usage
                 type: string
+              tags:
+                description: Tags describing the ServiceInstance will be copied to `ServiceBinding` secret in key called `tags`.
+                format: byte
+                type: string
             required:
             - conditions
             type: object

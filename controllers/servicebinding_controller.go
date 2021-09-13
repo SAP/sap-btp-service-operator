@@ -616,37 +616,8 @@ func (r *ServiceBindingReconciler) addInstanceInfo(ctx context.Context, binding 
 	credentialsMap["instance_guid"] = []byte(instance.Status.InstanceID)
 	credentialsMap["plan"] = []byte(instance.Spec.ServicePlanName)
 	credentialsMap["label"] = []byte(instance.Spec.ServiceOfferingName)
-
-	if binding.Spec.ServiceOfferingTagsRequired {
-		smInstance, err := smClient.GetInstanceByID(instance.Status.InstanceID, nil)
-		if err != nil {
-			return err
-		}
-
-		planQuery := &sm.Parameters{
-			FieldQuery: []string{fmt.Sprintf("id eq '%s'", smInstance.ServicePlanID)},
-		}
-		plans, err := smClient.ListPlans(planQuery)
-		if err != nil {
-			return err
-		}
-
-		if plans == nil || len(plans.ServicePlans) != 1 {
-			return fmt.Errorf("could not find plan with id %s", instance.Spec.ServicePlanID)
-		}
-
-		offeringQuery := &sm.Parameters{
-			FieldQuery: []string{fmt.Sprintf("id eq '%s'", plans.ServicePlans[0].ServiceOfferingID)},
-		}
-
-		offerings, err := smClient.ListOfferings(offeringQuery)
-		if err != nil {
-			return err
-		}
-		if offerings == nil || len(offerings.ServiceOfferings) != 1 {
-			return fmt.Errorf("could not find offering with id %s", plans.ServicePlans[0].ServiceOfferingID)
-		}
-		credentialsMap["tags"] = offerings.ServiceOfferings[0].Tags
+	if len(instance.Status.Tags) > 0 {
+		credentialsMap["tags"] = instance.Status.Tags
 	}
 	return nil
 }

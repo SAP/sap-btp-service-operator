@@ -73,10 +73,6 @@ type ServiceBindingSpec struct {
 	// end-user. User-provided values for this field are not saved.
 	// +optional
 	UserInfo *v1.UserInfo `json:"userInfo,omitempty"`
-
-	// ServiceOfferingTagsRequired indicates whether service offering tags fetching is required,
-	// if set to true the tags will be stored in binding secret in key called `tags`
-	ServiceOfferingTagsRequired bool `json:"serviceOfferingTagsRequired,omitempty"`
 }
 
 // ServiceBindingStatus defines the observed state of ServiceBinding

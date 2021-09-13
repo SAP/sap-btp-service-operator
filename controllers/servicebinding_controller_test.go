@@ -58,7 +58,6 @@ var _ = Describe("ServiceBinding controller", func() {
 		binding := newBinding(name, namespace)
 		binding.Spec.ServiceInstanceName = instanceName
 		binding.Spec.ExternalName = externalName
-		binding.Spec.ServiceOfferingTagsRequired = true
 		binding.Spec.Parameters = &runtime.RawExtension{
 			Raw: []byte(`{"key": "value"}`),
 		}
@@ -180,7 +179,7 @@ var _ = Describe("ServiceBinding controller", func() {
 		instanceName = "test-instance-" + guid
 		bindingName = "test-binding-" + guid
 		fakeClient = &smfakes.FakeClient{}
-		fakeClient.ProvisionReturns("12345678", "", nil)
+		fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: "12345678", Tags: []byte("[\"test\"]")}, nil)
 		fakeClient.BindReturns(&smclientTypes.ServiceBinding{ID: fakeBindingID, Credentials: json.RawMessage(`{"secret_key": "secret_value", "escaped": "{\"escaped_key\":\"escaped_val\"}"}`)}, "", nil)
 
 		smInstance := &smclientTypes.ServiceInstance{ID: fakeInstanceID, Ready: true, LastOperation: &smTypes.Operation{State: smTypes.SUCCEEDED, Type: smTypes.UPDATE}}
@@ -325,24 +324,6 @@ var _ = Describe("ServiceBinding controller", func() {
 				})
 
 				Context("service tags exist", func() {
-					BeforeEach(func() {
-						fakeClient.ListPlansReturns(&smclientTypes.ServicePlans{
-							ServicePlans: []smclientTypes.ServicePlan{
-								{
-									ServiceOfferingID: "1234",
-								},
-							},
-						}, nil)
-
-						fakeClient.ListOfferingsReturns(&smclientTypes.ServiceOfferings{
-							ServiceOfferings: []smclientTypes.ServiceOffering{
-								{
-									Tags: []byte("[\"test\"]"),
-								},
-							},
-						}, nil)
-					})
-
 					It("should create secret with tags", func() {
 						ctx := context.Background()
 						createdBinding = createBinding(ctx, bindingName, bindingTestNamespace, instanceName, "binding-external-name")
@@ -350,26 +331,6 @@ var _ = Describe("ServiceBinding controller", func() {
 						validateSecretData(bindingSecret, "tags", "[\"test\"]")
 					})
 
-					When("get offering fails", func() {
-						BeforeEach(func() {
-							fakeClient.ListPlansReturns(&smclientTypes.ServicePlans{
-								ServicePlans: []smclientTypes.ServicePlan{
-									{
-										ServiceOfferingID: "1234",
-									},
-								},
-							}, nil)
-
-							fakeClient.ListOfferingsReturns(nil, fmt.Errorf("some failure"))
-						})
-
-						It("should create secret without tags", func() {
-							ctx := context.Background()
-							createdBinding = createBinding(ctx, bindingName, bindingTestNamespace, instanceName, "binding-external-name")
-							bindingSecret := getSecret(ctx, createdBinding.Spec.SecretName, createdBinding.Namespace, true)
-							Expect(bindingSecret.Data).ToNot(HaveKey("tags"))
-						})
-					})
 				})
 
 				It("should put the raw broker response into the secret if spec.secretKey is provided", func() {
