@@ -306,6 +306,14 @@ var _ = Describe("ServiceBinding controller", func() {
 		Context("Valid parameters", func() {
 			Context("Sync", func() {
 
+				validateInstanceInfo := func(bindingSecret *v1.Secret) {
+					validateSecretData(bindingSecret, "plan", `a-plan-name`)
+					validateSecretData(bindingSecret, "label", `an-offering-name`)
+					validateSecretData(bindingSecret, "tags", "[\"test\"]")
+					validateSecretData(bindingSecret, "instance_name", instanceName)
+					Expect(bindingSecret.Data).To(HaveKey("instance_guid"))
+				}
+
 				It("Should create binding and store the binding credentials in a secret", func() {
 					ctx := context.Background()
 					createdBinding = createBinding(ctx, bindingName, bindingTestNamespace, instanceName, "binding-external-name")
@@ -316,12 +324,7 @@ var _ = Describe("ServiceBinding controller", func() {
 					bindingSecret := getSecret(ctx, createdBinding.Spec.SecretName, createdBinding.Namespace, true)
 					validateSecretData(bindingSecret, "secret_key", "secret_value")
 					validateSecretData(bindingSecret, "escaped", `{"escaped_key":"escaped_val"}`)
-					validateSecretData(bindingSecret, "plan", `a-plan-name`)
-					validateSecretData(bindingSecret, "label", `an-offering-name`)
-					validateSecretData(bindingSecret, "tags", "[\"test\"]")
-					Expect(bindingSecret.Data).To(HaveKey("instance_guid"))
-					Expect(bindingSecret.Data).To(HaveKey("instance_name"))
-
+					validateInstanceInfo(bindingSecret)
 				})
 
 				It("should put the raw broker response into the secret if spec.secretKey is provided", func() {
@@ -344,6 +347,7 @@ var _ = Describe("ServiceBinding controller", func() {
 
 					bindingSecret := getSecret(ctx, binding.Spec.SecretName, bindingTestNamespace, true)
 					validateSecretData(bindingSecret, secretKey, `{"secret_key": "secret_value", "escaped": "{\"escaped_key\":\"escaped_val\"}"}`)
+					validateInstanceInfo(bindingSecret)
 				})
 
 				When("secret deleted by user", func() {

@@ -78,6 +78,11 @@ type serviceManagerClient struct {
 	HTTPClient auth.HTTPClient
 }
 
+type planInfo struct {
+	planID          string
+	serviceOffering *types.ServiceOffering
+}
+
 type ProvisionResponse struct {
 	InstanceID string
 	PlanID     string
@@ -118,12 +123,12 @@ func (client *serviceManagerClient) Provision(instance *types.ServiceInstance, s
 		return nil, fmt.Errorf("missing field values. Specify service name and plan name for the instance '%s'", instance.Name)
 	}
 
-	planID, offering, err := client.getAndValidatePlanID(instance.ServicePlanID, serviceName, planName)
+	planInfo, err := client.getPlanInfo(instance.ServicePlanID, serviceName, planName)
 	if err != nil {
 		return nil, err
 	}
 
-	instance.ServicePlanID = planID
+	instance.ServicePlanID = planInfo.planID
 
 	location, err := client.register(instance, web.ServiceInstancesURL, q, user, &newInstance)
 	if err != nil {
@@ -141,10 +146,10 @@ func (client *serviceManagerClient) Provision(instance *types.ServiceInstance, s
 	res := &ProvisionResponse{
 		InstanceID: instanceID,
 		Location:   location,
-		PlanID:     planID,
+		PlanID:     planInfo.planID,
 	}
-	if offering != nil {
-		res.Tags = offering.Tags
+	if planInfo.serviceOffering != nil {
+		res.Tags = planInfo.serviceOffering.Tags
 	}
 	return res, nil
 
@@ -210,11 +215,11 @@ func (client *serviceManagerClient) Unbind(id string, q *Parameters, user string
 func (client *serviceManagerClient) UpdateInstance(id string, updatedInstance *types.ServiceInstance, serviceName string, planName string, q *Parameters, user string) (*types.ServiceInstance, string, error) {
 	var result *types.ServiceInstance
 
-	planID, _, err := client.getAndValidatePlanID(updatedInstance.ServicePlanID, serviceName, planName)
+	planInfo, err := client.getPlanInfo(updatedInstance.ServicePlanID, serviceName, planName)
 	if err != nil {
 		return nil, "", err
 	}
-	updatedInstance.ServicePlanID = planID
+	updatedInstance.ServicePlanID = planInfo.planID
 	location, err := client.update(updatedInstance, web.ServiceInstancesURL, id, q, user, &result)
 	if err != nil {
 		return nil, "", err
@@ -348,15 +353,15 @@ func (client *serviceManagerClient) callWithUser(method string, smpath string, b
 	return resp, nil
 }
 
-func (client *serviceManagerClient) getAndValidatePlanID(planID string, serviceName string, planName string) (string, *types.ServiceOffering, error) {
+func (client *serviceManagerClient) getPlanInfo(planID string, serviceName string, planName string) (*planInfo, error) {
 	offerings, err := client.getServiceOfferingsByName(serviceName)
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 
 	var commaSepOfferingIds string
 	if len(offerings.ServiceOfferings) == 0 {
-		return "", nil, fmt.Errorf("couldn't find the service offering '%s'", serviceName)
+		return nil, fmt.Errorf("couldn't find the service offering '%s'", serviceName)
 	}
 
 	serviceOfferingIds := make([]string, 0, len(offerings.ServiceOfferings))
@@ -371,16 +376,22 @@ func (client *serviceManagerClient) getAndValidatePlanID(planID string, serviceN
 
 	plans, err := client.ListPlans(query)
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 	if len(plans.ServicePlans) == 0 {
-		return "", nil, fmt.Errorf("couldn't find the service plan '%s' for the service offering '%s'", planName, serviceName)
+		return nil, fmt.Errorf("couldn't find the service plan '%s' for the service offering '%s'", planName, serviceName)
 	} else if len(plans.ServicePlans) == 1 && len(planID) == 0 {
-		return plans.ServicePlans[0].ID, findOffering(plans.ServicePlans[0].ServiceOfferingID, offerings), nil
+		return &planInfo{
+			planID:          plans.ServicePlans[0].ID,
+			serviceOffering: findOffering(plans.ServicePlans[0].ServiceOfferingID, offerings),
+		}, nil
 	} else {
 		for _, plan := range plans.ServicePlans {
 			if plan.ID == planID {
-				return plan.ID, findOffering(plan.ServiceOfferingID, offerings), nil
+				return &planInfo{
+					planID:          plan.ID,
+					serviceOffering: findOffering(plan.ServiceOfferingID, offerings),
+				}, nil
 			}
 		}
 	}
@@ -390,8 +401,7 @@ func (client *serviceManagerClient) getAndValidatePlanID(planID string, serviceN
 	} else {
 		err = fmt.Errorf("ambiguity error: found more than one resource that matches the provided offering name '%s' and plan name '%s'. Please provide servicePlanID", serviceName, planName)
 	}
-	return "", nil, err
-
+	return nil, err
 }
 
 func (client *serviceManagerClient) getServiceOfferingsByName(serviceName string) (*types.ServiceOfferings, error) {

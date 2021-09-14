@@ -186,8 +186,9 @@ spec:
                 type: string
               tags:
                 description: Tags describing the ServiceInstance will be copied to `ServiceBinding` secret in key called `tags`.
-                format: byte
-                type: string
+                items:
+                  type: string
+                type: array
             required:
             - conditions
             type: object

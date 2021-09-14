@@ -276,7 +276,7 @@ func (in *ServiceInstanceStatus) DeepCopyInto(out *ServiceInstanceStatus) {
 	*out = *in
 	if in.Tags != nil {
 		in, out := &in.Tags, &out.Tags
-		*out = make([]byte, len(*in))
+		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
 	if in.Conditions != nil {

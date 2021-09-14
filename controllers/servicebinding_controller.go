@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -617,7 +618,11 @@ func (r *ServiceBindingReconciler) addInstanceInfo(ctx context.Context, binding 
 	credentialsMap["plan"] = []byte(instance.Spec.ServicePlanName)
 	credentialsMap["label"] = []byte(instance.Spec.ServiceOfferingName)
 	if len(instance.Status.Tags) > 0 {
-		credentialsMap["tags"] = instance.Status.Tags
+		tagsBytes, err := json.Marshal(instance.Status.Tags)
+		if err != nil {
+			return err
+		}
+		credentialsMap["tags"] = tagsBytes
 	}
 	return nil
 }

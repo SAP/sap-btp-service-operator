@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -203,7 +204,12 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	if provision.Location != "" {
 		serviceInstance.Status.InstanceID = provision.InstanceID
 		if len(provision.Tags) > 0 {
-			serviceInstance.Status.Tags = provision.Tags
+			tags, err := getTags(provision.Tags)
+			if err != nil {
+				log.Error(err, "failed to unmarshal tags")
+			} else {
+				serviceInstance.Status.Tags = tags
+			}
 		}
 		log.Info("Provision request is in progress")
 		serviceInstance.Status.OperationURL = provision.Location
@@ -218,11 +224,24 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	log.Info("Instance provisioned successfully")
 	serviceInstance.Status.InstanceID = provision.InstanceID
 	if len(provision.Tags) > 0 {
-		serviceInstance.Status.Tags = provision.Tags
+		tags, err := getTags(provision.Tags)
+		if err != nil {
+			log.Error(err, "failed to unmarshal tags")
+		} else {
+			serviceInstance.Status.Tags = tags
+		}
 	}
 	serviceInstance.Status.Ready = metav1.ConditionTrue
 	setSuccessConditions(smTypes.CREATE, serviceInstance)
 	return ctrl.Result{}, r.updateStatus(ctx, serviceInstance)
+}
+
+func getTags(tags []byte) ([]string, error) {
+	var tagsArr []string
+	if err := json.Unmarshal(tags, &tagsArr); err != nil {
+		return nil, err
+	}
+	return tagsArr, nil
 }
 
 func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient sm.Client, serviceInstance *v1alpha1.ServiceInstance, log logr.Logger) (ctrl.Result, error) {
@@ -358,7 +377,7 @@ func (r *ServiceInstanceReconciler) resyncInstanceStatus(smClient sm.Client, k8s
 	}
 }
 
-func getOfferingTags(smClient sm.Client, planID string) ([]byte, error) {
+func getOfferingTags(smClient sm.Client, planID string) ([]string, error) {
 	planQuery := &sm.Parameters{
 		FieldQuery: []string{fmt.Sprintf("id eq '%s'", planID)},
 	}
@@ -382,7 +401,12 @@ func getOfferingTags(smClient sm.Client, planID string) ([]byte, error) {
 	if offerings == nil || len(offerings.ServiceOfferings) != 1 {
 		return nil, fmt.Errorf("could not find offering with id %s", plans.ServicePlans[0].ServiceOfferingID)
 	}
-	return offerings.ServiceOfferings[0].Tags, nil
+
+	var tags []string
+	if err := json.Unmarshal(offerings.ServiceOfferings[0].Tags, &tags); err != nil {
+		return nil, err
+	}
+	return tags, nil
 }
 
 func (r *ServiceInstanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
