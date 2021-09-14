@@ -79,6 +79,9 @@ type ServiceInstanceStatus struct {
 	// +optional
 	InstanceID string `json:"instanceID,omitempty"`
 
+	// Tags describing the ServiceInstance will be copied to `ServiceBinding` secret in key called `tags`.
+	Tags []string `json:"tags,omitempty"`
+
 	// URL of ongoing operation for the service instance
 	OperationURL string `json:"operationURL,omitempty"`
 

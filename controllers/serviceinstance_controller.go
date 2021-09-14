@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -99,7 +100,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 		if instance != nil {
 			log.Info(fmt.Sprintf("found existing instance in SM with id %s, updating status", instance.ID))
-			r.resyncInstanceStatus(serviceInstance, instance)
+			r.resyncInstanceStatus(smClient, serviceInstance, instance, log)
 			return ctrl.Result{}, r.updateStatus(ctx, serviceInstance)
 		}
 
@@ -180,7 +181,7 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 		return r.markAsNonTransientError(ctx, smTypes.CREATE, err, serviceInstance, log)
 	}
 
-	smInstanceID, operationURL, provisionErr := smClient.Provision(&types.ServiceInstance{
+	provision, provisionErr := smClient.Provision(&types.ServiceInstance{
 		Name:          serviceInstance.Spec.ExternalName,
 		ServicePlanID: serviceInstance.Spec.ServicePlanID,
 		Parameters:    instanceParameters,
@@ -200,10 +201,18 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 		return r.markAsNonTransientError(ctx, smTypes.CREATE, provisionErr, serviceInstance, log)
 	}
 
-	if operationURL != "" {
-		serviceInstance.Status.InstanceID = smInstanceID
+	if provision.Location != "" {
+		serviceInstance.Status.InstanceID = provision.InstanceID
+		if len(provision.Tags) > 0 {
+			tags, err := getTags(provision.Tags)
+			if err != nil {
+				log.Error(err, "failed to unmarshal tags")
+			} else {
+				serviceInstance.Status.Tags = tags
+			}
+		}
 		log.Info("Provision request is in progress")
-		serviceInstance.Status.OperationURL = operationURL
+		serviceInstance.Status.OperationURL = provision.Location
 		serviceInstance.Status.OperationType = smTypes.CREATE
 		setInProgressConditions(smTypes.CREATE, "", serviceInstance)
 		if err := r.updateStatus(ctx, serviceInstance); err != nil {
@@ -213,10 +222,26 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 		return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, nil
 	}
 	log.Info("Instance provisioned successfully")
-	serviceInstance.Status.InstanceID = smInstanceID
+	serviceInstance.Status.InstanceID = provision.InstanceID
+	if len(provision.Tags) > 0 {
+		tags, err := getTags(provision.Tags)
+		if err != nil {
+			log.Error(err, "failed to unmarshal tags")
+		} else {
+			serviceInstance.Status.Tags = tags
+		}
+	}
 	serviceInstance.Status.Ready = metav1.ConditionTrue
 	setSuccessConditions(smTypes.CREATE, serviceInstance)
 	return ctrl.Result{}, r.updateStatus(ctx, serviceInstance)
+}
+
+func getTags(tags []byte) ([]string, error) {
+	var tagsArr []string
+	if err := json.Unmarshal(tags, &tagsArr); err != nil {
+		return nil, err
+	}
+	return tagsArr, nil
 }
 
 func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient sm.Client, serviceInstance *v1alpha1.ServiceInstance, log logr.Logger) (ctrl.Result, error) {
@@ -316,7 +341,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 	return ctrl.Result{}, nil
 }
 
-func (r *ServiceInstanceReconciler) resyncInstanceStatus(k8sInstance *v1alpha1.ServiceInstance, smInstance *types.ServiceInstance) {
+func (r *ServiceInstanceReconciler) resyncInstanceStatus(smClient sm.Client, k8sInstance *v1alpha1.ServiceInstance, smInstance *types.ServiceInstance, log logr.Logger) {
 	//set observed generation to 0 because we dont know which generation the current state in SM represents,
 	//unless the generation is 1 and SM is in the same state as operator
 	if k8sInstance.Generation == 1 {
@@ -331,6 +356,13 @@ func (r *ServiceInstanceReconciler) resyncInstanceStatus(k8sInstance *v1alpha1.S
 	k8sInstance.Status.InstanceID = smInstance.ID
 	k8sInstance.Status.OperationURL = ""
 	k8sInstance.Status.OperationType = ""
+	tags, err := getOfferingTags(smClient, smInstance.ServicePlanID)
+	if err != nil {
+		log.Error(err, "could not recover offering tags")
+	}
+	if len(tags) > 0 {
+		k8sInstance.Status.Tags = tags
+	}
 	switch smInstance.LastOperation.State {
 	case smTypes.PENDING:
 		fallthrough
@@ -343,6 +375,38 @@ func (r *ServiceInstanceReconciler) resyncInstanceStatus(k8sInstance *v1alpha1.S
 	case smTypes.FAILED:
 		setFailureConditions(smInstance.LastOperation.Type, smInstance.LastOperation.Description, k8sInstance)
 	}
+}
+
+func getOfferingTags(smClient sm.Client, planID string) ([]string, error) {
+	planQuery := &sm.Parameters{
+		FieldQuery: []string{fmt.Sprintf("id eq '%s'", planID)},
+	}
+	plans, err := smClient.ListPlans(planQuery)
+	if err != nil {
+		return nil, err
+	}
+
+	if plans == nil || len(plans.ServicePlans) != 1 {
+		return nil, fmt.Errorf("could not find plan with id %s", planID)
+	}
+
+	offeringQuery := &sm.Parameters{
+		FieldQuery: []string{fmt.Sprintf("id eq '%s'", plans.ServicePlans[0].ServiceOfferingID)},
+	}
+
+	offerings, err := smClient.ListOfferings(offeringQuery)
+	if err != nil {
+		return nil, err
+	}
+	if offerings == nil || len(offerings.ServiceOfferings) != 1 {
+		return nil, fmt.Errorf("could not find offering with id %s", plans.ServicePlans[0].ServiceOfferingID)
+	}
+
+	var tags []string
+	if err := json.Unmarshal(offerings.ServiceOfferings[0].Tags, &tags); err != nil {
+		return nil, err
+	}
+	return tags, nil
 }
 
 func (r *ServiceInstanceReconciler) SetupWithManager(mgr ctrl.Manager) error {

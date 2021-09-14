@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -448,6 +449,10 @@ func (r *ServiceBindingReconciler) storeBindingSecret(ctx context.Context, k8sBi
 		}
 	}
 
+	if err := r.addInstanceInfo(ctx, k8sBinding, credentialsMap); err != nil {
+		log.Error(err, "failed to enrich binding with service instance info")
+	}
+
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      k8sBinding.Spec.SecretName,
@@ -600,4 +605,24 @@ func (r *ServiceBindingReconciler) handleSecretError(ctx context.Context, op smT
 		return r.markAsNonTransientError(ctx, op, err, binding, log)
 	}
 	return r.markAsTransientError(ctx, op, err, binding, log)
+}
+
+func (r *ServiceBindingReconciler) addInstanceInfo(ctx context.Context, binding *v1alpha1.ServiceBinding, credentialsMap map[string][]byte) error {
+	instance, err := r.getServiceInstanceForBinding(ctx, binding)
+	if err != nil {
+		return err
+	}
+
+	credentialsMap["instance_name"] = []byte(binding.Spec.ServiceInstanceName)
+	credentialsMap["instance_guid"] = []byte(instance.Status.InstanceID)
+	credentialsMap["plan"] = []byte(instance.Spec.ServicePlanName)
+	credentialsMap["label"] = []byte(instance.Spec.ServiceOfferingName)
+	if len(instance.Status.Tags) > 0 {
+		tagsBytes, err := json.Marshal(instance.Status.Tags)
+		if err != nil {
+			return err
+		}
+		credentialsMap["tags"] = tagsBytes
+	}
+	return nil
 }
