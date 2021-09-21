@@ -211,6 +211,15 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 				serviceInstance.Status.Tags = tags
 			}
 		}
+
+		if len(serviceInstance.Spec.CustomTags) > 0 {
+			if len(serviceInstance.Status.Tags) > 0 {
+				serviceInstance.Status.Tags = append(serviceInstance.Status.Tags, serviceInstance.Spec.CustomTags...)
+			} else {
+				serviceInstance.Status.Tags = serviceInstance.Spec.CustomTags
+			}
+		}
+
 		log.Info("Provision request is in progress")
 		serviceInstance.Status.OperationURL = provision.Location
 		serviceInstance.Status.OperationType = smTypes.CREATE
@@ -229,6 +238,13 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 			log.Error(err, "failed to unmarshal tags")
 		} else {
 			serviceInstance.Status.Tags = tags
+		}
+	}
+	if len(serviceInstance.Spec.CustomTags) > 0 {
+		if len(serviceInstance.Status.Tags) > 0 {
+			serviceInstance.Status.Tags = append(serviceInstance.Status.Tags, serviceInstance.Spec.CustomTags...)
+		} else {
+			serviceInstance.Status.Tags = serviceInstance.Spec.CustomTags
 		}
 	}
 	serviceInstance.Status.Ready = metav1.ConditionTrue
@@ -362,6 +378,9 @@ func (r *ServiceInstanceReconciler) resyncInstanceStatus(smClient sm.Client, k8s
 	}
 	if len(tags) > 0 {
 		k8sInstance.Status.Tags = tags
+	}
+	if len(k8sInstance.Spec.CustomTags) > 0 {
+		k8sInstance.Status.Tags = append(k8sInstance.Status.Tags, k8sInstance.Spec.CustomTags...)
 	}
 	switch smInstance.LastOperation.State {
 	case smTypes.PENDING:

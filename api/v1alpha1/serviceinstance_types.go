@@ -63,6 +63,9 @@ type ServiceInstanceSpec struct {
 	// +optional
 	ParametersFrom []ParametersFromSource `json:"parametersFrom,omitempty"`
 
+	// +optional
+	CustomTags []string `json:"customTags,omitempty"`
+
 	// UserInfo contains information about the user that last modified this
 	// instance. This field is set by the API server and not settable by the
 	// end-user. User-provided values for this field are not saved.
