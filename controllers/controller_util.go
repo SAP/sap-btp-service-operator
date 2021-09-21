@@ -53,3 +53,13 @@ func serialize(value interface{}) ([]byte, error) {
 	}
 	return data, nil
 }
+
+func isUnique(slice []string, i string) bool {
+	for _, s := range slice {
+		if s == i {
+			return false
+		}
+	}
+
+	return true
+}

@@ -56,6 +56,11 @@ spec:
           spec:
             description: ServiceInstanceSpec defines the desired state of ServiceInstance
             properties:
+              customTags:
+                description: List of custom tags to append to the .Status.Tags
+                items:
+                  type: string
+                type: array
               externalName:
                 description: The name of the instance in Service Manager
                 type: string

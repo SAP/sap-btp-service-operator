@@ -201,24 +201,16 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 		return r.markAsNonTransientError(ctx, smTypes.CREATE, provisionErr, serviceInstance, log)
 	}
 
+	var tags []string
 	if provision.Location != "" {
 		serviceInstance.Status.InstanceID = provision.InstanceID
 		if len(provision.Tags) > 0 {
-			tags, err := getTags(provision.Tags)
+			tags, err = getTags(provision.Tags)
 			if err != nil {
 				log.Error(err, "failed to unmarshal tags")
-			} else {
-				serviceInstance.Status.Tags = tags
 			}
 		}
-
-		if len(serviceInstance.Spec.CustomTags) > 0 {
-			if len(serviceInstance.Status.Tags) > 0 {
-				serviceInstance.Status.Tags = append(serviceInstance.Status.Tags, serviceInstance.Spec.CustomTags...)
-			} else {
-				serviceInstance.Status.Tags = serviceInstance.Spec.CustomTags
-			}
-		}
+		updateInstanceTags(serviceInstance, tags, serviceInstance.Spec.CustomTags)
 
 		log.Info("Provision request is in progress")
 		serviceInstance.Status.OperationURL = provision.Location
@@ -232,21 +224,15 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	}
 	log.Info("Instance provisioned successfully")
 	serviceInstance.Status.InstanceID = provision.InstanceID
+
 	if len(provision.Tags) > 0 {
-		tags, err := getTags(provision.Tags)
+		tags, err = getTags(provision.Tags)
 		if err != nil {
 			log.Error(err, "failed to unmarshal tags")
-		} else {
-			serviceInstance.Status.Tags = tags
 		}
 	}
-	if len(serviceInstance.Spec.CustomTags) > 0 {
-		if len(serviceInstance.Status.Tags) > 0 {
-			serviceInstance.Status.Tags = append(serviceInstance.Status.Tags, serviceInstance.Spec.CustomTags...)
-		} else {
-			serviceInstance.Status.Tags = serviceInstance.Spec.CustomTags
-		}
-	}
+
+	updateInstanceTags(serviceInstance, tags, serviceInstance.Spec.CustomTags)
 	serviceInstance.Status.Ready = metav1.ConditionTrue
 	setSuccessConditions(smTypes.CREATE, serviceInstance)
 	return ctrl.Result{}, r.updateStatus(ctx, serviceInstance)
@@ -376,12 +362,8 @@ func (r *ServiceInstanceReconciler) resyncInstanceStatus(smClient sm.Client, k8s
 	if err != nil {
 		log.Error(err, "could not recover offering tags")
 	}
-	if len(tags) > 0 {
-		k8sInstance.Status.Tags = tags
-	}
-	if len(k8sInstance.Spec.CustomTags) > 0 {
-		k8sInstance.Status.Tags = append(k8sInstance.Status.Tags, k8sInstance.Spec.CustomTags...)
-	}
+	updateInstanceTags(k8sInstance, tags, k8sInstance.Spec.CustomTags)
+
 	switch smInstance.LastOperation.State {
 	case smTypes.PENDING:
 		fallthrough
@@ -426,6 +408,18 @@ func getOfferingTags(smClient sm.Client, planID string) ([]string, error) {
 		return nil, err
 	}
 	return tags, nil
+}
+
+func updateInstanceTags(instance *v1alpha1.ServiceInstance, offeringTags, customTags []string) {
+	var tags []string
+
+	for _, tag := range append(offeringTags, customTags...) {
+		if isUnique(tags, tag) {
+			tags = append(tags, tag)
+		}
+	}
+
+	instance.Status.Tags = tags
 }
 
 func (r *ServiceInstanceReconciler) SetupWithManager(mgr ctrl.Manager) error {

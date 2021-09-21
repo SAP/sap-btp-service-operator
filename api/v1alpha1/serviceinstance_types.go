@@ -63,6 +63,7 @@ type ServiceInstanceSpec struct {
 	// +optional
 	ParametersFrom []ParametersFromSource `json:"parametersFrom,omitempty"`
 
+	// List of custom tags to append to the .Status.Tags
 	// +optional
 	CustomTags []string `json:"customTags,omitempty"`
 
