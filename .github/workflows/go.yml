@@ -36,6 +36,7 @@ jobs:
       run: make lint
       
     - name: Send coverage
-      uses: shogo82148/actions-goveralls@v1
+      uses: shogo82148/actions-goveralls@v1.4.2
       with:
+        github-token: ${{ secrets.github_token }}
         path-to-profile: profile.cov
