@@ -211,6 +211,7 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 				serviceInstance.Status.Tags = tags
 			}
 		}
+
 		log.Info("Provision request is in progress")
 		serviceInstance.Status.OperationURL = provision.Location
 		serviceInstance.Status.OperationType = smTypes.CREATE
@@ -223,6 +224,7 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	}
 	log.Info("Instance provisioned successfully")
 	serviceInstance.Status.InstanceID = provision.InstanceID
+
 	if len(provision.Tags) > 0 {
 		tags, err := getTags(provision.Tags)
 		if err != nil {
@@ -231,6 +233,7 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 			serviceInstance.Status.Tags = tags
 		}
 	}
+
 	serviceInstance.Status.Ready = metav1.ConditionTrue
 	setSuccessConditions(smTypes.CREATE, serviceInstance)
 	return ctrl.Result{}, r.updateStatus(ctx, serviceInstance)
@@ -363,6 +366,7 @@ func (r *ServiceInstanceReconciler) resyncInstanceStatus(smClient sm.Client, k8s
 	if len(tags) > 0 {
 		k8sInstance.Status.Tags = tags
 	}
+
 	switch smInstance.LastOperation.State {
 	case smTypes.PENDING:
 		fallthrough

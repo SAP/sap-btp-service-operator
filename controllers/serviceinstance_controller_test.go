@@ -16,7 +16,6 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -86,7 +85,7 @@ var _ = Describe("ServiceInstance controller", func() {
 	deleteInstance := func(ctx context.Context, instanceToDelete *v1alpha1.ServiceInstance, wait bool) {
 		err := k8sClient.Get(ctx, types.NamespacedName{Name: instanceToDelete.Name, Namespace: instanceToDelete.Namespace}, &v1alpha1.ServiceInstance{})
 		if err != nil {
-			Expect(errors.IsNotFound(err)).To(Equal(true))
+			Expect(apierrors.IsNotFound(err)).To(Equal(true))
 			return
 		}
 
@@ -96,7 +95,7 @@ var _ = Describe("ServiceInstance controller", func() {
 			Eventually(func() bool {
 				a := &v1alpha1.ServiceInstance{}
 				err := k8sClient.Get(ctx, types.NamespacedName{Name: instanceToDelete.Name, Namespace: instanceToDelete.Namespace}, a)
-				return errors.IsNotFound(err)
+				return apierrors.IsNotFound(err)
 			}, timeout, interval).Should(BeTrue())
 		}
 	}
@@ -346,7 +345,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					//validate deletion
 					Eventually(func() bool {
 						err := k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-						return errors.IsNotFound(err)
+						return apierrors.IsNotFound(err)
 					}, timeout, interval).Should(BeTrue())
 				})
 			})
@@ -467,7 +466,7 @@ var _ = Describe("ServiceInstance controller", func() {
 							//validate deletion
 							Eventually(func() bool {
 								err := k8sClient.Get(ctx, defaultLookupKey, updatedInstance)
-								return errors.IsNotFound(err)
+								return apierrors.IsNotFound(err)
 							}, timeout, interval).Should(BeTrue())
 						})
 					})
@@ -649,7 +648,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					deleteInstance(ctx, serviceInstance, false)
 					Eventually(func() bool {
 						err := k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-						if errors.IsNotFound(err) {
+						if apierrors.IsNotFound(err) {
 							return false
 						}
 						return isFailed(serviceInstance)

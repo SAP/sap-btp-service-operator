@@ -216,6 +216,7 @@ This feature is still under development, review, and testing.
 | externalName       | `string` | The name for the service instance in SAP BTP, defaults to the instance `metadata.name` if not specified. |
 | parameters       | `[]object` | Some services support the provisioning of additional configuration parameters during the instance creation.<br/>For the list of supported parameters, check the documentation of the particular service offering. |
 | parametersFrom | `[]object` | List of sources to populate parameters. |
+| customTags | `[]string` | List of custom tags describing the ServiceInstance, will be copied to `ServiceBinding` secret in the key called `tags`. |
 | userInfo | `object` | Contains information about the user that last modified this service instance. | 
 
 #### Status
@@ -225,7 +226,7 @@ This feature is still under development, review, and testing.
 | operationURL | `string` | The URL of the current operation performed on the service instance.  |
 | operationType   |  `string`| The type of the current operation. Possible values are CREATE, UPDATE, or DELETE. |
 | conditions       |  `[]condition`   | An array of conditions describing the status of the service instance.<br/>The possible condition types are:<br>- `Ready`: set to `true`  if the instance is ready and usable<br/>- `Failed`: set to `true` when an operation on the service instance fails.<br/> In the case of failure, the details about the error are available in the condition message.<br>- `Succeeded`: set to `true` when an operation on the service instance succeeded. In case of `false` operation considered as in progress unless `Failed` condition exists.
-| tags       |  `[]string`   | Tags describing the ServiceInstance will be copied to `ServiceBinding` secret in key called `tags`.
+| tags       |  `[]string`   | Tags describing the ServiceInstance as provided in service catalog, will be copied to `ServiceBinding` secret in the key called `tags`.
 
 
 
