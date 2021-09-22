@@ -63,6 +63,10 @@ type ServiceInstanceSpec struct {
 	// +optional
 	ParametersFrom []ParametersFromSource `json:"parametersFrom,omitempty"`
 
+	// List of custom tags describing the ServiceInstance, will be copied to `ServiceBinding` secret in the key called `tags`.
+	// +optional
+	CustomTags []string `json:"customTags,omitempty"`
+
 	// UserInfo contains information about the user that last modified this
 	// instance. This field is set by the API server and not settable by the
 	// end-user. User-provided values for this field are not saved.
@@ -79,7 +83,7 @@ type ServiceInstanceStatus struct {
 	// +optional
 	InstanceID string `json:"instanceID,omitempty"`
 
-	// Tags describing the ServiceInstance will be copied to `ServiceBinding` secret in key called `tags`.
+	// Tags describing the ServiceInstance as provided in service catalog, will be copied to `ServiceBinding` secret in the key called `tags`.
 	Tags []string `json:"tags,omitempty"`
 
 	// URL of ongoing operation for the service instance
