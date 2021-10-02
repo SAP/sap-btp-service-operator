@@ -51,6 +51,12 @@ type ServiceBindingSpec struct {
 	// +optional
 	SecretKey *string `json:"secretKey,omitempty"`
 
+	// SecretRootKey is used as the key inside the secret to store all binding
+	// data including credentials returned by the broker and additional info.
+	// Convenient way to store whole binding data in single file in container volumeMounts.
+	// +optional
+	SecretRootKey *string `json:"secretRootKey,omitempty"`
+
 	// Parameters for the binding.
 	//
 	// The Parameters field is NOT secret or secured in any way and should

@@ -453,6 +453,14 @@ func (r *ServiceBindingReconciler) storeBindingSecret(ctx context.Context, k8sBi
 		log.Error(err, "failed to enrich binding with service instance info")
 	}
 
+	if k8sBinding.Spec.SecretRootKey != nil {
+		var err error
+		credentialsMap, err = r.singleKeyMap(credentialsMap, *k8sBinding.Spec.SecretRootKey)
+		if err != nil {
+			return err
+		}
+	}
+
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      k8sBinding.Spec.SecretName,
@@ -625,6 +633,22 @@ func (r *ServiceBindingReconciler) addInstanceInfo(ctx context.Context, binding 
 		credentialsMap["tags"] = tagsBytes
 	}
 	return nil
+}
+
+func (r *ServiceBindingReconciler) singleKeyMap(credentialsMap map[string][]byte, key string) (map[string][]byte, error) {
+	stringCredentialsMap := make(map[string]string)
+	for k, v := range credentialsMap {
+		stringCredentialsMap[k] = string(v)
+	}
+
+	credBytes, err := json.Marshal(stringCredentialsMap)
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string][]byte{
+		key: credBytes,
+	}, nil
 }
 
 func mergeInstanceTags(offeringTags, customTags []string) []string {

@@ -350,6 +350,38 @@ var _ = Describe("ServiceBinding controller", func() {
 					validateInstanceInfo(bindingSecret)
 				})
 
+				FIt("should put binding data in single key if spec.secretRootKey is provided", func() {
+					ctx := context.Background()
+					binding := newBinding("binding-with-secretrootkey", bindingTestNamespace)
+					binding.Spec.ServiceInstanceName = instanceName
+					binding.Spec.SecretName = "mysecret"
+					secretKey := "mycredentials"
+					binding.Spec.SecretKey = &secretKey
+					secretRootKey := "root"
+					binding.Spec.SecretRootKey = &secretRootKey
+
+					_ = k8sClient.Create(ctx, binding)
+					bindingLookupKey := types.NamespacedName{Name: binding.Name, Namespace: binding.Namespace}
+					Eventually(func() bool {
+						err := k8sClient.Get(ctx, bindingLookupKey, binding)
+						if err != nil {
+							return false
+						}
+						return isReady(binding)
+					}, timeout, interval).Should(BeTrue())
+
+					bindingSecret := getSecret(ctx, binding.Spec.SecretName, bindingTestNamespace, true)
+					Expect(len(bindingSecret.Data)).To(Equal(1))
+					Expect(bindingSecret.Data).To(HaveKey("root"))
+					res := make(map[string]string)
+					Expect(json.Unmarshal(bindingSecret.Data["root"], &res)).To(Succeed())
+					Expect(res[secretKey]).To(Equal(`{"secret_key": "secret_value", "escaped": "{\"escaped_key\":\"escaped_val\"}"}`))
+					Expect(res["plan"]).To(Equal("a-plan-name"))
+					Expect(res["label"]).To(Equal("an-offering-name"))
+					Expect(res["tags"]).To(Equal("[\"test\",\"custom-tag\"]"))
+					Expect(res).To(HaveKey("instance_guid"))
+				})
+
 				When("secret deleted by user", func() {
 					fakeSmResponse := func(bindingID string) {
 						fakeClient.ListBindingsReturns(&smclientTypes.ServiceBindings{
