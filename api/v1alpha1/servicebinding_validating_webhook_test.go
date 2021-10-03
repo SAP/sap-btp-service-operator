@@ -102,6 +102,32 @@ var _ = Describe("Service Binding Webhook Test", func() {
 					})
 				})
 
+				When("secret name changed", func() {
+					It("should fail", func() {
+						newBinding.Spec.SecretName = "newsecret"
+						err := newBinding.ValidateUpdate(binding)
+						Expect(err).To(HaveOccurred())
+					})
+				})
+
+				When("SecretKey name changed", func() {
+					It("should fail", func() {
+						secretKey := "secret-key"
+						newBinding.Spec.SecretKey = &secretKey
+						err := newBinding.ValidateUpdate(binding)
+						Expect(err).To(HaveOccurred())
+					})
+				})
+
+				When("SecretRootKey name changed", func() {
+					It("should fail", func() {
+						secretRootKey := "root"
+						newBinding.Spec.SecretRootKey = &secretRootKey
+						err := newBinding.ValidateUpdate(binding)
+						Expect(err).To(HaveOccurred())
+					})
+				})
+
 				When("Parameters were changed", func() {
 					It("should fail", func() {
 						newBinding.Spec.Parameters = &runtime.RawExtension{
