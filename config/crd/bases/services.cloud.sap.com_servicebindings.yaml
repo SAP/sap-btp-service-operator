@@ -87,7 +87,7 @@ spec:
                 description: SecretName is the name of the secret where credentials will be stored
                 type: string
               secretRootKey:
-                description: SecretRootKey is used as the key inside the secret to store all binding data including credentials returned by the broker and additional info. Convenient way to store whole binding data in single file in container volumeMounts.
+                description: SecretRootKey is used as the key inside the secret to store all binding data including credentials returned by the broker and additional info under single key. Convenient way to store whole binding data in single file when using `volumeMounts`.
                 type: string
               serviceInstanceName:
                 description: The k8s name of the service instance to bind, should be in the namespace of the binding
