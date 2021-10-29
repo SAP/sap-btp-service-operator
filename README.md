@@ -83,17 +83,21 @@ This feature is still under development, review, and testing.
          "sm_url": "https://service-manager.cfapps.eu10.hana.ondemand.com"
      }
     ```
-   
-3. Deploy the the SAP BTP service operator in the cluster using the obtained access credentials:<br>
+3. Add SAP BTP service operator chart repository  
+   ```bash
+    helm repo add sap-btp-operator https://sap.github.io/sap-btp-service-operator
+   ```
+4. Deploy the the SAP BTP service operator in the cluster using the obtained access credentials:<br>
    
    *Note:<br>
     If you are deploying the SAP BTP service operator in the registered cluster based on the Service Catalog (svcat) and Service Manager agent so that you can migrate svcat-based content to service operator-based content, add ```--set cluster.id=<clusterID>  ``` to your deployment script.*<br>*For more information, see the step 2 of the Setup section of [Migration to SAP BTP service operator](https://github.com/SAP/sap-btp-service-operator-migration/blob/main/README.md).*
    
    The example of the deployment that uses the default access credentials type:
     ```bash
-    helm upgrade --install sap-btp-operator https://github.com/SAP/sap-btp-service-operator/releases/download/<release>/sap-btp-operator-<release>.tgz \
+    helm upgrade --install <release-name> sap-btp-operator/sap-btp-operator \
         --create-namespace \
         --namespace=sap-btp-operator \
+        --version=<release> \
         --set manager.secret.clientid=<clientid> \
         --set manager.secret.clientsecret=<clientsecret> \
         --set manager.secret.url=<sm_url> \
@@ -101,9 +105,10 @@ This feature is still under development, review, and testing.
     ```
    The example of the deployment that uses the X.509 access credentials type:
     ```bash
-    helm upgrade --install sap-btp-operator https://github.com/SAP/sap-btp-service-operator/releases/download/<release>/sap-btp-operator-<release>.tgz \
+    helm upgrade --install <release-name> sap-btp-operator/sap-btp-operator \
         --create-namespace \
         --namespace=sap-btp-operator \
+        --version=<release> \
         --set manager.secret.clientid=<clientid> \
         --set manager.secret.tls.crt="$(cat /path/to/cert)" \
         --set manager.secret.tls.key="$(cat /path/to/key)" \
