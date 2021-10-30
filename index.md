@@ -210,54 +210,186 @@ This feature is still under development, review, and testing.
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
 ## Reference Documentation
-
-### Service Instance
-#### Spec
-| Parameter         | Type     | Description                                                                                                   |
-|:-----------------|:---------|:-----------------------------------------------------------------------------------------------------------|
-| serviceOfferingName`*` | `string` | The name of the SAP BTP service offering. |
-| servicePlanName`*` | `string` |  The plan to use for the service instance.   |
-| servicePlanID   |  `string`  | The plan ID in case service offering and plan name are ambiguous. |
-| externalName       | `string` | The name for the service instance in SAP BTP, defaults to the instance `metadata.name` if not specified. |
-| parameters       | `[]object` | Some services support the provisioning of additional configuration parameters during the instance creation.<br/>For the list of supported parameters, check the documentation of the particular service offering. |
-| parametersFrom | `[]object` | List of sources to populate parameters. |
-| customTags | `[]string` | List of custom tags describing the ServiceInstance, will be copied to `ServiceBinding` secret in the key called `tags`. |
-| userInfo | `object` | Contains information about the user that last modified this service instance. | 
-
-#### Status
-| Parameter         | Type     | Description                                                                                                   |
-|:-----------------|:---------|:-----------------------------------------------------------------------------------------------------------|
-| instanceID   | `string` | The service instance ID in SAP Service Manager service.  |
-| operationURL | `string` | The URL of the current operation performed on the service instance.  |
-| operationType   |  `string`| The type of the current operation. Possible values are CREATE, UPDATE, or DELETE. |
-| conditions       |  `[]condition`   | An array of conditions describing the status of the service instance.<br/>The possible condition types are:<br>- `Ready`: set to `true`  if the instance is ready and usable<br/>- `Failed`: set to `true` when an operation on the service instance fails.<br/> In the case of failure, the details about the error are available in the condition message.<br>- `Succeeded`: set to `true` when an operation on the service instance succeeded. In case of `false` operation considered as in progress unless `Failed` condition exists.
-| tags       |  `[]string`   | Tags describing the ServiceInstance as provided in service catalog, will be copied to `ServiceBinding` secret in the key called `tags`.
-
-
-
-### Service Binding 
-#### Spec
-| Parameter             | Type       | Description                                                                                                   |
-|:-----------------|:---------|:-----------------------------------------------------------------------------------------------------------|
-| serviceInstanceName`*`   | `string`   |  The Kubernetes name of the service instance to bind, should be in the namespace of the binding. |
-| externalName       | `string`   |  The name for the service binding in SAP BTP, defaults to the binding `metadata.name` if not specified. |
-| secretName       | `string`   |  The name of the secret where the credentials are stored, defaults to the binding `metadata.name` if not specified. |
-| secretKey | `string`  | The key inside the binding secret to store the credentials returned by the broker encoded as json to support complex data structures. |
-| secretRootKey | `string`  | The key inside the secret to store all binding data including credentials returned by the broker and additional info under single key.<br/>Convenient way to store whole binding data in single file when using `volumeMounts`. |
-| parameters       |  `[]object`  |  Some services support the provisioning of additional configuration parameters during the bind request.<br/>For the list of supported parameters, check the documentation of the particular service offering.|
-| parametersFrom | `[]object` | List of sources to populate parameters. |
-| userInfo | `object`  | Contains information about the user that last modified this service binding. |
-
-
-
-#### Status
-| Parameter         | Type     | Description                                                                                                   |
-|:-----------------|:---------|:-----------------------------------------------------------------------------------------------------------|
-| instanceID   |  `string`  | The ID of the bound instance in the SAP Service Manager service. |
-| bindingID   |  `string`  | The service binding ID in SAP Service Manager service. |
-| operationURL |`string`| The URL of the current operation performed on the service binding. |
-| operationType| `string `| The type of the current operation. Possible values are CREATE, UPDATE, or DELETE. |
-| conditions| `[]condition` | An array of conditions describing the status of the service instance.<br/>The possible conditions types are:<br/>- `Ready`: set to `true` if the binding is ready and usable<br/>- `Failed`: set to `true` when an operation on the service binding fails.<br/> In the case of failure, the details about the error are available in the condition message.<br>- `Succeeded`: set to `true` when an operation on the service binding succeeded. In case of `false` operation considered as in progress unless `Failed` condition exists.
+<h3 id="service-instance">Service Instance</h3>
+<h4 id="spec">Spec</h4>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Parameter</th>
+<th style="text-align:left">Type</th>
+<th style="text-align:left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">serviceOfferingName<code>*</code></td>
+<td style="text-align:left"><code>string</code></td>
+<td style="text-align:left">The name of the SAP BTP service offering.</td>
+</tr>
+<tr>
+<td style="text-align:left">servicePlanName<code>*</code></td>
+<td style="text-align:left"><code>string</code></td>
+<td style="text-align:left">The plan to use for the service instance.</td>
+</tr>
+<tr>
+<td style="text-align:left">servicePlanID</td>
+<td style="text-align:left"><code>string</code></td>
+<td style="text-align:left">The plan ID in case service offering and plan name are ambiguous.</td>
+</tr>
+<tr>
+<td style="text-align:left">externalName</td>
+<td style="text-align:left"><code>string</code></td>
+<td style="text-align:left">The name for the service instance in SAP BTP, defaults to the instance <code>metadata.name</code> if not specified.</td>
+</tr>
+<tr>
+<td style="text-align:left">parameters</td>
+<td style="text-align:left"><code>[]object</code></td>
+<td style="text-align:left">Some services support the provisioning of additional configuration parameters during the instance creation.<br/>For the list of supported parameters, check the documentation of the particular service offering.</td>
+</tr>
+<tr>
+<td style="text-align:left">parametersFrom</td>
+<td style="text-align:left"><code>[]object</code></td>
+<td style="text-align:left">List of sources to populate parameters.</td>
+</tr>
+<tr>
+<td style="text-align:left">customTags</td>
+<td style="text-align:left"><code>[]string</code></td>
+<td style="text-align:left">List of custom tags describing the ServiceInstance, will be copied to <code>ServiceBinding</code> secret in the key called <code>tags</code>.</td>
+</tr>
+<tr>
+<td style="text-align:left">userInfo</td>
+<td style="text-align:left"><code>object</code></td>
+<td style="text-align:left">Contains information about the user that last modified this service instance.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="status">Status</h4>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Parameter</th>
+<th style="text-align:left">Type</th>
+<th style="text-align:left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">instanceID</td>
+<td style="text-align:left"><code>string</code></td>
+<td style="text-align:left">The service instance ID in SAP Service Manager service.</td>
+</tr>
+<tr>
+<td style="text-align:left">operationURL</td>
+<td style="text-align:left"><code>string</code></td>
+<td style="text-align:left">The URL of the current operation performed on the service instance.</td>
+</tr>
+<tr>
+<td style="text-align:left">operationType</td>
+<td style="text-align:left"><code>string</code></td>
+<td style="text-align:left">The type of the current operation. Possible values are CREATE, UPDATE, or DELETE.</td>
+</tr>
+<tr>
+<td style="text-align:left">conditions</td>
+<td style="text-align:left"><code>[]condition</code></td>
+<td style="text-align:left">An array of conditions describing the status of the service instance.<br/>The possible condition types are:<br>- <code>Ready</code>: set to <code>true</code>  if the instance is ready and usable<br/>- <code>Failed</code>: set to <code>true</code> when an operation on the service instance fails.<br/> In the case of failure, the details about the error are available in the condition message.<br>- <code>Succeeded</code>: set to <code>true</code> when an operation on the service instance succeeded. In case of <code>false</code> operation considered as in progress unless <code>Failed</code> condition exists.</td>
+</tr>
+<tr>
+<td style="text-align:left">tags</td>
+<td style="text-align:left"><code>[]string</code></td>
+<td style="text-align:left">Tags describing the ServiceInstance as provided in service catalog, will be copied to <code>ServiceBinding</code> secret in the key called <code>tags</code>.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="service-binding">Service Binding</h3>
+<h4 id="spec">Spec</h4>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Parameter</th>
+<th style="text-align:left">Type</th>
+<th style="text-align:left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">serviceInstanceName<code>*</code></td>
+<td style="text-align:left"><code>string</code></td>
+<td style="text-align:left">The Kubernetes name of the service instance to bind, should be in the namespace of the binding.</td>
+</tr>
+<tr>
+<td style="text-align:left">externalName</td>
+<td style="text-align:left"><code>string</code></td>
+<td style="text-align:left">The name for the service binding in SAP BTP, defaults to the binding <code>metadata.name</code> if not specified.</td>
+</tr>
+<tr>
+<td style="text-align:left">secretName</td>
+<td style="text-align:left"><code>string</code></td>
+<td style="text-align:left">The name of the secret where the credentials are stored, defaults to the binding <code>metadata.name</code> if not specified.</td>
+</tr>
+<tr>
+<td style="text-align:left">secretKey</td>
+<td style="text-align:left"><code>string</code></td>
+<td style="text-align:left">The key inside the binding secret to store the credentials returned by the broker encoded as json to support complex data structures.</td>
+</tr>
+<tr>
+<td style="text-align:left">secretRootKey</td>
+<td style="text-align:left"><code>string</code></td>
+<td style="text-align:left">The key inside the secret to store all binding data including credentials returned by the broker and additional info under single key.<br/>Convenient way to store whole binding data in single file when using <code>volumeMounts</code>.</td>
+</tr>
+<tr>
+<td style="text-align:left">parameters</td>
+<td style="text-align:left"><code>[]object</code></td>
+<td style="text-align:left">Some services support the provisioning of additional configuration parameters during the bind request.<br/>For the list of supported parameters, check the documentation of the particular service offering.</td>
+</tr>
+<tr>
+<td style="text-align:left">parametersFrom</td>
+<td style="text-align:left"><code>[]object</code></td>
+<td style="text-align:left">List of sources to populate parameters.</td>
+</tr>
+<tr>
+<td style="text-align:left">userInfo</td>
+<td style="text-align:left"><code>object</code></td>
+<td style="text-align:left">Contains information about the user that last modified this service binding.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="status">Status</h4>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">Parameter</th>
+<th style="text-align:left">Type</th>
+<th style="text-align:left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">instanceID</td>
+<td style="text-align:left"><code>string</code></td>
+<td style="text-align:left">The ID of the bound instance in the SAP Service Manager service.</td>
+</tr>
+<tr>
+<td style="text-align:left">bindingID</td>
+<td style="text-align:left"><code>string</code></td>
+<td style="text-align:left">The service binding ID in SAP Service Manager service.</td>
+</tr>
+<tr>
+<td style="text-align:left">operationURL</td>
+<td style="text-align:left"><code>string</code></td>
+<td style="text-align:left">The URL of the current operation performed on the service binding.</td>
+</tr>
+<tr>
+<td style="text-align:left">operationType</td>
+<td style="text-align:left"><code>string</code></td>
+<td style="text-align:left">The type of the current operation. Possible values are CREATE, UPDATE, or DELETE.</td>
+</tr>
+<tr>
+<td style="text-align:left">conditions</td>
+<td style="text-align:left"><code>[]condition</code></td>
+<td style="text-align:left">An array of conditions describing the status of the service instance.<br/>The possible conditions types are:<br/>- <code>Ready</code>: set to <code>true</code> if the binding is ready and usable<br/>- <code>Failed</code>: set to <code>true</code> when an operation on the service binding fails.<br/> In the case of failure, the details about the error are available in the condition message.<br>- <code>Succeeded</code>: set to <code>true</code> when an operation on the service binding succeeded. In case of <code>false</code> operation considered as in progress unless <code>Failed</code> condition exists.</td>
+</tr>
+</tbody>
+</table>
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
