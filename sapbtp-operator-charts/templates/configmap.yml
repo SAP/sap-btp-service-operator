@@ -4,7 +4,7 @@ data:
   {{- if $configmap }}
   CLUSTER_ID: {{ $configmap.data.CLUSTER_ID }}
   {{ else }}
-  CLUSTER_ID:  {{.Values.cluster.id | default uuidv4}}
+  CLUSTER_ID: {{.Values.cluster.id | default uuidv4}}
   {{- end }}
   MANAGEMENT_NAMESPACE: {{.Release.Namespace}}
 kind: ConfigMap
