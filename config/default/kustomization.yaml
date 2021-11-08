@@ -41,14 +41,14 @@ vars:
     group: cert-manager.io
     kind: Certificate
     name: serving-cert
-    version: v1alpha2
+    version: v1
 - fieldref: {}
   name: CERTIFICATE_NAME
   objref:
     group: cert-manager.io
     kind: Certificate
     name: serving-cert
-    version: v1alpha2
+    version: v1
 - fieldref:
     fieldPath: metadata.namespace
   name: SERVICE_NAMESPACE
