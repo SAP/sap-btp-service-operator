@@ -36,6 +36,8 @@ This feature is still under development, review, and testing.
 
 ## Setup
 1. Install [cert-manager](https://cert-manager.io/docs/installation/kubernetes)
+   - for releases v0.1.18 or higher use cert manager v1.6.0 or higher 
+   - for releases v0.1.17 or lower use cert manager lower then v1.6.0
 
 2. Obtain the access credentials for the SAP BTP service operator:
 
