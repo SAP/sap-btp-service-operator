@@ -21,7 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	v1alpha12 "github.com/SAP/sap-btp-service-operator/api/services.cloud.sap.com/v1alpha1"
+	v1alpha "github.com/SAP/sap-btp-service-operator/api/services.cloud.sap.com/v1alpha1"
 	"github.com/google/uuid"
 
 	smTypes "github.com/Peripli/service-manager/pkg/types"
@@ -49,7 +49,7 @@ type ServiceInstanceReconciler struct {
 func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("serviceinstance", req.NamespacedName).WithValues("correlation_id", uuid.New().String())
 
-	serviceInstance := &v1alpha12.ServiceInstance{}
+	serviceInstance := &v1alpha.ServiceInstance{}
 	if err := r.Get(ctx, req.NamespacedName, serviceInstance); err != nil {
 		if !apierrors.IsNotFound(err) {
 			log.Error(err, "unable to fetch ServiceInstance")
@@ -115,7 +115,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	return ctrl.Result{}, nil
 }
 
-func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client, serviceInstance *v1alpha12.ServiceInstance, log logr.Logger) (
+func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client, serviceInstance *v1alpha.ServiceInstance, log logr.Logger) (
 	ctrl.Result, error,
 ) {
 	log.Info(fmt.Sprintf("resource is in progress, found operation url %s", serviceInstance.Status.OperationURL))
@@ -124,7 +124,7 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client
 		log.Info(fmt.Sprintf("failed to fetch operation, got error from SM: %s", statusErr.Error()), "operationURL", serviceInstance.Status.OperationURL)
 		setInProgressConditions(serviceInstance.Status.OperationType, statusErr.Error(), serviceInstance)
 		// if failed to read operation status we cleanup the status to trigger re-sync from SM
-		freshStatus := v1alpha12.ServiceInstanceStatus{Conditions: serviceInstance.GetConditions()}
+		freshStatus := v1alpha.ServiceInstanceStatus{Conditions: serviceInstance.GetConditions()}
 		if isDelete(serviceInstance.ObjectMeta) {
 			freshStatus.InstanceID = serviceInstance.Status.InstanceID
 		}
@@ -159,7 +159,7 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client
 		setSuccessConditions(smTypes.OperationCategory(status.Type), serviceInstance)
 		if serviceInstance.Status.OperationType == smTypes.DELETE {
 			// delete was successful - remove our finalizer from the list and update it.
-			if err := r.removeFinalizer(ctx, serviceInstance, v1alpha12.FinalizerName, log); err != nil {
+			if err := r.removeFinalizer(ctx, serviceInstance, v1alpha.FinalizerName, log); err != nil {
 				return ctrl.Result{}, err
 			}
 		} else if serviceInstance.Status.OperationType == smTypes.CREATE {
@@ -174,7 +174,7 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client
 	return ctrl.Result{}, r.updateStatus(ctx, serviceInstance)
 }
 
-func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient sm.Client, serviceInstance *v1alpha12.ServiceInstance, log logr.Logger) (
+func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient sm.Client, serviceInstance *v1alpha.ServiceInstance, log logr.Logger) (
 	ctrl.Result, error,
 ) {
 	log.Info("Creating instance in SM")
@@ -252,7 +252,7 @@ func getTags(tags []byte) ([]string, error) {
 	return tagsArr, nil
 }
 
-func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient sm.Client, serviceInstance *v1alpha12.ServiceInstance, log logr.Logger) (
+func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient sm.Client, serviceInstance *v1alpha.ServiceInstance, log logr.Logger) (
 	ctrl.Result, error,
 ) {
 	var err error
@@ -295,10 +295,10 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 	return ctrl.Result{}, r.updateStatus(ctx, serviceInstance)
 }
 
-func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient sm.Client, serviceInstance *v1alpha12.ServiceInstance, log logr.Logger) (
+func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient sm.Client, serviceInstance *v1alpha.ServiceInstance, log logr.Logger) (
 	ctrl.Result, error,
 ) {
-	if controllerutil.ContainsFinalizer(serviceInstance, v1alpha12.FinalizerName) {
+	if controllerutil.ContainsFinalizer(serviceInstance, v1alpha.FinalizerName) {
 		if len(serviceInstance.Status.InstanceID) == 0 {
 			log.Info("No instance id found validating instance does not exists in SM before removing finalizer")
 
@@ -313,7 +313,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 				return ctrl.Result{}, r.updateStatus(ctx, serviceInstance)
 			}
 			log.Info("instance does not exists in SM, removing finalizer")
-			return ctrl.Result{}, r.removeFinalizer(ctx, serviceInstance, v1alpha12.FinalizerName, log)
+			return ctrl.Result{}, r.removeFinalizer(ctx, serviceInstance, v1alpha.FinalizerName, log)
 		}
 
 		log.Info(fmt.Sprintf("Deleting instance with id %v from SM", serviceInstance.Status.InstanceID))
@@ -343,7 +343,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 		}
 
 		// remove our finalizer from the list and update it.
-		if err := r.removeFinalizer(ctx, serviceInstance, v1alpha12.FinalizerName, log); err != nil {
+		if err := r.removeFinalizer(ctx, serviceInstance, v1alpha.FinalizerName, log); err != nil {
 			return ctrl.Result{}, err
 		}
 
@@ -354,7 +354,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 	return ctrl.Result{}, nil
 }
 
-func (r *ServiceInstanceReconciler) resyncInstanceStatus(smClient sm.Client, k8sInstance *v1alpha12.ServiceInstance, smInstance *types.ServiceInstance, log logr.Logger) {
+func (r *ServiceInstanceReconciler) resyncInstanceStatus(smClient sm.Client, k8sInstance *v1alpha.ServiceInstance, smInstance *types.ServiceInstance, log logr.Logger) {
 	//set observed generation to 0 because we dont know which generation the current state in SM represents,
 	//unless the generation is 1 and SM is in the same state as operator
 	if k8sInstance.Generation == 1 {
@@ -425,11 +425,11 @@ func getOfferingTags(smClient sm.Client, planID string) ([]string, error) {
 
 func (r *ServiceInstanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&v1alpha12.ServiceInstance{}).
+		For(&v1alpha.ServiceInstance{}).
 		Complete(r)
 }
 
-func (r *ServiceInstanceReconciler) getInstanceForRecovery(smClient sm.Client, serviceInstance *v1alpha12.ServiceInstance, log logr.Logger) (
+func (r *ServiceInstanceReconciler) getInstanceForRecovery(smClient sm.Client, serviceInstance *v1alpha.ServiceInstance, log logr.Logger) (
 	*types.ServiceInstance, error,
 ) {
 	parameters := sm.Parameters{
