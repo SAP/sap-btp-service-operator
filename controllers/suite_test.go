@@ -20,23 +20,24 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"github.com/SAP/sap-btp-service-operator/api/v1alpha1/webhooks"
+	"net"
+	"path/filepath"
+	"testing"
+	"time"
+
+	"github.com/SAP/sap-btp-service-operator/api/services.cloud.sap.com/v1alpha1"
+	webhooks2 "github.com/SAP/sap-btp-service-operator/api/services.cloud.sap.com/v1alpha1/webhooks"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
 	"github.com/SAP/sap-btp-service-operator/client/sm/smfakes"
 	"github.com/SAP/sap-btp-service-operator/internal/config"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"net"
-	"path/filepath"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
-	"testing"
-	"time"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	servicesv1alpha1 "github.com/SAP/sap-btp-service-operator/api/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -87,7 +88,7 @@ var _ = BeforeSuite(func(done Done) {
 	Expect(err).ToNot(HaveOccurred())
 	Expect(cfg).ToNot(BeNil())
 
-	err = servicesv1alpha1.AddToScheme(scheme.Scheme)
+	err = v1alpha1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	// +kubebuilder:scaffold:scheme
@@ -122,9 +123,13 @@ var _ = BeforeSuite(func(done Done) {
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	k8sManager.GetWebhookServer().Register("/mutate-services-cloud-sap-com-v1alpha1-serviceinstance", &webhook.Admission{Handler: &webhooks.ServiceInstanceDefaulter{Client: k8sManager.GetClient()}})
-	k8sManager.GetWebhookServer().Register("/mutate-services-cloud-sap-com-v1alpha1-servicebinding", &webhook.Admission{Handler: &webhooks.ServiceBindingDefaulter{Client: k8sManager.GetClient()}})
-	err = (&servicesv1alpha1.ServiceBinding{}).SetupWebhookWithManager(k8sManager)
+	k8sManager.GetWebhookServer().Register(
+		"/mutate-services-cloud-sap-com-v1alpha1-serviceinstance",
+		&webhook.Admission{Handler: &webhooks2.ServiceInstanceDefaulter{Client: k8sManager.GetClient()}})
+	k8sManager.GetWebhookServer().Register(
+		"/mutate-services-cloud-sap-com-v1alpha1-servicebinding",
+		&webhook.Admission{Handler: &webhooks2.ServiceBindingDefaulter{Client: k8sManager.GetClient()}})
+	err = (&v1alpha1.ServiceBinding{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	err = (&ServiceBindingReconciler{
@@ -179,6 +184,6 @@ var _ = AfterSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 })
 
-func isReady(resource servicesv1alpha1.SAPBTPResource) bool {
-	return meta.IsStatusConditionPresentAndEqual(resource.GetConditions(), servicesv1alpha1.ConditionSucceeded, metav1.ConditionTrue)
+func isReady(resource v1alpha1.SAPBTPResource) bool {
+	return meta.IsStatusConditionPresentAndEqual(resource.GetConditions(), v1alpha1.ConditionSucceeded, metav1.ConditionTrue)
 }

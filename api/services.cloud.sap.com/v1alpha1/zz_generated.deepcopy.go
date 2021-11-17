@@ -129,6 +129,11 @@ func (in *ServiceBindingSpec) DeepCopyInto(out *ServiceBindingSpec) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.SecretRootKey != nil {
+		in, out := &in.SecretRootKey, &out.SecretRootKey
+		*out = new(string)
+		**out = **in
+	}
 	if in.Parameters != nil {
 		in, out := &in.Parameters, &out.Parameters
 		*out = new(runtime.RawExtension)

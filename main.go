@@ -20,9 +20,10 @@ import (
 	"flag"
 	"os"
 
+	"github.com/SAP/sap-btp-service-operator/api/services.cloud.sap.com/v1alpha1"
+	webhooks2 "github.com/SAP/sap-btp-service-operator/api/services.cloud.sap.com/v1alpha1/webhooks"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
-	"github.com/SAP/sap-btp-service-operator/api/v1alpha1/webhooks"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/SAP/sap-btp-service-operator/internal/secrets"
@@ -36,7 +37,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	servicesv1alpha1 "github.com/SAP/sap-btp-service-operator/api/v1alpha1"
 	"github.com/SAP/sap-btp-service-operator/controllers"
 	// +kubebuilder:scaffold:imports
 )
@@ -49,7 +49,7 @@ var (
 func init() {
 	_ = clientgoscheme.AddToScheme(scheme)
 
-	_ = servicesv1alpha1.AddToScheme(scheme)
+	_ = v1alpha1.AddToScheme(scheme)
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -113,9 +113,12 @@ func main() {
 		os.Exit(1)
 	}
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-		mgr.GetWebhookServer().Register("/mutate-services-cloud-sap-com-v1alpha1-serviceinstance", &webhook.Admission{Handler: &webhooks.ServiceInstanceDefaulter{Client: mgr.GetClient()}})
-		mgr.GetWebhookServer().Register("/mutate-services-cloud-sap-com-v1alpha1-servicebinding", &webhook.Admission{Handler: &webhooks.ServiceBindingDefaulter{Client: mgr.GetClient()}})
-		if err = (&servicesv1alpha1.ServiceBinding{}).SetupWebhookWithManager(mgr); err != nil {
+		mgr.GetWebhookServer().Register(
+			"/mutate-services-cloud-sap-com-v1alpha1-serviceinstance",
+			&webhook.Admission{Handler: &webhooks2.ServiceInstanceDefaulter{Client: mgr.GetClient()}})
+		mgr.GetWebhookServer().Register(
+			"/mutate-services-cloud-sap-com-v1alpha1-servicebinding", &webhook.Admission{Handler: &webhooks2.ServiceBindingDefaulter{Client: mgr.GetClient()}})
+		if err = (&v1alpha1.ServiceBinding{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "ServiceBinding")
 			os.Exit(1)
 		}

@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"net/http"
 
+	v1alpha12 "github.com/SAP/sap-btp-service-operator/api/services.cloud.sap.com/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	"github.com/SAP/sap-btp-service-operator/api/v1alpha1"
 	v1admission "k8s.io/api/admission/v1"
 	v1 "k8s.io/api/authentication/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -27,15 +27,15 @@ type ServiceBindingDefaulter struct {
 
 func (s *ServiceBindingDefaulter) Handle(_ context.Context, req admission.Request) admission.Response {
 	bindinglog.Info("Defaulter webhook for servicebinding")
-	binding := &v1alpha1.ServiceBinding{}
+	binding := &v1alpha12.ServiceBinding{}
 	err := s.decoder.Decode(req, binding)
 	if err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	if binding.DeletionTimestamp.IsZero() && !controllerutil.ContainsFinalizer(binding, v1alpha1.FinalizerName) {
-		controllerutil.AddFinalizer(binding, v1alpha1.FinalizerName)
-		bindinglog.Info(fmt.Sprintf("added finalizer '%s' to service binding", v1alpha1.FinalizerName))
+	if binding.DeletionTimestamp.IsZero() && !controllerutil.ContainsFinalizer(binding, v1alpha12.FinalizerName) {
+		controllerutil.AddFinalizer(binding, v1alpha12.FinalizerName)
+		bindinglog.Info(fmt.Sprintf("added finalizer '%s' to service binding", v1alpha12.FinalizerName))
 	}
 
 	// mutate the fields

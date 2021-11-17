@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	servicesv1alpha1 "github.com/SAP/sap-btp-service-operator/api/services.cloud.sap.com/v1alpha1"
 	v1 "k8s.io/api/core/v1"
 
 	"k8s.io/client-go/tools/record"
@@ -19,7 +20,6 @@ import (
 	apimachinerytypes "k8s.io/apimachinery/pkg/types"
 
 	smTypes "github.com/Peripli/service-manager/pkg/types"
-	servicesv1alpha1 "github.com/SAP/sap-btp-service-operator/api/v1alpha1"
 	"github.com/SAP/sap-btp-service-operator/internal/config"
 	"github.com/SAP/sap-btp-service-operator/internal/secrets"
 	"github.com/go-logr/logr"

@@ -111,6 +111,8 @@ type ServiceInstanceStatus struct {
 // +kubebuilder:printcolumn:JSONPath=".metadata.creationTimestamp",name="Age",type=date
 // +kubebuilder:printcolumn:JSONPath=".status.instanceID",name="ID",type=string,priority=1
 // +kubebuilder:printcolumn:JSONPath=".status.conditions[0].message",name="Message",type=string,priority=1
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // ServiceInstance is the Schema for the serviceinstances API
 type ServiceInstance struct {
@@ -165,6 +167,7 @@ func (in *ServiceInstance) SetReady(ready metav1.ConditionStatus) {
 }
 
 // +kubebuilder:object:root=true
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // ServiceInstanceList contains a list of ServiceInstance
 type ServiceInstanceList struct {
