@@ -6,7 +6,7 @@
 ## This file is part of ewm-cloud-robotics (see https://github.com/SAP/ewm-cloud-robotics).
 ## Script was enhanced by SAP Steffen Brunner
 ##
-## This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file (https://github.com/SAP/ewm-cloud-robotics/blob/master/LICENSE)
+## This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file (https://github.com/SAP/ewm-cloud-robotics/)
 
 ######## ATTENTION ######
 ## $FOLDER_NAME  /tmp/.gopath/src/$FOLDER_NAME MUST 
