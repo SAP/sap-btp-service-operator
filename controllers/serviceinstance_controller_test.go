@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	smTypes "github.com/Peripli/service-manager/pkg/types"
-	v1alpha "github.com/SAP/sap-btp-service-operator/api/services.cloud.sap.com/v1alpha1"
+	"github.com/SAP/sap-btp-service-operator/api/services.cloud.sap.com/v1alpha1"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
 	"github.com/SAP/sap-btp-service-operator/client/sm/smfakes"
 	smclientTypes "github.com/SAP/sap-btp-service-operator/client/sm/types"
@@ -34,20 +34,20 @@ const (
 
 var _ = Describe("ServiceInstance controller", func() {
 
-	var serviceInstance *v1alpha.ServiceInstance
+	var serviceInstance *v1alpha1.ServiceInstance
 	var fakeInstanceName string
 	var ctx context.Context
 	var defaultLookupKey types.NamespacedName
-	instanceSpec := v1alpha.ServiceInstanceSpec{
+	instanceSpec := v1alpha1.ServiceInstanceSpec{
 		ExternalName:        fakeInstanceExternalName,
 		ServicePlanName:     fakePlanName,
 		ServiceOfferingName: fakeOfferingName,
 		Parameters: &runtime.RawExtension{
 			Raw: []byte(`{"key": "value"}`),
 		},
-		ParametersFrom: []v1alpha.ParametersFromSource{
+		ParametersFrom: []v1alpha1.ParametersFromSource{
 			{
-				SecretKeyRef: &v1alpha.SecretKeyReference{
+				SecretKeyRef: &v1alpha1.SecretKeyReference{
 					Name: "param-secret",
 					Key:  "secret-parameter",
 				},
@@ -55,8 +55,8 @@ var _ = Describe("ServiceInstance controller", func() {
 		},
 	}
 
-	createInstance := func(ctx context.Context, instanceSpec v1alpha.ServiceInstanceSpec) *v1alpha.ServiceInstance {
-		instance := &v1alpha.ServiceInstance{
+	createInstance := func(ctx context.Context, instanceSpec v1alpha1.ServiceInstanceSpec) *v1alpha1.ServiceInstance {
+		instance := &v1alpha1.ServiceInstance{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "services.cloud.sap.com/v1alpha1",
 				Kind:       "ServiceInstance",
@@ -69,7 +69,7 @@ var _ = Describe("ServiceInstance controller", func() {
 		}
 		Expect(k8sClient.Create(ctx, instance)).Should(Succeed())
 
-		createdInstance := &v1alpha.ServiceInstance{}
+		createdInstance := &v1alpha1.ServiceInstance{}
 
 		Eventually(func() bool {
 			err := k8sClient.Get(ctx, defaultLookupKey, createdInstance)
@@ -82,8 +82,8 @@ var _ = Describe("ServiceInstance controller", func() {
 		return createdInstance
 	}
 
-	deleteInstance := func(ctx context.Context, instanceToDelete *v1alpha.ServiceInstance, wait bool) {
-		err := k8sClient.Get(ctx, types.NamespacedName{Name: instanceToDelete.Name, Namespace: instanceToDelete.Namespace}, &v1alpha.ServiceInstance{})
+	deleteInstance := func(ctx context.Context, instanceToDelete *v1alpha1.ServiceInstance, wait bool) {
+		err := k8sClient.Get(ctx, types.NamespacedName{Name: instanceToDelete.Name, Namespace: instanceToDelete.Namespace}, &v1alpha1.ServiceInstance{})
 		if err != nil {
 			Expect(apierrors.IsNotFound(err)).To(Equal(true))
 			return
@@ -94,15 +94,15 @@ var _ = Describe("ServiceInstance controller", func() {
 		if wait {
 			Eventually(
 				func() bool {
-					a := &v1alpha.ServiceInstance{}
+					a := &v1alpha1.ServiceInstance{}
 					err := k8sClient.Get(ctx, types.NamespacedName{Name: instanceToDelete.Name, Namespace: instanceToDelete.Namespace}, a)
 					return apierrors.IsNotFound(err)
 				}, timeout, interval).Should(BeTrue())
 		}
 	}
 
-	updateInstance := func(ctx context.Context, serviceInstance *v1alpha.ServiceInstance) *v1alpha.ServiceInstance {
-		isConditionRefersUpdateOp := func(instance *v1alpha.ServiceInstance) bool {
+	updateInstance := func(ctx context.Context, serviceInstance *v1alpha1.ServiceInstance) *v1alpha1.ServiceInstance {
+		isConditionRefersUpdateOp := func(instance *v1alpha1.ServiceInstance) bool {
 			conditionReason := instance.Status.Conditions[0].Reason
 			return strings.Contains(conditionReason, Updated) || strings.Contains(conditionReason, UpdateInProgress) || strings.Contains(
 				conditionReason, UpdateFailed)
@@ -110,7 +110,7 @@ var _ = Describe("ServiceInstance controller", func() {
 		}
 
 		_ = k8sClient.Update(ctx, serviceInstance)
-		updatedInstance := &v1alpha.ServiceInstance{}
+		updatedInstance := &v1alpha1.ServiceInstance{}
 
 		Eventually(
 			func() bool {
@@ -151,8 +151,8 @@ var _ = Describe("ServiceInstance controller", func() {
 
 	Describe("Create", func() {
 		Context("Invalid parameters", func() {
-			createInstanceWithFailure := func(spec v1alpha.ServiceInstanceSpec) {
-				instance := &v1alpha.ServiceInstance{
+			createInstanceWithFailure := func(spec v1alpha1.ServiceInstanceSpec) {
+				instance := &v1alpha1.ServiceInstance{
 					TypeMeta: metav1.TypeMeta{
 						APIVersion: "services.cloud.sap.com/v1alpha1",
 						Kind:       "ServiceInstance",
@@ -168,17 +168,17 @@ var _ = Describe("ServiceInstance controller", func() {
 			Describe("service plan id not provided", func() {
 				When("service offering name and service plan name are not provided", func() {
 					It("provisioning should fail", func() {
-						createInstanceWithFailure(v1alpha.ServiceInstanceSpec{})
+						createInstanceWithFailure(v1alpha1.ServiceInstanceSpec{})
 					})
 				})
 				When("service offering name is provided and service plan name is not provided", func() {
 					It("provisioning should fail", func() {
-						createInstanceWithFailure(v1alpha.ServiceInstanceSpec{ServiceOfferingName: "fake-offering"})
+						createInstanceWithFailure(v1alpha1.ServiceInstanceSpec{ServiceOfferingName: "fake-offering"})
 					})
 				})
 				When("service offering name not provided and service plan name is provided", func() {
 					It("provisioning should fail", func() {
-						createInstanceWithFailure(v1alpha.ServiceInstanceSpec{ServicePlanID: "fake-plan"})
+						createInstanceWithFailure(v1alpha1.ServiceInstanceSpec{ServicePlanID: "fake-plan"})
 					})
 				})
 			})
@@ -186,11 +186,11 @@ var _ = Describe("ServiceInstance controller", func() {
 			Describe("service plan id is provided", func() {
 				When("service offering name and service plan name are not provided", func() {
 					It("provision should fail", func() {
-						createInstanceWithFailure(v1alpha.ServiceInstanceSpec{ServicePlanID: "fake-plan-id"})
+						createInstanceWithFailure(v1alpha1.ServiceInstanceSpec{ServicePlanID: "fake-plan-id"})
 					})
 				})
 				When("plan id does not match the provided offering name and plan name", func() {
-					instanceSpec := v1alpha.ServiceInstanceSpec{
+					instanceSpec := v1alpha1.ServiceInstanceSpec{
 						ServiceOfferingName: fakeOfferingName,
 						ServicePlanName:     fakePlanName,
 						ServicePlanID:       "wrong-id",
@@ -357,7 +357,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 		When("external name is not provided", func() {
 			It("succeeds and uses the k8s name as external name", func() {
-				withoutExternal := v1alpha.ServiceInstanceSpec{
+				withoutExternal := v1alpha1.ServiceInstanceSpec{
 					ServicePlanName:     "a-plan-name",
 					ServiceOfferingName: "an-offering-name",
 				}
@@ -371,9 +371,9 @@ var _ = Describe("ServiceInstance controller", func() {
 
 	Describe("Update", func() {
 
-		updateSpec := func() v1alpha.ServiceInstanceSpec {
+		updateSpec := func() v1alpha1.ServiceInstanceSpec {
 			newExternalName := "my-new-external-name" + uuid.New().String()
-			return v1alpha.ServiceInstanceSpec{
+			return v1alpha1.ServiceInstanceSpec{
 				ExternalName:        newExternalName,
 				ServicePlanName:     fakePlanName,
 				ServiceOfferingName: fakeOfferingName,

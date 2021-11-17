@@ -10,7 +10,7 @@ import (
 
 	smTypes "github.com/Peripli/service-manager/pkg/types"
 	"github.com/Peripli/service-manager/pkg/web"
-	v1alpha "github.com/SAP/sap-btp-service-operator/api/services.cloud.sap.com/v1alpha1"
+	"github.com/SAP/sap-btp-service-operator/api/services.cloud.sap.com/v1alpha1"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
 	"github.com/SAP/sap-btp-service-operator/client/sm/smfakes"
 	smclientTypes "github.com/SAP/sap-btp-service-operator/client/sm/types"
@@ -35,13 +35,13 @@ var _ = Describe("ServiceBinding controller", func() {
 
 	// Define utility constants for object names and testing timeouts/durations and intervals.
 
-	var createdInstance *v1alpha.ServiceInstance
-	var createdBinding *v1alpha.ServiceBinding
+	var createdInstance *v1alpha1.ServiceInstance
+	var createdBinding *v1alpha1.ServiceBinding
 	var instanceName string
 	var bindingName string
 
-	newBinding := func(name, namespace string) *v1alpha.ServiceBinding {
-		return &v1alpha.ServiceBinding{
+	newBinding := func(name, namespace string) *v1alpha1.ServiceBinding {
+		return &v1alpha1.ServiceBinding{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "services.cloud.sap.com/v1alpha1",
 				Kind:       "ServiceBinding",
@@ -54,7 +54,7 @@ var _ = Describe("ServiceBinding controller", func() {
 	}
 
 	createBindingWithoutAssertionsAndWait := func(ctx context.Context, name string, namespace string, instanceName string, externalName string, wait bool) (
-		*v1alpha.ServiceBinding, error,
+		*v1alpha1.ServiceBinding, error,
 	) {
 		binding := newBinding(name, namespace)
 		binding.Spec.ServiceInstanceName = instanceName
@@ -62,9 +62,9 @@ var _ = Describe("ServiceBinding controller", func() {
 		binding.Spec.Parameters = &runtime.RawExtension{
 			Raw: []byte(`{"key": "value"}`),
 		}
-		binding.Spec.ParametersFrom = []v1alpha.ParametersFromSource{
+		binding.Spec.ParametersFrom = []v1alpha1.ParametersFromSource{
 			{
-				SecretKeyRef: &v1alpha.SecretKeyReference{
+				SecretKeyRef: &v1alpha1.SecretKeyReference{
 					Name: "param-secret",
 					Key:  "secret-parameter",
 				},
@@ -76,7 +76,7 @@ var _ = Describe("ServiceBinding controller", func() {
 		}
 
 		bindingLookupKey := types.NamespacedName{Name: name, Namespace: namespace}
-		createdBinding = &v1alpha.ServiceBinding{}
+		createdBinding = &v1alpha1.ServiceBinding{}
 
 		Eventually(func() bool {
 			err := k8sClient.Get(ctx, bindingLookupKey, createdBinding)
@@ -94,7 +94,7 @@ var _ = Describe("ServiceBinding controller", func() {
 	}
 
 	createBindingWithoutAssertions := func(ctx context.Context, name string, namespace string, instanceName string, externalName string) (
-		*v1alpha.ServiceBinding, error,
+		*v1alpha1.ServiceBinding, error,
 	) {
 		return createBindingWithoutAssertionsAndWait(ctx, name, namespace, instanceName, externalName, true)
 	}
@@ -110,7 +110,7 @@ var _ = Describe("ServiceBinding controller", func() {
 		}
 	}
 
-	createBindingWithBlockedError := func(ctx context.Context, name, namespace, instanceName, externalName, failureMessage string) *v1alpha.ServiceBinding {
+	createBindingWithBlockedError := func(ctx context.Context, name, namespace, instanceName, externalName, failureMessage string) *v1alpha1.ServiceBinding {
 		createdBinding, err := createBindingWithoutAssertions(ctx, name, namespace, instanceName, externalName)
 		if err != nil {
 			Expect(err.Error()).To(ContainSubstring(failureMessage))
@@ -124,7 +124,7 @@ var _ = Describe("ServiceBinding controller", func() {
 		return nil
 	}
 
-	createBinding := func(ctx context.Context, name, namespace, instanceName, externalName string) *v1alpha.ServiceBinding {
+	createBinding := func(ctx context.Context, name, namespace, instanceName, externalName string) *v1alpha1.ServiceBinding {
 		createdBinding, err := createBindingWithoutAssertions(ctx, name, namespace, instanceName, externalName)
 		Expect(err).ToNot(HaveOccurred())
 
@@ -140,8 +140,8 @@ var _ = Describe("ServiceBinding controller", func() {
 		return createdBinding
 	}
 
-	createInstance := func(ctx context.Context, name, namespace, externalName string) *v1alpha.ServiceInstance {
-		instance := &v1alpha.ServiceInstance{
+	createInstance := func(ctx context.Context, name, namespace, externalName string) *v1alpha1.ServiceInstance {
+		instance := &v1alpha1.ServiceInstance{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "services.cloud.sap.com/v1alpha1",
 				Kind:       "ServiceInstance",
@@ -150,7 +150,7 @@ var _ = Describe("ServiceBinding controller", func() {
 				Name:      name,
 				Namespace: namespace,
 			},
-			Spec: v1alpha.ServiceInstanceSpec{
+			Spec: v1alpha1.ServiceInstanceSpec{
 				ExternalName:        externalName,
 				ServicePlanName:     "a-plan-name",
 				ServiceOfferingName: "an-offering-name",
@@ -160,7 +160,7 @@ var _ = Describe("ServiceBinding controller", func() {
 		Expect(k8sClient.Create(ctx, instance)).Should(Succeed())
 
 		instanceLookupKey := types.NamespacedName{Name: name, Namespace: namespace}
-		createdInstance := &v1alpha.ServiceInstance{}
+		createdInstance := &v1alpha1.ServiceInstance{}
 
 		Eventually(func() bool {
 			err := k8sClient.Get(ctx, instanceLookupKey, createdInstance)
@@ -674,7 +674,7 @@ var _ = Describe("ServiceBinding controller", func() {
 
 	Context("Delete", func() {
 
-		validateBindingDeletion := func(binding *v1alpha.ServiceBinding) {
+		validateBindingDeletion := func(binding *v1alpha1.ServiceBinding) {
 			secretName := binding.Spec.SecretName
 			Expect(secretName).ToNot(BeEmpty())
 			Expect(k8sClient.Delete(context.Background(), binding)).To(Succeed())
@@ -689,7 +689,7 @@ var _ = Describe("ServiceBinding controller", func() {
 				}, timeout, interval).Should(BeTrue())
 		}
 
-		validateBindingNotDeleted := func(binding *v1alpha.ServiceBinding, errorMessage string) {
+		validateBindingNotDeleted := func(binding *v1alpha1.ServiceBinding, errorMessage string) {
 			secretName := createdBinding.Spec.SecretName
 			Expect(secretName).ToNot(BeEmpty())
 			Expect(k8sClient.Delete(context.Background(), createdBinding)).To(Succeed())

@@ -110,7 +110,6 @@ type ServiceBindingStatus struct {
 	Ready metav1.ConditionStatus `json:"ready,omitempty"`
 }
 
-// ServiceBinding is the Schema for the servicebindings API
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:object:root=true
@@ -121,6 +120,8 @@ type ServiceBindingStatus struct {
 // +kubebuilder:printcolumn:JSONPath=".metadata.creationTimestamp",name="Age",type=date
 // +kubebuilder:printcolumn:JSONPath=".status.bindingID",name="ID",type=string,priority=1
 // +kubebuilder:printcolumn:JSONPath=".status.conditions[0].message",name="Message",type=string,priority=1
+
+// ServiceBinding is the Schema for the servicebindings API
 type ServiceBinding struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -173,9 +174,10 @@ func (sb *ServiceBinding) SetReady(ready metav1.ConditionStatus) {
 	sb.Status.Ready = ready
 }
 
-// ServiceBindingList contains a list of ServiceBinding
 // +kubebuilder:object:root=true
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// ServiceBindingList contains a list of ServiceBinding
 type ServiceBindingList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

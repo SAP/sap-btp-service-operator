@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"reflect"
 
-	v1alpha "github.com/SAP/sap-btp-service-operator/api/services.cloud.sap.com/v1alpha1"
+	"github.com/SAP/sap-btp-service-operator/api/services.cloud.sap.com/v1alpha1"
 	v1admission "k8s.io/api/admission/v1"
 	v1 "k8s.io/api/authentication/v1"
 
@@ -29,15 +29,15 @@ type ServiceInstanceDefaulter struct {
 
 func (s *ServiceInstanceDefaulter) Handle(_ context.Context, req admission.Request) admission.Response {
 	instancelog.Info("Defaulter webhook for serviceinstance")
-	instance := &v1alpha.ServiceInstance{}
+	instance := &v1alpha1.ServiceInstance{}
 	err := s.decoder.Decode(req, instance)
 	if err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	if instance.DeletionTimestamp.IsZero() && !controllerutil.ContainsFinalizer(instance, v1alpha.FinalizerName) {
-		controllerutil.AddFinalizer(instance, v1alpha.FinalizerName)
-		instancelog.Info(fmt.Sprintf("added finalizer '%s' to service instance", v1alpha.FinalizerName))
+	if instance.DeletionTimestamp.IsZero() && !controllerutil.ContainsFinalizer(instance, v1alpha1.FinalizerName) {
+		controllerutil.AddFinalizer(instance, v1alpha1.FinalizerName)
+		instancelog.Info(fmt.Sprintf("added finalizer '%s' to service instance", v1alpha1.FinalizerName))
 	}
 
 	// mutate the fields
@@ -58,7 +58,7 @@ func (s *ServiceInstanceDefaulter) Handle(_ context.Context, req admission.Reque
 	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledInstance)
 }
 
-func (s *ServiceInstanceDefaulter) setServiceInstanceUserInfo(req admission.Request, instance *v1alpha.ServiceInstance) error {
+func (s *ServiceInstanceDefaulter) setServiceInstanceUserInfo(req admission.Request, instance *v1alpha1.ServiceInstance) error {
 	userInfo := &v1.UserInfo{
 		Username: req.UserInfo.Username,
 		UID:      req.UserInfo.UID,
@@ -68,7 +68,7 @@ func (s *ServiceInstanceDefaulter) setServiceInstanceUserInfo(req admission.Requ
 	if req.Operation == v1admission.Create || req.Operation == v1admission.Delete {
 		instance.Spec.UserInfo = userInfo
 	} else if req.Operation == v1admission.Update {
-		oldInstance := &v1alpha.ServiceInstance{}
+		oldInstance := &v1alpha1.ServiceInstance{}
 		err := s.decoder.DecodeRaw(req.OldObject, oldInstance)
 		if err != nil {
 			return err
