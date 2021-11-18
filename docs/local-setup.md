@@ -5,7 +5,7 @@
 ### Deploy locally
 Edit [manager secret](../hack/override_values.yaml) section with SM credentials. (DO NOT SUBMIT)
 ```
-kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.1.0/cert-manager.yaml
+kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.6.0/cert-manager.yaml
 make docker-build
 kind load docker-image controller:latest
 make deploy
