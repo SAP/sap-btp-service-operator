@@ -1,5 +1,9 @@
 # sap-btp-operator Helm Chart
 
+This is a custom version of the sap-btp-operator helm chart.
+
+The upstream version of the sap-btp-operator helm chart has a dependency on the jetstack cert-manager. This custom version makes [jetstack/cert-manager](https://github.com/jetstack/cert-manager) optional and adds the possibility to use a custom caBundle or [gardener/cert-management](https://github.com/gardener/cert-management).
+
 ## Prerequeisites
 
 * Kubernetes 1.16+

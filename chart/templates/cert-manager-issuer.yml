@@ -1,6 +1,6 @@
 {{- if .Values.manager.certificates.certManager }}
 ---
-apiVersion: cert-manager.io/v1alpha2
+apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
   name: sap-btp-operator-selfsigned-issuer
