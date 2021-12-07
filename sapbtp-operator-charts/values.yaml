@@ -11,6 +11,7 @@ manager:
     repository: ghcr.io/sap/sap-btp-service-operator/controller
     tag: master
   secret:
+    enabled: true
     tls:
       crt:
       key:

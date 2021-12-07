@@ -13,7 +13,11 @@ spec:
   template:
     metadata:
       annotations:
-        rollme: {{ randAlphaNum 5 | quote }}
+        {{- $configmap := (include (print $.Template.BasePath "/configmap.yml") .) -}}
+        {{- $secret := (include (print $.Template.BasePath "/secret.yml") .) -}}
+        {{- $secretTls := (include (print $.Template.BasePath "/secret-tls.yml") .) -}}
+        {{- $configSha := (print $configmap $secret $secretTls) | sha256sum -}}
+        checksum/config: {{ $configSha }}
       labels:
         control-plane: controller-manager
     spec:

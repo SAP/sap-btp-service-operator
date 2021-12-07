@@ -1,10 +1,14 @@
 apiVersion: v1
 data:
+  {{- if .Values.cluster.id }}
+  CLUSTER_ID: {{ .Values.cluster.id }}
+  {{- else }}
   {{- $configmap := lookup "v1" "ConfigMap" .Release.Namespace "sap-btp-operator-config" -}}
   {{- if $configmap }}
   CLUSTER_ID: {{ $configmap.data.CLUSTER_ID }}
-  {{ else }}
-  CLUSTER_ID: {{.Values.cluster.id | default uuidv4}}
+  {{- else }}
+  CLUSTER_ID: {{ uuidv4}}
+  {{- end }}
   {{- end }}
   MANAGEMENT_NAMESPACE: {{.Release.Namespace}}
 kind: ConfigMap
