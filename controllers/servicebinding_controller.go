@@ -442,7 +442,11 @@ func (r *ServiceBindingReconciler) storeBindingSecret(ctx context.Context, k8sBi
 		}
 	} else {
 		var err error
-		credentialsMap, err = normalizeCredentials(smBinding.Credentials)
+		flattenLevel := int64(1)
+		if k8sBinding.Spec.FlattenSecretToLevel != nil {
+			flattenLevel = *k8sBinding.Spec.FlattenSecretToLevel
+		}
+		credentialsMap, err = normalizeCredentials(smBinding.Credentials, flattenLevel)
 		if err != nil {
 			logger.Error(err, "Failed to store binding secret")
 			return fmt.Errorf("failed to create secret. Error: %v", err.Error())

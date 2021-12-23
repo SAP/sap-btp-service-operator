@@ -180,7 +180,7 @@ var _ = Describe("ServiceBinding controller", func() {
 		bindingName = "test-binding-" + guid
 		fakeClient = &smfakes.FakeClient{}
 		fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: "12345678", Tags: []byte("[\"test\"]")}, nil)
-		fakeClient.BindReturns(&smclientTypes.ServiceBinding{ID: fakeBindingID, Credentials: json.RawMessage(`{"secret_key": "secret_value", "escaped": "{\"escaped_key\":\"escaped_val\"}"}`)}, "", nil)
+		fakeClient.BindReturns(&smclientTypes.ServiceBinding{ID: fakeBindingID, Credentials: json.RawMessage(`{"secret_key": "secret_value", "escaped": "{\"escaped_key\":\"escaped_val\"}", "unescaped": {"unescaped_key": "unescaped_val","deep": {"level": "3"}}}`)}, "", nil)
 
 		smInstance := &smclientTypes.ServiceInstance{ID: fakeInstanceID, Ready: true, LastOperation: &smTypes.Operation{State: smTypes.SUCCEEDED, Type: smTypes.UPDATE}}
 		fakeClient.GetInstanceByIDReturns(smInstance, nil)
@@ -324,6 +324,7 @@ var _ = Describe("ServiceBinding controller", func() {
 					bindingSecret := getSecret(ctx, createdBinding.Spec.SecretName, createdBinding.Namespace, true)
 					validateSecretData(bindingSecret, "secret_key", "secret_value")
 					validateSecretData(bindingSecret, "escaped", `{"escaped_key":"escaped_val"}`)
+					validateSecretData(bindingSecret, "unescaped", `{"deep":{"level":"3"},"unescaped_key":"unescaped_val"}`)
 					validateInstanceInfo(bindingSecret)
 				})
 
@@ -346,7 +347,7 @@ var _ = Describe("ServiceBinding controller", func() {
 					}, timeout, interval).Should(BeTrue())
 
 					bindingSecret := getSecret(ctx, binding.Spec.SecretName, bindingTestNamespace, true)
-					validateSecretData(bindingSecret, secretKey, `{"secret_key": "secret_value", "escaped": "{\"escaped_key\":\"escaped_val\"}"}`)
+					validateSecretData(bindingSecret, secretKey, `{"secret_key": "secret_value", "escaped": "{\"escaped_key\":\"escaped_val\"}", "unescaped": {"unescaped_key": "unescaped_val","deep": {"level": "3"}}}`)
 					validateInstanceInfo(bindingSecret)
 				})
 
@@ -374,11 +375,61 @@ var _ = Describe("ServiceBinding controller", func() {
 					Expect(bindingSecret.Data).To(HaveKey("root"))
 					res := make(map[string]string)
 					Expect(json.Unmarshal(bindingSecret.Data["root"], &res)).To(Succeed())
-					Expect(res[secretKey]).To(Equal(`{"secret_key": "secret_value", "escaped": "{\"escaped_key\":\"escaped_val\"}"}`))
+					Expect(res[secretKey]).To(Equal(`{"secret_key": "secret_value", "escaped": "{\"escaped_key\":\"escaped_val\"}", "unescaped": {"unescaped_key": "unescaped_val","deep": {"level": "3"}}}`))
 					Expect(res["plan"]).To(Equal("a-plan-name"))
 					Expect(res["label"]).To(Equal("an-offering-name"))
 					Expect(res["tags"]).To(Equal("[\"test\",\"custom-tag\"]"))
 					Expect(res).To(HaveKey("instance_guid"))
+				})
+
+				It("should flatten binding data to configured level 2 keys if spec.flattenSecretToLevel is provided as 2", func() {
+					ctx := context.Background()
+					binding := newBinding("binding-with-flatten-2", bindingTestNamespace)
+					flattenTolevel := int64(2)
+					binding.Spec.ServiceInstanceName = instanceName
+					binding.Spec.FlattenSecretToLevel = &flattenTolevel
+
+					_ = k8sClient.Create(ctx, binding)
+					bindingLookupKey := types.NamespacedName{Name: binding.Name, Namespace: binding.Namespace}
+					Eventually(func() bool {
+						err := k8sClient.Get(ctx, bindingLookupKey, binding)
+						if err != nil {
+							return false
+						}
+						return isReady(binding)
+					}, timeout, interval).Should(BeTrue())
+
+					bindingSecret := getSecret(ctx, binding.Spec.SecretName, bindingTestNamespace, true)
+					Expect(len(bindingSecret.Data)).To(Equal(9))
+					validateSecretData(bindingSecret, "secret_key", "secret_value")
+					validateSecretData(bindingSecret, "escaped", "{\"escaped_key\":\"escaped_val\"}")
+					validateSecretData(bindingSecret, "unescaped_unescaped_key", "unescaped_val")
+					validateSecretData(bindingSecret, "unescaped_deep", "{\"level\":\"3\"}")
+				})
+
+				It("should flatten binding data to configured level 3 keys if spec.flattenSecretToLevel is provided as 3", func() {
+					ctx := context.Background()
+					binding := newBinding("binding-with-flatten-3", bindingTestNamespace)
+					flattenTolevel := int64(3)
+					binding.Spec.ServiceInstanceName = instanceName
+					binding.Spec.FlattenSecretToLevel = &flattenTolevel
+
+					_ = k8sClient.Create(ctx, binding)
+					bindingLookupKey := types.NamespacedName{Name: binding.Name, Namespace: binding.Namespace}
+					Eventually(func() bool {
+						err := k8sClient.Get(ctx, bindingLookupKey, binding)
+						if err != nil {
+							return false
+						}
+						return isReady(binding)
+					}, timeout, interval).Should(BeTrue())
+
+					bindingSecret := getSecret(ctx, binding.Spec.SecretName, bindingTestNamespace, true)
+					Expect(len(bindingSecret.Data)).To(Equal(9))
+					validateSecretData(bindingSecret, "secret_key", "secret_value")
+					validateSecretData(bindingSecret, "escaped", "{\"escaped_key\":\"escaped_val\"}")
+					validateSecretData(bindingSecret, "unescaped_unescaped_key", "unescaped_val")
+					validateSecretData(bindingSecret, "unescaped_deep_level", "3")
 				})
 
 				When("secret deleted by user", func() {

@@ -25,5 +25,6 @@ sapbtp-operator-charts/templates/sap-operator.yml
 *.swp
 *.swo
 *~
+.vscode
 
 vendor

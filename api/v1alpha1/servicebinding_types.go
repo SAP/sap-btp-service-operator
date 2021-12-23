@@ -57,6 +57,12 @@ type ServiceBindingSpec struct {
 	// +optional
 	SecretRootKey *string `json:"secretRootKey,omitempty"`
 
+	// FlattenSecretToLevel instructs the operator th flatten the returned secret data
+	// directlyt to data in the secret instead of marshalling all in JSON
+	// up to the specified level
+	// +optional
+	FlattenSecretToLevel *int64 `json:"flattenSecretToLevel,omitempty"`
+
 	// Parameters for the binding.
 	//
 	// The Parameters field is NOT secret or secured in any way and should

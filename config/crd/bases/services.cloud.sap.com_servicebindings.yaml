@@ -89,6 +89,9 @@ spec:
               secretRootKey:
                 description: SecretRootKey is used as the key inside the secret to store all binding data including credentials returned by the broker and additional info under single key. Convenient way to store whole binding data in single file when using `volumeMounts`.
                 type: string
+              flattenSecretToLevel:
+                description: The data inside the binding is flattened by concatenating nested structured with "_" up to the specified level.
+                type: integer
               serviceInstanceName:
                 description: The k8s name of the service instance to bind, should be in the namespace of the binding
                 minLength: 1

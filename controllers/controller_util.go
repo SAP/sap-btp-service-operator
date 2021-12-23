@@ -8,7 +8,7 @@ import (
 	v1 "k8s.io/api/authentication/v1"
 )
 
-func normalizeCredentials(credentialsJSON json.RawMessage) (map[string][]byte, error) {
+func normalizeCredentials(credentialsJSON json.RawMessage, flattenLevel int64) (map[string][]byte, error) {
 	var credentialsMap map[string]interface{}
 	err := json.Unmarshal(credentialsJSON, &credentialsMap)
 	if err != nil {
@@ -16,13 +16,26 @@ func normalizeCredentials(credentialsJSON json.RawMessage) (map[string][]byte, e
 	}
 
 	normalized := make(map[string][]byte)
-	for propertyName, value := range credentialsMap {
-		keyString := strings.Replace(propertyName, " ", "_", -1)
-		normalizedValue, err := serialize(value)
-		if err != nil {
-			return nil, err
+	return flattenCredentials(credentialsMap, normalized, "", 1, flattenLevel)
+}
+
+func flattenCredentials(currentObject map[string]interface{}, normalized map[string][]byte, prefix string, currentLevel int64, flattenLevel int64) (map[string][]byte, error) {
+	for propertyName, value := range currentObject {
+		keyString := prefix + strings.Replace(propertyName, " ", "_", -1)
+
+		subObject, ok := value.(map[string]interface{})
+		if ok && currentLevel < flattenLevel {
+			_, err := flattenCredentials(subObject, normalized, keyString+"_", currentLevel+1, flattenLevel)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			normalizedValue, err := serialize(value)
+			if err != nil {
+				return nil, err
+			}
+			normalized[keyString] = normalizedValue
 		}
-		normalized[keyString] = normalizedValue
 	}
 	return normalized, nil
 }
