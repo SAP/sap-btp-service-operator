@@ -1,4 +1,4 @@
-{{- if .Values.manager.certificates.certManagement }}
+{{- if .Values.manager.certificates.certManager }}
 ---
 apiVersion: cert-manager.io/v1
 kind: Issuer

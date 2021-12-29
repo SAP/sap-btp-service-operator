@@ -21,6 +21,6 @@ manager:
     tokenurl:
     tokenurlsuffix: "/oauth/token"
   certificates:
-    certManagement: true
+    certManager: true
 cluster:
   id:
