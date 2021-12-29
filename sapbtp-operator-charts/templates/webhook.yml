@@ -1,0 +1,82 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  {{- if .Values.manager.certificates.certManager }}
+  annotations:
+    cert-manager.io/inject-ca-from: {{.Release.Namespace}}/sap-btp-operator-serving-cert
+  {{- end}}
+  name: sap-btp-operator-mutating-webhook-configuration
+webhooks:
+  - admissionReviewVersions:
+      - v1beta1
+      - v1
+    clientConfig:
+      service:
+        name: sap-btp-operator-webhook-service
+        namespace: {{.Release.Namespace}}
+        path: /mutate-services-cloud-sap-com-v1alpha1-servicebinding
+    failurePolicy: Fail
+    name: mservicebinding.kb.io
+    rules:
+      - apiGroups:
+          - services.cloud.sap.com
+        apiVersions:
+          - v1alpha1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - servicebindings
+    sideEffects: None
+  - admissionReviewVersions:
+      - v1beta1
+      - v1
+    clientConfig:
+      service:
+        name: sap-btp-operator-webhook-service
+        namespace: {{.Release.Namespace}}
+        path: /mutate-services-cloud-sap-com-v1alpha1-serviceinstance
+    failurePolicy: Fail
+    name: mserviceinstance.kb.io
+    rules:
+      - apiGroups:
+          - services.cloud.sap.com
+        apiVersions:
+          - v1alpha1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - serviceinstances
+    sideEffects: None
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  {{- if .Values.manager.certificates.certManager }}
+  annotations:
+    cert-manager.io/inject-ca-from: {{.Release.Namespace}}/sap-btp-operator-serving-cert
+  {{- end}}
+  name: sap-btp-operator-validating-webhook-configuration
+webhooks:
+  - admissionReviewVersions:
+      - v1beta1
+      - v1
+    clientConfig:
+      service:
+        name: sap-btp-operator-webhook-service
+        namespace: {{.Release.Namespace}}
+        path: /validate-services-cloud-sap-com-v1alpha1-servicebinding
+    failurePolicy: Fail
+    name: vservicebinding.kb.io
+    rules:
+      - apiGroups:
+          - services.cloud.sap.com
+        apiVersions:
+          - v1alpha1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - servicebindings
+    sideEffects: None
