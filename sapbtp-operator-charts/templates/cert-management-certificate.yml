@@ -1,0 +1,24 @@
+{{- if .Values.manager.certificates.certManagement }}
+---
+apiVersion: cert.gardener.cloud/v1alpha1
+kind: Certificate
+metadata:
+  name: sap-btp-operator-serving-cert
+  namespace: {{.Release.Namespace}}
+spec:
+  commonName: Kubernetes
+  dnsNames:
+  - sap-btp-operator-webhook-service.{{.Release.Namespace}}.svc
+  - sap-btp-operator-webhook-service.{{.Release.Namespace}}.svc.cluster.local
+  # if issuer is not specified, the default issuer is used
+  issuerRef:
+{{- if .Values.manager.certificates.certManagement.issuer }}
+    name: {{ .Values.manager.certificates.certManagement.issuer }}
+{{- else }}
+    name: issuer-ca
+{{- end}}
+  # optionally specify secret to store certificate
+  secretRef:
+    name: webhook-server-cert
+    namespace: {{.Release.Namespace}}
+{{- end}}

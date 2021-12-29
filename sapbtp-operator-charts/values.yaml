@@ -22,5 +22,30 @@ manager:
     tokenurlsuffix: "/oauth/token"
   certificates:
     certManager: true
+    # Configure if self-generated, self-signed certificates are used
+    # selfSigned: {}
+    # selfSigned:
+      # caBundle: "" # must be base64 encoded
+
+      # server-cert.pem
+      # crt: "" # must be base64 encoded
+
+      # server-key.pem
+      # key: "" # must be base64 encoded
+
+    # Configure if https://github.com/gardener/cert-management is used
+    # certManagement: {}
+    # certManagement:
+    ## set to use own issuer
+    # issuer:
+
+    ## setup to create issuer with own CA. This requires a caBUndle (ca-cert and ca-key)
+    # caBundle: "" # must be base64 encoded
+
+    ## ca-cert.pem
+    # crt: "" # must be base64 encoded
+
+    ## ca-key.pem
+    # key: "" # must be base64 encoded
 cluster:
   id:

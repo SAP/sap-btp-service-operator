@@ -15,6 +15,12 @@ webhooks:
         name: sap-btp-operator-webhook-service
         namespace: {{.Release.Namespace}}
         path: /mutate-services-cloud-sap-com-v1alpha1-servicebinding
+      {{- if .Values.manager.certificates.selfSigned }}
+      caBundle: {{.Values.manager.certificates.selfSigned.caBundle }}
+      {{- end }}
+      {{- if .Values.manager.certificates.certManagement }}
+      caBundle: {{.Values.manager.certificates.certManagement.caBundle }}
+      {{- end }}
     failurePolicy: Fail
     name: mservicebinding.kb.io
     rules:
@@ -67,6 +73,12 @@ webhooks:
         name: sap-btp-operator-webhook-service
         namespace: {{.Release.Namespace}}
         path: /validate-services-cloud-sap-com-v1alpha1-servicebinding
+      {{- if .Values.manager.certificates.selfSigned }}
+      caBundle: {{.Values.manager.certificates.selfSigned.caBundle }}
+      {{- end }}
+      {{- if .Values.manager.certificates.certManagement }}
+      caBundle: {{.Values.manager.certificates.certManagement.caBundle }}
+      {{- end }}
     failurePolicy: Fail
     name: vservicebinding.kb.io
     rules:
