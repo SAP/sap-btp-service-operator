@@ -18,8 +18,8 @@ webhooks:
       {{- if .Values.manager.certificates.selfSigned }}
       caBundle: {{.Values.manager.certificates.selfSigned.caBundle }}
       {{- end }}
-      {{- if .Values.manager.certificates.certManagement }}
-      caBundle: {{.Values.manager.certificates.certManagement.caBundle }}
+      {{- if .Values.manager.certificates.gardenerCertManager }}
+      caBundle: {{.Values.manager.certificates.gardenerCertManager.caBundle }}
       {{- end }}
     failurePolicy: Fail
     name: mservicebinding.kb.io
@@ -76,8 +76,8 @@ webhooks:
       {{- if .Values.manager.certificates.selfSigned }}
       caBundle: {{.Values.manager.certificates.selfSigned.caBundle }}
       {{- end }}
-      {{- if .Values.manager.certificates.certManagement }}
-      caBundle: {{.Values.manager.certificates.certManagement.caBundle }}
+      {{- if .Values.manager.certificates.gardenerCertManager }}
+      caBundle: {{.Values.manager.certificates.gardenerCertManager.caBundle }}
       {{- end }}
     failurePolicy: Fail
     name: vservicebinding.kb.io

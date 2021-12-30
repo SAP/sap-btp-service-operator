@@ -21,6 +21,7 @@ manager:
     tokenurl:
     tokenurlsuffix: "/oauth/token"
   certificates:
+    # Configure if https://github.com/jetstack/cert-manager is used
     certManager: true
     # Configure if self-generated, self-signed certificates are used
     # selfSigned: {}
@@ -34,8 +35,8 @@ manager:
       # key: "" # must be base64 encoded
 
     # Configure if https://github.com/gardener/cert-management is used
-    # certManagement: {}
-    # certManagement:
+    # gardenerCertManager: {}
+    # gardenerCertManager:
     ## set to use own issuer
     # issuer:
 

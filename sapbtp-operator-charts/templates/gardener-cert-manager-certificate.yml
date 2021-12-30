@@ -1,4 +1,4 @@
-{{- if .Values.manager.certificates.certManagement }}
+{{- if .Values.manager.certificates.gardenerCertManager }}
 ---
 apiVersion: cert.gardener.cloud/v1alpha1
 kind: Certificate
@@ -12,12 +12,11 @@ spec:
   - sap-btp-operator-webhook-service.{{.Release.Namespace}}.svc.cluster.local
   # if issuer is not specified, the default issuer is used
   issuerRef:
-{{- if .Values.manager.certificates.certManagement.issuer }}
-    name: {{ .Values.manager.certificates.certManagement.issuer }}
+{{- if .Values.manager.certificates.gardenerCertManager.issuer }}
+    name: {{ .Values.manager.certificates.gardenerCertManager.issuer }}
 {{- else }}
     name: issuer-ca
 {{- end}}
-  # optionally specify secret to store certificate
   secretRef:
     name: webhook-server-cert
     namespace: {{.Release.Namespace}}
