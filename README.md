@@ -98,8 +98,7 @@ This feature is still under development, review, and testing.
     ```bash
     helm upgrade --install <release-name> sap-btp-operator/sap-btp-operator \
         --create-namespace \
-        --namespace=sap-btp-operator \
-        --version=<release> \
+        --namespace=sap-btp-operator \        
         --set manager.secret.clientid=<clientid> \
         --set manager.secret.clientsecret=<clientsecret> \
         --set manager.secret.url=<sm_url> \
@@ -109,17 +108,14 @@ This feature is still under development, review, and testing.
     ```bash
     helm upgrade --install <release-name> sap-btp-operator/sap-btp-operator \
         --create-namespace \
-        --namespace=sap-btp-operator \
-        --version=<release> \
+        --namespace=sap-btp-operator \        
         --set manager.secret.clientid=<clientid> \
         --set manager.secret.tls.crt="$(cat /path/to/cert)" \
         --set manager.secret.tls.key="$(cat /path/to/key)" \
         --set manager.secret.url=<sm_url> \
         --set manager.secret.tokenurl=<certurl>
     ```
-    
-
-    The list of available releases: [sapbtp-operator releases](https://github.com/SAP/sap-btp-service-operator/releases)
+        
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes).
 
@@ -359,8 +355,10 @@ using the access credentials stored in the cluster.
 - The SAP BTP kubectl plugin is currently based on `bash`. If you're using Windows, you should utilize the SAP BTP plugin commands from a linux shell (e.g. [Cygwin](https://www.cygwin.com/)).  
 
 ### Installation
-- Download https://github.com/SAP/sap-btp-service-operator/releases/download/v0.1.6/kubectl-sapbtp
+- Download `https://github.com/SAP/sap-btp-service-operator/releases/download/<release>/kubectl-sapbtp`
 - Move the executable file to any location in your `PATH`
+
+The list of available releases: [sapbtp-operator releases](https://github.com/SAP/sap-btp-service-operator/releases)
 
 ### Usage
 ```
