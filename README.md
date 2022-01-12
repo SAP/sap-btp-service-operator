@@ -336,6 +336,7 @@ Multiple parameters could be listed in the secret - simply separate key/value pa
       "key3": "value3"
     }'
 ```
+[Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes).
 
 ## SAP BTP kubectl Plugin (Experimental)
 The SAP BTP kubectl plugin extends kubectl with commands for getting the available services in your SAP BTP account by
