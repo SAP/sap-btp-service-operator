@@ -16,7 +16,6 @@ This feature is still under development, review, and testing.
 ## Table of Contents
 * [Prerequisites](#prerequisites)
 * [Setup Operator](#setup)
-* [SAP BTP kubectl extension](#sap-btp-kubectl-plugin-experimental)
 * [Using the SAP BTP Service Operator](#using-the-sap-btp-service-operator)
     * [Creating a service instance](#step-1-create-a-service-instance)
     * [Binding the service instance](#step-2-create-a-service-binding)
@@ -24,6 +23,7 @@ This feature is still under development, review, and testing.
     * [Service instance properties](#service-instance)
     * [Binding properties](#service-binding)
     * [Passing parameters](#passing-parameters)
+* [SAP BTP kubectl extension](#sap-btp-kubectl-plugin-experimental)    
 
 ## Prerequisites
 - SAP BTP [Global Account](https://help.sap.com/viewer/65de2977205c403bbc107264b8eccf4b/Cloud/en-US/d61c2819034b48e68145c45c36acba6e.html) and [Subaccount](https://help.sap.com/viewer/65de2977205c403bbc107264b8eccf4b/Cloud/en-US/55d0b6d8b96846b8ae93b85194df0944.html) 
@@ -337,14 +337,7 @@ Multiple parameters could be listed in the secret - simply separate key/value pa
     }'
 ```
 
-## Support
-You're welcome to raise issues related to feature requests, bugs, or give us general feedback on this project's GitHub Issues page. 
-The SAP BTP service operator project maintainers will respond to the best of their abilities. 
-
-## Contributions
-We currently do not accept community contributions. 
-
-## SAP BTP kubectl Plugin (Experimental) 
+## SAP BTP kubectl Plugin (Experimental)
 The SAP BTP kubectl plugin extends kubectl with commands for getting the available services in your SAP BTP account by
 using the access credentials stored in the cluster.
 
@@ -352,7 +345,7 @@ using the access credentials stored in the cluster.
 - [jq](https://stedolan.github.io/jq/)
 
 ### Limitations
-- The SAP BTP kubectl plugin is currently based on `bash`. If you're using Windows, you should utilize the SAP BTP plugin commands from a linux shell (e.g. [Cygwin](https://www.cygwin.com/)).  
+- The SAP BTP kubectl plugin is currently based on `bash`. If you're using Windows, you should utilize the SAP BTP plugin commands from a linux shell (e.g. [Cygwin](https://www.cygwin.com/)).
 
 ### Installation
 - Download `https://github.com/SAP/sap-btp-service-operator/releases/download/<release>/kubectl-sapbtp`
@@ -368,11 +361,17 @@ The list of available releases: [sapbtp-operator releases](https://github.com/SA
 ```
 
 Use the `namespace` parameter to specify the location of the secret containing the SAP BTP access credentials.  
-Usually it is the namespace in which you installed the operator. 
-If not specified, the `default` namespace is used. 
+Usually it is the namespace in which you installed the operator.
+If not specified, the `default` namespace is used.
 
+## Support
+You're welcome to raise issues related to feature requests, bugs, or give us general feedback on this project's GitHub Issues page. 
+The SAP BTP service operator project maintainers will respond to the best of their abilities. 
 
-[Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
+## Contributions
+We currently do not accept community contributions. 
 
 ## License
 This project is licensed under Apache 2.0 except as noted otherwise in the [license](./LICENSE) file.
+
+[Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
