@@ -53,6 +53,7 @@ type Client interface {
 	GetBindingByID(string, *Parameters) (*types.ServiceBinding, error)
 	Bind(binding *types.ServiceBinding, q *Parameters, user string) (*types.ServiceBinding, string, error)
 	Unbind(id string, q *Parameters, user string) (string, error)
+	RenameBinding(id, newName string) (*types.ServiceBinding, error)
 
 	ListOfferings(*Parameters) (*types.ServiceOfferings, error)
 	ListPlans(*Parameters) (*types.ServicePlans, error)
@@ -225,6 +226,16 @@ func (client *serviceManagerClient) UpdateInstance(id string, updatedInstance *t
 		return nil, "", err
 	}
 	return result, location, nil
+}
+
+func (client *serviceManagerClient) RenameBinding(id, newName string) (*types.ServiceBinding, error) {
+	renameRequest := map[string]string{
+		"name": newName,
+	}
+
+	var result *types.ServiceBinding
+	_, err := client.update(renameRequest, web.ServiceBindingsURL, id, nil, "", &result)
+	return result, err
 }
 
 func (client *serviceManagerClient) list(result interface{}, url string, q *Parameters) error {

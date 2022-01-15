@@ -52,6 +52,9 @@ const (
 	Unknown = "Unknown"
 )
 
+type LogKey struct {
+}
+
 type BaseReconciler struct {
 	client.Client
 	Log            logr.Logger
@@ -62,10 +65,15 @@ type BaseReconciler struct {
 	Recorder       record.EventRecorder
 }
 
-func (r *BaseReconciler) getSMClient(ctx context.Context, object servicesv1alpha1.SAPBTPResource, log logr.Logger) (sm.Client, error) {
+func GetLogger(ctx context.Context) logr.Logger {
+	return ctx.Value(LogKey{}).(logr.Logger)
+}
+
+func (r *BaseReconciler) getSMClient(ctx context.Context, object servicesv1alpha1.SAPBTPResource) (sm.Client, error) {
 	if r.SMClient != nil {
 		return r.SMClient(), nil
 	}
+	log := GetLogger(ctx)
 
 	secret, err := r.SecretResolver.GetSecretForResource(ctx, object.GetNamespace(), secrets.SAPBTPOperatorSecretName)
 	if err != nil {
@@ -97,7 +105,8 @@ func (r *BaseReconciler) getSMClient(ctx context.Context, object servicesv1alpha
 	return cl, err
 }
 
-func (r *BaseReconciler) removeFinalizer(ctx context.Context, object servicesv1alpha1.SAPBTPResource, finalizerName string, log logr.Logger) error {
+func (r *BaseReconciler) removeFinalizer(ctx context.Context, object servicesv1alpha1.SAPBTPResource, finalizerName string) error {
+	log := GetLogger(ctx)
 	if controllerutil.ContainsFinalizer(object, finalizerName) {
 		controllerutil.RemoveFinalizer(object, finalizerName)
 		if err := r.Update(ctx, object); err != nil {
@@ -271,7 +280,8 @@ func isDelete(object metav1.ObjectMeta) bool {
 	return !object.DeletionTimestamp.IsZero()
 }
 
-func isTransientError(err error, log logr.Logger) bool {
+func isTransientError(ctx context.Context, err error) bool {
+	log := GetLogger(ctx)
 	if smError, ok := err.(*sm.ServiceManagerError); ok {
 		log.Info(fmt.Sprintf("SM returned error status code %d", smError.StatusCode))
 		return smError.StatusCode == http.StatusTooManyRequests || smError.StatusCode == http.StatusServiceUnavailable || smError.StatusCode == http.StatusGatewayTimeout || smError.StatusCode == http.StatusNotFound
@@ -279,7 +289,8 @@ func isTransientError(err error, log logr.Logger) bool {
 	return false
 }
 
-func (r *BaseReconciler) markAsNonTransientError(ctx context.Context, operationType smTypes.OperationCategory, nonTransientErr error, object servicesv1alpha1.SAPBTPResource, log logr.Logger) (ctrl.Result, error) {
+func (r *BaseReconciler) markAsNonTransientError(ctx context.Context, operationType smTypes.OperationCategory, nonTransientErr error, object servicesv1alpha1.SAPBTPResource) (ctrl.Result, error) {
+	log := GetLogger(ctx)
 	setFailureConditions(operationType, nonTransientErr.Error(), object)
 	if operationType != smTypes.DELETE {
 		log.Info(fmt.Sprintf("operation %s of %s encountered a non transient error %s, giving up operation :(", operationType, object.GetControllerName(), nonTransientErr.Error()))
@@ -295,7 +306,8 @@ func (r *BaseReconciler) markAsNonTransientError(ctx context.Context, operationT
 	return ctrl.Result{}, nil
 }
 
-func (r *BaseReconciler) markAsTransientError(ctx context.Context, operationType smTypes.OperationCategory, transientErr error, object servicesv1alpha1.SAPBTPResource, log logr.Logger) (ctrl.Result, error) {
+func (r *BaseReconciler) markAsTransientError(ctx context.Context, operationType smTypes.OperationCategory, transientErr error, object servicesv1alpha1.SAPBTPResource) (ctrl.Result, error) {
+	log := GetLogger(ctx)
 	setInProgressConditions(operationType, transientErr.Error(), object)
 	log.Info(fmt.Sprintf("operation %s of %s encountered a transient error %s, retrying operation :)", operationType, object.GetControllerName(), transientErr.Error()))
 	if err := r.updateStatus(ctx, object); err != nil {

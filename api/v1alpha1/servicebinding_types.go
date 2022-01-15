@@ -21,6 +21,7 @@ import (
 	v1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"time"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -79,6 +80,10 @@ type ServiceBindingSpec struct {
 	// end-user. User-provided values for this field are not saved.
 	// +optional
 	UserInfo *v1.UserInfo `json:"userInfo,omitempty"`
+
+	// CredentialsRotationConfiguration indicates whether automatic credentials rotation required.
+	// +optional
+	CredRotationConfig *CredentialsRotationConfiguration `json:"credentialsRotationConfig,omitempty"`
 }
 
 // ServiceBindingStatus defines the observed state of ServiceBinding
@@ -108,6 +113,9 @@ type ServiceBindingStatus struct {
 
 	// Indicates whether binding is ready for usage
 	Ready metav1.ConditionStatus `json:"ready,omitempty"`
+
+	// Indicates when binding secret was rotated
+	LastCredentialsRotationTime metav1.Time `json:"lastCredentialsRotationTime,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -179,6 +187,11 @@ type ServiceBindingList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []ServiceBinding `json:"items"`
+}
+
+type CredentialsRotationConfiguration struct {
+	Enabled          bool          `json:"enabled,omitempty"`
+	RotationInterval time.Duration `json:"rotationInterval,omitempty"`
 }
 
 func init() {
