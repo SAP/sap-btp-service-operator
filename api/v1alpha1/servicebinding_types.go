@@ -17,11 +17,12 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"time"
+
 	"github.com/Peripli/service-manager/pkg/types"
 	v1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"time"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
