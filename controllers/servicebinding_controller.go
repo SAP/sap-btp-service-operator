@@ -225,7 +225,8 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 	serviceBinding.Status.BindingID = smBinding.ID
 	serviceBinding.Status.Ready = metav1.ConditionTrue
 	if r.credRotationEnabled(serviceBinding) {
-		serviceBinding.Status.LastCredentialsRotationTime = metav1.NewTime(time.Now())
+		now := metav1.NewTime(time.Now())
+		serviceBinding.Status.LastCredentialsRotationTime = &now
 	}
 	setSuccessConditions(smTypes.CREATE, serviceBinding)
 	log.Info("Updating binding", "bindingID", smBinding.ID)
@@ -346,7 +347,8 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, smClient sm.Client,
 			}
 			serviceBinding.Status.Ready = metav1.ConditionTrue
 			if r.credRotationEnabled(serviceBinding) {
-				serviceBinding.Status.LastCredentialsRotationTime = metav1.NewTime(time.Now())
+				now := metav1.NewTime(time.Now())
+				serviceBinding.Status.LastCredentialsRotationTime = &now
 			}
 			setSuccessConditions(smTypes.OperationCategory(status.Type), serviceBinding)
 		case smTypes.DELETE:
@@ -445,7 +447,8 @@ func (r *ServiceBindingReconciler) resyncBindingStatus(k8sBinding *v1alpha1.Serv
 		if err != nil {
 			createdAt = time.Now()
 		}
-		k8sBinding.Status.LastCredentialsRotationTime = metav1.NewTime(createdAt)
+		createdAtTime := metav1.NewTime(createdAt)
+		k8sBinding.Status.LastCredentialsRotationTime = &createdAtTime
 	}
 }
 
@@ -684,7 +687,7 @@ func (r *ServiceBindingReconciler) singleKeyMap(credentialsMap map[string][]byte
 }
 
 func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, smClient sm.Client, binding *v1alpha1.ServiceBinding) {
-	//r.getBindingForRecovery()
+	_, _ = r.getBindingForRecovery(ctx, smClient, binding)
 }
 
 func (r *ServiceBindingReconciler) credRotationEnabled(binding *v1alpha1.ServiceBinding) bool {

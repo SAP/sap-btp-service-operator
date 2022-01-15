@@ -115,7 +115,7 @@ type ServiceBindingStatus struct {
 	Ready metav1.ConditionStatus `json:"ready,omitempty"`
 
 	// Indicates when binding secret was rotated
-	LastCredentialsRotationTime metav1.Time `json:"lastCredentialsRotationTime,omitempty"`
+	LastCredentialsRotationTime *metav1.Time `json:"lastCredentialsRotationTime,omitempty"`
 }
 
 // +kubebuilder:object:root=true
