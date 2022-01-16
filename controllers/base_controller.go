@@ -50,6 +50,10 @@ const (
 
 	Blocked = "Blocked"
 	Unknown = "Unknown"
+
+	//Cred Rotation
+	CredPreparing = "Preparing"
+	CredRotating  = "Rotating"
 )
 
 type LogKey struct {
@@ -227,6 +231,21 @@ func setSuccessConditions(operationType smTypes.OperationCategory, object servic
 	meta.SetStatusCondition(&conditions, getReadyCondition(object))
 
 	object.SetConditions(conditions)
+}
+
+func setCredRotationInProgress(reason, message string, object servicesv1alpha1.SAPBTPResource) {
+	if len(message) == 0 {
+		message = reason
+	}
+	conditions := object.GetConditions()
+	credRotCondition := metav1.Condition{
+		Type:               servicesv1alpha1.ConditionCredRotationInProgress,
+		Status:             metav1.ConditionTrue,
+		Reason:             reason,
+		Message:            message,
+		ObservedGeneration: object.GetGeneration(),
+	}
+	meta.SetStatusCondition(&conditions, credRotCondition)
 }
 
 func setFailureConditions(operationType smTypes.OperationCategory, errorMessage string, object servicesv1alpha1.SAPBTPResource) {

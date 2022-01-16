@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"time"
 
 	"github.com/google/uuid"
@@ -91,9 +92,21 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return r.delete(ctx, smClient, serviceBinding)
 	}
 
+	if serviceBinding.Status.Ready == metav1.ConditionTrue {
+		if ok, err := r.initCredRotationIfRequired(ctx, serviceBinding); ok || err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
+	if meta.IsStatusConditionTrue(serviceBinding.Status.Conditions, v1alpha1.ConditionCredRotationInProgress) {
+		if err := r.rotateCredentials(ctx, smClient, serviceBinding); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
 	if serviceBinding.GetObservedGeneration() > 0 && !isInProgress(serviceBinding) {
 		log.Info("Binding in final state")
-		return r.maintain(ctx, serviceBinding, smClient)
+		return r.maintain(ctx, serviceBinding)
 	}
 
 	log.Info(fmt.Sprintf("Current generation is %v and observed is %v", serviceBinding.Generation, serviceBinding.GetObservedGeneration()))
@@ -605,7 +618,7 @@ func (r *ServiceBindingReconciler) validateSecretNameIsAvailable(ctx context.Con
 	return nil
 }
 
-func (r *ServiceBindingReconciler) maintain(ctx context.Context, binding *v1alpha1.ServiceBinding, smClient sm.Client) (ctrl.Result, error) {
+func (r *ServiceBindingReconciler) maintain(ctx context.Context, binding *v1alpha1.ServiceBinding) (ctrl.Result, error) {
 	log := GetLogger(ctx)
 	shouldUpdateStatus := false
 	if binding.Generation != binding.Status.ObservedGeneration {
@@ -630,12 +643,6 @@ func (r *ServiceBindingReconciler) maintain(ctx context.Context, binding *v1alph
 	if shouldUpdateStatus {
 		log.Info(fmt.Sprintf("maintanance required for binding %s", binding.Name))
 		return ctrl.Result{}, r.updateStatus(ctx, binding)
-	}
-
-	if r.credRotationEnabled(binding) {
-		if time.Since(binding.Status.LastCredentialsRotationTime.Time) > binding.Spec.CredRotationConfig.RotationInterval {
-			r.rotateCredentials(ctx, smClient, binding)
-		}
 	}
 
 	return ctrl.Result{}, nil
@@ -686,12 +693,83 @@ func (r *ServiceBindingReconciler) singleKeyMap(credentialsMap map[string][]byte
 	}, nil
 }
 
-func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, smClient sm.Client, binding *v1alpha1.ServiceBinding) {
-	_, _ = r.getBindingForRecovery(ctx, smClient, binding)
+func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, smClient sm.Client, binding *v1alpha1.ServiceBinding) error {
+	log := GetLogger(ctx)
+	conditions := binding.GetConditions()
+	credInProgressCondition := meta.FindStatusCondition(conditions, v1alpha1.ConditionCredRotationInProgress)
+
+	if credInProgressCondition.Reason == CredRotating {
+		if len(binding.Status.BindingID) > 0 && binding.Status.Ready == metav1.ConditionTrue {
+			log.Info("Credentials rotation - finished successfully")
+			now := metav1.NewTime(time.Now())
+			binding.Status.LastCredentialsRotationTime = &now
+			meta.RemoveStatusCondition(&conditions, v1alpha1.ConditionCredRotationInProgress)
+			return r.updateStatus(ctx, binding)
+		}
+		log.Info("Credentials rotation - waiting to finish")
+		return nil
+	}
+
+	// if has old binding delete it
+	log.Info("Credentials rotation - deleting old binding", "name", binding.Spec.ExternalName+"_old")
+	smBinding, errGet := r.getBindingForRecovery(ctx, smClient, binding) // TODO: change externalName
+	if errGet != nil && !apierrors.IsNotFound(errGet) {
+		log.Info("Credentials rotation - failed get old binding", "binding", binding.Spec.ExternalName+"_old")
+		setCredRotationInProgress(CredPreparing, errGet.Error(), binding)
+		if errStatus := r.updateStatus(ctx, binding); errStatus != nil {
+			return errStatus
+		}
+		return errGet
+	}
+
+	if smBinding != nil && smBinding.LastOperation.Type != smTypes.DELETE {
+		_, unbindErr := smClient.Unbind(smBinding.ID, nil, "")
+		if unbindErr != nil {
+			log.Info("Credentials rotation - failed to unbind", "binding", binding.Spec.ExternalName+"_old")
+			setCredRotationInProgress(CredPreparing, unbindErr.Error(), binding)
+			if errStatus := r.updateStatus(ctx, binding); errStatus != nil {
+				return errStatus
+			}
+			return unbindErr
+		}
+	}
+
+	// rename current binding
+	log.Info("Credentials rotation - renaming binding to old", "current", binding.Spec.ExternalName)
+	if _, errRenaming := smClient.RenameBinding(binding.Status.BindingID, binding.Spec.ExternalName+"_old"); errRenaming != nil {
+		log.Info("Credentials rotation - failed renaming binding to old", "current", binding.Spec.ExternalName)
+		setCredRotationInProgress(CredPreparing, errRenaming.Error(), binding)
+		if errStatus := r.updateStatus(ctx, binding); errStatus != nil {
+			return errStatus
+		}
+		return errRenaming
+	}
+
+	binding.Status.BindingID = ""
+	binding.Status.Ready = metav1.ConditionFalse
+	setInProgressConditions(smTypes.CREATE, "rotating binding credentials", binding)
+	setCredRotationInProgress(CredRotating, "", binding)
+	log.Info("Credentials rotation - creating new binding")
+	return r.updateStatus(ctx, binding)
 }
 
 func (r *ServiceBindingReconciler) credRotationEnabled(binding *v1alpha1.ServiceBinding) bool {
 	return binding.Spec.CredRotationConfig != nil && binding.Spec.CredRotationConfig.Enabled
+}
+
+func (r *ServiceBindingReconciler) initCredRotationIfRequired(ctx context.Context, binding *v1alpha1.ServiceBinding) (bool, error) {
+	if isFailed(binding) || !r.credRotationEnabled(binding) || binding.Status.LastCredentialsRotationTime == nil {
+		return false, nil
+	}
+
+	if time.Since(binding.Status.LastCredentialsRotationTime.Time) > binding.Spec.CredRotationConfig.RotationInterval {
+		setCredRotationInProgress(CredPreparing, "", binding)
+		if err := r.Status().Update(ctx, binding); err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+	return false, nil
 }
 
 func mergeInstanceTags(offeringTags, customTags []string) []string {

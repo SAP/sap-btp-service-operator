@@ -23,6 +23,9 @@ const (
 
 	// ConditionReady represents if the resource ready for usage.
 	ConditionReady = "Ready"
+
+	// ConditionCredRotationInProgress represents if cred rotation is in progress
+	ConditionCredRotationInProgress = "CredRotationInProgress"
 )
 
 // +kubebuilder:object:generate=false
