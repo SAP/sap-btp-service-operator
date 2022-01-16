@@ -20,8 +20,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"k8s.io/apimachinery/pkg/api/meta"
 	"time"
+
+	"k8s.io/apimachinery/pkg/api/meta"
 
 	"github.com/google/uuid"
 
@@ -153,7 +154,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			return ctrl.Result{}, r.updateStatus(ctx, serviceBinding)
 		}
 
-		binding, err := r.getBindingForRecovery(ctx, smClient, serviceBinding)
+		binding, err := r.getBindingForRecovery(ctx, smClient, serviceBinding, "")
 		if err != nil {
 			log.Error(err, "failed to check binding recovery")
 			return r.markAsTransientError(ctx, smTypes.CREATE, err, serviceBinding)
@@ -248,11 +249,12 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 }
 
 func (r *ServiceBindingReconciler) delete(ctx context.Context, smClient sm.Client, serviceBinding *v1alpha1.ServiceBinding) (ctrl.Result, error) {
+	// TODO: remove old binding
 	log := GetLogger(ctx)
 	if controllerutil.ContainsFinalizer(serviceBinding, v1alpha1.FinalizerName) {
 		if len(serviceBinding.Status.BindingID) == 0 {
 			log.Info("No binding id found validating binding does not exists in SM before removing finalizer")
-			smBinding, err := r.getBindingForRecovery(ctx, smClient, serviceBinding)
+			smBinding, err := r.getBindingForRecovery(ctx, smClient, serviceBinding, "")
 			if err != nil {
 				return ctrl.Result{}, err
 			}
@@ -550,9 +552,12 @@ func (r *ServiceBindingReconciler) deleteBindingSecret(ctx context.Context, bind
 	return nil
 }
 
-func (r *ServiceBindingReconciler) getBindingForRecovery(ctx context.Context, smClient sm.Client, serviceBinding *v1alpha1.ServiceBinding) (*smclientTypes.ServiceBinding, error) {
+func (r *ServiceBindingReconciler) getBindingForRecovery(ctx context.Context, smClient sm.Client, serviceBinding *v1alpha1.ServiceBinding, name string) (*smclientTypes.ServiceBinding, error) {
 	log := GetLogger(ctx)
-	nameQuery := fmt.Sprintf("name eq '%s'", serviceBinding.Spec.ExternalName)
+	if len(name) == 0 {
+		name = serviceBinding.Spec.ExternalName
+	}
+	nameQuery := fmt.Sprintf("name eq '%s'", name)
 	clusterIDQuery := fmt.Sprintf("context/clusterid eq '%s'", r.Config.ClusterID)
 	namespaceQuery := fmt.Sprintf("context/namespace eq '%s'", serviceBinding.Namespace)
 	k8sNameQuery := fmt.Sprintf("%s eq '%s'", k8sNameLabel, serviceBinding.Name)
@@ -710,11 +715,12 @@ func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, smClie
 		return nil
 	}
 
+	oldName := binding.Spec.ExternalName + "_old"
 	// if has old binding delete it
-	log.Info("Credentials rotation - deleting old binding", "name", binding.Spec.ExternalName+"_old")
-	smBinding, errGet := r.getBindingForRecovery(ctx, smClient, binding) // TODO: change externalName
+	log.Info("Credentials rotation - deleting old binding", "binding", oldName)
+	smBinding, errGet := r.getBindingForRecovery(ctx, smClient, binding, oldName)
 	if errGet != nil && !apierrors.IsNotFound(errGet) {
-		log.Info("Credentials rotation - failed get old binding", "binding", binding.Spec.ExternalName+"_old")
+		log.Info("Credentials rotation - failed get old binding", "binding", oldName)
 		setCredRotationInProgress(CredPreparing, errGet.Error(), binding)
 		if errStatus := r.updateStatus(ctx, binding); errStatus != nil {
 			return errStatus
@@ -722,22 +728,25 @@ func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, smClie
 		return errGet
 	}
 
-	if smBinding != nil && smBinding.LastOperation.Type != smTypes.DELETE {
-		_, unbindErr := smClient.Unbind(smBinding.ID, nil, "")
-		if unbindErr != nil {
-			log.Info("Credentials rotation - failed to unbind", "binding", binding.Spec.ExternalName+"_old")
-			setCredRotationInProgress(CredPreparing, unbindErr.Error(), binding)
-			if errStatus := r.updateStatus(ctx, binding); errStatus != nil {
-				return errStatus
+	if smBinding != nil {
+		lastOp := smBinding.LastOperation
+		if lastOp.Type != smTypes.DELETE || (lastOp.Type == smTypes.DELETE && lastOp.State == smTypes.FAILED) {
+			_, unbindErr := smClient.Unbind(smBinding.ID, nil, "")
+			if unbindErr != nil {
+				log.Info("Credentials rotation - failed to unbind", "binding", oldName)
+				setCredRotationInProgress(CredPreparing, unbindErr.Error(), binding)
+				if errStatus := r.updateStatus(ctx, binding); errStatus != nil {
+					return errStatus
+				}
+				return unbindErr
 			}
-			return unbindErr
 		}
 	}
 
 	// rename current binding
 	log.Info("Credentials rotation - renaming binding to old", "current", binding.Spec.ExternalName)
-	if _, errRenaming := smClient.RenameBinding(binding.Status.BindingID, binding.Spec.ExternalName+"_old"); errRenaming != nil {
-		log.Info("Credentials rotation - failed renaming binding to old", "current", binding.Spec.ExternalName)
+	if _, errRenaming := smClient.RenameBinding(binding.Status.BindingID, oldName); errRenaming != nil {
+		log.Info("Credentials rotation - failed renaming binding to old", "binding", binding.Spec.ExternalName)
 		setCredRotationInProgress(CredPreparing, errRenaming.Error(), binding)
 		if errStatus := r.updateStatus(ctx, binding); errStatus != nil {
 			return errStatus
