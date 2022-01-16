@@ -52,6 +52,7 @@ func (sb *ServiceBinding) ValidateCreate() error {
 func (sb *ServiceBinding) ValidateUpdate(old runtime.Object) error {
 	servicebindinglog.Info("validate update", "name", sb.Name)
 
+	//TODO: Allow changing credentialsRotationConfig
 	if sb.specChanged(old) && sb.Status.BindingID != "" {
 		return fmt.Errorf("updating service bindings is not supported")
 	}

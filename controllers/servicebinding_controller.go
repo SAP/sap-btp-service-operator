@@ -249,9 +249,19 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 }
 
 func (r *ServiceBindingReconciler) delete(ctx context.Context, smClient sm.Client, serviceBinding *v1alpha1.ServiceBinding) (ctrl.Result, error) {
-	// TODO: remove old binding
 	log := GetLogger(ctx)
 	if controllerutil.ContainsFinalizer(serviceBinding, v1alpha1.FinalizerName) {
+		//delete rotated binding if exists
+		oldBinding, errGet := r.getBindingForRecovery(ctx, smClient, serviceBinding, serviceBinding.Spec.ExternalName+"_old")
+		if errGet != nil {
+			return ctrl.Result{}, errGet
+		}
+		if oldBinding != nil {
+			if _, err := smClient.Unbind(oldBinding.ID, nil, ""); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+
 		if len(serviceBinding.Status.BindingID) == 0 {
 			log.Info("No binding id found validating binding does not exists in SM before removing finalizer")
 			smBinding, err := r.getBindingForRecovery(ctx, smClient, serviceBinding, "")
@@ -719,7 +729,7 @@ func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, smClie
 	// if has old binding delete it
 	log.Info("Credentials rotation - deleting old binding", "binding", oldName)
 	smBinding, errGet := r.getBindingForRecovery(ctx, smClient, binding, oldName)
-	if errGet != nil && !apierrors.IsNotFound(errGet) {
+	if errGet != nil {
 		log.Info("Credentials rotation - failed get old binding", "binding", oldName)
 		setCredRotationInProgress(CredPreparing, errGet.Error(), binding)
 		if errStatus := r.updateStatus(ctx, binding); errStatus != nil {
