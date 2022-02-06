@@ -44,8 +44,7 @@ import (
 )
 
 const (
-	StaleLabel = "services.cloud.sap.com/stale"
-	OldSuffix  = "__old__"
+	OldSuffix = "__old__"
 )
 
 // ServiceBindingReconciler reconciles a ServiceBinding object
@@ -768,7 +767,7 @@ func (r *ServiceBindingReconciler) initCredRotationIfRequired(ctx context.Contex
 func (r *ServiceBindingReconciler) createOldBinding(ctx context.Context, newK8SName string, binding *v1alpha1.ServiceBinding) error {
 	oldBinding := newBinding(newK8SName, binding.Namespace)
 	oldBinding.Labels = map[string]string{
-		StaleLabel: "true",
+		v1alpha1.StaleLabel: "true",
 	}
 	spec := binding.Spec.DeepCopy()
 	spec.CredRotationConfig = nil

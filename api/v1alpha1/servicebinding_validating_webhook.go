@@ -52,7 +52,15 @@ func (sb *ServiceBinding) ValidateCreate() error {
 func (sb *ServiceBinding) ValidateUpdate(old runtime.Object) error {
 	servicebindinglog.Info("validate update", "name", sb.Name)
 
-	if sb.specChanged(old) && sb.Status.BindingID != "" {
+	specChanged := sb.specChanged(old)
+	isStale := false
+	if sb.Labels != nil {
+		if _, ok := sb.Labels[StaleLabel]; ok {
+			isStale = true
+		}
+	}
+
+	if specChanged && (sb.Status.BindingID != "" || isStale) {
 		return fmt.Errorf("updating service bindings is not supported")
 	}
 	return nil

@@ -48,6 +48,12 @@ func (s *ServiceBindingDefaulter) Handle(_ context.Context, req admission.Reques
 		binding.Spec.SecretName = binding.Name
 	}
 
+	if binding.Labels != nil {
+		if _, ok := binding.Labels[v1alpha1.StaleLabel]; ok {
+			binding.Spec.CredRotationConfig = nil
+		}
+	}
+
 	if req.Operation == v1admission.Create || req.Operation == v1admission.Delete {
 		binding.Spec.UserInfo = &v1.UserInfo{
 			Username: req.UserInfo.Username,
