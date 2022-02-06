@@ -43,6 +43,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
+const (
+	StaleLabel = "services.cloud.sap.com/stale"
+	OldSuffix  = "__old__"
+)
+
 // ServiceBindingReconciler reconciles a ServiceBinding object
 type ServiceBindingReconciler struct {
 	*BaseReconciler
@@ -154,7 +159,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			return ctrl.Result{}, r.updateStatus(ctx, serviceBinding)
 		}
 
-		binding, err := r.getBindingForRecovery(ctx, smClient, serviceBinding, "")
+		binding, err := r.getBindingForRecovery(ctx, smClient, serviceBinding)
 		if err != nil {
 			log.Error(err, "failed to check binding recovery")
 			return r.markAsTransientError(ctx, smTypes.CREATE, err, serviceBinding)
@@ -251,20 +256,9 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 func (r *ServiceBindingReconciler) delete(ctx context.Context, smClient sm.Client, serviceBinding *v1alpha1.ServiceBinding) (ctrl.Result, error) {
 	log := GetLogger(ctx)
 	if controllerutil.ContainsFinalizer(serviceBinding, v1alpha1.FinalizerName) {
-		//delete rotated binding if exists
-		oldBinding, errGet := r.getBindingForRecovery(ctx, smClient, serviceBinding, serviceBinding.Spec.ExternalName+"_old")
-		if errGet != nil {
-			return ctrl.Result{}, errGet
-		}
-		if oldBinding != nil {
-			if _, err := smClient.Unbind(oldBinding.ID, nil, ""); err != nil {
-				return ctrl.Result{}, err
-			}
-		}
-
 		if len(serviceBinding.Status.BindingID) == 0 {
 			log.Info("No binding id found validating binding does not exists in SM before removing finalizer")
-			smBinding, err := r.getBindingForRecovery(ctx, smClient, serviceBinding, "")
+			smBinding, err := r.getBindingForRecovery(ctx, smClient, serviceBinding)
 			if err != nil {
 				return ctrl.Result{}, err
 			}
@@ -562,12 +556,9 @@ func (r *ServiceBindingReconciler) deleteBindingSecret(ctx context.Context, bind
 	return nil
 }
 
-func (r *ServiceBindingReconciler) getBindingForRecovery(ctx context.Context, smClient sm.Client, serviceBinding *v1alpha1.ServiceBinding, name string) (*smclientTypes.ServiceBinding, error) {
+func (r *ServiceBindingReconciler) getBindingForRecovery(ctx context.Context, smClient sm.Client, serviceBinding *v1alpha1.ServiceBinding) (*smclientTypes.ServiceBinding, error) {
 	log := GetLogger(ctx)
-	if len(name) == 0 {
-		name = serviceBinding.Spec.ExternalName
-	}
-	nameQuery := fmt.Sprintf("name eq '%s'", name)
+	nameQuery := fmt.Sprintf("name eq '%s'", serviceBinding.Spec.ExternalName)
 	clusterIDQuery := fmt.Sprintf("context/clusterid eq '%s'", r.Config.ClusterID)
 	namespaceQuery := fmt.Sprintf("context/namespace eq '%s'", serviceBinding.Namespace)
 	k8sNameQuery := fmt.Sprintf("%s eq '%s'", k8sNameLabel, serviceBinding.Name)
@@ -725,43 +716,26 @@ func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, smClie
 		return nil
 	}
 
-	oldName := binding.Spec.ExternalName + "_old"
-	// if has old binding delete it
-	log.Info("Credentials rotation - deleting old binding", "binding", oldName)
-	smBinding, errGet := r.getBindingForRecovery(ctx, smClient, binding, oldName)
-	if errGet != nil {
-		log.Info("Credentials rotation - failed get old binding", "binding", oldName)
-		setCredRotationInProgress(CredPreparing, errGet.Error(), binding)
-		if errStatus := r.updateStatus(ctx, binding); errStatus != nil {
-			return errStatus
-		}
-		return errGet
-	}
-
-	if smBinding != nil {
-		lastOp := smBinding.LastOperation
-		if lastOp.Type != smTypes.DELETE || (lastOp.Type == smTypes.DELETE && lastOp.State == smTypes.FAILED) {
-			_, unbindErr := smClient.Unbind(smBinding.ID, nil, "")
-			if unbindErr != nil {
-				log.Info("Credentials rotation - failed to unbind", "binding", oldName)
-				setCredRotationInProgress(CredPreparing, unbindErr.Error(), binding)
-				if errStatus := r.updateStatus(ctx, binding); errStatus != nil {
-					return errStatus
-				}
-				return unbindErr
-			}
-		}
-	}
-
+	newExternalName := binding.Spec.ExternalName + OldSuffix
+	newK8SName := binding.Name + OldSuffix
 	// rename current binding
 	log.Info("Credentials rotation - renaming binding to old", "current", binding.Spec.ExternalName)
-	if _, errRenaming := smClient.RenameBinding(binding.Status.BindingID, oldName); errRenaming != nil {
+	if _, errRenaming := smClient.RenameBinding(binding.Status.BindingID, newExternalName, binding.Name, newK8SName); errRenaming != nil {
 		log.Info("Credentials rotation - failed renaming binding to old", "binding", binding.Spec.ExternalName)
 		setCredRotationInProgress(CredPreparing, errRenaming.Error(), binding)
 		if errStatus := r.updateStatus(ctx, binding); errStatus != nil {
 			return errStatus
 		}
 		return errRenaming
+	}
+
+	if err := r.createOldBinding(ctx, newK8SName, binding); err != nil {
+		log.Info("Credentials rotation - failed renaming backing up old binding")
+		setCredRotationInProgress(CredPreparing, err.Error(), binding)
+		if errStatus := r.updateStatus(ctx, binding); errStatus != nil {
+			return errStatus
+		}
+		return err
 	}
 
 	binding.Status.BindingID = ""
@@ -791,6 +765,18 @@ func (r *ServiceBindingReconciler) initCredRotationIfRequired(ctx context.Contex
 	return false, nil
 }
 
+func (r *ServiceBindingReconciler) createOldBinding(ctx context.Context, newK8SName string, binding *v1alpha1.ServiceBinding) error {
+	oldBinding := newBinding(newK8SName, binding.Namespace)
+	oldBinding.Labels = map[string]string{
+		StaleLabel: "true",
+	}
+	spec := binding.Spec.DeepCopy()
+	spec.CredRotationConfig = nil
+	spec.SecretName = spec.SecretName + OldSuffix
+	spec.ExternalName = spec.ExternalName + OldSuffix
+	return r.Create(ctx, oldBinding)
+}
+
 func mergeInstanceTags(offeringTags, customTags []string) []string {
 	var tags []string
 
@@ -801,4 +787,17 @@ func mergeInstanceTags(offeringTags, customTags []string) []string {
 	}
 
 	return tags
+}
+
+func newBinding(name, namespace string) *v1alpha1.ServiceBinding {
+	return &v1alpha1.ServiceBinding{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: v1alpha1.GroupVersion.String(),
+			Kind:       "ServiceBinding",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+	}
 }

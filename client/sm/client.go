@@ -21,6 +21,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	smtypes "github.com/Peripli/service-manager/pkg/types"
 	"io"
 	"net/http"
 	"regexp"
@@ -53,7 +54,7 @@ type Client interface {
 	GetBindingByID(string, *Parameters) (*types.ServiceBinding, error)
 	Bind(binding *types.ServiceBinding, q *Parameters, user string) (*types.ServiceBinding, string, error)
 	Unbind(id string, q *Parameters, user string) (string, error)
-	RenameBinding(id, newName string) (*types.ServiceBinding, error)
+	RenameBinding(id, newName, oldK8SName, newK8SName string) (*types.ServiceBinding, error)
 
 	ListOfferings(*Parameters) (*types.ServiceOfferings, error)
 	ListPlans(*Parameters) (*types.ServicePlans, error)
@@ -228,13 +229,35 @@ func (client *serviceManagerClient) UpdateInstance(id string, updatedInstance *t
 	return result, location, nil
 }
 
-func (client *serviceManagerClient) RenameBinding(id, newName string) (*types.ServiceBinding, error) {
+func (client *serviceManagerClient) RenameBinding(id, newName, oldK8SName, newK8SName string) (*types.ServiceBinding, error) {
 	renameRequest := map[string]string{
 		"name": newName,
 	}
 
 	var result *types.ServiceBinding
 	_, err := client.update(renameRequest, web.ServiceBindingsURL, id, nil, "", &result)
+	if err != nil {
+		return nil, err
+	}
+
+	const k8sNameLabel = "_k8sname"
+	labelChanges := &types.LabelChanges{
+		LabelChanges: []*smtypes.LabelChange{
+			{
+				Key:       k8sNameLabel,
+				Operation: smtypes.RemoveLabelOperation,
+				Values:    []string{oldK8SName},
+			},
+			{
+				Key:       k8sNameLabel,
+				Operation: smtypes.AddLabelValuesOperation,
+				Values:    []string{newK8SName},
+			},
+		},
+	}
+
+	err = client.label(web.ServiceBindingsURL, id, labelChanges, nil)
+
 	return result, err
 }
 
@@ -329,6 +352,24 @@ func (client *serviceManagerClient) update(resource interface{}, url string, id 
 	default:
 		return "", handleFailedResponse(response)
 	}
+}
+
+func (client *serviceManagerClient) label(url string, id string, change *types.LabelChanges, q *Parameters) error {
+	requestBody, err := json.Marshal(change)
+	if err != nil {
+		return err
+	}
+	buffer := bytes.NewBuffer(requestBody)
+	response, err := client.Call(http.MethodPatch, url+"/"+id, buffer, q)
+	if err != nil {
+		return err
+	}
+
+	if response.StatusCode != http.StatusOK {
+		return util.HandleResponseError(response)
+	}
+
+	return nil
 }
 
 func handleFailedResponse(response *http.Response) error {

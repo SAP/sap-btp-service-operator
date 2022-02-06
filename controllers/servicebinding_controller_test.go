@@ -40,19 +40,6 @@ var _ = Describe("ServiceBinding controller", func() {
 	var instanceName string
 	var bindingName string
 
-	newBinding := func(name, namespace string) *v1alpha1.ServiceBinding {
-		return &v1alpha1.ServiceBinding{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "services.cloud.sap.com/v1alpha1",
-				Kind:       "ServiceBinding",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: namespace,
-			},
-		}
-	}
-
 	createBindingWithoutAssertionsAndWait := func(ctx context.Context, name string, namespace string, instanceName string, externalName string, wait bool) (*v1alpha1.ServiceBinding, error) {
 		binding := newBinding(name, namespace)
 		binding.Spec.ServiceInstanceName = instanceName

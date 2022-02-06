@@ -58,8 +58,12 @@ spec:
                 properties:
                   enabled:
                     type: boolean
+                  keepFor:
+                    description: For how long to keep the rotated binding.
+                    format: int64
+                    type: integer
                   rotationInterval:
-                    description: A Duration represents the elapsed time between two instants as an int64 nanosecond count. The representation limits the largest representable duration to approximately 290 years.
+                    description: what frequency to perform binding rotation.
                     format: int64
                     type: integer
                 type: object
