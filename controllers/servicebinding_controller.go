@@ -516,6 +516,7 @@ func (r *ServiceBindingReconciler) storeBindingSecret(ctx context.Context, k8sBi
 		return err
 	}
 
+	// TODO: handle recovery
 	log.Info("Creating binding secret")
 	if err := r.Create(ctx, secret); err != nil {
 		if !apierrors.IsAlreadyExists(err) {
@@ -766,8 +767,9 @@ func (r *ServiceBindingReconciler) initCredRotationIfRequired(ctx context.Contex
 
 func (r *ServiceBindingReconciler) createOldBinding(ctx context.Context, newK8SName string, binding *v1alpha1.ServiceBinding) error {
 	oldBinding := newBinding(newK8SName, binding.Namespace)
-	oldBinding.Labels = map[string]string{
-		v1alpha1.StaleLabel: "true",
+	// TODO: delete yourself when keep for time elapsed
+	oldBinding.Annotations = map[string]string{
+		v1alpha1.StaleAnnotation: "true",
 	}
 	spec := binding.Spec.DeepCopy()
 	spec.CredRotationConfig = nil

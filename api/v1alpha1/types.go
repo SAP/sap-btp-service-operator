@@ -12,7 +12,7 @@ const (
 	ServiceInstanceController ControllerName = "ServiceInstance"
 	ServiceBindingController  ControllerName = "ServiceBinding"
 	FinalizerName             string         = "services.cloud.sap.com/sap-btp-finalizer"
-	StaleLabel                               = "services.cloud.sap.com/stale"
+	StaleAnnotation           string         = "services.cloud.sap.com/stale"
 )
 
 const (
