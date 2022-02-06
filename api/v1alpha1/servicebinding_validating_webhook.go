@@ -52,17 +52,21 @@ func (sb *ServiceBinding) ValidateCreate() error {
 func (sb *ServiceBinding) ValidateUpdate(old runtime.Object) error {
 	servicebindinglog.Info("validate update", "name", sb.Name)
 
-	//TODO: Allow changing credentialsRotationConfig
 	if sb.specChanged(old) && sb.Status.BindingID != "" {
 		return fmt.Errorf("updating service bindings is not supported")
 	}
-
 	return nil
 }
 
 func (sb *ServiceBinding) specChanged(old runtime.Object) bool {
 	oldBinding := old.(*ServiceBinding)
-	return !reflect.DeepEqual(oldBinding.Spec, sb.Spec)
+	oldSpec := oldBinding.Spec.DeepCopy()
+	newSpec := sb.Spec.DeepCopy()
+
+	//allow changing cred rotation config
+	oldSpec.CredRotationConfig = nil
+	newSpec.CredRotationConfig = nil
+	return !reflect.DeepEqual(oldSpec, newSpec)
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
