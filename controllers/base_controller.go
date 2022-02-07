@@ -246,6 +246,7 @@ func setCredRotationInProgress(reason, message string, object servicesv1alpha1.S
 		ObservedGeneration: object.GetGeneration(),
 	}
 	meta.SetStatusCondition(&conditions, credRotCondition)
+	object.SetConditions(conditions)
 }
 
 func setFailureConditions(operationType smTypes.OperationCategory, errorMessage string, object servicesv1alpha1.SAPBTPResource) {

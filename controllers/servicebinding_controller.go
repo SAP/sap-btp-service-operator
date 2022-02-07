@@ -44,7 +44,7 @@ import (
 )
 
 const (
-	OldSuffix = "__old__"
+	OldSuffix = "--old"
 )
 
 // ServiceBindingReconciler reconciles a ServiceBinding object
@@ -77,8 +77,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	serviceBinding = serviceBinding.DeepCopy()
 
 	if len(serviceBinding.GetConditions()) == 0 {
-		err := r.init(ctx, serviceBinding)
-		if err != nil {
+		if err := r.init(ctx, serviceBinding); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
@@ -101,8 +100,9 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		if r.isStaleServiceBinding(serviceBinding) {
 			return ctrl.Result{}, r.Delete(ctx, serviceBinding)
 		}
-		if ok, err := r.initCredRotationIfRequired(ctx, serviceBinding); ok || err != nil {
-			return ctrl.Result{}, err
+
+		if r.initCredRotationIfRequired(serviceBinding) {
+			return ctrl.Result{}, r.Status().Update(ctx, serviceBinding)
 		}
 	}
 
@@ -245,10 +245,6 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 
 	serviceBinding.Status.BindingID = smBinding.ID
 	serviceBinding.Status.Ready = metav1.ConditionTrue
-	if r.credRotationEnabled(serviceBinding) {
-		now := metav1.NewTime(time.Now())
-		serviceBinding.Status.LastCredentialsRotationTime = &now
-	}
 	setSuccessConditions(smTypes.CREATE, serviceBinding)
 	log.Info("Updating binding", "bindingID", smBinding.ID)
 
@@ -367,10 +363,6 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, smClient sm.Client,
 				return r.handleSecretError(ctx, smTypes.CREATE, err, serviceBinding)
 			}
 			serviceBinding.Status.Ready = metav1.ConditionTrue
-			if r.credRotationEnabled(serviceBinding) {
-				now := metav1.NewTime(time.Now())
-				serviceBinding.Status.LastCredentialsRotationTime = &now
-			}
 			setSuccessConditions(smTypes.OperationCategory(status.Type), serviceBinding)
 		case smTypes.DELETE:
 			return r.removeBindingFromKubernetes(ctx, serviceBinding)
@@ -460,15 +452,6 @@ func (r *ServiceBindingReconciler) resyncBindingStatus(k8sBinding *v1alpha1.Serv
 		setSuccessConditions(smBinding.LastOperation.Type, k8sBinding)
 	case smTypes.FAILED:
 		setFailureConditions(smBinding.LastOperation.Type, smBinding.LastOperation.Description, k8sBinding)
-	}
-
-	if r.credRotationEnabled(k8sBinding) && smBinding.Ready {
-		createdAt, err := time.Parse(time.RFC3339Nano, smBinding.CreatedAt)
-		if err != nil {
-			createdAt = time.Now()
-		}
-		createdAtTime := metav1.NewTime(createdAt)
-		k8sBinding.Status.LastCredentialsRotationTime = &createdAtTime
 	}
 }
 
@@ -755,19 +738,23 @@ func (r *ServiceBindingReconciler) credRotationEnabled(binding *v1alpha1.Service
 	return binding.Spec.CredRotationConfig != nil && binding.Spec.CredRotationConfig.Enabled
 }
 
-func (r *ServiceBindingReconciler) initCredRotationIfRequired(ctx context.Context, binding *v1alpha1.ServiceBinding) (bool, error) {
-	if isFailed(binding) || !r.credRotationEnabled(binding) || binding.Status.LastCredentialsRotationTime == nil {
-		return false, nil
+func (r *ServiceBindingReconciler) initCredRotationIfRequired(binding *v1alpha1.ServiceBinding) bool {
+	if isFailed(binding) || !r.credRotationEnabled(binding) || meta.IsStatusConditionTrue(binding.Status.Conditions, v1alpha1.ConditionCredRotationInProgress) {
+		return false
 	}
 
-	if time.Since(binding.Status.LastCredentialsRotationTime.Time) > binding.Spec.CredRotationConfig.RotationInterval {
-		setCredRotationInProgress(CredPreparing, "", binding)
-		if err := r.Status().Update(ctx, binding); err != nil {
-			return false, err
-		}
-		return true, nil
+	lastCredentialRotationTime := binding.Status.LastCredentialsRotationTime
+	if lastCredentialRotationTime == nil {
+		ts := metav1.NewTime(binding.CreationTimestamp.Time)
+		lastCredentialRotationTime = &ts
 	}
-	return false, nil
+
+	if time.Since(lastCredentialRotationTime.Time) > binding.Spec.CredRotationConfig.RotationInterval {
+		setCredRotationInProgress(CredPreparing, "", binding)
+		return true
+	}
+
+	return false
 }
 
 func (r *ServiceBindingReconciler) createOldBinding(ctx context.Context, newK8SName string, binding *v1alpha1.ServiceBinding) error {
@@ -775,10 +762,12 @@ func (r *ServiceBindingReconciler) createOldBinding(ctx context.Context, newK8SN
 	oldBinding.Annotations = map[string]string{
 		v1alpha1.StaleAnnotation: "true",
 	}
+
 	spec := binding.Spec.DeepCopy()
 	spec.CredRotationConfig.Enabled = false
 	spec.SecretName = spec.SecretName + OldSuffix
 	spec.ExternalName = spec.ExternalName + OldSuffix
+	oldBinding.Spec = *spec
 	return r.Create(ctx, oldBinding)
 }
 
@@ -812,6 +801,10 @@ func (r *ServiceBindingReconciler) recoverSecret(ctx context.Context, binding *v
 }
 
 func (r *ServiceBindingReconciler) isStaleServiceBinding(binding *v1alpha1.ServiceBinding) bool {
+	if isDelete(binding.ObjectMeta) {
+		return false
+	}
+
 	if binding.Annotations != nil {
 		if _, ok := binding.Annotations[v1alpha1.StaleAnnotation]; ok {
 			if binding.Spec.CredRotationConfig != nil {

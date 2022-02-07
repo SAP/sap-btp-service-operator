@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	smTypes "github.com/Peripli/service-manager/pkg/types"
 	"github.com/Peripli/service-manager/pkg/web"
@@ -874,6 +875,50 @@ var _ = Describe("ServiceBinding controller", func() {
 		} {
 			executeTestCase(testCase)
 		}
+	})
+
+	Context("Credential Rotation", func() {
+		var ctx context.Context
+		JustBeforeEach(func() {
+			fakeClient.RenameBindingReturns(nil, nil)
+			ctx = context.Background()
+			createdBinding = createBinding(ctx, bindingName, bindingTestNamespace, instanceName, "binding-external-name")
+			fakeClient.ListBindingsReturns(&smclientTypes.ServiceBindings{
+				ServiceBindings: []smclientTypes.ServiceBinding{
+					{
+						ID:          createdBinding.Status.BindingID,
+						Ready:       true,
+						Credentials: json.RawMessage("{\"secret_key2\": \"secret_value2\"}"),
+						LastOperation: &smTypes.Operation{
+							Type:        smTypes.CREATE,
+							State:       smTypes.SUCCEEDED,
+							Description: "fake-description",
+						},
+					},
+				},
+			}, nil)
+
+		})
+
+		It("should rotate the credentials and create old binding", func() {
+			Expect(k8sClient.Get(context.Background(), types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}, createdBinding)).To(Succeed())
+			createdBinding.Spec.CredRotationConfig = &v1alpha1.CredentialsRotationConfiguration{
+				Enabled:          true,
+				RotationInterval: 0,
+				KeepFor:          time.Hour,
+			}
+			Expect(k8sClient.Update(ctx, createdBinding)).To(Succeed())
+			Eventually(func() bool {
+				err := k8sClient.Get(context.Background(), types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}, createdBinding)
+				return err == nil && createdBinding.Status.LastCredentialsRotationTime != nil
+			}, timeout, interval).Should(BeTrue())
+
+			oldBinding := &v1alpha1.ServiceBinding{}
+			Eventually(func() bool {
+				err := k8sClient.Get(context.Background(), types.NamespacedName{Name: bindingName + OldSuffix, Namespace: bindingTestNamespace}, oldBinding)
+				return err == nil && isReady(oldBinding)
+			}, timeout, interval).Should(BeTrue())
+		})
 	})
 })
 
