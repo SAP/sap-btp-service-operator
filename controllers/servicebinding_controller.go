@@ -98,6 +98,9 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	if serviceBinding.Status.Ready == metav1.ConditionTrue {
+		if r.isStaleServiceBinding(serviceBinding) {
+			return ctrl.Result{}, r.Delete(ctx, serviceBinding)
+		}
 		if ok, err := r.initCredRotationIfRequired(ctx, serviceBinding); ok || err != nil {
 			return ctrl.Result{}, err
 		}
@@ -408,7 +411,6 @@ func bindingAlreadyOwnedByInstance(instance *v1alpha1.ServiceInstance, binding *
 
 		return aGV.Group == bGV.Group && existing.Kind == instance.Kind && existing.Name == instance.Name
 	}
-
 	return false
 }
 
@@ -770,12 +772,11 @@ func (r *ServiceBindingReconciler) initCredRotationIfRequired(ctx context.Contex
 
 func (r *ServiceBindingReconciler) createOldBinding(ctx context.Context, newK8SName string, binding *v1alpha1.ServiceBinding) error {
 	oldBinding := newBindingObject(newK8SName, binding.Namespace)
-	// TODO: delete yourself when keep for time elapsed
 	oldBinding.Annotations = map[string]string{
 		v1alpha1.StaleAnnotation: "true",
 	}
 	spec := binding.Spec.DeepCopy()
-	spec.CredRotationConfig = nil
+	spec.CredRotationConfig.Enabled = false
 	spec.SecretName = spec.SecretName + OldSuffix
 	spec.ExternalName = spec.ExternalName + OldSuffix
 	return r.Create(ctx, oldBinding)
@@ -808,6 +809,19 @@ func (r *ServiceBindingReconciler) recoverSecret(ctx context.Context, binding *v
 	dbSecret.StringData = secret.StringData
 	return r.Update(ctx, dbSecret)
 
+}
+
+func (r *ServiceBindingReconciler) isStaleServiceBinding(binding *v1alpha1.ServiceBinding) bool {
+	if binding.Annotations != nil {
+		if _, ok := binding.Annotations[v1alpha1.StaleAnnotation]; ok {
+			if binding.Spec.CredRotationConfig != nil {
+				if time.Since(binding.CreationTimestamp.Time) > binding.Spec.CredRotationConfig.KeepFor {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 func mergeInstanceTags(offeringTags, customTags []string) []string {

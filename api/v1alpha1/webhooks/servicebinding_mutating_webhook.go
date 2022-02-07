@@ -50,7 +50,9 @@ func (s *ServiceBindingDefaulter) Handle(_ context.Context, req admission.Reques
 
 	if binding.Annotations != nil {
 		if _, ok := binding.Annotations[v1alpha1.StaleAnnotation]; ok {
-			binding.Spec.CredRotationConfig = nil
+			if binding.Spec.CredRotationConfig != nil {
+				binding.Spec.CredRotationConfig.Enabled = false
+			}
 		}
 	}
 
