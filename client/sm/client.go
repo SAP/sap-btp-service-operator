@@ -246,7 +246,7 @@ func (client *serviceManagerClient) RenameBinding(id, newName, oldK8SName, newK8
 		LabelChanges: []*smtypes.LabelChange{
 			{
 				Key:       k8sNameLabel,
-				Operation: smtypes.RemoveLabelOperation,
+				Operation: smtypes.RemoveLabelValuesOperation,
 				Values:    []string{oldK8SName},
 			},
 			{
