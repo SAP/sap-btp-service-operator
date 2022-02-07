@@ -15,7 +15,7 @@ This feature is still under development, review, and testing.
 
 ## Table of Contents
 * [Prerequisites](#prerequisites)
-* [Setup Operator](#setup)
+* [Setup](#setup)
 * [Using the SAP BTP Service Operator](#using-the-sap-btp-service-operator)
     * [Creating a service instance](#step-1-create-a-service-instance)
     * [Binding the service instance](#step-2-create-a-service-binding)
