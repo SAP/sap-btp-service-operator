@@ -518,16 +518,16 @@ func (r *ServiceBindingReconciler) storeBindingSecret(ctx context.Context, k8sBi
 
 	if recovery {
 		return r.recoverSecret(ctx, k8sBinding, secret)
-	} else {
-		log.Info("Creating binding secret", "name", secret.Name)
-		if err := r.Create(ctx, secret); err != nil {
-			if !apierrors.IsAlreadyExists(err) {
-				return err
-			}
-			return nil
-		}
-		r.Recorder.Event(k8sBinding, corev1.EventTypeNormal, "SecretCreated", "SecretCreated")
 	}
+	log.Info("Creating binding secret", "name", secret.Name)
+	if err := r.Create(ctx, secret); err != nil {
+		if !apierrors.IsAlreadyExists(err) {
+			return err
+		}
+		return nil
+	}
+	r.Recorder.Event(k8sBinding, corev1.EventTypeNormal, "SecretCreated", "SecretCreated")
+
 	return nil
 }
 
@@ -802,12 +802,12 @@ func (r *ServiceBindingReconciler) recoverSecret(ctx context.Context, binding *v
 		}
 		r.Recorder.Event(binding, corev1.EventTypeNormal, "SecretCreated", "SecretCreated")
 		return nil
-	} else {
-		log.Info("Updating existing binding secret", "name", secret.Name)
-		dbSecret.Data = secret.Data
-		dbSecret.StringData = secret.StringData
-		return r.Update(ctx, dbSecret)
 	}
+	log.Info("Updating existing binding secret", "name", secret.Name)
+	dbSecret.Data = secret.Data
+	dbSecret.StringData = secret.StringData
+	return r.Update(ctx, dbSecret)
+
 }
 
 func mergeInstanceTags(offeringTags, customTags []string) []string {
