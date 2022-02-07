@@ -70,6 +70,16 @@ var _ = Describe("Service Binding Webhook Test", func() {
 				})
 			})
 
+			When("CredConfig changed", func() {
+				It("should succeed", func() {
+					newBinding.Spec.CredRotationConfig = &CredentialsRotationConfiguration{
+						Enabled: true,
+					}
+					err := newBinding.ValidateUpdate(binding)
+					Expect(err).ToNot(HaveOccurred())
+				})
+			})
+
 			When("Status changed", func() {
 				It("should succeed", func() {
 					newBinding.Status.BindingID = "12345"
@@ -170,6 +180,16 @@ var _ = Describe("Service Binding Webhook Test", func() {
 			When("Metadata changed", func() {
 				It("should succeed", func() {
 					newBinding.Finalizers = append(newBinding.Finalizers, "newFinalizer")
+					err := newBinding.ValidateUpdate(binding)
+					Expect(err).ToNot(HaveOccurred())
+				})
+			})
+
+			When("CredConfig changed", func() {
+				It("should succeed", func() {
+					newBinding.Spec.CredRotationConfig = &CredentialsRotationConfiguration{
+						Enabled: true,
+					}
 					err := newBinding.ValidateUpdate(binding)
 					Expect(err).ToNot(HaveOccurred())
 				})
