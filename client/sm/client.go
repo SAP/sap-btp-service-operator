@@ -21,11 +21,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	smtypes "github.com/Peripli/service-manager/pkg/types"
 	"io"
 	"net/http"
 	"regexp"
 	"strings"
+
+	smtypes "github.com/Peripli/service-manager/pkg/types"
 
 	"github.com/Peripli/service-manager/pkg/log"
 	"github.com/Peripli/service-manager/pkg/util"

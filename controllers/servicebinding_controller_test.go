@@ -41,7 +41,7 @@ var _ = Describe("ServiceBinding controller", func() {
 	var bindingName string
 
 	createBindingWithoutAssertionsAndWait := func(ctx context.Context, name string, namespace string, instanceName string, externalName string, wait bool) (*v1alpha1.ServiceBinding, error) {
-		binding := newBinding(name, namespace)
+		binding := newBindingObject(name, namespace)
 		binding.Spec.ServiceInstanceName = instanceName
 		binding.Spec.ExternalName = externalName
 		binding.Spec.Parameters = &runtime.RawExtension{
@@ -259,7 +259,7 @@ var _ = Describe("ServiceBinding controller", func() {
 					Expect(k8sClient.Delete(ctx, secret)).Should(Succeed())
 				})
 				It("should fail the request and allow the user to replace secret name", func() {
-					binding := newBinding("newbinding", bindingTestNamespace)
+					binding := newBindingObject("newbinding", bindingTestNamespace)
 					binding.Spec.ServiceInstanceName = instanceName
 					binding.Spec.SecretName = "mysecret"
 
@@ -316,7 +316,7 @@ var _ = Describe("ServiceBinding controller", func() {
 
 				It("should put the raw broker response into the secret if spec.secretKey is provided", func() {
 					ctx := context.Background()
-					binding := newBinding("binding-with-secretkey", bindingTestNamespace)
+					binding := newBindingObject("binding-with-secretkey", bindingTestNamespace)
 					binding.Spec.ServiceInstanceName = instanceName
 					binding.Spec.SecretName = "mysecret"
 					secretKey := "mycredentials"
@@ -339,7 +339,7 @@ var _ = Describe("ServiceBinding controller", func() {
 
 				It("should put binding data in single key if spec.secretRootKey is provided", func() {
 					ctx := context.Background()
-					binding := newBinding("binding-with-secretrootkey", bindingTestNamespace)
+					binding := newBindingObject("binding-with-secretrootkey", bindingTestNamespace)
 					binding.Spec.ServiceInstanceName = instanceName
 					secretKey := "mycredentials"
 					binding.Spec.SecretKey = &secretKey
@@ -537,7 +537,7 @@ var _ = Describe("ServiceBinding controller", func() {
 
 			When("secret name is provided", func() {
 				It("should create a secret with the provided name", func() {
-					binding := newBinding(bindingName, bindingTestNamespace)
+					binding := newBindingObject(bindingName, bindingTestNamespace)
 					binding.Spec.ServiceInstanceName = instanceName
 					binding.Spec.SecretName = "my-special-secret"
 
