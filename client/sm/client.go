@@ -231,19 +231,10 @@ func (client *serviceManagerClient) UpdateInstance(id string, updatedInstance *t
 }
 
 func (client *serviceManagerClient) RenameBinding(id, newName, oldK8SName, newK8SName string) (*types.ServiceBinding, error) {
-	renameRequest := map[string]string{
-		"name": newName,
-	}
-
-	var result *types.ServiceBinding
-	_, err := client.update(renameRequest, web.ServiceBindingsURL, id, nil, "", &result)
-	if err != nil {
-		return nil, err
-	}
-
 	const k8sNameLabel = "_k8sname"
-	labelChanges := &types.LabelChanges{
-		LabelChanges: []*smtypes.LabelChange{
+	renameRequest := map[string]interface{}{
+		"name": newName,
+		"labels": []*smtypes.LabelChange{
 			{
 				Key:       k8sNameLabel,
 				Operation: smtypes.RemoveLabelValuesOperation,
@@ -257,8 +248,11 @@ func (client *serviceManagerClient) RenameBinding(id, newName, oldK8SName, newK8
 		},
 	}
 
-	err = client.label(web.ServiceBindingsURL, id, labelChanges, nil)
-
+	var result *types.ServiceBinding
+	_, err := client.update(renameRequest, web.ServiceBindingsURL, id, nil, "", &result)
+	if err != nil {
+		return nil, err
+	}
 	return result, err
 }
 
@@ -353,24 +347,6 @@ func (client *serviceManagerClient) update(resource interface{}, url string, id 
 	default:
 		return "", handleFailedResponse(response)
 	}
-}
-
-func (client *serviceManagerClient) label(url string, id string, change *types.LabelChanges, q *Parameters) error {
-	requestBody, err := json.Marshal(change)
-	if err != nil {
-		return err
-	}
-	buffer := bytes.NewBuffer(requestBody)
-	response, err := client.Call(http.MethodPatch, url+"/"+id, buffer, q)
-	if err != nil {
-		return err
-	}
-
-	if response.StatusCode != http.StatusOK {
-		return util.HandleResponseError(response)
-	}
-
-	return nil
 }
 
 func handleFailedResponse(response *http.Response) error {
