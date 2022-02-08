@@ -920,6 +920,7 @@ var _ = Describe("ServiceBinding controller", func() {
 			}, timeout, interval).Should(BeTrue())
 			_, ok := oldBinding.Annotations[v1alpha1.StaleAnnotation]
 			Expect(ok).To(BeTrue())
+			Expect(oldBinding.Spec.CredRotationConfig.Enabled).To(BeFalse())
 
 			secret := &corev1.Secret{}
 			Expect(k8sClient.Get(ctx, types.NamespacedName{Name: createdBinding.Spec.SecretName, Namespace: bindingTestNamespace}, secret)).To(Succeed())
@@ -930,8 +931,21 @@ var _ = Describe("ServiceBinding controller", func() {
 			Expect(k8sClient.Get(ctx, types.NamespacedName{Name: createdBinding.Spec.SecretName + OldSuffix, Namespace: bindingTestNamespace}, secret)).To(Succeed())
 		})
 
-		XIt("should delete old binding when stale", func() {
-
+		It("should delete old binding when stale", func() {
+			Expect(k8sClient.Get(context.Background(), types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}, createdBinding)).To(Succeed())
+			createdBinding.Spec.CredRotationConfig = &v1alpha1.CredentialsRotationConfiguration{
+				Enabled:          false,
+				RotationInterval: 0,
+				KeepFor:          0,
+			}
+			createdBinding.Annotations = map[string]string{
+				v1alpha1.StaleAnnotation: "true",
+			}
+			Expect(k8sClient.Update(ctx, createdBinding)).To(Succeed())
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}, createdBinding)
+				return apierrors.IsNotFound(err)
+			}, timeout, interval).Should(BeTrue())
 		})
 	})
 })
