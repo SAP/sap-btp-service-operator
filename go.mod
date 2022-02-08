@@ -3,7 +3,7 @@ module github.com/SAP/sap-btp-service-operator
 go 1.15
 
 require (
-	github.com/Peripli/service-manager v0.19.0
+	github.com/Peripli/service-manager v0.22.4
 	github.com/go-logr/logr v0.3.0
 	github.com/gofrs/uuid v3.3.0+incompatible // indirect
 	github.com/google/uuid v1.1.2
