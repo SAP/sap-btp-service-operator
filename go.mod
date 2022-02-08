@@ -1,6 +1,6 @@
 module github.com/SAP/sap-btp-service-operator
 
-go 1.13
+go 1.15
 
 require (
 	github.com/Peripli/service-manager v0.19.0
