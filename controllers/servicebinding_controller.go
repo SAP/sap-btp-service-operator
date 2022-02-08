@@ -102,7 +102,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 
 		if r.initCredRotationIfRequired(serviceBinding) {
-			return ctrl.Result{}, r.Status().Update(ctx, serviceBinding)
+			return ctrl.Result{}, r.updateStatus(ctx, serviceBinding)
 		}
 	}
 
@@ -689,6 +689,15 @@ func (r *ServiceBindingReconciler) singleKeyMap(credentialsMap map[string][]byte
 
 func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, smClient sm.Client, binding *v1alpha1.ServiceBinding) error {
 	log := GetLogger(ctx)
+	if binding.Annotations != nil {
+		if _, ok := binding.Annotations[v1alpha1.ForceRotateAnnotation]; ok {
+			delete(binding.Annotations, v1alpha1.ForceRotateAnnotation)
+			if err := r.Update(ctx, binding); err != nil {
+				return err
+			}
+		}
+	}
+
 	conditions := binding.GetConditions()
 	credInProgressCondition := meta.FindStatusCondition(conditions, v1alpha1.ConditionCredRotationInProgress)
 
@@ -710,7 +719,7 @@ func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, smClie
 	log.Info("Credentials rotation - renaming binding to old", "current", binding.Spec.ExternalName)
 	if _, errRenaming := smClient.RenameBinding(binding.Status.BindingID, newExternalName, binding.Name, newK8SName); errRenaming != nil {
 		log.Info("Credentials rotation - failed renaming binding to old", "binding", binding.Spec.ExternalName)
-		setCredRotationInProgress(CredPreparing, errRenaming.Error(), binding)
+		setCredRotationInProgressConditions(CredPreparing, errRenaming.Error(), binding)
 		if errStatus := r.updateStatus(ctx, binding); errStatus != nil {
 			return errStatus
 		}
@@ -719,7 +728,7 @@ func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, smClie
 
 	if err := r.createOldBinding(ctx, newK8SName, binding); err != nil {
 		log.Info("Credentials rotation - failed renaming backing up old binding")
-		setCredRotationInProgress(CredPreparing, err.Error(), binding)
+		setCredRotationInProgressConditions(CredPreparing, err.Error(), binding)
 		if errStatus := r.updateStatus(ctx, binding); errStatus != nil {
 			return errStatus
 		}
@@ -729,7 +738,7 @@ func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, smClie
 	binding.Status.BindingID = ""
 	binding.Status.Ready = metav1.ConditionFalse
 	setInProgressConditions(smTypes.CREATE, "rotating binding credentials", binding)
-	setCredRotationInProgress(CredRotating, "", binding)
+	setCredRotationInProgressConditions(CredRotating, "", binding)
 	log.Info("Credentials rotation - creating new binding")
 	return r.updateStatus(ctx, binding)
 }
@@ -742,6 +751,7 @@ func (r *ServiceBindingReconciler) initCredRotationIfRequired(binding *v1alpha1.
 	if isFailed(binding) || !r.credRotationEnabled(binding) || meta.IsStatusConditionTrue(binding.Status.Conditions, v1alpha1.ConditionCredRotationInProgress) {
 		return false
 	}
+	_, forceRotate := binding.Annotations[v1alpha1.ForceRotateAnnotation]
 
 	lastCredentialRotationTime := binding.Status.LastCredentialsRotationTime
 	if lastCredentialRotationTime == nil {
@@ -749,8 +759,8 @@ func (r *ServiceBindingReconciler) initCredRotationIfRequired(binding *v1alpha1.
 		lastCredentialRotationTime = &ts
 	}
 
-	if time.Since(lastCredentialRotationTime.Time) > binding.Spec.CredRotationConfig.RotationInterval {
-		setCredRotationInProgress(CredPreparing, "", binding)
+	if time.Since(lastCredentialRotationTime.Time) > binding.Spec.CredRotationConfig.RotationInterval || forceRotate {
+		setCredRotationInProgressConditions(CredPreparing, "", binding)
 		return true
 	}
 

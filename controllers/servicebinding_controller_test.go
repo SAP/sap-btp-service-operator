@@ -922,13 +922,31 @@ var _ = Describe("ServiceBinding controller", func() {
 			Expect(ok).To(BeTrue())
 			Expect(oldBinding.Spec.CredRotationConfig.Enabled).To(BeFalse())
 
-			secret := &corev1.Secret{}
-			Expect(k8sClient.Get(ctx, types.NamespacedName{Name: createdBinding.Spec.SecretName, Namespace: bindingTestNamespace}, secret)).To(Succeed())
+			secret := getSecret(ctx, createdBinding.Spec.SecretName, bindingTestNamespace, true)
 			val := secret.Data["secret_key2"]
 			Expect(string(val)).To(Equal("secret_value2"))
 
-			secret = &corev1.Secret{}
-			Expect(k8sClient.Get(ctx, types.NamespacedName{Name: createdBinding.Spec.SecretName + OldSuffix, Namespace: bindingTestNamespace}, secret)).To(Succeed())
+			getSecret(ctx, createdBinding.Spec.SecretName+OldSuffix, bindingTestNamespace, true)
+		})
+
+		It("should rotate the credentials with force rotate annotation", func() {
+			Expect(k8sClient.Get(context.Background(), types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}, createdBinding)).To(Succeed())
+			createdBinding.Spec.CredRotationConfig = &v1alpha1.CredentialsRotationConfiguration{
+				Enabled:          true,
+				RotationInterval: time.Hour,
+				KeepFor:          time.Hour,
+			}
+			createdBinding.Annotations = map[string]string{
+				v1alpha1.ForceRotateAnnotation: "true",
+			}
+			Expect(k8sClient.Update(ctx, createdBinding)).To(Succeed())
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}, createdBinding)
+				return err == nil && createdBinding.Status.LastCredentialsRotationTime != nil
+			}, timeout, interval).Should(BeTrue())
+
+			_, ok := createdBinding.Annotations[v1alpha1.ForceRotateAnnotation]
+			Expect(ok).To(BeFalse())
 		})
 
 		It("should delete old binding when stale", func() {

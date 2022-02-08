@@ -13,6 +13,7 @@ const (
 	ServiceBindingController  ControllerName = "ServiceBinding"
 	FinalizerName             string         = "services.cloud.sap.com/sap-btp-finalizer"
 	StaleAnnotation           string         = "services.cloud.sap.com/stale"
+	ForceRotateAnnotation     string         = "services.cloud.sap.com/forceRotate"
 )
 
 const (

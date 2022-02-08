@@ -233,7 +233,7 @@ func setSuccessConditions(operationType smTypes.OperationCategory, object servic
 	object.SetConditions(conditions)
 }
 
-func setCredRotationInProgress(reason, message string, object servicesv1alpha1.SAPBTPResource) {
+func setCredRotationInProgressConditions(reason, message string, object servicesv1alpha1.SAPBTPResource) {
 	if len(message) == 0 {
 		message = reason
 	}
