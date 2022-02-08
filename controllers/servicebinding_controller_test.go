@@ -909,15 +909,29 @@ var _ = Describe("ServiceBinding controller", func() {
 			}
 			Expect(k8sClient.Update(ctx, createdBinding)).To(Succeed())
 			Eventually(func() bool {
-				err := k8sClient.Get(context.Background(), types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}, createdBinding)
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}, createdBinding)
 				return err == nil && createdBinding.Status.LastCredentialsRotationTime != nil
 			}, timeout, interval).Should(BeTrue())
 
 			oldBinding := &v1alpha1.ServiceBinding{}
 			Eventually(func() bool {
-				err := k8sClient.Get(context.Background(), types.NamespacedName{Name: bindingName + OldSuffix, Namespace: bindingTestNamespace}, oldBinding)
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: bindingName + OldSuffix, Namespace: bindingTestNamespace}, oldBinding)
 				return err == nil && isReady(oldBinding)
 			}, timeout, interval).Should(BeTrue())
+			_, ok := oldBinding.Annotations[v1alpha1.StaleAnnotation]
+			Expect(ok).To(BeTrue())
+
+			secret := &corev1.Secret{}
+			Expect(k8sClient.Get(ctx, types.NamespacedName{Name: createdBinding.Spec.SecretName, Namespace: bindingTestNamespace}, secret)).To(Succeed())
+			val := secret.Data["secret_key2"]
+			Expect(string(val)).To(Equal("secret_value2"))
+
+			secret = &corev1.Secret{}
+			Expect(k8sClient.Get(ctx, types.NamespacedName{Name: createdBinding.Spec.SecretName + OldSuffix, Namespace: bindingTestNamespace}, secret)).To(Succeed())
+		})
+
+		XIt("should delete old binding when stale", func() {
+
 		})
 	})
 })
