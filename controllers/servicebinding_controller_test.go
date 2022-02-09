@@ -907,18 +907,6 @@ var _ = Describe("ServiceBinding controller", func() {
 			}
 			Expect(k8sClient.Update(ctx, createdBinding)).To(Succeed())
 
-			// old binding created
-			oldBinding := &v1alpha1.ServiceBinding{}
-			Eventually(func() bool {
-				err := k8sClient.Get(ctx, types.NamespacedName{Name: bindingName + OldSuffix, Namespace: bindingTestNamespace}, oldBinding)
-				return err == nil && isReady(oldBinding)
-			}, timeout, interval).Should(BeTrue())
-			_, ok := oldBinding.Annotations[v1alpha1.StaleAnnotation]
-			Expect(ok).To(BeTrue())
-			Expect(oldBinding.Spec.CredRotationConfig.Enabled).To(BeFalse())
-			// old secret created
-			getSecret(ctx, createdBinding.Spec.SecretName+OldSuffix, bindingTestNamespace, true)
-
 			// binding rotated
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}, createdBinding)
@@ -942,6 +930,7 @@ var _ = Describe("ServiceBinding controller", func() {
 				v1alpha1.ForceRotateAnnotation: "true",
 			}
 			Expect(k8sClient.Update(ctx, createdBinding)).To(Succeed())
+			// binding rotated
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}, createdBinding)
 				return err == nil && createdBinding.Status.LastCredentialsRotationTime != nil
@@ -949,6 +938,18 @@ var _ = Describe("ServiceBinding controller", func() {
 
 			_, ok := createdBinding.Annotations[v1alpha1.ForceRotateAnnotation]
 			Expect(ok).To(BeFalse())
+
+			// old binding created
+			oldBinding := &v1alpha1.ServiceBinding{}
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: bindingName + OldSuffix, Namespace: bindingTestNamespace}, oldBinding)
+				return err == nil && isReady(oldBinding)
+			}, timeout, interval).Should(BeTrue())
+			_, ok = oldBinding.Annotations[v1alpha1.StaleAnnotation]
+			Expect(ok).To(BeTrue())
+			Expect(oldBinding.Spec.CredRotationConfig.Enabled).To(BeFalse())
+			// old secret created
+			getSecret(ctx, createdBinding.Spec.SecretName+OldSuffix, bindingTestNamespace, true)
 		})
 
 		It("should delete old binding when stale", func() {
