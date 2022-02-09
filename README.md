@@ -390,8 +390,9 @@ The association of a namespace to a subaccount is based on different set of cred
 
 In order to connect namespace to a subaccount, you first have to obtain the access [credentials](#setup) for the SAP BTP service operator, then to maintain the credentials provided by the binding in a secret that it specific for that namespace.
 There are 2 options to maintain namespace specific credentials:
-- Define secret named sap-btp-service-operator in the namespace, `ServiceInstance` and `ServiceBinding` applied in the namespace will be created in the subaccount from which the credentials were issued.
-- Define different secrets for the different namespaces in a centrally managed namespace, following the secret name convention: sap-btp-service-operator-<namespace>.
+- Define secret named `sap-btp-service-operator` in the namespace, `ServiceInstance` and `ServiceBinding` applied in the namespace will be created in the subaccount from which the credentials were issued.
+- Define different secrets for the different namespaces in a centrally [managed namespace](./sapbtp-operator-charts/templates/configmap.yml), following the secret name convention: `sap-btp-service-operator-<namespace>`.
+- If none of the above options set, `sap-btp-service-operator` secret in release namespace will be used.
 
 **Note:** in order to work with tls additional `Secret` should be created in the namespace see [secret](./sapbtp-operator-charts/templates/secret-tls.yml)
 
