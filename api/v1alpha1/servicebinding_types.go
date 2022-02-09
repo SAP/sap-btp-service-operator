@@ -82,7 +82,7 @@ type ServiceBindingSpec struct {
 	// +optional
 	UserInfo *v1.UserInfo `json:"userInfo,omitempty"`
 
-	// CredentialsRotationConfiguration indicates whether automatic credentials rotation required.
+	// CredentialsRotationConfiguration holds automatic credentials rotation configuration.
 	// +optional
 	CredRotationConfig *CredentialsRotationConfiguration `json:"credentialsRotationConfig,omitempty"`
 }
@@ -194,7 +194,7 @@ type CredentialsRotationConfiguration struct {
 	Enabled bool `json:"enabled,omitempty"`
 	// what frequency to perform binding rotation.
 	RotationInterval time.Duration `json:"rotationInterval,omitempty"`
-	// For how long to keep the rotated binding.
+	// For how long to keep the rotated binding must be lower then RotationInterval.
 	KeepFor time.Duration `json:"keepFor,omitempty"`
 }
 

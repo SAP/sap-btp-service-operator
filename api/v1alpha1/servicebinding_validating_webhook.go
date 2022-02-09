@@ -45,12 +45,22 @@ var _ webhook.Validator = &ServiceBinding{}
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (sb *ServiceBinding) ValidateCreate() error {
 	servicebindinglog.Info("validate create", "name", sb.Name)
+	if sb.Spec.CredRotationConfig != nil {
+		if sb.Spec.CredRotationConfig.KeepFor > sb.Spec.CredRotationConfig.RotationInterval {
+			return fmt.Errorf("credentialsRotationConfig.keepFor must be smaller then credentialsRotationConfig.rotationInterval")
+		}
+	}
 	return nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (sb *ServiceBinding) ValidateUpdate(old runtime.Object) error {
 	servicebindinglog.Info("validate update", "name", sb.Name)
+	if sb.Spec.CredRotationConfig != nil {
+		if sb.Spec.CredRotationConfig.KeepFor > sb.Spec.CredRotationConfig.RotationInterval {
+			return fmt.Errorf("credentialsRotationConfig.keepFor must be smaller then credentialsRotationConfig.rotationInterval")
+		}
+	}
 
 	specChanged := sb.specChanged(old)
 	isStale := false

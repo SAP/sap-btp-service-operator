@@ -15,7 +15,7 @@ This feature is still under development, review, and testing.
 
 ## Table of Contents
 * [Prerequisites](#prerequisites)
-* [Setup Operator](#setup)
+* [Setup](#setup)
 * [Using the SAP BTP Service Operator](#using-the-sap-btp-service-operator)
     * [Creating a service instance](#step-1-create-a-service-instance)
     * [Binding the service instance](#step-2-create-a-service-binding)
@@ -23,7 +23,8 @@ This feature is still under development, review, and testing.
     * [Service instance properties](#service-instance)
     * [Binding properties](#service-binding)
     * [Passing parameters](#passing-parameters)
-* [SAP BTP kubectl extension](#sap-btp-kubectl-plugin-experimental)    
+* [SAP BTP kubectl extension](#sap-btp-kubectl-plugin-experimental) 
+* [Credentials Rotation](#credentials-rotation)
 
 ## Prerequisites
 - SAP BTP [Global Account](https://help.sap.com/viewer/65de2977205c403bbc107264b8eccf4b/Cloud/en-US/d61c2819034b48e68145c45c36acba6e.html) and [Subaccount](https://help.sap.com/viewer/65de2977205c403bbc107264b8eccf4b/Cloud/en-US/55d0b6d8b96846b8ae93b85194df0944.html) 
@@ -245,6 +246,10 @@ This feature is still under development, review, and testing.
 | parameters       |  `[]object`  |  Some services support the provisioning of additional configuration parameters during the bind request.<br/>For the list of supported parameters, check the documentation of the particular service offering.|
 | parametersFrom | `[]object` | List of sources to populate parameters. |
 | userInfo | `object`  | Contains information about the user that last modified this service binding. |
+| credentialsRotationConfig | `object`  | Holds automatic credentials rotation configuration. |
+| credentialsRotationConfig.enabled | `boolean`  | Indicates whether automatic credentials rotation enabled. |
+| credentialsRotationConfig.rotationInterval | `duration`  | What frequency to perform binding rotation. |
+| credentialsRotationConfig.keepFor | `duration`  | For how long to keep the rotated binding must be lower then `rotationInterval`. |
 
 
 
@@ -256,6 +261,7 @@ This feature is still under development, review, and testing.
 | operationURL |`string`| The URL of the current operation performed on the service binding. |
 | operationType| `string `| The type of the current operation. Possible values are CREATE, UPDATE, or DELETE. |
 | conditions| `[]condition` | An array of conditions describing the status of the service instance.<br/>The possible conditions types are:<br/>- `Ready`: set to `true` if the binding is ready and usable<br/>- `Failed`: set to `true` when an operation on the service binding fails.<br/> In the case of failure, the details about the error are available in the condition message.<br>- `Succeeded`: set to `true` when an operation on the service binding succeeded. In case of `false` operation considered as in progress unless `Failed` condition exists.
+| lastCredentialsRotationTime| `time` | Indicates when binding secret was rotated.
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
@@ -364,6 +370,22 @@ The list of available releases: [sapbtp-operator releases](https://github.com/SA
 Use the `namespace` parameter to specify the location of the secret containing the SAP BTP access credentials.  
 Usually it is the namespace in which you installed the operator.
 If not specified, the `default` namespace is used.
+
+## Credentials Rotation
+To enable automatic credential rotation you need to set field `credentialsRotationConfig` in the `spec` field of the `ServiceBinding` resource:
+- `enabled`: allows to switch on and switch off the automatic credentials rotation
+- `rotationInterval`: indicates the frequency of the credentials rotation valid time units are "ns", "us" or ("µs"), "ms", "s", "m", "h"
+- `keepFor`: Indicates for how long to keep the rotated `ServiceBinding` must be lower then `rotationInterval`.
+
+During the transition will be 2 `ServiceBinding` the original and the rotated with '--old' suffix which will be deleted after `keepFor` duration elapsed.
+
+**Note:** it's not possible to enable automatic credentials rotation to already rotated `ServiceBinding` (with '--old' suffix).
+
+By setting `services.cloud.sap.com/forceRotate` annotation immediate credentials rotation will be performed (credentials rotation must be enabled). 
+
+
+
+[Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
 ## Support
 You're welcome to raise issues related to feature requests, bugs, or give us general feedback on this project's GitHub Issues page. 
