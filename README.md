@@ -378,7 +378,7 @@ To enable automatic credential rotation you need to set field `credentialsRotati
 - `rotationInterval`: indicates the frequency of the credentials rotation valid time units are "ns", "us" or ("µs"), "ms", "s", "m", "h"
 - `keepFor`: Indicates for how long to keep the rotated `ServiceBinding` must be lower then `rotationInterval`.
 
-During the transition will be 2 `ServiceBinding` the original and the rotated with '--old' suffix which will be deleted after `keepFor` duration elapsed.
+During the transition will be 2 `ServiceBinding`, the original and the rotated with '--old' suffix which will be deleted after `keepFor` duration elapsed.
 
 **Note:** it's not possible to enable automatic credentials rotation to already rotated `ServiceBinding` (with '--old' suffix).
 
