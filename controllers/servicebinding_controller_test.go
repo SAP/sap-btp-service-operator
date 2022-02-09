@@ -903,16 +903,11 @@ var _ = Describe("ServiceBinding controller", func() {
 		It("should rotate the credentials and create old binding", func() {
 			Expect(k8sClient.Get(context.Background(), types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}, createdBinding)).To(Succeed())
 			createdBinding.Spec.CredRotationConfig = &v1alpha1.CredentialsRotationConfiguration{
-				Enabled:          true,
-				RotationInterval: 0,
-				KeepFor:          time.Hour,
+				Enabled: true,
 			}
 			Expect(k8sClient.Update(ctx, createdBinding)).To(Succeed())
-			Eventually(func() bool {
-				err := k8sClient.Get(ctx, types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}, createdBinding)
-				return err == nil && createdBinding.Status.LastCredentialsRotationTime != nil
-			}, timeout, interval).Should(BeTrue())
 
+			// old binding created
 			oldBinding := &v1alpha1.ServiceBinding{}
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, types.NamespacedName{Name: bindingName + OldSuffix, Namespace: bindingTestNamespace}, oldBinding)
@@ -921,12 +916,19 @@ var _ = Describe("ServiceBinding controller", func() {
 			_, ok := oldBinding.Annotations[v1alpha1.StaleAnnotation]
 			Expect(ok).To(BeTrue())
 			Expect(oldBinding.Spec.CredRotationConfig.Enabled).To(BeFalse())
+			// old secret created
+			getSecret(ctx, createdBinding.Spec.SecretName+OldSuffix, bindingTestNamespace, true)
 
+			// binding rotated
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}, createdBinding)
+				return err == nil && createdBinding.Status.LastCredentialsRotationTime != nil
+			}, timeout, interval).Should(BeTrue())
+
+			// secret updated
 			secret := getSecret(ctx, createdBinding.Spec.SecretName, bindingTestNamespace, true)
 			val := secret.Data["secret_key2"]
 			Expect(string(val)).To(Equal("secret_value2"))
-
-			getSecret(ctx, createdBinding.Spec.SecretName+OldSuffix, bindingTestNamespace, true)
 		})
 
 		It("should rotate the credentials with force rotate annotation", func() {
