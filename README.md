@@ -25,6 +25,7 @@ This feature is still under development, review, and testing.
     * [Passing parameters](#passing-parameters)
 * [SAP BTP kubectl extension](#sap-btp-kubectl-plugin-experimental) 
 * [Credentials Rotation](#credentials-rotation)
+* [Multi Tenancy](#multi-tenancy)
 
 ## Prerequisites
 - SAP BTP [Global Account](https://help.sap.com/viewer/65de2977205c403bbc107264b8eccf4b/Cloud/en-US/d61c2819034b48e68145c45c36acba6e.html) and [Subaccount](https://help.sap.com/viewer/65de2977205c403bbc107264b8eccf4b/Cloud/en-US/55d0b6d8b96846b8ae93b85194df0944.html) 
@@ -383,7 +384,16 @@ During the transition will be 2 `ServiceBinding` the original and the rotated wi
 
 By setting `services.cloud.sap.com/forceRotate` annotation immediate credentials rotation will be performed (credentials rotation must be enabled). 
 
+## Multi Tenancy
+SAP BTP service operator can be configured to work with more than one subaccount on the same k8s cluster, different namespaces can be connected to different subaccounts.
+The association of a namespace to a subaccount is based on different set of credentials, configured for the different namespaces.
 
+In order to connect namespace to a subaccount, you first have to obtain the access [credentials](#setup) for the SAP BTP service operator, then to maintain the credentials provided by the binding in a secret that it specific for that namespace.
+There are 2 options to maintain namespace specific credentials:
+- Define secret named sap-btp-service-operator in the namespace, `ServiceInstance` and `ServiceBinding` applied in the namespace will be created in the subaccount from which the credentials were issued.
+- Define different secrets for the different namespaces in a centrally managed namespace, following the secret name convention: sap-btp-service-operator-<namespace>.
+
+**Note:** in order to work with tls additional `Secret` should be created in the namespace see [secret](./sapbtp-operator-charts/templates/secret-tls.yml)
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
