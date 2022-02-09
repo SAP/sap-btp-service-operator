@@ -384,13 +384,12 @@ During the transition will be 2 `ServiceBinding`, the original and the rotated w
 
 By setting `services.cloud.sap.com/forceRotate` annotation immediate credentials rotation will be performed (credentials rotation must be enabled). 
 
-## Multi Tenancy
-SAP BTP service operator can be configured to work with more than one subaccount on the same k8s cluster, different namespaces can be connected to different subaccounts.
-The association of a namespace to a subaccount is based on different set of credentials, configured for the different namespaces.
-
-In order to connect namespace to a subaccount, you first have to obtain the access [credentials](#setup) for the SAP BTP service operator, then to maintain the credentials provided by the binding in a secret that it specific for that namespace.
-There are 2 options to maintain namespace specific credentials:
-- Define secret named `sap-btp-service-operator` in the namespace, `ServiceInstance` and `ServiceBinding` applied in the namespace will be created in the subaccount from which the credentials were issued.
+## Multitenancy
+You can configure the SAP BTP service operator to work with more than one subaccount in the same Kubernetes cluster, and different namespaces can be connected to different subaccounts.
+The association between a namespace and a subaccount is based on different sets of credentials configured for different namespaces.
+To connect a namespace to a subaccount, you first have to obtain the access [credentials](#setup) for the SAP BTP service operator, and then maintain the credentials provided by the binding in a secret that is specific for that namespace.
+You have two options at your disposal to maintain namespace-specific credentials:
+- Define a secret named `sap-btp-service-operator` in the namespace, `ServiceInstance` and `ServiceBinding` applied in the namespace will be created in the subaccount from which the credentials were issued.
 - Define different secrets for the different namespaces in a centrally [managed namespace](./sapbtp-operator-charts/templates/configmap.yml), following the secret name convention: `sap-btp-service-operator-<namespace>`.
 - If none of the above options set, `sap-btp-service-operator` secret in release namespace will be used.
 
