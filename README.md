@@ -394,7 +394,7 @@ There are 2 options to maintain namespace specific credentials:
 - Define different secrets for the different namespaces in a centrally [managed namespace](./sapbtp-operator-charts/templates/configmap.yml), following the secret name convention: `sap-btp-service-operator-<namespace>`.
 - If none of the above options set, `sap-btp-service-operator` secret in release namespace will be used.
 
-**Note:** in order to work with tls additional `Secret` should be created in the namespace see [secret](./sapbtp-operator-charts/templates/secret-tls.yml)
+**Note:** in order to work with TLS additional `Secret` should be created in the namespace see [tls secret](./sapbtp-operator-charts/templates/secret-tls.yml)
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
