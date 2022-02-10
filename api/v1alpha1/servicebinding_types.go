@@ -208,7 +208,7 @@ type ServiceBindingList struct {
 }
 
 type CredentialsRotationConfiguration struct {
-	Enabled bool `json:"enabled,omitempty"`
+	Enabled bool `json:"enabled"`
 	// what frequency to perform binding rotation.
 	RotationInterval string `json:"rotationInterval,omitempty"`
 	// For how long to keep the rotated binding must be lower then RotationInterval.
