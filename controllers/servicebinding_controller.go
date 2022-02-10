@@ -172,7 +172,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 			if !(binding.LastOperation.Type == smTypes.CREATE && binding.LastOperation.State != smTypes.SUCCEEDED) {
 				// store secret unless binding is still being created or failed during creation
-				if err := r.storeBindingSecret(ctx, serviceBinding, binding, true); err != nil {
+				if err := r.storeBindingSecret(ctx, serviceBinding, binding); err != nil {
 					return r.handleSecretError(ctx, binding.LastOperation.Type, err, serviceBinding)
 				}
 			}
@@ -239,7 +239,7 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 
 	log.Info("Binding created successfully")
 
-	if err := r.storeBindingSecret(ctx, serviceBinding, smBinding, false); err != nil {
+	if err := r.storeBindingSecret(ctx, serviceBinding, smBinding); err != nil {
 		return r.handleSecretError(ctx, smTypes.CREATE, err, serviceBinding)
 	}
 
@@ -359,7 +359,7 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, smClient sm.Client,
 				return ctrl.Result{}, err
 			}
 
-			if err := r.storeBindingSecret(ctx, serviceBinding, smBinding, false); err != nil {
+			if err := r.storeBindingSecret(ctx, serviceBinding, smBinding); err != nil {
 				return r.handleSecretError(ctx, smTypes.CREATE, err, serviceBinding)
 			}
 			serviceBinding.Status.Ready = metav1.ConditionTrue
@@ -455,7 +455,7 @@ func (r *ServiceBindingReconciler) resyncBindingStatus(k8sBinding *v1alpha1.Serv
 	}
 }
 
-func (r *ServiceBindingReconciler) storeBindingSecret(ctx context.Context, k8sBinding *v1alpha1.ServiceBinding, smBinding *smclientTypes.ServiceBinding, recovery bool) error {
+func (r *ServiceBindingReconciler) storeBindingSecret(ctx context.Context, k8sBinding *v1alpha1.ServiceBinding, smBinding *smclientTypes.ServiceBinding) error {
 	log := GetLogger(ctx)
 	logger := log.WithValues("bindingName", k8sBinding.Name, "secretName", k8sBinding.Spec.SecretName)
 
@@ -501,19 +501,7 @@ func (r *ServiceBindingReconciler) storeBindingSecret(ctx context.Context, k8sBi
 		return err
 	}
 
-	if recovery {
-		return r.recoverSecret(ctx, k8sBinding, secret)
-	}
-	log.Info("Creating binding secret", "name", secret.Name)
-	if err := r.Create(ctx, secret); err != nil {
-		if !apierrors.IsAlreadyExists(err) {
-			return err
-		}
-		return nil
-	}
-	r.Recorder.Event(k8sBinding, corev1.EventTypeNormal, "SecretCreated", "SecretCreated")
-
-	return nil
+	return r.recoverSecret(ctx, k8sBinding, secret)
 }
 
 func (r *ServiceBindingReconciler) deleteBindingSecret(ctx context.Context, binding *v1alpha1.ServiceBinding) error {
@@ -707,6 +695,7 @@ func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, smClie
 			now := metav1.NewTime(time.Now())
 			binding.Status.LastCredentialsRotationTime = &now
 			meta.RemoveStatusCondition(&conditions, v1alpha1.ConditionCredRotationInProgress)
+			binding.Status.Conditions = conditions
 			return r.updateStatus(ctx, binding)
 		}
 		log.Info("Credentials rotation - waiting to finish")
@@ -804,11 +793,11 @@ func (r *ServiceBindingReconciler) recoverSecret(ctx context.Context, binding *v
 		r.Recorder.Event(binding, corev1.EventTypeNormal, "SecretCreated", "SecretCreated")
 		return nil
 	}
+
 	log.Info("Updating existing binding secret", "name", secret.Name)
 	dbSecret.Data = secret.Data
 	dbSecret.StringData = secret.StringData
 	return r.Update(ctx, dbSecret)
-
 }
 
 func (r *ServiceBindingReconciler) isStaleServiceBinding(binding *v1alpha1.ServiceBinding) bool {
