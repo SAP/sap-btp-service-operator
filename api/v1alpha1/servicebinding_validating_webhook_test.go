@@ -1,8 +1,6 @@
 package v1alpha1
 
 import (
-	"time"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -75,7 +73,9 @@ var _ = Describe("Service Binding Webhook Test", func() {
 			When("CredConfig changed", func() {
 				It("should succeed", func() {
 					newBinding.Spec.CredRotationConfig = &CredentialsRotationConfiguration{
-						Enabled: true,
+						Enabled:          true,
+						KeepFor:          "1s",
+						RotationInterval: "1s",
 					}
 					err := newBinding.ValidateUpdate(binding)
 					Expect(err).ToNot(HaveOccurred())
@@ -84,8 +84,8 @@ var _ = Describe("Service Binding Webhook Test", func() {
 				It("should fail when keepFor > rotationInterval", func() {
 					newBinding.Spec.CredRotationConfig = &CredentialsRotationConfiguration{
 						Enabled:          true,
-						KeepFor:          time.Hour,
-						RotationInterval: time.Minute,
+						KeepFor:          "1h",
+						RotationInterval: "1m",
 					}
 					err := newBinding.ValidateUpdate(binding)
 					Expect(err).To(HaveOccurred())
@@ -200,7 +200,9 @@ var _ = Describe("Service Binding Webhook Test", func() {
 			When("CredConfig changed", func() {
 				It("should succeed", func() {
 					newBinding.Spec.CredRotationConfig = &CredentialsRotationConfiguration{
-						Enabled: true,
+						Enabled:          true,
+						KeepFor:          "1s",
+						RotationInterval: "1s",
 					}
 					err := newBinding.ValidateUpdate(binding)
 					Expect(err).ToNot(HaveOccurred())
@@ -209,8 +211,8 @@ var _ = Describe("Service Binding Webhook Test", func() {
 				It("should fail when keepFor > rotationInterval", func() {
 					newBinding.Spec.CredRotationConfig = &CredentialsRotationConfiguration{
 						Enabled:          true,
-						KeepFor:          time.Hour,
-						RotationInterval: time.Minute,
+						KeepFor:          "1h",
+						RotationInterval: "1m",
 					}
 					err := newBinding.ValidateUpdate(binding)
 					Expect(err).To(HaveOccurred())

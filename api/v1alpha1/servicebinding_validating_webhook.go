@@ -46,8 +46,8 @@ var _ webhook.Validator = &ServiceBinding{}
 func (sb *ServiceBinding) ValidateCreate() error {
 	servicebindinglog.Info("validate create", "name", sb.Name)
 	if sb.Spec.CredRotationConfig != nil {
-		if sb.Spec.CredRotationConfig.KeepFor > sb.Spec.CredRotationConfig.RotationInterval {
-			return fmt.Errorf("credentialsRotationConfig.keepFor must be smaller then credentialsRotationConfig.rotationInterval")
+		if err := sb.validateCredRotatingConfig(); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -57,8 +57,8 @@ func (sb *ServiceBinding) ValidateCreate() error {
 func (sb *ServiceBinding) ValidateUpdate(old runtime.Object) error {
 	servicebindinglog.Info("validate update", "name", sb.Name)
 	if sb.Spec.CredRotationConfig != nil {
-		if sb.Spec.CredRotationConfig.KeepFor > sb.Spec.CredRotationConfig.RotationInterval {
-			return fmt.Errorf("credentialsRotationConfig.keepFor must be smaller then credentialsRotationConfig.rotationInterval")
+		if err := sb.validateCredRotatingConfig(); err != nil {
+			return err
 		}
 	}
 

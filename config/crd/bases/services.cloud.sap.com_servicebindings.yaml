@@ -60,12 +60,10 @@ spec:
                     type: boolean
                   keepFor:
                     description: For how long to keep the rotated binding must be lower then RotationInterval.
-                    format: int64
-                    type: integer
+                    type: string
                   rotationInterval:
                     description: what frequency to perform binding rotation.
-                    format: int64
-                    type: integer
+                    type: string
                 type: object
               externalName:
                 description: The name of the binding in Service Manager

@@ -759,7 +759,8 @@ func (r *ServiceBindingReconciler) initCredRotationIfRequired(binding *v1alpha1.
 		lastCredentialRotationTime = &ts
 	}
 
-	if time.Since(lastCredentialRotationTime.Time) > binding.Spec.CredRotationConfig.RotationInterval || forceRotate {
+	rotationInterval, _ := time.ParseDuration(binding.Spec.CredRotationConfig.RotationInterval)
+	if time.Since(lastCredentialRotationTime.Time) > rotationInterval || forceRotate {
 		setCredRotationInProgressConditions(CredPreparing, "", binding)
 		return true
 	}
@@ -818,7 +819,8 @@ func (r *ServiceBindingReconciler) isStaleServiceBinding(binding *v1alpha1.Servi
 	if binding.Annotations != nil {
 		if _, ok := binding.Annotations[v1alpha1.StaleAnnotation]; ok {
 			if binding.Spec.CredRotationConfig != nil {
-				if time.Since(binding.CreationTimestamp.Time) > binding.Spec.CredRotationConfig.KeepFor {
+				keepFor, _ := time.ParseDuration(binding.Spec.CredRotationConfig.KeepFor)
+				if time.Since(binding.CreationTimestamp.Time) > keepFor {
 					return true
 				}
 			}

@@ -17,12 +17,12 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"time"
-
+	"fmt"
 	"github.com/Peripli/service-manager/pkg/types"
 	v1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"time"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -181,6 +181,22 @@ func (sb *ServiceBinding) SetReady(ready metav1.ConditionStatus) {
 	sb.Status.Ready = ready
 }
 
+func (sb *ServiceBinding) validateCredRotatingConfig() error {
+	keepFor, err := time.ParseDuration(sb.Spec.CredRotationConfig.KeepFor)
+	if err != nil {
+		return err
+	}
+	rotationInterval, err := time.ParseDuration(sb.Spec.CredRotationConfig.RotationInterval)
+	if err != nil {
+		return err
+	}
+
+	if keepFor > rotationInterval {
+		return fmt.Errorf("credentialsRotationConfig.keepFor must be smaller then credentialsRotationConfig.rotationInterval")
+	}
+	return nil
+}
+
 // +kubebuilder:object:root=true
 
 // ServiceBindingList contains a list of ServiceBinding
@@ -193,9 +209,9 @@ type ServiceBindingList struct {
 type CredentialsRotationConfiguration struct {
 	Enabled bool `json:"enabled,omitempty"`
 	// what frequency to perform binding rotation.
-	RotationInterval time.Duration `json:"rotationInterval,omitempty"`
+	RotationInterval string `json:"rotationInterval,omitempty"`
 	// For how long to keep the rotated binding must be lower then RotationInterval.
-	KeepFor time.Duration `json:"keepFor,omitempty"`
+	KeepFor string `json:"keepFor,omitempty"`
 }
 
 func init() {
