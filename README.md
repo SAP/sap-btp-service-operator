@@ -23,9 +23,9 @@ This feature is still under development, review, and testing.
     * [Service instance properties](#service-instance)
     * [Binding properties](#service-binding)
     * [Passing parameters](#passing-parameters)
-* [SAP BTP kubectl extension](#sap-btp-kubectl-plugin-experimental) 
+* [SAP BTP kubectl Extension](#sap-btp-kubectl-plugin-experimental) 
 * [Credentials Rotation](#credentials-rotation)
-* [Multi Tenancy](#multi-tenancy)
+* [Multitenancy](#multi-tenancy)
 
 ## Prerequisites
 - SAP BTP [Global Account](https://help.sap.com/viewer/65de2977205c403bbc107264b8eccf4b/Cloud/en-US/d61c2819034b48e68145c45c36acba6e.html) and [Subaccount](https://help.sap.com/viewer/65de2977205c403bbc107264b8eccf4b/Cloud/en-US/55d0b6d8b96846b8ae93b85194df0944.html) 
@@ -248,9 +248,9 @@ This feature is still under development, review, and testing.
 | parametersFrom | `[]object` | List of sources to populate parameters. |
 | userInfo | `object`  | Contains information about the user that last modified this service binding. |
 | credentialsRotationConfig | `object`  | Holds automatic credentials rotation configuration. |
-| credentialsRotationConfig.enabled | `boolean`  | Indicates whether automatic credentials rotation enabled. |
-| credentialsRotationConfig.rotationInterval | `duration`  | What frequency to perform binding rotation. |
-| credentialsRotationConfig.keepFor | `duration`  | For how long to keep the rotated binding must be lower then `rotationInterval`. |
+| credentialsRotationConfig.enabled | `boolean`  | Indicates whether automatic credentials rotation are enabled. |
+| credentialsRotationConfig.rotationInterval | `duration`  | Specifies the frequency at which the binding rotation is performed. |
+| credentialsRotationConfig.keepFor | `duration`  | Specifies the time period for which to keep the rotated binding. Must be lower then `rotationInterval`. |
 
 
 
@@ -262,7 +262,7 @@ This feature is still under development, review, and testing.
 | operationURL |`string`| The URL of the current operation performed on the service binding. |
 | operationType| `string `| The type of the current operation. Possible values are CREATE, UPDATE, or DELETE. |
 | conditions| `[]condition` | An array of conditions describing the status of the service instance.<br/>The possible conditions types are:<br/>- `Ready`: set to `true` if the binding is ready and usable<br/>- `Failed`: set to `true` when an operation on the service binding fails.<br/> In the case of failure, the details about the error are available in the condition message.<br>- `Succeeded`: set to `true` when an operation on the service binding succeeded. In case of `false` operation considered as in progress unless `Failed` condition exists.
-| lastCredentialsRotationTime| `time` | Indicates when binding secret was rotated.
+| lastCredentialsRotationTime| `time` | Indicates the last time the binding secret was rotated.
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
@@ -373,27 +373,31 @@ Usually it is the namespace in which you installed the operator.
 If not specified, the `default` namespace is used.
 
 ## Credentials Rotation
-To enable automatic credential rotation you need to set field `credentialsRotationConfig` in the `spec` field of the `ServiceBinding` resource:
-- `enabled`: allows to switch on and switch off the automatic credentials rotation
-- `rotationInterval`: indicates the frequency of the credentials rotation valid time units are "ns", "us" or ("µs"), "ms", "s", "m", "h"
-- `keepFor`: Indicates for how long to keep the rotated `ServiceBinding` must be lower then `rotationInterval`.
+To enable automatic credentials rotation, you need to set the following parameters of the `credentialsRotationConfig` field in the `spec` field of the `ServiceBinding` resource:
 
-During the transition will be 2 `ServiceBinding`, the original and the rotated with '--old' suffix which will be deleted after `keepFor` duration elapsed.
+- `enabled` - Whether the credentials rotation option is enabled. Default value is false. :question:  is it?
+- `rotationInterval` - Indicates the frequency at which the credentials rotation is performed. Valid time units are: "ns", "us" or ("µs"), "ms", "s", "m", "h".
+- `keepFor` - Indicates for how long to keep the rotated `ServiceBinding`. Must be lower then `rotationInterval`.
 
-**Note:** it's not possible to enable automatic credentials rotation to already rotated `ServiceBinding` (with '--old' suffix).
+During the transition period, there are two `ServiceBinding` RTDs: the original and the rotated one (holds the '--old' suffix, which is deleted once the `keepFor` duration elapses).
 
-By setting `services.cloud.sap.com/forceRotate` annotation immediate credentials rotation will be performed (credentials rotation must be enabled). 
+**Note:**<br> It isn't possible to enable automatic credentials rotation to an already-rotated `ServiceBinding` (with the '--old' suffix).
+
+You can also choose the `services.cloud.sap.com/forceRotate` annotation, upon which immediate credentials rotation is performed. Note that the prerequisite for the force action is that credentials rotation `enabled` field is set to true.). 
 
 ## Multitenancy
-You can configure the SAP BTP service operator to work with more than one subaccount in the same Kubernetes cluster, and different namespaces can be connected to different subaccounts.
-The association between a namespace and a subaccount is based on different sets of credentials configured for different namespaces.
-To connect a namespace to a subaccount, you first have to obtain the access [credentials](#setup) for the SAP BTP service operator, and then maintain the credentials provided by the binding in a secret that is specific for that namespace.
-You have two options at your disposal to maintain namespace-specific credentials:
-- Define a secret named `sap-btp-service-operator` in the namespace, `ServiceInstance` and `ServiceBinding` applied in the namespace will be created in the subaccount from which the credentials were issued.
-- Define different secrets for the different namespaces in a centrally [managed namespace](./sapbtp-operator-charts/templates/configmap.yml), following the secret name convention: `sap-btp-service-operator-<namespace>`.
-- If none of the above options set, `sap-btp-service-operator` secret in release namespace will be used.
+You can configure the SAP BTP service operator to work with more than one subaccount in the same Kubernetes cluster. This means that different namespaces can be connected to different subaccounts.
+The association between a namespace and a subaccount is based on a different set of credentials configured for different namespaces.
 
-**Note:** in order to work with TLS additional `Secret` should be created in the namespace see [tls secret](./sapbtp-operator-charts/templates/secret-tls.yml)
+To connect the namespace to a subaccount, you first have to obtain the [access credentials](#setup) for the SAP BTP service operator and then maintain them in a secret that is specific for that namespace.
+
+There are two options to maintain namespace-specific credentials:
+- Define a secret named `sap-btp-service-operator` in the namespace. `ServiceInstance` and `ServiceBinding` that are already applied in the namespace will also be created in the subaccount from which the credentials were issued. :question: Not sure the second sentence is correct. 
+- Define different secrets for different namespaces in a centrally [managed namespace](./sapbtp-operator-charts/templates/configmap.yml), following the secret naming convention: `sap-btp-service-operator-<namespace>`.
+
+If none of the those mentioned above options are set, `sap-btp-service-operator` secret of a release namespace is used.  :question: what is this "release namespace"?
+
+**Note:**<br> To work with TLS-based credentials, additional `Secret` should be created in the namespace. For more information, see [tls secret](./sapbtp-operator-charts/templates/secret-tls.yml).
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
@@ -405,6 +409,6 @@ The SAP BTP service operator project maintainers will respond to the best of the
 We currently do not accept community contributions. 
 
 ## License
-This project is licensed under Apache 2.0 except as noted otherwise in the [license](./LICENSE) file.
+This project is licensed under Apache 2.0 unless noted otherwise in the [license](./LICENSE) file.
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
