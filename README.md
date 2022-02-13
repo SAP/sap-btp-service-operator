@@ -381,9 +381,9 @@ To enable automatic credentials rotation, you need to set the following paramete
 
 Valid time units for `rotationInterval` and `keepFor` are: "ns", "us" or ("µs"), "ms", "s", "m", "h".
 
-During the transition period, there are two (or more) `ServiceBinding`: the original and the rotated one (holds the services.cloud.sap.com/stale annotation, which is deleted once the `keepFor` duration elapses).
+During the transition period, there are two (or more) `ServiceBinding`: the original and the rotated one (holds the `services.cloud.sap.com/stale` annotation, which is deleted once the `keepFor` duration elapses).
 
-**Note:**<br> It isn't possible to enable automatic credentials rotation to an already-rotated `ServiceBinding` (with the services.cloud.sap.com/stale annotation).
+**Note:**<br> It isn't possible to enable automatic credentials rotation to an already-rotated `ServiceBinding` (with the `services.cloud.sap.com/stale` annotation).
 
 You can also choose the `services.cloud.sap.com/forceRotate` annotation, upon which immediate credentials rotation is performed. Note that the prerequisite for the force action is that credentials rotation `enabled` field is set to true.). 
 
