@@ -380,6 +380,7 @@ To enable automatic credentials rotation, you need to set the following paramete
 - `keepFor` - Indicates for how long to keep the rotated `ServiceBinding`.
 
 Valid time units for `rotationInterval` and `keepFor` are: "ns", "us" or ("µs"), "ms", "s", "m", "h".
+`status.lastCredentialsRotationTime` indicates the last time the `ServiceBinding` secret was rotated.
 
 During the transition period, there are two (or more) `ServiceBinding`: the original and the rotated one (holds the `services.cloud.sap.com/stale` annotation, which is deleted once the `keepFor` duration elapses).
 
