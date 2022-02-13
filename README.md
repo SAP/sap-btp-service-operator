@@ -376,12 +376,14 @@ If not specified, the `default` namespace is used.
 To enable automatic credentials rotation, you need to set the following parameters of the `credentialsRotationConfig` field in the `spec` field of the `ServiceBinding` resource:
 
 - `enabled` - Whether the credentials rotation option is enabled. Default value is false. 
-- `rotationInterval` - Indicates the frequency at which the credentials rotation is performed. Valid time units are: "ns", "us" or ("µs"), "ms", "s", "m", "h".
-- `keepFor` - Indicates for how long to keep the rotated `ServiceBinding`. Must be lower then `rotationInterval`.
+- `rotationInterval` - Indicates the frequency at which the credentials rotation is performed. 
+- `keepFor` - Indicates for how long to keep the rotated `ServiceBinding`.
 
-During the transition period, there are two `ServiceBinding`: the original and the rotated one (holds the '--old' suffix, which is deleted once the `keepFor` duration elapses).
+Valid time units for `rotationInterval` and `keepFor` are: "ns", "us" or ("µs"), "ms", "s", "m", "h".
 
-**Note:**<br> It isn't possible to enable automatic credentials rotation to an already-rotated `ServiceBinding` (with the '--old' suffix).
+During the transition period, there are two (or more) `ServiceBinding`: the original and the rotated one (holds the services.cloud.sap.com/stale annotation, which is deleted once the `keepFor` duration elapses).
+
+**Note:**<br> It isn't possible to enable automatic credentials rotation to an already-rotated `ServiceBinding` (with the services.cloud.sap.com/stale annotation).
 
 You can also choose the `services.cloud.sap.com/forceRotate` annotation, upon which immediate credentials rotation is performed. Note that the prerequisite for the force action is that credentials rotation `enabled` field is set to true.). 
 
