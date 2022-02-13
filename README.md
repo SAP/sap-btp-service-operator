@@ -379,7 +379,7 @@ To enable automatic credentials rotation, you need to set the following paramete
 - `rotationInterval` - Indicates the frequency at which the credentials rotation is performed. Valid time units are: "ns", "us" or ("µs"), "ms", "s", "m", "h".
 - `keepFor` - Indicates for how long to keep the rotated `ServiceBinding`. Must be lower then `rotationInterval`.
 
-During the transition period, there are two `ServiceBinding` RTDs: the original and the rotated one (holds the '--old' suffix, which is deleted once the `keepFor` duration elapses).
+During the transition period, there are two `ServiceBinding`: the original and the rotated one (holds the '--old' suffix, which is deleted once the `keepFor` duration elapses).
 
 **Note:**<br> It isn't possible to enable automatic credentials rotation to an already-rotated `ServiceBinding` (with the '--old' suffix).
 
