@@ -20,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"net/http"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
 )
 
@@ -877,6 +878,24 @@ var _ = Describe("ServiceBinding controller", func() {
 
 	Context("Credential Rotation", func() {
 		var ctx context.Context
+
+		calculateOldBindingName := func(originalName string) string {
+			bindingList := &v1alpha1.ServiceBindingList{}
+			var binding v1alpha1.ServiceBinding
+			Eventually(func() bool {
+				Expect(k8sClient.List(ctx, bindingList, client.InNamespace(bindingTestNamespace))).To(Succeed())
+				found := false
+				for i := 0; i < len(bindingList.Items); i++ {
+					binding = bindingList.Items[i]
+					_, found = binding.Annotations[v1alpha1.StaleAnnotation]
+
+				}
+				return found && strings.Contains(binding.Name, createdBinding.Name)
+			}, timeout, interval).Should(BeTrue())
+
+			return binding.Name
+		}
+
 		JustBeforeEach(func() {
 			fakeClient.RenameBindingReturns(nil, nil)
 			ctx = context.Background()
@@ -887,11 +906,11 @@ var _ = Describe("ServiceBinding controller", func() {
 					return nil, nil
 				}
 
-				if strings.Contains(params.FieldQuery[0], OldSuffix) {
+				if strings.Contains(params.FieldQuery[0], "binding-external-name-") {
 					return &smclientTypes.ServiceBindings{
 						ServiceBindings: []smclientTypes.ServiceBinding{
 							{
-								ID:          createdBinding.Status.BindingID,
+								ID:          fakeBindingID,
 								Ready:       true,
 								Credentials: json.RawMessage("{\"secret_key2\": \"secret_value2\"}"),
 								LastOperation: &smTypes.Operation{
@@ -911,7 +930,7 @@ var _ = Describe("ServiceBinding controller", func() {
 			Expect(k8sClient.Get(context.Background(), types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}, createdBinding)).To(Succeed())
 			createdBinding.Spec.CredRotationConfig = &v1alpha1.CredentialsRotationConfiguration{
 				Enabled:          true,
-				KeepFor:          "1ns",
+				KeepFor:          "1h",
 				RotationInterval: "1ns",
 			}
 			secret := getSecret(ctx, createdBinding.Spec.SecretName, bindingTestNamespace, true)
@@ -931,6 +950,22 @@ var _ = Describe("ServiceBinding controller", func() {
 			secret = getSecret(ctx, myBinding.Spec.SecretName, bindingTestNamespace, true)
 			val := secret.Data["secret_key"]
 			Expect(string(val)).To(Equal("secret_value"))
+
+			// old binding created
+			oldBindingName := calculateOldBindingName(bindingName)
+			oldBinding := &v1alpha1.ServiceBinding{}
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: oldBindingName, Namespace: bindingTestNamespace}, oldBinding)
+				return err == nil && isReady(oldBinding)
+			}, timeout, interval).Should(BeTrue())
+			_, ok := oldBinding.Annotations[v1alpha1.StaleAnnotation]
+			Expect(ok).To(BeTrue())
+			Expect(oldBinding.Spec.CredRotationConfig.Enabled).To(BeFalse())
+
+			// old secret created
+			secret = getSecret(ctx, oldBinding.Spec.SecretName, bindingTestNamespace, true)
+			val = secret.Data["secret_key2"]
+			Expect(string(val)).To(Equal("secret_value2"))
 		})
 
 		It("should rotate the credentials with force rotate annotation", func() {
@@ -953,20 +988,6 @@ var _ = Describe("ServiceBinding controller", func() {
 
 			_, ok := myBinding.Annotations[v1alpha1.ForceRotateAnnotation]
 			Expect(ok).To(BeFalse())
-
-			// old binding created
-			oldBinding := &v1alpha1.ServiceBinding{}
-			Eventually(func() bool {
-				err := k8sClient.Get(ctx, types.NamespacedName{Name: bindingName + OldSuffix, Namespace: bindingTestNamespace}, oldBinding)
-				return err == nil && isReady(oldBinding)
-			}, timeout, interval).Should(BeTrue())
-			_, ok = oldBinding.Annotations[v1alpha1.StaleAnnotation]
-			Expect(ok).To(BeTrue())
-			Expect(oldBinding.Spec.CredRotationConfig.Enabled).To(BeFalse())
-			// old secret created
-			secret := getSecret(ctx, createdBinding.Spec.SecretName+OldSuffix, bindingTestNamespace, true)
-			val := secret.Data["secret_key2"]
-			Expect(string(val)).To(Equal("secret_value2"))
 		})
 
 		It("should delete old binding when stale", func() {

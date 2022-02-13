@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"k8s.io/apimachinery/pkg/util/rand"
 	"strings"
 
 	v1 "k8s.io/api/authentication/v1"
@@ -63,4 +64,13 @@ func contains(slice []string, i string) bool {
 	}
 
 	return false
+}
+
+func RandStringRunes(n int) string {
+	var letterRunes = []rune("abcdefghijklmnopqrstuvwxyz1234567890")
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+	}
+	return string(b)
 }

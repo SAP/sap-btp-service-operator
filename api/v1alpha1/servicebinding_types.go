@@ -17,7 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/Peripli/service-manager/pkg/types"
@@ -183,18 +182,15 @@ func (sb *ServiceBinding) SetReady(ready metav1.ConditionStatus) {
 }
 
 func (sb *ServiceBinding) validateCredRotatingConfig() error {
-	keepFor, err := time.ParseDuration(sb.Spec.CredRotationConfig.KeepFor)
+	_, err := time.ParseDuration(sb.Spec.CredRotationConfig.KeepFor)
 	if err != nil {
 		return err
 	}
-	rotationInterval, err := time.ParseDuration(sb.Spec.CredRotationConfig.RotationInterval)
+	_, err = time.ParseDuration(sb.Spec.CredRotationConfig.RotationInterval)
 	if err != nil {
 		return err
 	}
 
-	if keepFor > rotationInterval {
-		return fmt.Errorf("credentialsRotationConfig.keepFor must be smaller then credentialsRotationConfig.rotationInterval")
-	}
 	return nil
 }
 
