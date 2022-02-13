@@ -391,17 +391,20 @@ The association between a namespace and a subaccount is based on a different set
 
 To connect the namespace to a subaccount, you first have to obtain the [access credentials](#setup) for the SAP BTP service operator and then maintain them in a secret that is specific for that namespace.
 
-There are two options to maintain namespace-specific credentials:
+There are two options to maintain namespace-specific credentials, and they differ between default and TLS-based access credentials types:
+
+### Default Access Credentials
 - Define a secret named `sap-btp-service-operator` in the namespace. `ServiceInstance` and `ServiceBinding` that are applied in the namespace will belong to the subaccount from which the credentials were issued.  
 - Define different secrets for different namespaces in a centrally [managed namespace](./sapbtp-operator-charts/templates/configmap.yml), following the secret naming convention: `sap-btp-service-operator-<namespace>`. 
+
+### TLS-Based Access Credentials
+- Define a secret pair named `sap-btp-service-operator` and `sap-btp-service-operator-tls`  in the namespace. `ServiceInstance` and `ServiceBinding` that are applied in the namespace will belong to the subaccount from which the credentials were issued.  
+- Define different secrets for different namespaces in a centrally [managed namespace](./sapbtp-operator-charts/templates/configmap.yml), following the secret naming convention: `sap-btp-service-operator-<namespace>` and `sap-btp-service-operator-tls--<namespace>` . For more information, see [tls secret](./sapbtp-operator-charts/templates/secret-tls.yml).
 
 **Notes:**
 - If none of the those mentioned above options are set, `sap-btp-service-operator` secret of a release namespace is used.<br>
   See step 4 of the [Setup](#setup) section.
   
-- To work with TLS-based credentials, additional `Secret` should be created in the namespace. For more information, see [tls secret](./sapbtp-operator-charts/templates/secret-tls.yml).<br> You should follow the same naming convention that specifies a namespace, but for both secrets:<br>
-`sap-btp-service-operator-<namespace>` and `sap-btp-service-operator-tls-<namespace>` 
-
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
 ## Support
