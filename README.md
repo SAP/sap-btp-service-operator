@@ -395,9 +395,11 @@ There are two options to maintain namespace-specific credentials:
 - Define a secret named `sap-btp-service-operator` in the namespace. `ServiceInstance` and `ServiceBinding` that are applied in the namespace will belong to the subaccount from which the credentials were issued.  
 - Define different secrets for different namespaces in a centrally [managed namespace](./sapbtp-operator-charts/templates/configmap.yml), following the secret naming convention: `sap-btp-service-operator-<namespace>`.
 
-**Note:**<br>If none of the those mentioned above options are set, `sap-btp-service-operator` secret of a release namespace is used. See step 4 of the [Setup](#setup) section.
-
-**Note:**<br> To work with TLS-based credentials, additional `Secret` should be created in the namespace. For more information, see [tls secret](./sapbtp-operator-charts/templates/secret-tls.yml).
+**Notes:**
+- If none of the those mentioned above options are set, `sap-btp-service-operator` secret of a release namespace is used. 
+  See step 4 of the [Setup](#setup) section.
+  
+- To work with TLS-based credentials, additional `Secret` should be created in the namespace. For more information, see [tls secret](./sapbtp-operator-charts/templates/secret-tls.yml).
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
