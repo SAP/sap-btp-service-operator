@@ -3,8 +3,9 @@ package controllers
 import (
 	"context"
 	"encoding/json"
-	"k8s.io/apimachinery/pkg/util/rand"
 	"strings"
+
+	"k8s.io/apimachinery/pkg/util/rand"
 
 	v1 "k8s.io/api/authentication/v1"
 )
