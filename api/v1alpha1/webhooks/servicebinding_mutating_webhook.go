@@ -56,6 +56,16 @@ func (s *ServiceBindingDefaulter) Handle(_ context.Context, req admission.Reques
 		}
 	}
 
+	if binding.Spec.CredRotationConfig != nil {
+		if len(binding.Spec.CredRotationConfig.RotationInterval) == 0 {
+			binding.Spec.CredRotationConfig.RotationInterval = "0ns"
+		}
+
+		if len(binding.Spec.CredRotationConfig.KeepFor) == 0 {
+			binding.Spec.CredRotationConfig.KeepFor = "0ns"
+		}
+	}
+
 	if req.Operation == v1admission.Create || req.Operation == v1admission.Delete {
 		binding.Spec.UserInfo = &v1.UserInfo{
 			Username: req.UserInfo.Username,

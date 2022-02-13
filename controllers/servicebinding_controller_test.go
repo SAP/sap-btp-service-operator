@@ -993,9 +993,7 @@ var _ = Describe("ServiceBinding controller", func() {
 		It("should delete old binding when stale", func() {
 			Expect(k8sClient.Get(context.Background(), types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}, createdBinding)).To(Succeed())
 			createdBinding.Spec.CredRotationConfig = &v1alpha1.CredentialsRotationConfiguration{
-				Enabled:          false,
-				KeepFor:          "1ns",
-				RotationInterval: "1ns",
+				Enabled: false,
 			}
 			createdBinding.Annotations = map[string]string{
 				v1alpha1.StaleAnnotation: "true",
