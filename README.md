@@ -14,6 +14,7 @@ The SAP BTP service operator is based on the [Kubernetes Operator pattern](https
 This feature is still under development, review, and testing. 
 
 ## Table of Contents
+* [Architecture](#architecture)
 * [Prerequisites](#prerequisites)
 * [Setup](#setup)
 * [Using the SAP BTP Service Operator](#using-the-sap-btp-service-operator)
@@ -26,6 +27,12 @@ This feature is still under development, review, and testing.
 * [SAP BTP kubectl Extension](#sap-btp-kubectl-plugin-experimental) 
 * [Credentials Rotation](#credentials-rotation)
 * [Multitenancy](#multitenancy)
+
+## Architecture
+SAP BTP service operator communicates with [Service Manager](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/3a27b85a47fc4dff99184dd5bf181e14.html) that uses the [Open service broker API](https://github.com/openservicebrokerapi/servicebroker) to communicate with service brokers, acting as an intermediary for the Kubernetes API Server to negotiate the initial provisioning and retrieve the credentials necessary for the application to use a managed service.<br><br>
+It is implemented using a [CRDs-based](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/#custom-resources) architecture.
+
+![img](./docs/images/architecture.png)
 
 ## Prerequisites
 - SAP BTP [Global Account](https://help.sap.com/viewer/65de2977205c403bbc107264b8eccf4b/Cloud/en-US/d61c2819034b48e68145c45c36acba6e.html) and [Subaccount](https://help.sap.com/viewer/65de2977205c403bbc107264b8eccf4b/Cloud/en-US/55d0b6d8b96846b8ae93b85194df0944.html) 
