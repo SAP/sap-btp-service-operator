@@ -718,7 +718,7 @@ func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, smClie
 		return errRenaming
 	}
 
-	log.Info("Credentials rotation - backing up old binding in K8S")
+	log.Info("Credentials rotation - backing up old binding in K8S", "name", binding.Name+oldSuffix)
 	if err := r.createOldBinding(ctx, oldSuffix, binding); err != nil {
 		log.Error(err, "Credentials rotation - failed to back up old binding in K8S, renaming back to original", "original", binding.Spec.ExternalName)
 		if _, renameErr := smClient.RenameBinding(binding.Status.BindingID, binding.Spec.ExternalName, binding.Name+oldSuffix, binding.Name); renameErr != nil {
