@@ -734,7 +734,7 @@ func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, smClie
 	binding.Status.BindingID = ""
 	binding.Status.Ready = metav1.ConditionFalse
 	setInProgressConditions(smTypes.CREATE, "rotating binding credentials", binding)
-	setCredRotationInProgressConditions(CredRotating, "RotationInProgress", binding)
+	setCredRotationInProgressConditions(CredRotating, "", binding)
 	return r.updateStatus(ctx, binding)
 }
 
