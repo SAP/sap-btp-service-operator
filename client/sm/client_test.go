@@ -971,7 +971,7 @@ TSTAhYWEQVZqRKYQMYGHpNlU
 			})
 
 			It("should rename binding", func() {
-				res, err := client.RenameBinding(binding.ID, "newname", "k8sname", "newk8sname")
+				res, err := client.RenameBinding(binding.ID, "newname", "newk8sname")
 				Expect(err).ToNot(HaveOccurred())
 				Expect(res.ID).To(Equal("bindingID"))
 			})

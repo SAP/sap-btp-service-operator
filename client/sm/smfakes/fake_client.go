@@ -156,13 +156,12 @@ type FakeClient struct {
 		result1 *sm.ProvisionResponse
 		result2 error
 	}
-	RenameBindingStub        func(string, string, string, string) (*types.ServiceBinding, error)
+	RenameBindingStub        func(string, string, string) (*types.ServiceBinding, error)
 	renameBindingMutex       sync.RWMutex
 	renameBindingArgsForCall []struct {
 		arg1 string
 		arg2 string
 		arg3 string
-		arg4 string
 	}
 	renameBindingReturns struct {
 		result1 *types.ServiceBinding
@@ -881,21 +880,20 @@ func (fake *FakeClient) ProvisionReturnsOnCall(i int, result1 *sm.ProvisionRespo
 	}{result1, result2}
 }
 
-func (fake *FakeClient) RenameBinding(arg1 string, arg2 string, arg3 string, arg4 string) (*types.ServiceBinding, error) {
+func (fake *FakeClient) RenameBinding(arg1 string, arg2 string, arg3 string) (*types.ServiceBinding, error) {
 	fake.renameBindingMutex.Lock()
 	ret, specificReturn := fake.renameBindingReturnsOnCall[len(fake.renameBindingArgsForCall)]
 	fake.renameBindingArgsForCall = append(fake.renameBindingArgsForCall, struct {
 		arg1 string
 		arg2 string
 		arg3 string
-		arg4 string
-	}{arg1, arg2, arg3, arg4})
+	}{arg1, arg2, arg3})
 	stub := fake.RenameBindingStub
 	fakeReturns := fake.renameBindingReturns
-	fake.recordInvocation("RenameBinding", []interface{}{arg1, arg2, arg3, arg4})
+	fake.recordInvocation("RenameBinding", []interface{}{arg1, arg2, arg3})
 	fake.renameBindingMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2, arg3, arg4)
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -909,17 +907,17 @@ func (fake *FakeClient) RenameBindingCallCount() int {
 	return len(fake.renameBindingArgsForCall)
 }
 
-func (fake *FakeClient) RenameBindingCalls(stub func(string, string, string, string) (*types.ServiceBinding, error)) {
+func (fake *FakeClient) RenameBindingCalls(stub func(string, string, string) (*types.ServiceBinding, error)) {
 	fake.renameBindingMutex.Lock()
 	defer fake.renameBindingMutex.Unlock()
 	fake.RenameBindingStub = stub
 }
 
-func (fake *FakeClient) RenameBindingArgsForCall(i int) (string, string, string, string) {
+func (fake *FakeClient) RenameBindingArgsForCall(i int) (string, string, string) {
 	fake.renameBindingMutex.RLock()
 	defer fake.renameBindingMutex.RUnlock()
 	argsForCall := fake.renameBindingArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *FakeClient) RenameBindingReturns(result1 *types.ServiceBinding, result2 error) {

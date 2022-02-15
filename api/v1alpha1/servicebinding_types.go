@@ -17,8 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"time"
-
 	"github.com/Peripli/service-manager/pkg/types"
 	v1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -82,9 +80,9 @@ type ServiceBindingSpec struct {
 	// +optional
 	UserInfo *v1.UserInfo `json:"userInfo,omitempty"`
 
-	// CredentialsRotationConfiguration holds automatic credentials rotation configuration.
+	// CredentialsRotationPolicy holds automatic credentials rotation configuration.
 	// +optional
-	CredRotationConfig *CredentialsRotationConfiguration `json:"credentialsRotationConfig,omitempty"`
+	CredRotationConfig *CredentialsRotationConfiguration `json:"credentialsRotationPolicy,omitempty"`
 }
 
 // ServiceBindingStatus defines the observed state of ServiceBinding
@@ -181,19 +179,6 @@ func (sb *ServiceBinding) SetReady(ready metav1.ConditionStatus) {
 	sb.Status.Ready = ready
 }
 
-func (sb *ServiceBinding) validateCredRotatingConfig() error {
-	_, err := time.ParseDuration(sb.Spec.CredRotationConfig.KeepFor)
-	if err != nil {
-		return err
-	}
-	_, err = time.ParseDuration(sb.Spec.CredRotationConfig.RotationInterval)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // +kubebuilder:object:root=true
 
 // ServiceBindingList contains a list of ServiceBinding
@@ -205,10 +190,10 @@ type ServiceBindingList struct {
 
 type CredentialsRotationConfiguration struct {
 	Enabled bool `json:"enabled"`
-	// what frequency to perform binding rotation.
-	RotationInterval string `json:"rotationInterval,omitempty"`
-	// For how long to keep the rotated binding must be lower then RotationInterval.
-	KeepFor string `json:"keepFor,omitempty"`
+	// What frequency to perform binding rotation.
+	RotationFrequency string `json:"rotationFrequency,omitempty"`
+	// For how long to keep the rotated binding.
+	RotatedBindingTTL string `json:"rotatedBindingTTL,omitempty"`
 }
 
 func init() {

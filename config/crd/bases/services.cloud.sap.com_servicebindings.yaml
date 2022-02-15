@@ -53,16 +53,16 @@ spec:
           spec:
             description: ServiceBindingSpec defines the desired state of ServiceBinding
             properties:
-              credentialsRotationConfig:
-                description: CredentialsRotationConfiguration holds automatic credentials rotation configuration.
+              credentialsRotationPolicy:
+                description: CredentialsRotationPolicy holds automatic credentials rotation configuration.
                 properties:
                   enabled:
                     type: boolean
-                  keepFor:
-                    description: For how long to keep the rotated binding must be lower then RotationInterval.
+                  rotatedBindingTTL:
+                    description: For how long to keep the rotated binding.
                     type: string
-                  rotationInterval:
-                    description: what frequency to perform binding rotation.
+                  rotationFrequency:
+                    description: What frequency to perform binding rotation.
                     type: string
                 required:
                 - enabled

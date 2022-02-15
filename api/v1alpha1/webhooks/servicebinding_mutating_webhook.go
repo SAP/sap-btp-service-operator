@@ -57,12 +57,12 @@ func (s *ServiceBindingDefaulter) Handle(_ context.Context, req admission.Reques
 	}
 
 	if binding.Spec.CredRotationConfig != nil {
-		if len(binding.Spec.CredRotationConfig.RotationInterval) == 0 {
-			binding.Spec.CredRotationConfig.RotationInterval = "0ns"
+		if len(binding.Spec.CredRotationConfig.RotationFrequency) == 0 {
+			binding.Spec.CredRotationConfig.RotationFrequency = "0ns"
 		}
 
-		if len(binding.Spec.CredRotationConfig.KeepFor) == 0 {
-			binding.Spec.CredRotationConfig.KeepFor = "0ns"
+		if len(binding.Spec.CredRotationConfig.RotatedBindingTTL) == 0 {
+			binding.Spec.CredRotationConfig.RotatedBindingTTL = "0ns"
 		}
 	}
 

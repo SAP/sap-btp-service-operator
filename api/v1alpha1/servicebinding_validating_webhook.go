@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"fmt"
 	"reflect"
+	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -92,5 +93,18 @@ func (sb *ServiceBinding) ValidateDelete() error {
 	servicebindinglog.Info("validate delete", "name", sb.Name)
 
 	// TODO(user): fill in your validation logic upon object deletion.
+	return nil
+}
+
+func (sb *ServiceBinding) validateCredRotatingConfig() error {
+	_, err := time.ParseDuration(sb.Spec.CredRotationConfig.RotatedBindingTTL)
+	if err != nil {
+		return err
+	}
+	_, err = time.ParseDuration(sb.Spec.CredRotationConfig.RotationFrequency)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

@@ -55,7 +55,7 @@ type Client interface {
 	GetBindingByID(string, *Parameters) (*types.ServiceBinding, error)
 	Bind(binding *types.ServiceBinding, q *Parameters, user string) (*types.ServiceBinding, string, error)
 	Unbind(id string, q *Parameters, user string) (string, error)
-	RenameBinding(id, newName, oldK8SName, newK8SName string) (*types.ServiceBinding, error)
+	RenameBinding(id, newName, newK8SName string) (*types.ServiceBinding, error)
 
 	ListOfferings(*Parameters) (*types.ServiceOfferings, error)
 	ListPlans(*Parameters) (*types.ServicePlans, error)
@@ -230,19 +230,19 @@ func (client *serviceManagerClient) UpdateInstance(id string, updatedInstance *t
 	return result, location, nil
 }
 
-func (client *serviceManagerClient) RenameBinding(id, newName, oldK8SName, newK8SName string) (*types.ServiceBinding, error) {
+func (client *serviceManagerClient) RenameBinding(id, newName, newK8SName string) (*types.ServiceBinding, error) {
 	const k8sNameLabel = "_k8sname"
 	renameRequest := map[string]interface{}{
 		"name": newName,
 		"labels": []*smtypes.LabelChange{
 			{
 				Key:       k8sNameLabel,
-				Operation: smtypes.RemoveLabelValuesOperation,
-				Values:    []string{oldK8SName},
+				Operation: smtypes.RemoveLabelOperation,
+				Values:    []string{},
 			},
 			{
 				Key:       k8sNameLabel,
-				Operation: smtypes.AddLabelValuesOperation,
+				Operation: smtypes.AddLabelOperation,
 				Values:    []string{newK8SName},
 			},
 		},

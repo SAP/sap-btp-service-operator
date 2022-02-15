@@ -73,9 +73,9 @@ var _ = Describe("Service Binding Webhook Test", func() {
 			When("CredConfig changed", func() {
 				It("should succeed", func() {
 					newBinding.Spec.CredRotationConfig = &CredentialsRotationConfiguration{
-						Enabled:          true,
-						KeepFor:          "1s",
-						RotationInterval: "1s",
+						Enabled:           true,
+						RotatedBindingTTL: "1s",
+						RotationFrequency: "1s",
 					}
 					err := newBinding.ValidateUpdate(binding)
 					Expect(err).ToNot(HaveOccurred())
@@ -83,9 +83,9 @@ var _ = Describe("Service Binding Webhook Test", func() {
 
 				It("should fail when duration format not valid", func() {
 					newBinding.Spec.CredRotationConfig = &CredentialsRotationConfiguration{
-						Enabled:          true,
-						KeepFor:          "1x",
-						RotationInterval: "1y",
+						Enabled:           true,
+						RotatedBindingTTL: "1x",
+						RotationFrequency: "1y",
 					}
 					err := newBinding.ValidateUpdate(binding)
 					Expect(err).To(HaveOccurred())
@@ -200,9 +200,9 @@ var _ = Describe("Service Binding Webhook Test", func() {
 			When("CredConfig changed", func() {
 				It("should succeed", func() {
 					newBinding.Spec.CredRotationConfig = &CredentialsRotationConfiguration{
-						Enabled:          true,
-						KeepFor:          "1s",
-						RotationInterval: "1s",
+						Enabled:           true,
+						RotatedBindingTTL: "1s",
+						RotationFrequency: "1s",
 					}
 					err := newBinding.ValidateUpdate(binding)
 					Expect(err).ToNot(HaveOccurred())
@@ -210,9 +210,9 @@ var _ = Describe("Service Binding Webhook Test", func() {
 
 				It("should fail when duration format not valid", func() {
 					newBinding.Spec.CredRotationConfig = &CredentialsRotationConfiguration{
-						Enabled:          true,
-						KeepFor:          "1x",
-						RotationInterval: "1y",
+						Enabled:           true,
+						RotatedBindingTTL: "1x",
+						RotationFrequency: "1y",
 					}
 					err := newBinding.ValidateUpdate(binding)
 					Expect(err).To(HaveOccurred())

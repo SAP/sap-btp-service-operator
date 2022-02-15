@@ -254,10 +254,10 @@ It is implemented using a [CRDs-based](https://kubernetes.io/docs/concepts/exten
 | parameters       |  `[]object`  |  Some services support the provisioning of additional configuration parameters during the bind request.<br/>For the list of supported parameters, check the documentation of the particular service offering.|
 | parametersFrom | `[]object` | List of sources to populate parameters. |
 | userInfo | `object`  | Contains information about the user that last modified this service binding. |
-| credentialsRotationConfig | `object`  | Holds automatic credentials rotation configuration. |
-| credentialsRotationConfig.enabled | `boolean`  | Indicates whether automatic credentials rotation are enabled. |
-| credentialsRotationConfig.rotationInterval | `duration`  | Specifies the frequency at which the binding rotation is performed. |
-| credentialsRotationConfig.keepFor | `duration`  | Specifies the time period for which to keep the rotated binding. Must be lower then `rotationInterval`. |
+| credentialsRotationPolicy | `object`  | Holds automatic credentials rotation configuration. |
+| credentialsRotationPolicy.enabled | `boolean`  | Indicates whether automatic credentials rotation are enabled. |
+| credentialsRotationPolicy.rotationFrequency | `duration`  | Specifies the frequency at which the binding rotation is performed. |
+| credentialsRotationPolicy.rotatedBindingTTL | `duration`  | Specifies the time period for which to keep the rotated binding. |
 
 
 
@@ -380,16 +380,16 @@ Usually it is the namespace in which you installed the operator.
 If not specified, the `default` namespace is used.
 
 ## Credentials Rotation
-To enable automatic credentials rotation, you need to set the following parameters of the `credentialsRotationConfig` field in the `spec` field of the `ServiceBinding` resource:
+To enable automatic credentials rotation, you need to set the following parameters of the `credentialsRotationPolicy` field in the `spec` field of the `ServiceBinding` resource:
 
 - `enabled` - Whether the credentials rotation option is enabled. Default value is false. 
-- `rotationInterval` - Indicates the frequency at which the credentials rotation is performed. 
-- `keepFor` - Indicates for how long to keep the rotated `ServiceBinding`.
+- `rotationFrequency` - Indicates the frequency at which the credentials rotation is performed. 
+- `rotatedBindingTTL` - Indicates for how long to keep the rotated `ServiceBinding`.
 
-Valid time units for `rotationInterval` and `keepFor` are: "ns", "us" or ("µs"), "ms", "s", "m", "h".</br>
+Valid time units for `rotationFrequency` and `rotatedBindingTTL` are: "ns", "us" or ("µs"), "ms", "s", "m", "h".</br>
 `status.lastCredentialsRotationTime` indicates the last time the `ServiceBinding` secret was rotated.
 
-During the transition period, there are two (or more) `ServiceBinding`: the original and the rotated one (holds the `services.cloud.sap.com/stale` annotation, which is deleted once the `keepFor` duration elapses).
+During the transition period, there are two (or more) `ServiceBinding`: the original and the rotated one (holds the `services.cloud.sap.com/stale` annotation, which is deleted once the `rotatedBindingTTL` duration elapses).
 
 **Note:**<br> It isn't possible to enable automatic credentials rotation to an already-rotated `ServiceBinding` (with the `services.cloud.sap.com/stale` annotation).
 

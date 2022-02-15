@@ -929,9 +929,9 @@ var _ = Describe("ServiceBinding controller", func() {
 		It("should rotate the credentials and create old binding", func() {
 			Expect(k8sClient.Get(context.Background(), types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}, createdBinding)).To(Succeed())
 			createdBinding.Spec.CredRotationConfig = &v1alpha1.CredentialsRotationConfiguration{
-				Enabled:          true,
-				KeepFor:          "1h",
-				RotationInterval: "1ns",
+				Enabled:           true,
+				RotatedBindingTTL: "1h",
+				RotationFrequency: "1ns",
 			}
 			secret := getSecret(ctx, createdBinding.Spec.SecretName, bindingTestNamespace, true)
 			secret.Data = map[string][]byte{}
@@ -971,9 +971,9 @@ var _ = Describe("ServiceBinding controller", func() {
 		It("should rotate the credentials with force rotate annotation", func() {
 			Expect(k8sClient.Get(context.Background(), types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}, createdBinding)).To(Succeed())
 			createdBinding.Spec.CredRotationConfig = &v1alpha1.CredentialsRotationConfiguration{
-				Enabled:          true,
-				RotationInterval: "1h",
-				KeepFor:          "1h",
+				Enabled:           true,
+				RotationFrequency: "1h",
+				RotatedBindingTTL: "1h",
 			}
 			createdBinding.Annotations = map[string]string{
 				v1alpha1.ForceRotateAnnotation: "true",
