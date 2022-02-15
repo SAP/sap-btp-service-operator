@@ -46,7 +46,7 @@ var _ webhook.Validator = &ServiceBinding{}
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (sb *ServiceBinding) ValidateCreate() error {
 	servicebindinglog.Info("validate create", "name", sb.Name)
-	if sb.Spec.CredRotationConfig != nil {
+	if sb.Spec.CredRotationPolicy != nil {
 		if err := sb.validateCredRotatingConfig(); err != nil {
 			return err
 		}
@@ -57,7 +57,7 @@ func (sb *ServiceBinding) ValidateCreate() error {
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (sb *ServiceBinding) ValidateUpdate(old runtime.Object) error {
 	servicebindinglog.Info("validate update", "name", sb.Name)
-	if sb.Spec.CredRotationConfig != nil {
+	if sb.Spec.CredRotationPolicy != nil {
 		if err := sb.validateCredRotatingConfig(); err != nil {
 			return err
 		}
@@ -83,8 +83,8 @@ func (sb *ServiceBinding) specChanged(old runtime.Object) bool {
 	newSpec := sb.Spec.DeepCopy()
 
 	//allow changing cred rotation config
-	oldSpec.CredRotationConfig = nil
-	newSpec.CredRotationConfig = nil
+	oldSpec.CredRotationPolicy = nil
+	newSpec.CredRotationPolicy = nil
 	return !reflect.DeepEqual(oldSpec, newSpec)
 }
 
@@ -97,11 +97,11 @@ func (sb *ServiceBinding) ValidateDelete() error {
 }
 
 func (sb *ServiceBinding) validateCredRotatingConfig() error {
-	_, err := time.ParseDuration(sb.Spec.CredRotationConfig.RotatedBindingTTL)
+	_, err := time.ParseDuration(sb.Spec.CredRotationPolicy.RotatedBindingTTL)
 	if err != nil {
 		return err
 	}
-	_, err = time.ParseDuration(sb.Spec.CredRotationConfig.RotationFrequency)
+	_, err = time.ParseDuration(sb.Spec.CredRotationPolicy.RotationFrequency)
 	if err != nil {
 		return err
 	}

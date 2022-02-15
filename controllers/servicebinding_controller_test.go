@@ -928,7 +928,7 @@ var _ = Describe("ServiceBinding controller", func() {
 
 		It("should rotate the credentials and create old binding", func() {
 			Expect(k8sClient.Get(context.Background(), types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}, createdBinding)).To(Succeed())
-			createdBinding.Spec.CredRotationConfig = &v1alpha1.CredentialsRotationConfiguration{
+			createdBinding.Spec.CredRotationPolicy = &v1alpha1.CredentialsRotationPolicy{
 				Enabled:           true,
 				RotatedBindingTTL: "1h",
 				RotationFrequency: "1ns",
@@ -960,7 +960,7 @@ var _ = Describe("ServiceBinding controller", func() {
 			}, timeout, interval).Should(BeTrue())
 			_, ok := oldBinding.Annotations[v1alpha1.StaleAnnotation]
 			Expect(ok).To(BeTrue())
-			Expect(oldBinding.Spec.CredRotationConfig.Enabled).To(BeFalse())
+			Expect(oldBinding.Spec.CredRotationPolicy.Enabled).To(BeFalse())
 
 			// old secret created
 			secret = getSecret(ctx, oldBinding.Spec.SecretName, bindingTestNamespace, true)
@@ -970,7 +970,7 @@ var _ = Describe("ServiceBinding controller", func() {
 
 		It("should rotate the credentials with force rotate annotation", func() {
 			Expect(k8sClient.Get(context.Background(), types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}, createdBinding)).To(Succeed())
-			createdBinding.Spec.CredRotationConfig = &v1alpha1.CredentialsRotationConfiguration{
+			createdBinding.Spec.CredRotationPolicy = &v1alpha1.CredentialsRotationPolicy{
 				Enabled:           true,
 				RotationFrequency: "1h",
 				RotatedBindingTTL: "1h",
@@ -992,7 +992,7 @@ var _ = Describe("ServiceBinding controller", func() {
 
 		It("should delete old binding when stale", func() {
 			Expect(k8sClient.Get(context.Background(), types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}, createdBinding)).To(Succeed())
-			createdBinding.Spec.CredRotationConfig = &v1alpha1.CredentialsRotationConfiguration{
+			createdBinding.Spec.CredRotationPolicy = &v1alpha1.CredentialsRotationPolicy{
 				Enabled: false,
 			}
 			createdBinding.Annotations = map[string]string{

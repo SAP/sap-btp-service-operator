@@ -744,7 +744,7 @@ func (r *ServiceBindingReconciler) stopRotation(ctx context.Context, binding *v1
 }
 
 func (r *ServiceBindingReconciler) credRotationEnabled(binding *v1alpha1.ServiceBinding) bool {
-	return binding.Spec.CredRotationConfig != nil && binding.Spec.CredRotationConfig.Enabled
+	return binding.Spec.CredRotationPolicy != nil && binding.Spec.CredRotationPolicy.Enabled
 }
 
 func (r *ServiceBindingReconciler) initCredRotationIfRequired(binding *v1alpha1.ServiceBinding) bool {
@@ -759,7 +759,7 @@ func (r *ServiceBindingReconciler) initCredRotationIfRequired(binding *v1alpha1.
 		lastCredentialRotationTime = &ts
 	}
 
-	rotationInterval, _ := time.ParseDuration(binding.Spec.CredRotationConfig.RotationFrequency)
+	rotationInterval, _ := time.ParseDuration(binding.Spec.CredRotationPolicy.RotationFrequency)
 	if time.Since(lastCredentialRotationTime.Time) > rotationInterval || forceRotate {
 		setCredRotationInProgressConditions(CredPreparing, "", binding)
 		return true
@@ -775,7 +775,7 @@ func (r *ServiceBindingReconciler) createOldBinding(ctx context.Context, suffix 
 	}
 
 	spec := binding.Spec.DeepCopy()
-	spec.CredRotationConfig.Enabled = false
+	spec.CredRotationPolicy.Enabled = false
 	spec.SecretName = spec.SecretName + suffix
 	spec.ExternalName = spec.ExternalName + suffix
 	oldBinding.Spec = *spec
@@ -818,8 +818,8 @@ func (r *ServiceBindingReconciler) isStaleServiceBinding(binding *v1alpha1.Servi
 
 	if binding.Annotations != nil {
 		if _, ok := binding.Annotations[v1alpha1.StaleAnnotation]; ok {
-			if binding.Spec.CredRotationConfig != nil {
-				keepFor, _ := time.ParseDuration(binding.Spec.CredRotationConfig.RotatedBindingTTL)
+			if binding.Spec.CredRotationPolicy != nil {
+				keepFor, _ := time.ParseDuration(binding.Spec.CredRotationPolicy.RotatedBindingTTL)
 				if time.Since(binding.CreationTimestamp.Time) > keepFor {
 					return true
 				}

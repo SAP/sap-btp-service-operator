@@ -82,7 +82,7 @@ type ServiceBindingSpec struct {
 
 	// CredentialsRotationPolicy holds automatic credentials rotation configuration.
 	// +optional
-	CredRotationConfig *CredentialsRotationConfiguration `json:"credentialsRotationPolicy,omitempty"`
+	CredRotationPolicy *CredentialsRotationPolicy `json:"credentialsRotationPolicy,omitempty"`
 }
 
 // ServiceBindingStatus defines the observed state of ServiceBinding
@@ -188,7 +188,7 @@ type ServiceBindingList struct {
 	Items           []ServiceBinding `json:"items"`
 }
 
-type CredentialsRotationConfiguration struct {
+type CredentialsRotationPolicy struct {
 	Enabled bool `json:"enabled"`
 	// What frequency to perform binding rotation.
 	RotationFrequency string `json:"rotationFrequency,omitempty"`

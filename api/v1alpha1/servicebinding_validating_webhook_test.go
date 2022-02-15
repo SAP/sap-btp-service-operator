@@ -72,7 +72,7 @@ var _ = Describe("Service Binding Webhook Test", func() {
 
 			When("CredConfig changed", func() {
 				It("should succeed", func() {
-					newBinding.Spec.CredRotationConfig = &CredentialsRotationConfiguration{
+					newBinding.Spec.CredRotationPolicy = &CredentialsRotationPolicy{
 						Enabled:           true,
 						RotatedBindingTTL: "1s",
 						RotationFrequency: "1s",
@@ -82,7 +82,7 @@ var _ = Describe("Service Binding Webhook Test", func() {
 				})
 
 				It("should fail when duration format not valid", func() {
-					newBinding.Spec.CredRotationConfig = &CredentialsRotationConfiguration{
+					newBinding.Spec.CredRotationPolicy = &CredentialsRotationPolicy{
 						Enabled:           true,
 						RotatedBindingTTL: "1x",
 						RotationFrequency: "1y",
@@ -199,7 +199,7 @@ var _ = Describe("Service Binding Webhook Test", func() {
 
 			When("CredConfig changed", func() {
 				It("should succeed", func() {
-					newBinding.Spec.CredRotationConfig = &CredentialsRotationConfiguration{
+					newBinding.Spec.CredRotationPolicy = &CredentialsRotationPolicy{
 						Enabled:           true,
 						RotatedBindingTTL: "1s",
 						RotationFrequency: "1s",
@@ -209,7 +209,7 @@ var _ = Describe("Service Binding Webhook Test", func() {
 				})
 
 				It("should fail when duration format not valid", func() {
-					newBinding.Spec.CredRotationConfig = &CredentialsRotationConfiguration{
+					newBinding.Spec.CredRotationPolicy = &CredentialsRotationPolicy{
 						Enabled:           true,
 						RotatedBindingTTL: "1x",
 						RotationFrequency: "1y",

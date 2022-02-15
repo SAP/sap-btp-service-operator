@@ -50,19 +50,19 @@ func (s *ServiceBindingDefaulter) Handle(_ context.Context, req admission.Reques
 
 	if binding.Annotations != nil {
 		if _, ok := binding.Annotations[v1alpha1.StaleAnnotation]; ok {
-			if binding.Spec.CredRotationConfig != nil {
-				binding.Spec.CredRotationConfig.Enabled = false
+			if binding.Spec.CredRotationPolicy != nil {
+				binding.Spec.CredRotationPolicy.Enabled = false
 			}
 		}
 	}
 
-	if binding.Spec.CredRotationConfig != nil {
-		if len(binding.Spec.CredRotationConfig.RotationFrequency) == 0 {
-			binding.Spec.CredRotationConfig.RotationFrequency = "0ns"
+	if binding.Spec.CredRotationPolicy != nil {
+		if len(binding.Spec.CredRotationPolicy.RotationFrequency) == 0 {
+			binding.Spec.CredRotationPolicy.RotationFrequency = "0ns"
 		}
 
-		if len(binding.Spec.CredRotationConfig.RotatedBindingTTL) == 0 {
-			binding.Spec.CredRotationConfig.RotatedBindingTTL = "0ns"
+		if len(binding.Spec.CredRotationPolicy.RotatedBindingTTL) == 0 {
+			binding.Spec.CredRotationPolicy.RotatedBindingTTL = "0ns"
 		}
 	}
 
