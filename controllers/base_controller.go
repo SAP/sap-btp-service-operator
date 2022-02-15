@@ -306,7 +306,7 @@ func isTransientError(ctx context.Context, err error) bool {
 		log.Info(fmt.Sprintf("SM returned error status code %d", smError.StatusCode))
 		return smError.StatusCode == http.StatusTooManyRequests || smError.StatusCode == http.StatusServiceUnavailable || smError.StatusCode == http.StatusGatewayTimeout || smError.StatusCode == http.StatusNotFound
 	}
-	return false
+	return true
 }
 
 func (r *BaseReconciler) markAsNonTransientError(ctx context.Context, operationType smTypes.OperationCategory, nonTransientErr error, object servicesv1alpha1.SAPBTPResource) (ctrl.Result, error) {

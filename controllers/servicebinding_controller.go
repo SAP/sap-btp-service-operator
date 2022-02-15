@@ -696,6 +696,11 @@ func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, smClie
 			meta.RemoveStatusCondition(&conditions, v1alpha1.ConditionCredRotationInProgress)
 			binding.Status.Conditions = conditions
 			return r.updateStatus(ctx, binding)
+		} else if isFailed(binding) {
+			log.Info("Credentials rotation - binding failed stopping rotation")
+			meta.RemoveStatusCondition(&conditions, v1alpha1.ConditionCredRotationInProgress)
+			binding.Status.Conditions = conditions
+			return r.updateStatus(ctx, binding)
 		}
 		log.Info("Credentials rotation - waiting to finish")
 		return nil
