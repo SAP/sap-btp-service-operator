@@ -41,6 +41,11 @@ func getBinding() *ServiceBinding {
 				Groups:   []string{"test-group"},
 				Extra:    map[string]v1.ExtraValue{"key": {"val"}},
 			},
+			CredRotationPolicy: &CredentialsRotationPolicy{
+				Enabled:           true,
+				RotationFrequency: "1s",
+				RotatedBindingTTL: "1s",
+			},
 		},
 
 		Status: ServiceBindingStatus{},
