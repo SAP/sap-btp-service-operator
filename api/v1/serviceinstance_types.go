@@ -22,7 +22,6 @@ import (
 	v1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/conversion"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -177,14 +176,4 @@ type ServiceInstanceList struct {
 
 func init() {
 	SchemeBuilder.Register(&ServiceInstance{}, &ServiceInstanceList{})
-}
-
-// ConvertTo converts this ServiceInstance to the Hub version (v1alpha1).
-func (in *ServiceInstance) ConvertTo(_ conversion.Hub) error {
-	return nil
-}
-
-// ConvertFrom converts from the Hub version (v1alpha1) to this version.
-func (in *ServiceInstance) ConvertFrom(_ conversion.Hub) error {
-	return nil
 }
