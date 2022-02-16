@@ -10,7 +10,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	smv1 "github.com/SAP/sap-btp-service-operator/api/v1"
+	servicesv1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	v1admission "k8s.io/api/admission/v1"
 	v1 "k8s.io/api/authentication/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -29,7 +29,7 @@ type ServiceBindingDefaulter struct {
 
 func (s *ServiceBindingDefaulter) Handle(_ context.Context, req admission.Request) admission.Response {
 	bindinglog.Info("Defaulter webhook for servicebinding")
-	binding := &smv1.ServiceBinding{}
+	binding := &servicesv1.ServiceBinding{}
 	err := s.decoder.Decode(req, binding)
 	if err != nil {
 		return admission.Errored(http.StatusBadRequest, err)

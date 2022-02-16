@@ -14,7 +14,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	smv1 "github.com/SAP/sap-btp-service-operator/api/v1"
+	servicesv1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -31,7 +31,7 @@ type ServiceInstanceDefaulter struct {
 
 func (s *ServiceInstanceDefaulter) Handle(_ context.Context, req admission.Request) admission.Response {
 	instancelog.Info("Defaulter webhook for serviceinstance")
-	instance := &smv1.ServiceInstance{}
+	instance := &servicesv1.ServiceInstance{}
 	err := s.decoder.Decode(req, instance)
 	if err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
@@ -60,7 +60,7 @@ func (s *ServiceInstanceDefaulter) Handle(_ context.Context, req admission.Reque
 	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledInstance)
 }
 
-func (s *ServiceInstanceDefaulter) setServiceInstanceUserInfo(req admission.Request, instance *smv1.ServiceInstance) error {
+func (s *ServiceInstanceDefaulter) setServiceInstanceUserInfo(req admission.Request, instance *servicesv1.ServiceInstance) error {
 	userInfo := &v1.UserInfo{
 		Username: req.UserInfo.Username,
 		UID:      req.UserInfo.UID,
@@ -70,7 +70,7 @@ func (s *ServiceInstanceDefaulter) setServiceInstanceUserInfo(req admission.Requ
 	if req.Operation == v1admission.Create || req.Operation == v1admission.Delete {
 		instance.Spec.UserInfo = userInfo
 	} else if req.Operation == v1admission.Update {
-		oldInstance := &smv1.ServiceInstance{}
+		oldInstance := &servicesv1.ServiceInstance{}
 		err := s.decoder.DecodeRaw(req.OldObject, oldInstance)
 		if err != nil {
 			return err
