@@ -48,8 +48,8 @@ func (s *ServiceBindingDefaulter) Handle(_ context.Context, req admission.Reques
 		binding.Spec.SecretName = binding.Name
 	}
 
-	if binding.Annotations != nil {
-		if _, ok := binding.Annotations[v1alpha1.StaleAnnotation]; ok {
+	if binding.Labels != nil {
+		if _, ok := binding.Labels[v1alpha1.StaleBindingLabel]; ok {
 			if binding.Spec.CredRotationPolicy != nil {
 				binding.Spec.CredRotationPolicy.Enabled = false
 			}

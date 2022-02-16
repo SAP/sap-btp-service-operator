@@ -389,9 +389,9 @@ To enable automatic credentials rotation, you need to set the following paramete
 Valid time units for `rotationFrequency` and `rotatedBindingTTL` are: "ns", "us" or ("µs"), "ms", "s", "m", "h".</br>
 `status.lastCredentialsRotationTime` indicates the last time the `ServiceBinding` secret was rotated.
 
-During the transition period, there are two (or more) `ServiceBinding`: the original and the rotated one (holds the `services.cloud.sap.com/stale` annotation, which is deleted once the `rotatedBindingTTL` duration elapses).
+During the transition period, there are two (or more) `ServiceBinding`: the original and the rotated one (holds the `services.cloud.sap.com/stale` label, which is deleted once the `rotatedBindingTTL` duration elapses).
 
-**Note:**<br> It isn't possible to enable automatic credentials rotation to an already-rotated `ServiceBinding` (with the `services.cloud.sap.com/stale` annotation).
+**Note:**<br> It isn't possible to enable automatic credentials rotation to an already-rotated `ServiceBinding` (with the `services.cloud.sap.com/stale` label).
 
 You can also choose the `services.cloud.sap.com/forceRotate` annotation (value doesn't matter), upon which immediate credentials rotation is performed. Note that the prerequisite for the force action is that credentials rotation `enabled` field is set to true.). 
 

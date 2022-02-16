@@ -879,23 +879,6 @@ var _ = Describe("ServiceBinding controller", func() {
 	Context("Credential Rotation", func() {
 		var ctx context.Context
 
-		calculateOldBindingName := func(originalName string) string {
-			bindingList := &v1alpha1.ServiceBindingList{}
-			var binding v1alpha1.ServiceBinding
-			Eventually(func() bool {
-				Expect(k8sClient.List(ctx, bindingList, client.InNamespace(bindingTestNamespace))).To(Succeed())
-				found := false
-				for i := 0; i < len(bindingList.Items); i++ {
-					binding = bindingList.Items[i]
-					_, found = binding.Annotations[v1alpha1.StaleAnnotation]
-
-				}
-				return found && strings.Contains(binding.Name, createdBinding.Name)
-			}, timeout, interval).Should(BeTrue())
-
-			return binding.Name
-		}
-
 		JustBeforeEach(func() {
 			fakeClient.RenameBindingReturns(nil, nil)
 			ctx = context.Background()
@@ -926,7 +909,7 @@ var _ = Describe("ServiceBinding controller", func() {
 			}
 		})
 
-		It("should rotate the credentials and create old binding", func() {
+		FIt("should rotate the credentials and create old binding", func() {
 			Expect(k8sClient.Get(context.Background(), types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}, createdBinding)).To(Succeed())
 			createdBinding.Spec.CredRotationPolicy = &v1alpha1.CredentialsRotationPolicy{
 				Enabled:           true,
@@ -952,14 +935,12 @@ var _ = Describe("ServiceBinding controller", func() {
 			Expect(string(val)).To(Equal("secret_value"))
 
 			// old binding created
-			oldBindingName := calculateOldBindingName(bindingName)
-			oldBinding := &v1alpha1.ServiceBinding{}
+			bindingList := &v1alpha1.ServiceBindingList{}
 			Eventually(func() bool {
-				err := k8sClient.Get(ctx, types.NamespacedName{Name: oldBindingName, Namespace: bindingTestNamespace}, oldBinding)
-				return err == nil && isReady(oldBinding)
+				Expect(k8sClient.List(ctx, bindingList, client.MatchingLabels{v1alpha1.StaleBindingLabel: myBinding.Status.BindingID}, client.InNamespace(bindingTestNamespace))).To(Succeed())
+				return len(bindingList.Items) > 0
 			}, timeout, interval).Should(BeTrue())
-			_, ok := oldBinding.Annotations[v1alpha1.StaleAnnotation]
-			Expect(ok).To(BeTrue())
+			oldBinding := bindingList.Items[0]
 			Expect(oldBinding.Spec.CredRotationPolicy.Enabled).To(BeFalse())
 
 			// old secret created
@@ -995,8 +976,8 @@ var _ = Describe("ServiceBinding controller", func() {
 			createdBinding.Spec.CredRotationPolicy = &v1alpha1.CredentialsRotationPolicy{
 				Enabled: false,
 			}
-			createdBinding.Annotations = map[string]string{
-				v1alpha1.StaleAnnotation: "true",
+			createdBinding.Labels = map[string]string{
+				v1alpha1.StaleBindingLabel: createdBinding.Status.BindingID,
 			}
 			Expect(k8sClient.Update(ctx, createdBinding)).To(Succeed())
 			Eventually(func() bool {

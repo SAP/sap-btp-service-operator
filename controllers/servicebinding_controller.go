@@ -707,26 +707,34 @@ func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, smClie
 		return r.stopRotation(ctx, binding)
 	}
 
-	// rename current binding
-	log.Info("Credentials rotation - renaming binding to old in SM", "current", binding.Spec.ExternalName)
-	if _, errRenaming := smClient.RenameBinding(binding.Status.BindingID, binding.Spec.ExternalName+oldSuffix, binding.Name+oldSuffix); errRenaming != nil {
-		log.Error(errRenaming, "Credentials rotation - failed renaming binding to old in SM", "binding", binding.Spec.ExternalName)
-		setCredRotationInProgressConditions(CredPreparing, errRenaming.Error(), binding)
-		if errStatus := r.updateStatus(ctx, binding); errStatus != nil {
-			return errStatus
-		}
-		return errRenaming
+	bindings := &v1alpha1.ServiceBindingList{}
+	err := r.List(ctx, bindings, client.MatchingLabels{v1alpha1.StaleBindingLabel: binding.Status.BindingID}, client.InNamespace(binding.Namespace))
+	if err != nil {
+		return err
 	}
 
-	log.Info("Credentials rotation - backing up old binding in K8S", "name", binding.Name+oldSuffix)
-	if err := r.createOldBinding(ctx, oldSuffix, binding); err != nil {
-		log.Error(err, "Credentials rotation - failed to back up old binding in K8S")
-
-		setCredRotationInProgressConditions(CredPreparing, err.Error(), binding)
-		if errStatus := r.updateStatus(ctx, binding); errStatus != nil {
-			return errStatus
+	if len(bindings.Items) == 0 {
+		// rename current binding
+		log.Info("Credentials rotation - renaming binding to old in SM", "current", binding.Spec.ExternalName)
+		if _, errRenaming := smClient.RenameBinding(binding.Status.BindingID, binding.Spec.ExternalName+oldSuffix, binding.Name+oldSuffix); errRenaming != nil {
+			log.Error(errRenaming, "Credentials rotation - failed renaming binding to old in SM", "binding", binding.Spec.ExternalName)
+			setCredRotationInProgressConditions(CredPreparing, errRenaming.Error(), binding)
+			if errStatus := r.updateStatus(ctx, binding); errStatus != nil {
+				return errStatus
+			}
+			return errRenaming
 		}
-		return err
+
+		log.Info("Credentials rotation - backing up old binding in K8S", "name", binding.Name+oldSuffix)
+		if err := r.createOldBinding(ctx, oldSuffix, binding); err != nil {
+			log.Error(err, "Credentials rotation - failed to back up old binding in K8S")
+
+			setCredRotationInProgressConditions(CredPreparing, err.Error(), binding)
+			if errStatus := r.updateStatus(ctx, binding); errStatus != nil {
+				return errStatus
+			}
+			return err
+		}
 	}
 
 	binding.Status.BindingID = ""
@@ -770,10 +778,9 @@ func (r *ServiceBindingReconciler) initCredRotationIfRequired(binding *v1alpha1.
 
 func (r *ServiceBindingReconciler) createOldBinding(ctx context.Context, suffix string, binding *v1alpha1.ServiceBinding) error {
 	oldBinding := newBindingObject(binding.Name+suffix, binding.Namespace)
-	oldBinding.Annotations = map[string]string{
-		v1alpha1.StaleAnnotation: "true",
+	oldBinding.Labels = map[string]string{
+		v1alpha1.StaleBindingLabel: binding.Status.BindingID,
 	}
-
 	spec := binding.Spec.DeepCopy()
 	spec.CredRotationPolicy.Enabled = false
 	spec.SecretName = spec.SecretName + suffix
@@ -816,8 +823,8 @@ func (r *ServiceBindingReconciler) isStaleServiceBinding(binding *v1alpha1.Servi
 		return false
 	}
 
-	if binding.Annotations != nil {
-		if _, ok := binding.Annotations[v1alpha1.StaleAnnotation]; ok {
+	if binding.Labels != nil {
+		if _, ok := binding.Labels[v1alpha1.StaleBindingLabel]; ok {
 			if binding.Spec.CredRotationPolicy != nil {
 				keepFor, _ := time.ParseDuration(binding.Spec.CredRotationPolicy.RotatedBindingTTL)
 				if time.Since(binding.CreationTimestamp.Time) > keepFor {
