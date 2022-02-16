@@ -135,7 +135,7 @@ It is implemented using a [CRDs-based](https://kubernetes.io/docs/concepts/exten
 1.  To create an instance of a service offered by SAP BTP, first create a `ServiceInstance` custom-resource file:
 
 ```yaml
-    apiVersion: services.cloud.sap.com/v1alpha1
+    apiVersion: services.cloud.sap.com/v1
     kind: ServiceInstance
     metadata:
         name: my-service-instance
@@ -176,7 +176,7 @@ It is implemented using a [CRDs-based](https://kubernetes.io/docs/concepts/exten
     The credentials are stored in a secret created in your cluster.
 
   ```yaml
-    apiVersion: services.cloud.sap.com/v1alpha1
+    apiVersion: services.cloud.sap.com/v1
     kind: ServiceBinding
     metadata:
         name: my-binding
