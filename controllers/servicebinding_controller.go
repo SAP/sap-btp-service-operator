@@ -20,8 +20,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/SAP/sap-btp-service-operator/api"
 	"time"
+
+	"github.com/SAP/sap-btp-service-operator/api"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 
