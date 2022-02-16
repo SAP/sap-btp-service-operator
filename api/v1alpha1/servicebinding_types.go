@@ -120,7 +120,6 @@ type ServiceBindingStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:storageversion
 // +kubebuilder:printcolumn:JSONPath=".spec.serviceInstanceName",name="Instance",type=string
 // +kubebuilder:printcolumn:JSONPath=".status.conditions[0].reason",name="Status",type=string
 // +kubebuilder:printcolumn:JSONPath=".status.ready",name="Ready",type=string
@@ -201,5 +200,3 @@ type CredentialsRotationPolicy struct {
 func init() {
 	SchemeBuilder.Register(&ServiceBinding{}, &ServiceBindingList{})
 }
-
-func (sb *ServiceBinding) Hub() {}

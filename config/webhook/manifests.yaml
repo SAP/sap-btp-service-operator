@@ -13,14 +13,14 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /mutate-services-cloud-sap-com-v1alpha1-servicebinding
+      path: /mutate-services-cloud-sap-com-v1-servicebinding
   failurePolicy: Fail
   name: mservicebinding.kb.io
   rules:
   - apiGroups:
     - services.cloud.sap.com
     apiVersions:
-    - v1alpha1
+    - v1
     operations:
     - CREATE
     - UPDATE
@@ -34,14 +34,14 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /mutate-services-cloud-sap-com-v1alpha1-serviceinstance
+      path: /mutate-services-cloud-sap-com-v1-serviceinstance
   failurePolicy: Fail
   name: mserviceinstance.kb.io
   rules:
   - apiGroups:
     - services.cloud.sap.com
     apiVersions:
-    - v1alpha1
+    - v1
     operations:
     - CREATE
     - UPDATE
@@ -63,14 +63,14 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-services-cloud-sap-com-v1alpha1-servicebinding
+      path: /validate-services-cloud-sap-com-v1-servicebinding
   failurePolicy: Fail
   name: vservicebinding.kb.io
   rules:
   - apiGroups:
     - services.cloud.sap.com
     apiVersions:
-    - v1alpha1
+    - v1
     operations:
     - CREATE
     - UPDATE

@@ -105,6 +105,7 @@ type ServiceInstanceStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:storageversion
 // +kubebuilder:printcolumn:JSONPath=".spec.serviceOfferingName",name="Offering",type=string
 // +kubebuilder:printcolumn:JSONPath=".spec.servicePlanName",name="Plan",type=string
 // +kubebuilder:printcolumn:JSONPath=".status.conditions[0].reason",name="Status",type=string
@@ -177,3 +178,5 @@ type ServiceInstanceList struct {
 func init() {
 	SchemeBuilder.Register(&ServiceInstance{}, &ServiceInstanceList{})
 }
+
+func (in *ServiceInstance) Hub() {}

@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
 
 	"github.com/SAP/sap-btp-service-operator/api"
 
@@ -27,7 +28,6 @@ import (
 
 	smTypes "github.com/Peripli/service-manager/pkg/types"
 	"github.com/Peripli/service-manager/pkg/web"
-	"github.com/SAP/sap-btp-service-operator/api/v1alpha1"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
 	"github.com/SAP/sap-btp-service-operator/client/sm/types"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -51,7 +51,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	log := r.Log.WithValues("serviceinstance", req.NamespacedName).WithValues("correlation_id", uuid.New().String())
 	ctx = context.WithValue(ctx, LogKey{}, log)
 
-	serviceInstance := &v1alpha1.ServiceInstance{}
+	serviceInstance := &v1.ServiceInstance{}
 	if err := r.Get(ctx, req.NamespacedName, serviceInstance); err != nil {
 		if !apierrors.IsNotFound(err) {
 			log.Error(err, "unable to fetch ServiceInstance")
@@ -117,7 +117,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	return ctrl.Result{}, nil
 }
 
-func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client, serviceInstance *v1alpha1.ServiceInstance) (ctrl.Result, error) {
+func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client, serviceInstance *v1.ServiceInstance) (ctrl.Result, error) {
 	log := GetLogger(ctx)
 	log.Info(fmt.Sprintf("resource is in progress, found operation url %s", serviceInstance.Status.OperationURL))
 	status, statusErr := smClient.Status(serviceInstance.Status.OperationURL, nil)
@@ -125,7 +125,7 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client
 		log.Info(fmt.Sprintf("failed to fetch operation, got error from SM: %s", statusErr.Error()), "operationURL", serviceInstance.Status.OperationURL)
 		setInProgressConditions(serviceInstance.Status.OperationType, statusErr.Error(), serviceInstance)
 		// if failed to read operation status we cleanup the status to trigger re-sync from SM
-		freshStatus := v1alpha1.ServiceInstanceStatus{Conditions: serviceInstance.GetConditions()}
+		freshStatus := v1.ServiceInstanceStatus{Conditions: serviceInstance.GetConditions()}
 		if isDelete(serviceInstance.ObjectMeta) {
 			freshStatus.InstanceID = serviceInstance.Status.InstanceID
 		}
@@ -175,7 +175,7 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client
 	return ctrl.Result{}, r.updateStatus(ctx, serviceInstance)
 }
 
-func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient sm.Client, serviceInstance *v1alpha1.ServiceInstance) (ctrl.Result, error) {
+func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient sm.Client, serviceInstance *v1.ServiceInstance) (ctrl.Result, error) {
 	log := GetLogger(ctx)
 	log.Info("Creating instance in SM")
 	_, instanceParameters, err := buildParameters(r.Client, serviceInstance.Namespace, serviceInstance.Spec.ParametersFrom, serviceInstance.Spec.Parameters)
@@ -251,7 +251,7 @@ func getTags(tags []byte) ([]string, error) {
 	return tagsArr, nil
 }
 
-func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient sm.Client, serviceInstance *v1alpha1.ServiceInstance) (ctrl.Result, error) {
+func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient sm.Client, serviceInstance *v1.ServiceInstance) (ctrl.Result, error) {
 	var err error
 	log := GetLogger(ctx)
 	log.Info(fmt.Sprintf("updating instance %s in SM", serviceInstance.Status.InstanceID))
@@ -291,7 +291,7 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 	return ctrl.Result{}, r.updateStatus(ctx, serviceInstance)
 }
 
-func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient sm.Client, serviceInstance *v1alpha1.ServiceInstance) (ctrl.Result, error) {
+func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient sm.Client, serviceInstance *v1.ServiceInstance) (ctrl.Result, error) {
 	log := GetLogger(ctx)
 	if controllerutil.ContainsFinalizer(serviceInstance, api.FinalizerName) {
 		if len(serviceInstance.Status.InstanceID) == 0 {
@@ -349,7 +349,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 	return ctrl.Result{}, nil
 }
 
-func (r *ServiceInstanceReconciler) resyncInstanceStatus(ctx context.Context, smClient sm.Client, k8sInstance *v1alpha1.ServiceInstance, smInstance *types.ServiceInstance) {
+func (r *ServiceInstanceReconciler) resyncInstanceStatus(ctx context.Context, smClient sm.Client, k8sInstance *v1.ServiceInstance, smInstance *types.ServiceInstance) {
 	log := GetLogger(ctx)
 	//set observed generation to 0 because we dont know which generation the current state in SM represents,
 	//unless the generation is 1 and SM is in the same state as operator
@@ -421,11 +421,11 @@ func getOfferingTags(smClient sm.Client, planID string) ([]string, error) {
 
 func (r *ServiceInstanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&v1alpha1.ServiceInstance{}).
+		For(&v1.ServiceInstance{}).
 		Complete(r)
 }
 
-func (r *ServiceInstanceReconciler) getInstanceForRecovery(ctx context.Context, smClient sm.Client, serviceInstance *v1alpha1.ServiceInstance) (*types.ServiceInstance, error) {
+func (r *ServiceInstanceReconciler) getInstanceForRecovery(ctx context.Context, smClient sm.Client, serviceInstance *v1.ServiceInstance) (*types.ServiceInstance, error) {
 	log := GetLogger(ctx)
 	parameters := sm.Parameters{
 		FieldQuery: []string{

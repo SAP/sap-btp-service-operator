@@ -10,7 +10,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	"github.com/SAP/sap-btp-service-operator/api/v1alpha1"
+	smv1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	v1admission "k8s.io/api/admission/v1"
 	v1 "k8s.io/api/authentication/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -18,7 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-// +kubebuilder:webhook:path=/mutate-services-cloud-sap-com-v1alpha1-servicebinding,mutating=true,failurePolicy=fail,groups=services.cloud.sap.com,resources=servicebindings,verbs=create;update,versions=v1alpha1,name=mservicebinding.kb.io,sideEffects=None,admissionReviewVersions=v1beta1;v1
+// +kubebuilder:webhook:path=/mutate-services-cloud-sap-com-v1-servicebinding,mutating=true,failurePolicy=fail,groups=services.cloud.sap.com,resources=servicebindings,verbs=create;update,versions=v1,name=mservicebinding.kb.io,sideEffects=None,admissionReviewVersions=v1beta1;v1
 
 var bindinglog = logf.Log.WithName("servicebinding-webhook")
 
@@ -29,7 +29,7 @@ type ServiceBindingDefaulter struct {
 
 func (s *ServiceBindingDefaulter) Handle(_ context.Context, req admission.Request) admission.Response {
 	bindinglog.Info("Defaulter webhook for servicebinding")
-	binding := &v1alpha1.ServiceBinding{}
+	binding := &smv1.ServiceBinding{}
 	err := s.decoder.Decode(req, binding)
 	if err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
