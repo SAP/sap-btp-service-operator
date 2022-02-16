@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 
+	servicesv1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	corev1 "k8s.io/api/core/v1"
+
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -19,7 +21,7 @@ import (
 // secret values.
 // The second return value is parameters marshalled to byt array
 // The third return value is any error that caused the function to fail.
-func buildParameters(kubeClient client.Client, namespace string, parametersFrom []v1.ParametersFromSource, parameters *runtime.RawExtension) (map[string]interface{}, []byte, error) {
+func buildParameters(kubeClient client.Client, namespace string, parametersFrom []servicesv1.ParametersFromSource, parameters *runtime.RawExtension) (map[string]interface{}, []byte, error) {
 	params := make(map[string]interface{})
 	if len(parametersFrom) > 0 {
 		for _, p := range parametersFrom {
@@ -61,7 +63,7 @@ func buildParameters(kubeClient client.Client, namespace string, parametersFrom 
 
 // fetchParametersFromSource fetches data from a specified external source and
 // represents it in the parameters map format
-func fetchParametersFromSource(kubeClient client.Client, namespace string, parametersFrom *v1.ParametersFromSource) (map[string]interface{}, error) {
+func fetchParametersFromSource(kubeClient client.Client, namespace string, parametersFrom *servicesv1.ParametersFromSource) (map[string]interface{}, error) {
 	var params map[string]interface{}
 	if parametersFrom.SecretKeyRef != nil {
 		data, err := fetchSecretKeyValue(kubeClient, namespace, parametersFrom.SecretKeyRef)
@@ -107,7 +109,7 @@ func unmarshalJSON(in []byte) (map[string]interface{}, error) {
 }
 
 // fetchSecretKeyValue requests and returns the contents of the given secret key
-func fetchSecretKeyValue(kubeClient client.Client, namespace string, secretKeyRef *v1.SecretKeyReference) ([]byte, error) {
+func fetchSecretKeyValue(kubeClient client.Client, namespace string, secretKeyRef *servicesv1.SecretKeyReference) ([]byte, error) {
 	secret := &corev1.Secret{}
 	err := kubeClient.Get(context.Background(), types.NamespacedName{Namespace: namespace, Name: secretKeyRef.Name}, secret)
 
