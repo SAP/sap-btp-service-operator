@@ -4,8 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/SAP/sap-btp-service-operator/api"
 	"net/http"
+
+	"github.com/SAP/sap-btp-service-operator/api"
 
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 

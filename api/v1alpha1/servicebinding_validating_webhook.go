@@ -18,9 +18,10 @@ package v1alpha1
 
 import (
 	"fmt"
-	"github.com/SAP/sap-btp-service-operator/api"
 	"reflect"
 	"time"
+
+	"github.com/SAP/sap-btp-service-operator/api"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
