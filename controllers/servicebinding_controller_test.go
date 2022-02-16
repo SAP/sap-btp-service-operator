@@ -925,9 +925,8 @@ var _ = Describe("ServiceBinding controller", func() {
 			myBinding := &v1alpha1.ServiceBinding{}
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}, myBinding)
-				return err == nil && myBinding.Status.LastCredentialsRotationTime != nil
+				return err == nil && myBinding.Status.LastCredentialsRotationTime != nil && len(myBinding.Status.Conditions) == 2
 			}, timeout, interval).Should(BeTrue())
-			Expect(len(myBinding.Status.Conditions)).To(Equal(2))
 
 			// secret updated back
 			secret = getSecret(ctx, myBinding.Spec.SecretName, bindingTestNamespace, true)
