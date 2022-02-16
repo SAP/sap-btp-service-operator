@@ -14,8 +14,9 @@ The SAP BTP service operator is based on the [Kubernetes Operator pattern](https
 This feature is still under development, review, and testing. 
 
 ## Table of Contents
+* [Architecture](#architecture)
 * [Prerequisites](#prerequisites)
-* [Setup Operator](#setup)
+* [Setup](#setup)
 * [Using the SAP BTP Service Operator](#using-the-sap-btp-service-operator)
     * [Creating a service instance](#step-1-create-a-service-instance)
     * [Binding the service instance](#step-2-create-a-service-binding)
@@ -23,7 +24,15 @@ This feature is still under development, review, and testing.
     * [Service instance properties](#service-instance)
     * [Binding properties](#service-binding)
     * [Passing parameters](#passing-parameters)
-* [SAP BTP kubectl extension](#sap-btp-kubectl-plugin-experimental)    
+* [SAP BTP kubectl Extension](#sap-btp-kubectl-plugin-experimental) 
+* [Credentials Rotation](#credentials-rotation)
+* [Multitenancy](#multitenancy)
+
+## Architecture
+SAP BTP service operator communicates with [Service Manager](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/3a27b85a47fc4dff99184dd5bf181e14.html) that uses the [Open service broker API](https://github.com/openservicebrokerapi/servicebroker) to communicate with service brokers, acting as an intermediary for the Kubernetes API Server to negotiate the initial provisioning and retrieve the credentials necessary for the application to use a managed service.<br><br>
+It is implemented using a [CRDs-based](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/#custom-resources) architecture.
+
+![img](./docs/images/architecture.png)
 
 ## Prerequisites
 - SAP BTP [Global Account](https://help.sap.com/viewer/65de2977205c403bbc107264b8eccf4b/Cloud/en-US/d61c2819034b48e68145c45c36acba6e.html) and [Subaccount](https://help.sap.com/viewer/65de2977205c403bbc107264b8eccf4b/Cloud/en-US/55d0b6d8b96846b8ae93b85194df0944.html) 
@@ -245,6 +254,10 @@ This feature is still under development, review, and testing.
 | parameters       |  `[]object`  |  Some services support the provisioning of additional configuration parameters during the bind request.<br/>For the list of supported parameters, check the documentation of the particular service offering.|
 | parametersFrom | `[]object` | List of sources to populate parameters. |
 | userInfo | `object`  | Contains information about the user that last modified this service binding. |
+| credentialsRotationPolicy | `object`  | Holds automatic credentials rotation configuration. |
+| credentialsRotationPolicy.enabled | `boolean`  | Indicates whether automatic credentials rotation are enabled. |
+| credentialsRotationPolicy.rotationFrequency | `duration`  | Specifies the frequency at which the binding rotation is performed. |
+| credentialsRotationPolicy.rotatedBindingTTL | `duration`  | Specifies the time period for which to keep the rotated binding. |
 
 
 
@@ -256,6 +269,7 @@ This feature is still under development, review, and testing.
 | operationURL |`string`| The URL of the current operation performed on the service binding. |
 | operationType| `string `| The type of the current operation. Possible values are CREATE, UPDATE, or DELETE. |
 | conditions| `[]condition` | An array of conditions describing the status of the service instance.<br/>The possible conditions types are:<br/>- `Ready`: set to `true` if the binding is ready and usable<br/>- `Failed`: set to `true` when an operation on the service binding fails.<br/> In the case of failure, the details about the error are available in the condition message.<br>- `Succeeded`: set to `true` when an operation on the service binding succeeded. In case of `false` operation considered as in progress unless `Failed` condition exists.
+| lastCredentialsRotationTime| `time` | Indicates the last time the binding secret was rotated.
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
@@ -365,6 +379,47 @@ Use the `namespace` parameter to specify the location of the secret containing t
 Usually it is the namespace in which you installed the operator.
 If not specified, the `default` namespace is used.
 
+## Credentials Rotation
+To enable automatic credentials rotation, you need to set the following parameters of the `credentialsRotationPolicy` field in the `spec` field of the `ServiceBinding` resource:
+
+- `enabled` - Whether the credentials rotation option is enabled. Default value is false. 
+- `rotationFrequency` - Indicates the frequency at which the credentials rotation is performed. 
+- `rotatedBindingTTL` - Indicates for how long to keep the rotated `ServiceBinding`.
+
+Valid time units for `rotationFrequency` and `rotatedBindingTTL` are: "ns", "us" or ("µs"), "ms", "s", "m", "h".</br></br>
+`status.lastCredentialsRotationTime` indicates the last time the `ServiceBinding` secret was rotated.</br>
+Please note that `credentialsRotationPolicy` evaluated and executed during [control loop](https://kubernetes.io/docs/concepts/architecture/controller/) which runs on every update or during
+full reconciliation process.
+
+During the transition period, there are two (or more) `ServiceBinding`: the original and the rotated one (holds the `services.cloud.sap.com/stale` label, which is deleted once the `rotatedBindingTTL` duration elapses).</br></br>
+You can also choose the `services.cloud.sap.com/forceRotate` annotation (value doesn't matter), upon which immediate credentials rotation is performed. Note that the prerequisite for the force action is that credentials rotation `enabled` field is set to true.).
+
+**Note:**<br> It isn't possible to enable automatic credentials rotation to an already-rotated `ServiceBinding` (with the `services.cloud.sap.com/stale` label).
+
+ 
+
+## Multitenancy
+You can configure the SAP BTP service operator to work with more than one subaccount in the same Kubernetes cluster. This means that different namespaces can be connected to different subaccounts.
+The association between a namespace and a subaccount is based on a different set of credentials configured for different namespaces.
+
+To connect the namespace to a subaccount, you first have to obtain the [access credentials](#setup) for the SAP BTP service operator and then maintain them in a secret that is specific for that namespace.
+
+There are two options to maintain namespace-specific credentials, and they differ between default and TLS-based access credentials types:
+
+### Default Access Credentials
+- Define a secret named `sap-btp-service-operator` in the namespace. `ServiceInstance` and `ServiceBinding` that are applied in the namespace will belong to the subaccount from which the credentials were issued.  
+- Define different secrets for different namespaces in a [centrally managed namespace](./sapbtp-operator-charts/templates/configmap.yml), following the secret naming convention: `sap-btp-service-operator-<namespace>`. 
+
+### TLS-Based Access Credentials
+- Define a secret pair named `sap-btp-service-operator` and `sap-btp-service-operator-tls`  in the namespace. `ServiceInstance` and `ServiceBinding` that are applied in the namespace will belong to the subaccount from which the credentials were issued.  
+- Define different secrets for different namespaces in a [centrally managed namespace](./sapbtp-operator-charts/templates/configmap.yml), following the secret naming convention: `sap-btp-service-operator-<namespace>` and `sap-btp-service-operator-tls-<namespace>` . For more information, see [tls secret](./sapbtp-operator-charts/templates/secret-tls.yml).
+
+**Notes:**
+- If none of the those mentioned above options are set, `sap-btp-service-operator` secret of a release namespace is used.<br>
+  See step 4 of the [Setup](#setup) section.
+  
+[Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
+
 ## Support
 You're welcome to raise issues related to feature requests, bugs, or give us general feedback on this project's GitHub Issues page. 
 The SAP BTP service operator project maintainers will respond to the best of their abilities. 
@@ -373,6 +428,6 @@ The SAP BTP service operator project maintainers will respond to the best of the
 We currently do not accept community contributions. 
 
 ## License
-This project is licensed under Apache 2.0 except as noted otherwise in the [license](./LICENSE) file.
+This project is licensed under Apache 2.0 unless noted otherwise in the [license](./LICENSE) file.
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)

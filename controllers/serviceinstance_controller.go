@@ -28,7 +28,6 @@ import (
 	"github.com/SAP/sap-btp-service-operator/api/v1alpha1"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
 	"github.com/SAP/sap-btp-service-operator/client/sm/types"
-	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -48,6 +47,7 @@ type ServiceInstanceReconciler struct {
 
 func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("serviceinstance", req.NamespacedName).WithValues("correlation_id", uuid.New().String())
+	ctx = context.WithValue(ctx, LogKey{}, log)
 
 	serviceInstance := &v1alpha1.ServiceInstance{}
 	if err := r.Get(ctx, req.NamespacedName, serviceInstance); err != nil {
@@ -68,18 +68,18 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 	}
 
-	smClient, err := r.getSMClient(ctx, serviceInstance, log)
+	smClient, err := r.getSMClient(ctx, serviceInstance)
 	if err != nil {
-		return r.markAsTransientError(ctx, Unknown, err, serviceInstance, log)
+		return r.markAsTransientError(ctx, Unknown, err, serviceInstance)
 	}
 
 	if len(serviceInstance.Status.OperationURL) > 0 {
 		// ongoing operation - poll status from SM
-		return r.poll(ctx, smClient, serviceInstance, log)
+		return r.poll(ctx, smClient, serviceInstance)
 	}
 
 	if isDelete(serviceInstance.ObjectMeta) {
-		return r.deleteInstance(ctx, smClient, serviceInstance, log)
+		return r.deleteInstance(ctx, smClient, serviceInstance)
 	}
 
 	if serviceInstance.Generation == serviceInstance.Status.ObservedGeneration && !isInProgress(serviceInstance) {
@@ -93,29 +93,30 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	if serviceInstance.Status.InstanceID == "" {
 		//Recovery
 		log.Info("Instance ID is empty, checking if instance exist in SM")
-		instance, err := r.getInstanceForRecovery(smClient, serviceInstance, log)
+		instance, err := r.getInstanceForRecovery(ctx, smClient, serviceInstance)
 		if err != nil {
 			log.Error(err, "failed to check instance recovery")
-			return r.markAsTransientError(ctx, Unknown, err, serviceInstance, log)
+			return r.markAsTransientError(ctx, Unknown, err, serviceInstance)
 		}
 		if instance != nil {
 			log.Info(fmt.Sprintf("found existing instance in SM with id %s, updating status", instance.ID))
-			r.resyncInstanceStatus(smClient, serviceInstance, instance, log)
+			r.resyncInstanceStatus(ctx, smClient, serviceInstance, instance)
 			return ctrl.Result{}, r.updateStatus(ctx, serviceInstance)
 		}
 
 		//if instance was not recovered then create new instance
-		return r.createInstance(ctx, smClient, serviceInstance, log)
+		return r.createInstance(ctx, smClient, serviceInstance)
 	}
 
 	//Update
 	if serviceInstance.Status.Ready == metav1.ConditionTrue {
-		return r.updateInstance(ctx, smClient, serviceInstance, log)
+		return r.updateInstance(ctx, smClient, serviceInstance)
 	}
 	return ctrl.Result{}, nil
 }
 
-func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client, serviceInstance *v1alpha1.ServiceInstance, log logr.Logger) (ctrl.Result, error) {
+func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client, serviceInstance *v1alpha1.ServiceInstance) (ctrl.Result, error) {
+	log := GetLogger(ctx)
 	log.Info(fmt.Sprintf("resource is in progress, found operation url %s", serviceInstance.Status.OperationURL))
 	status, statusErr := smClient.Status(serviceInstance.Status.OperationURL, nil)
 	if statusErr != nil {
@@ -157,7 +158,7 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client
 		setSuccessConditions(smTypes.OperationCategory(status.Type), serviceInstance)
 		if serviceInstance.Status.OperationType == smTypes.DELETE {
 			// delete was successful - remove our finalizer from the list and update it.
-			if err := r.removeFinalizer(ctx, serviceInstance, v1alpha1.FinalizerName, log); err != nil {
+			if err := r.removeFinalizer(ctx, serviceInstance, v1alpha1.FinalizerName); err != nil {
 				return ctrl.Result{}, err
 			}
 		} else if serviceInstance.Status.OperationType == smTypes.CREATE {
@@ -172,13 +173,14 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client
 	return ctrl.Result{}, r.updateStatus(ctx, serviceInstance)
 }
 
-func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient sm.Client, serviceInstance *v1alpha1.ServiceInstance, log logr.Logger) (ctrl.Result, error) {
+func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient sm.Client, serviceInstance *v1alpha1.ServiceInstance) (ctrl.Result, error) {
+	log := GetLogger(ctx)
 	log.Info("Creating instance in SM")
 	_, instanceParameters, err := buildParameters(r.Client, serviceInstance.Namespace, serviceInstance.Spec.ParametersFrom, serviceInstance.Spec.Parameters)
 	if err != nil {
 		//if parameters are invalid there is nothing we can do, the user should fix it according to the error message in the condition
 		log.Error(err, "failed to parse instance parameters")
-		return r.markAsNonTransientError(ctx, smTypes.CREATE, err, serviceInstance, log)
+		return r.markAsNonTransientError(ctx, smTypes.CREATE, err, serviceInstance)
 	}
 
 	provision, provisionErr := smClient.Provision(&types.ServiceInstance{
@@ -190,15 +192,15 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 			k8sNameLabel:   []string{serviceInstance.Name},
 			clusterIDLabel: []string{r.Config.ClusterID},
 		},
-	}, serviceInstance.Spec.ServiceOfferingName, serviceInstance.Spec.ServicePlanName, nil, buildUserInfo(serviceInstance.Spec.UserInfo, log))
+	}, serviceInstance.Spec.ServiceOfferingName, serviceInstance.Spec.ServicePlanName, nil, buildUserInfo(ctx, serviceInstance.Spec.UserInfo))
 
 	if provisionErr != nil {
 		log.Error(provisionErr, "failed to create service instance", "serviceOfferingName", serviceInstance.Spec.ServiceOfferingName,
 			"servicePlanName", serviceInstance.Spec.ServicePlanName)
-		if isTransientError(provisionErr, log) {
-			return r.markAsTransientError(ctx, smTypes.CREATE, provisionErr, serviceInstance, log)
+		if isTransientError(ctx, provisionErr) {
+			return r.markAsTransientError(ctx, smTypes.CREATE, provisionErr, serviceInstance)
 		}
-		return r.markAsNonTransientError(ctx, smTypes.CREATE, provisionErr, serviceInstance, log)
+		return r.markAsNonTransientError(ctx, smTypes.CREATE, provisionErr, serviceInstance)
 	}
 
 	if provision.Location != "" {
@@ -247,27 +249,27 @@ func getTags(tags []byte) ([]string, error) {
 	return tagsArr, nil
 }
 
-func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient sm.Client, serviceInstance *v1alpha1.ServiceInstance, log logr.Logger) (ctrl.Result, error) {
+func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient sm.Client, serviceInstance *v1alpha1.ServiceInstance) (ctrl.Result, error) {
 	var err error
-
+	log := GetLogger(ctx)
 	log.Info(fmt.Sprintf("updating instance %s in SM", serviceInstance.Status.InstanceID))
 	_, instanceParameters, err := buildParameters(r.Client, serviceInstance.Namespace, serviceInstance.Spec.ParametersFrom, serviceInstance.Spec.Parameters)
 	if err != nil {
 		log.Error(err, "failed to parse instance parameters")
-		return r.markAsNonTransientError(ctx, smTypes.UPDATE, fmt.Errorf("failed to parse parameters: %v", err.Error()), serviceInstance, log)
+		return r.markAsNonTransientError(ctx, smTypes.UPDATE, fmt.Errorf("failed to parse parameters: %v", err.Error()), serviceInstance)
 	}
 
 	_, operationURL, err := smClient.UpdateInstance(serviceInstance.Status.InstanceID, &types.ServiceInstance{
 		Name:          serviceInstance.Spec.ExternalName,
 		ServicePlanID: serviceInstance.Spec.ServicePlanID,
 		Parameters:    instanceParameters,
-	}, serviceInstance.Spec.ServiceOfferingName, serviceInstance.Spec.ServicePlanName, nil, buildUserInfo(serviceInstance.Spec.UserInfo, log))
+	}, serviceInstance.Spec.ServiceOfferingName, serviceInstance.Spec.ServicePlanName, nil, buildUserInfo(ctx, serviceInstance.Spec.UserInfo))
 	if err != nil {
 		log.Error(err, fmt.Sprintf("failed to update service instance with ID %s", serviceInstance.Status.InstanceID))
-		if isTransientError(err, log) {
-			return r.markAsTransientError(ctx, smTypes.UPDATE, err, serviceInstance, log)
+		if isTransientError(ctx, err) {
+			return r.markAsTransientError(ctx, smTypes.UPDATE, err, serviceInstance)
 		}
-		return r.markAsNonTransientError(ctx, smTypes.UPDATE, err, serviceInstance, log)
+		return r.markAsNonTransientError(ctx, smTypes.UPDATE, err, serviceInstance)
 	}
 
 	if operationURL != "" {
@@ -287,12 +289,13 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 	return ctrl.Result{}, r.updateStatus(ctx, serviceInstance)
 }
 
-func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient sm.Client, serviceInstance *v1alpha1.ServiceInstance, log logr.Logger) (ctrl.Result, error) {
+func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient sm.Client, serviceInstance *v1alpha1.ServiceInstance) (ctrl.Result, error) {
+	log := GetLogger(ctx)
 	if controllerutil.ContainsFinalizer(serviceInstance, v1alpha1.FinalizerName) {
 		if len(serviceInstance.Status.InstanceID) == 0 {
 			log.Info("No instance id found validating instance does not exists in SM before removing finalizer")
 
-			smInstance, err := r.getInstanceForRecovery(smClient, serviceInstance, log)
+			smInstance, err := r.getInstanceForRecovery(ctx, smClient, serviceInstance)
 			if err != nil {
 				return ctrl.Result{}, err
 			}
@@ -303,14 +306,14 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 				return ctrl.Result{}, r.updateStatus(ctx, serviceInstance)
 			}
 			log.Info("instance does not exists in SM, removing finalizer")
-			return ctrl.Result{}, r.removeFinalizer(ctx, serviceInstance, v1alpha1.FinalizerName, log)
+			return ctrl.Result{}, r.removeFinalizer(ctx, serviceInstance, v1alpha1.FinalizerName)
 		}
 
 		log.Info(fmt.Sprintf("Deleting instance with id %v from SM", serviceInstance.Status.InstanceID))
-		operationURL, deprovisionErr := smClient.Deprovision(serviceInstance.Status.InstanceID, nil, buildUserInfo(serviceInstance.Spec.UserInfo, log))
+		operationURL, deprovisionErr := smClient.Deprovision(serviceInstance.Status.InstanceID, nil, buildUserInfo(ctx, serviceInstance.Spec.UserInfo))
 		if deprovisionErr != nil {
 			// delete will proceed anyway
-			return r.markAsNonTransientError(ctx, smTypes.DELETE, deprovisionErr, serviceInstance, log)
+			return r.markAsNonTransientError(ctx, smTypes.DELETE, deprovisionErr, serviceInstance)
 		}
 
 		if operationURL != "" {
@@ -333,7 +336,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 		}
 
 		// remove our finalizer from the list and update it.
-		if err := r.removeFinalizer(ctx, serviceInstance, v1alpha1.FinalizerName, log); err != nil {
+		if err := r.removeFinalizer(ctx, serviceInstance, v1alpha1.FinalizerName); err != nil {
 			return ctrl.Result{}, err
 		}
 
@@ -344,7 +347,8 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 	return ctrl.Result{}, nil
 }
 
-func (r *ServiceInstanceReconciler) resyncInstanceStatus(smClient sm.Client, k8sInstance *v1alpha1.ServiceInstance, smInstance *types.ServiceInstance, log logr.Logger) {
+func (r *ServiceInstanceReconciler) resyncInstanceStatus(ctx context.Context, smClient sm.Client, k8sInstance *v1alpha1.ServiceInstance, smInstance *types.ServiceInstance) {
+	log := GetLogger(ctx)
 	//set observed generation to 0 because we dont know which generation the current state in SM represents,
 	//unless the generation is 1 and SM is in the same state as operator
 	if k8sInstance.Generation == 1 {
@@ -419,7 +423,8 @@ func (r *ServiceInstanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *ServiceInstanceReconciler) getInstanceForRecovery(smClient sm.Client, serviceInstance *v1alpha1.ServiceInstance, log logr.Logger) (*types.ServiceInstance, error) {
+func (r *ServiceInstanceReconciler) getInstanceForRecovery(ctx context.Context, smClient sm.Client, serviceInstance *v1alpha1.ServiceInstance) (*types.ServiceInstance, error) {
+	log := GetLogger(ctx)
 	parameters := sm.Parameters{
 		FieldQuery: []string{
 			fmt.Sprintf("name eq '%s'", serviceInstance.Spec.ExternalName),

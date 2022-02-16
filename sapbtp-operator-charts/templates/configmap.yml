@@ -10,7 +10,11 @@ data:
   CLUSTER_ID: {{ uuidv4}}
   {{- end }}
   {{- end }}
+  {{- if .Values.manager.management_namespace }}
+  MANAGEMENT_NAMESPACE: {{ .Values.manager.management_namespace }}
+  {{- else }}
   MANAGEMENT_NAMESPACE: {{.Release.Namespace}}
+  {{- end }}
 kind: ConfigMap
 metadata:
   name: sap-btp-operator-config

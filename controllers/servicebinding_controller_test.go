@@ -5,9 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
-	"strings"
-
 	smTypes "github.com/Peripli/service-manager/pkg/types"
 	"github.com/Peripli/service-manager/pkg/web"
 	"github.com/SAP/sap-btp-service-operator/api/v1alpha1"
@@ -22,6 +19,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"net/http"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"strings"
 )
 
 // +kubebuilder:docs-gen:collapse=Imports
@@ -40,21 +40,8 @@ var _ = Describe("ServiceBinding controller", func() {
 	var instanceName string
 	var bindingName string
 
-	newBinding := func(name, namespace string) *v1alpha1.ServiceBinding {
-		return &v1alpha1.ServiceBinding{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "services.cloud.sap.com/v1alpha1",
-				Kind:       "ServiceBinding",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: namespace,
-			},
-		}
-	}
-
 	createBindingWithoutAssertionsAndWait := func(ctx context.Context, name string, namespace string, instanceName string, externalName string, wait bool) (*v1alpha1.ServiceBinding, error) {
-		binding := newBinding(name, namespace)
+		binding := newBindingObject(name, namespace)
 		binding.Spec.ServiceInstanceName = instanceName
 		binding.Spec.ExternalName = externalName
 		binding.Spec.Parameters = &runtime.RawExtension{
@@ -272,7 +259,7 @@ var _ = Describe("ServiceBinding controller", func() {
 					Expect(k8sClient.Delete(ctx, secret)).Should(Succeed())
 				})
 				It("should fail the request and allow the user to replace secret name", func() {
-					binding := newBinding("newbinding", bindingTestNamespace)
+					binding := newBindingObject("newbinding", bindingTestNamespace)
 					binding.Spec.ServiceInstanceName = instanceName
 					binding.Spec.SecretName = "mysecret"
 
@@ -329,7 +316,7 @@ var _ = Describe("ServiceBinding controller", func() {
 
 				It("should put the raw broker response into the secret if spec.secretKey is provided", func() {
 					ctx := context.Background()
-					binding := newBinding("binding-with-secretkey", bindingTestNamespace)
+					binding := newBindingObject("binding-with-secretkey", bindingTestNamespace)
 					binding.Spec.ServiceInstanceName = instanceName
 					binding.Spec.SecretName = "mysecret"
 					secretKey := "mycredentials"
@@ -352,7 +339,7 @@ var _ = Describe("ServiceBinding controller", func() {
 
 				It("should put binding data in single key if spec.secretRootKey is provided", func() {
 					ctx := context.Background()
-					binding := newBinding("binding-with-secretrootkey", bindingTestNamespace)
+					binding := newBindingObject("binding-with-secretrootkey", bindingTestNamespace)
 					binding.Spec.ServiceInstanceName = instanceName
 					secretKey := "mycredentials"
 					binding.Spec.SecretKey = &secretKey
@@ -550,7 +537,7 @@ var _ = Describe("ServiceBinding controller", func() {
 
 			When("secret name is provided", func() {
 				It("should create a secret with the provided name", func() {
-					binding := newBinding(bindingName, bindingTestNamespace)
+					binding := newBindingObject(bindingName, bindingTestNamespace)
 					binding.Spec.ServiceInstanceName = instanceName
 					binding.Spec.SecretName = "my-special-secret"
 
@@ -887,6 +874,116 @@ var _ = Describe("ServiceBinding controller", func() {
 		} {
 			executeTestCase(testCase)
 		}
+	})
+
+	Context("Credential Rotation", func() {
+		var ctx context.Context
+
+		JustBeforeEach(func() {
+			fakeClient.RenameBindingReturns(nil, nil)
+			ctx = context.Background()
+			createdBinding = createBinding(ctx, bindingName, bindingTestNamespace, instanceName, "binding-external-name")
+
+			fakeClient.ListBindingsStub = func(params *sm.Parameters) (*smclientTypes.ServiceBindings, error) {
+				if params == nil || params.FieldQuery == nil || len(params.FieldQuery) == 0 {
+					return nil, nil
+				}
+
+				if strings.Contains(params.FieldQuery[0], "binding-external-name-") {
+					return &smclientTypes.ServiceBindings{
+						ServiceBindings: []smclientTypes.ServiceBinding{
+							{
+								ID:          fakeBindingID,
+								Ready:       true,
+								Credentials: json.RawMessage("{\"secret_key2\": \"secret_value2\"}"),
+								LastOperation: &smTypes.Operation{
+									Type:        smTypes.CREATE,
+									State:       smTypes.SUCCEEDED,
+									Description: "fake-description",
+								},
+							},
+						},
+					}, nil
+				}
+				return nil, nil
+			}
+		})
+
+		It("should rotate the credentials and create old binding", func() {
+			Expect(k8sClient.Get(context.Background(), types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}, createdBinding)).To(Succeed())
+			createdBinding.Spec.CredRotationPolicy = &v1alpha1.CredentialsRotationPolicy{
+				Enabled:           true,
+				RotatedBindingTTL: "1h",
+				RotationFrequency: "1ns",
+			}
+			secret := getSecret(ctx, createdBinding.Spec.SecretName, bindingTestNamespace, true)
+			secret.Data = map[string][]byte{}
+			Expect(k8sClient.Update(ctx, secret)).To(Succeed())
+			Expect(k8sClient.Update(ctx, createdBinding)).To(Succeed())
+
+			// binding rotated
+			myBinding := &v1alpha1.ServiceBinding{}
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}, myBinding)
+				return err == nil && myBinding.Status.LastCredentialsRotationTime != nil && len(myBinding.Status.Conditions) == 2
+			}, timeout, interval).Should(BeTrue())
+
+			// secret updated back
+			secret = getSecret(ctx, myBinding.Spec.SecretName, bindingTestNamespace, true)
+			val := secret.Data["secret_key"]
+			Expect(string(val)).To(Equal("secret_value"))
+
+			// old binding created
+			bindingList := &v1alpha1.ServiceBindingList{}
+			Eventually(func() bool {
+				Expect(k8sClient.List(ctx, bindingList, client.MatchingLabels{v1alpha1.StaleBindingLabel: myBinding.Status.BindingID}, client.InNamespace(bindingTestNamespace))).To(Succeed())
+				return len(bindingList.Items) > 0
+			}, timeout, interval).Should(BeTrue())
+			oldBinding := bindingList.Items[0]
+			Expect(oldBinding.Spec.CredRotationPolicy.Enabled).To(BeFalse())
+
+			// old secret created
+			secret = getSecret(ctx, oldBinding.Spec.SecretName, bindingTestNamespace, true)
+			val = secret.Data["secret_key2"]
+			Expect(string(val)).To(Equal("secret_value2"))
+		})
+
+		It("should rotate the credentials with force rotate annotation", func() {
+			Expect(k8sClient.Get(context.Background(), types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}, createdBinding)).To(Succeed())
+			createdBinding.Spec.CredRotationPolicy = &v1alpha1.CredentialsRotationPolicy{
+				Enabled:           true,
+				RotationFrequency: "1h",
+				RotatedBindingTTL: "1h",
+			}
+			createdBinding.Annotations = map[string]string{
+				v1alpha1.ForceRotateAnnotation: "true",
+			}
+			Expect(k8sClient.Update(ctx, createdBinding)).To(Succeed())
+			// binding rotated
+			myBinding := &v1alpha1.ServiceBinding{}
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}, myBinding)
+				return err == nil && myBinding.Status.LastCredentialsRotationTime != nil
+			}, timeout, interval).Should(BeTrue())
+
+			_, ok := myBinding.Annotations[v1alpha1.ForceRotateAnnotation]
+			Expect(ok).To(BeFalse())
+		})
+
+		It("should delete old binding when stale", func() {
+			Expect(k8sClient.Get(context.Background(), types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}, createdBinding)).To(Succeed())
+			createdBinding.Spec.CredRotationPolicy = &v1alpha1.CredentialsRotationPolicy{
+				Enabled: false,
+			}
+			createdBinding.Labels = map[string]string{
+				v1alpha1.StaleBindingLabel: createdBinding.Status.BindingID,
+			}
+			Expect(k8sClient.Update(ctx, createdBinding)).To(Succeed())
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}, createdBinding)
+				return apierrors.IsNotFound(err)
+			}, timeout, interval).Should(BeTrue())
+		})
 	})
 })
 

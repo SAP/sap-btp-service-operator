@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"fmt"
 	"reflect"
+	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -45,23 +46,46 @@ var _ webhook.Validator = &ServiceBinding{}
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (sb *ServiceBinding) ValidateCreate() error {
 	servicebindinglog.Info("validate create", "name", sb.Name)
+	if sb.Spec.CredRotationPolicy != nil {
+		if err := sb.validateCredRotatingConfig(); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (sb *ServiceBinding) ValidateUpdate(old runtime.Object) error {
 	servicebindinglog.Info("validate update", "name", sb.Name)
-
-	if sb.specChanged(old) && sb.Status.BindingID != "" {
-		return fmt.Errorf("updating service bindings is not supported")
+	if sb.Spec.CredRotationPolicy != nil {
+		if err := sb.validateCredRotatingConfig(); err != nil {
+			return err
+		}
 	}
 
+	specChanged := sb.specChanged(old)
+	isStale := false
+	if sb.Labels != nil {
+		if _, ok := sb.Labels[StaleBindingLabel]; ok {
+			isStale = true
+		}
+	}
+
+	if specChanged && (sb.Status.BindingID != "" || isStale) {
+		return fmt.Errorf("updating service bindings is not supported")
+	}
 	return nil
 }
 
 func (sb *ServiceBinding) specChanged(old runtime.Object) bool {
 	oldBinding := old.(*ServiceBinding)
-	return !reflect.DeepEqual(oldBinding.Spec, sb.Spec)
+	oldSpec := oldBinding.Spec.DeepCopy()
+	newSpec := sb.Spec.DeepCopy()
+
+	//allow changing cred rotation config
+	oldSpec.CredRotationPolicy = nil
+	newSpec.CredRotationPolicy = nil
+	return !reflect.DeepEqual(oldSpec, newSpec)
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
@@ -69,5 +93,18 @@ func (sb *ServiceBinding) ValidateDelete() error {
 	servicebindinglog.Info("validate delete", "name", sb.Name)
 
 	// TODO(user): fill in your validation logic upon object deletion.
+	return nil
+}
+
+func (sb *ServiceBinding) validateCredRotatingConfig() error {
+	_, err := time.ParseDuration(sb.Spec.CredRotationPolicy.RotatedBindingTTL)
+	if err != nil {
+		return err
+	}
+	_, err = time.ParseDuration(sb.Spec.CredRotationPolicy.RotationFrequency)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

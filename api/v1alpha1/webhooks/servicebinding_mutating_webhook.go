@@ -48,6 +48,24 @@ func (s *ServiceBindingDefaulter) Handle(_ context.Context, req admission.Reques
 		binding.Spec.SecretName = binding.Name
 	}
 
+	if binding.Labels != nil {
+		if _, ok := binding.Labels[v1alpha1.StaleBindingLabel]; ok {
+			if binding.Spec.CredRotationPolicy != nil {
+				binding.Spec.CredRotationPolicy.Enabled = false
+			}
+		}
+	}
+
+	if binding.Spec.CredRotationPolicy != nil {
+		if len(binding.Spec.CredRotationPolicy.RotationFrequency) == 0 {
+			binding.Spec.CredRotationPolicy.RotationFrequency = "0ns"
+		}
+
+		if len(binding.Spec.CredRotationPolicy.RotatedBindingTTL) == 0 {
+			binding.Spec.CredRotationPolicy.RotatedBindingTTL = "0ns"
+		}
+	}
+
 	if req.Operation == v1admission.Create || req.Operation == v1admission.Delete {
 		binding.Spec.UserInfo = &v1.UserInfo{
 			Username: req.UserInfo.Username,

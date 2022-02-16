@@ -1,10 +1,12 @@
 package controllers
 
 import (
+	"context"
 	"encoding/json"
 	"strings"
 
-	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/util/rand"
+
 	v1 "k8s.io/api/authentication/v1"
 )
 
@@ -27,7 +29,8 @@ func normalizeCredentials(credentialsJSON json.RawMessage) (map[string][]byte, e
 	return normalized, nil
 }
 
-func buildUserInfo(userInfo *v1.UserInfo, log logr.Logger) string {
+func buildUserInfo(ctx context.Context, userInfo *v1.UserInfo) string {
+	log := GetLogger(ctx)
 	if userInfo == nil {
 		return ""
 	}
@@ -62,4 +65,13 @@ func contains(slice []string, i string) bool {
 	}
 
 	return false
+}
+
+func RandStringRunes(n int) string {
+	var letterRunes = []rune("abcdefghijklmnopqrstuvwxyz1234567890")
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+	}
+	return string(b)
 }

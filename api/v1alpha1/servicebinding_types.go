@@ -79,6 +79,10 @@ type ServiceBindingSpec struct {
 	// end-user. User-provided values for this field are not saved.
 	// +optional
 	UserInfo *v1.UserInfo `json:"userInfo,omitempty"`
+
+	// CredentialsRotationPolicy holds automatic credentials rotation configuration.
+	// +optional
+	CredRotationPolicy *CredentialsRotationPolicy `json:"credentialsRotationPolicy,omitempty"`
 }
 
 // ServiceBindingStatus defines the observed state of ServiceBinding
@@ -108,6 +112,9 @@ type ServiceBindingStatus struct {
 
 	// Indicates whether binding is ready for usage
 	Ready metav1.ConditionStatus `json:"ready,omitempty"`
+
+	// Indicates when binding secret was rotated
+	LastCredentialsRotationTime *metav1.Time `json:"lastCredentialsRotationTime,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -179,6 +186,14 @@ type ServiceBindingList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []ServiceBinding `json:"items"`
+}
+
+type CredentialsRotationPolicy struct {
+	Enabled bool `json:"enabled"`
+	// What frequency to perform binding rotation.
+	RotationFrequency string `json:"rotationFrequency,omitempty"`
+	// For how long to keep the rotated binding.
+	RotatedBindingTTL string `json:"rotatedBindingTTL,omitempty"`
 }
 
 func init() {

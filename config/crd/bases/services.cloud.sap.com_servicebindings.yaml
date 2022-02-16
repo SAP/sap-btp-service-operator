@@ -53,6 +53,20 @@ spec:
           spec:
             description: ServiceBindingSpec defines the desired state of ServiceBinding
             properties:
+              credentialsRotationPolicy:
+                description: CredentialsRotationPolicy holds automatic credentials rotation configuration.
+                properties:
+                  enabled:
+                    type: boolean
+                  rotatedBindingTTL:
+                    description: For how long to keep the rotated binding.
+                    type: string
+                  rotationFrequency:
+                    description: What frequency to perform binding rotation.
+                    type: string
+                required:
+                - enabled
+                type: object
               externalName:
                 description: The name of the binding in Service Manager
                 type: string
@@ -171,6 +185,10 @@ spec:
                 type: array
               instanceID:
                 description: The ID of the instance in SM associated with binding
+                type: string
+              lastCredentialsRotationTime:
+                description: Indicates when binding secret was rotated
+                format: date-time
                 type: string
               observedGeneration:
                 description: Last generation that was acted on
