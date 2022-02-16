@@ -151,7 +151,7 @@ var _ = Describe("ServiceInstance controller", func() {
 			createInstanceWithFailure := func(spec v1alpha1.ServiceInstanceSpec) {
 				instance := &v1alpha1.ServiceInstance{
 					TypeMeta: metav1.TypeMeta{
-						APIVersion: "services.cloud.sap.com/v1alpha1",
+						APIVersion: "services.cloud.sap.com/v1",
 						Kind:       "ServiceInstance",
 					},
 					ObjectMeta: metav1.ObjectMeta{

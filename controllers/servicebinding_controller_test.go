@@ -7,6 +7,7 @@ import (
 	"fmt"
 	smTypes "github.com/Peripli/service-manager/pkg/types"
 	"github.com/Peripli/service-manager/pkg/web"
+	"github.com/SAP/sap-btp-service-operator/api"
 	"github.com/SAP/sap-btp-service-operator/api/v1alpha1"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
 	"github.com/SAP/sap-btp-service-operator/client/sm/smfakes"
@@ -936,7 +937,7 @@ var _ = Describe("ServiceBinding controller", func() {
 			// old binding created
 			bindingList := &v1alpha1.ServiceBindingList{}
 			Eventually(func() bool {
-				Expect(k8sClient.List(ctx, bindingList, client.MatchingLabels{v1alpha1.StaleBindingLabel: myBinding.Status.BindingID}, client.InNamespace(bindingTestNamespace))).To(Succeed())
+				Expect(k8sClient.List(ctx, bindingList, client.MatchingLabels{api.StaleBindingLabel: myBinding.Status.BindingID}, client.InNamespace(bindingTestNamespace))).To(Succeed())
 				return len(bindingList.Items) > 0
 			}, timeout, interval).Should(BeTrue())
 			oldBinding := bindingList.Items[0]
@@ -956,7 +957,7 @@ var _ = Describe("ServiceBinding controller", func() {
 				RotatedBindingTTL: "1h",
 			}
 			createdBinding.Annotations = map[string]string{
-				v1alpha1.ForceRotateAnnotation: "true",
+				api.ForceRotateAnnotation: "true",
 			}
 			Expect(k8sClient.Update(ctx, createdBinding)).To(Succeed())
 			// binding rotated
@@ -966,7 +967,7 @@ var _ = Describe("ServiceBinding controller", func() {
 				return err == nil && myBinding.Status.LastCredentialsRotationTime != nil
 			}, timeout, interval).Should(BeTrue())
 
-			_, ok := myBinding.Annotations[v1alpha1.ForceRotateAnnotation]
+			_, ok := myBinding.Annotations[api.ForceRotateAnnotation]
 			Expect(ok).To(BeFalse())
 		})
 
@@ -976,7 +977,7 @@ var _ = Describe("ServiceBinding controller", func() {
 				Enabled: false,
 			}
 			createdBinding.Labels = map[string]string{
-				v1alpha1.StaleBindingLabel: createdBinding.Status.BindingID,
+				api.StaleBindingLabel: createdBinding.Status.BindingID,
 			}
 			Expect(k8sClient.Update(ctx, createdBinding)).To(Succeed())
 			Eventually(func() bool {

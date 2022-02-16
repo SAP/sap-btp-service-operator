@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"github.com/SAP/sap-btp-service-operator/api"
 	"net/http"
 
 	v1 "k8s.io/api/core/v1"
@@ -19,7 +20,6 @@ import (
 	apimachinerytypes "k8s.io/apimachinery/pkg/types"
 
 	smTypes "github.com/Peripli/service-manager/pkg/types"
-	servicesv1alpha1 "github.com/SAP/sap-btp-service-operator/api/v1alpha1"
 	"github.com/SAP/sap-btp-service-operator/internal/config"
 	"github.com/SAP/sap-btp-service-operator/internal/secrets"
 	"github.com/go-logr/logr"
@@ -73,7 +73,7 @@ func GetLogger(ctx context.Context) logr.Logger {
 	return ctx.Value(LogKey{}).(logr.Logger)
 }
 
-func (r *BaseReconciler) getSMClient(ctx context.Context, object servicesv1alpha1.SAPBTPResource) (sm.Client, error) {
+func (r *BaseReconciler) getSMClient(ctx context.Context, object api.SAPBTPResource) (sm.Client, error) {
 	if r.SMClient != nil {
 		return r.SMClient(), nil
 	}
@@ -109,7 +109,7 @@ func (r *BaseReconciler) getSMClient(ctx context.Context, object servicesv1alpha
 	return cl, err
 }
 
-func (r *BaseReconciler) removeFinalizer(ctx context.Context, object servicesv1alpha1.SAPBTPResource, finalizerName string) error {
+func (r *BaseReconciler) removeFinalizer(ctx context.Context, object api.SAPBTPResource, finalizerName string) error {
 	log := GetLogger(ctx)
 	if controllerutil.ContainsFinalizer(object, finalizerName) {
 		controllerutil.RemoveFinalizer(object, finalizerName)
@@ -128,11 +128,11 @@ func (r *BaseReconciler) removeFinalizer(ctx context.Context, object servicesv1a
 	return nil
 }
 
-func (r *BaseReconciler) updateStatus(ctx context.Context, object servicesv1alpha1.SAPBTPResource) error {
+func (r *BaseReconciler) updateStatus(ctx context.Context, object api.SAPBTPResource) error {
 	return r.Status().Update(ctx, object)
 }
 
-func (r *BaseReconciler) init(ctx context.Context, obj servicesv1alpha1.SAPBTPResource) error {
+func (r *BaseReconciler) init(ctx context.Context, obj api.SAPBTPResource) error {
 	obj.SetReady(metav1.ConditionFalse)
 	setInProgressConditions(smTypes.CREATE, "Pending", obj)
 	if err := r.updateStatus(ctx, obj); err != nil {
@@ -178,7 +178,7 @@ func getConditionReason(opType smTypes.OperationCategory, state smTypes.Operatio
 	return Unknown
 }
 
-func setInProgressConditions(operationType smTypes.OperationCategory, message string, object servicesv1alpha1.SAPBTPResource) {
+func setInProgressConditions(operationType smTypes.OperationCategory, message string, object api.SAPBTPResource) {
 	if len(message) == 0 {
 		if operationType == smTypes.CREATE {
 			message = fmt.Sprintf("%s is being created", object.GetControllerName())
@@ -191,10 +191,10 @@ func setInProgressConditions(operationType smTypes.OperationCategory, message st
 
 	conditions := object.GetConditions()
 	if len(conditions) > 0 {
-		meta.RemoveStatusCondition(&conditions, servicesv1alpha1.ConditionFailed)
+		meta.RemoveStatusCondition(&conditions, api.ConditionFailed)
 	}
 	lastOpCondition := metav1.Condition{
-		Type:               servicesv1alpha1.ConditionSucceeded,
+		Type:               api.ConditionSucceeded,
 		Status:             metav1.ConditionFalse,
 		Reason:             getConditionReason(operationType, smTypes.IN_PROGRESS),
 		Message:            message,
@@ -206,7 +206,7 @@ func setInProgressConditions(operationType smTypes.OperationCategory, message st
 	object.SetConditions(conditions)
 }
 
-func setSuccessConditions(operationType smTypes.OperationCategory, object servicesv1alpha1.SAPBTPResource) {
+func setSuccessConditions(operationType smTypes.OperationCategory, object api.SAPBTPResource) {
 	var message string
 	if operationType == smTypes.CREATE {
 		message = fmt.Sprintf("%s provisioned successfully", object.GetControllerName())
@@ -218,10 +218,10 @@ func setSuccessConditions(operationType smTypes.OperationCategory, object servic
 
 	conditions := object.GetConditions()
 	if len(conditions) > 0 {
-		meta.RemoveStatusCondition(&conditions, servicesv1alpha1.ConditionFailed)
+		meta.RemoveStatusCondition(&conditions, api.ConditionFailed)
 	}
 	lastOpCondition := metav1.Condition{
-		Type:               servicesv1alpha1.ConditionSucceeded,
+		Type:               api.ConditionSucceeded,
 		Status:             metav1.ConditionTrue,
 		Reason:             getConditionReason(operationType, smTypes.SUCCEEDED),
 		Message:            message,
@@ -233,13 +233,13 @@ func setSuccessConditions(operationType smTypes.OperationCategory, object servic
 	object.SetConditions(conditions)
 }
 
-func setCredRotationInProgressConditions(reason, message string, object servicesv1alpha1.SAPBTPResource) {
+func setCredRotationInProgressConditions(reason, message string, object api.SAPBTPResource) {
 	if len(message) == 0 {
 		message = reason
 	}
 	conditions := object.GetConditions()
 	credRotCondition := metav1.Condition{
-		Type:               servicesv1alpha1.ConditionCredRotationInProgress,
+		Type:               api.ConditionCredRotationInProgress,
 		Status:             metav1.ConditionTrue,
 		Reason:             reason,
 		Message:            message,
@@ -249,7 +249,7 @@ func setCredRotationInProgressConditions(reason, message string, object services
 	object.SetConditions(conditions)
 }
 
-func setFailureConditions(operationType smTypes.OperationCategory, errorMessage string, object servicesv1alpha1.SAPBTPResource) {
+func setFailureConditions(operationType smTypes.OperationCategory, errorMessage string, object api.SAPBTPResource) {
 	var message string
 	if operationType == smTypes.CREATE {
 		message = fmt.Sprintf("%s create failed: %s", object.GetControllerName(), errorMessage)
@@ -268,7 +268,7 @@ func setFailureConditions(operationType smTypes.OperationCategory, errorMessage 
 
 	conditions := object.GetConditions()
 	lastOpCondition := metav1.Condition{
-		Type:               servicesv1alpha1.ConditionSucceeded,
+		Type:               api.ConditionSucceeded,
 		Status:             metav1.ConditionFalse,
 		Reason:             reason,
 		Message:            message,
@@ -277,7 +277,7 @@ func setFailureConditions(operationType smTypes.OperationCategory, errorMessage 
 	meta.SetStatusCondition(&conditions, lastOpCondition)
 
 	failedCondition := metav1.Condition{
-		Type:               servicesv1alpha1.ConditionFailed,
+		Type:               api.ConditionFailed,
 		Status:             metav1.ConditionTrue,
 		Reason:             reason,
 		Message:            message,
@@ -290,9 +290,9 @@ func setFailureConditions(operationType smTypes.OperationCategory, errorMessage 
 }
 
 //blocked condition marks to the user that action from his side is required, this is considered as in progress operation
-func setBlockedCondition(message string, object servicesv1alpha1.SAPBTPResource) {
+func setBlockedCondition(message string, object api.SAPBTPResource) {
 	setInProgressConditions(Unknown, message, object)
-	lastOpCondition := meta.FindStatusCondition(object.GetConditions(), servicesv1alpha1.ConditionSucceeded)
+	lastOpCondition := meta.FindStatusCondition(object.GetConditions(), api.ConditionSucceeded)
 	lastOpCondition.Reason = Blocked
 }
 
@@ -309,7 +309,7 @@ func isTransientError(ctx context.Context, err error) bool {
 	return false
 }
 
-func (r *BaseReconciler) markAsNonTransientError(ctx context.Context, operationType smTypes.OperationCategory, nonTransientErr error, object servicesv1alpha1.SAPBTPResource) (ctrl.Result, error) {
+func (r *BaseReconciler) markAsNonTransientError(ctx context.Context, operationType smTypes.OperationCategory, nonTransientErr error, object api.SAPBTPResource) (ctrl.Result, error) {
 	log := GetLogger(ctx)
 	setFailureConditions(operationType, nonTransientErr.Error(), object)
 	if operationType != smTypes.DELETE {
@@ -326,7 +326,7 @@ func (r *BaseReconciler) markAsNonTransientError(ctx context.Context, operationT
 	return ctrl.Result{}, nil
 }
 
-func (r *BaseReconciler) markAsTransientError(ctx context.Context, operationType smTypes.OperationCategory, transientErr error, object servicesv1alpha1.SAPBTPResource) (ctrl.Result, error) {
+func (r *BaseReconciler) markAsTransientError(ctx context.Context, operationType smTypes.OperationCategory, transientErr error, object api.SAPBTPResource) (ctrl.Result, error) {
 	log := GetLogger(ctx)
 	setInProgressConditions(operationType, transientErr.Error(), object)
 	log.Info(fmt.Sprintf("operation %s of %s encountered a transient error %s, retrying operation :)", operationType, object.GetControllerName(), transientErr.Error()))
@@ -336,23 +336,23 @@ func (r *BaseReconciler) markAsTransientError(ctx context.Context, operationType
 	return ctrl.Result{}, transientErr
 }
 
-func isInProgress(object servicesv1alpha1.SAPBTPResource) bool {
+func isInProgress(object api.SAPBTPResource) bool {
 	conditions := object.GetConditions()
-	return meta.IsStatusConditionPresentAndEqual(conditions, servicesv1alpha1.ConditionSucceeded, metav1.ConditionFalse) &&
-		!meta.IsStatusConditionPresentAndEqual(conditions, servicesv1alpha1.ConditionFailed, metav1.ConditionTrue)
+	return meta.IsStatusConditionPresentAndEqual(conditions, api.ConditionSucceeded, metav1.ConditionFalse) &&
+		!meta.IsStatusConditionPresentAndEqual(conditions, api.ConditionFailed, metav1.ConditionTrue)
 }
 
-func isFailed(resource servicesv1alpha1.SAPBTPResource) bool {
+func isFailed(resource api.SAPBTPResource) bool {
 	if len(resource.GetConditions()) == 0 {
 		return false
 	}
-	return meta.IsStatusConditionPresentAndEqual(resource.GetConditions(), servicesv1alpha1.ConditionFailed, metav1.ConditionTrue) ||
+	return meta.IsStatusConditionPresentAndEqual(resource.GetConditions(), api.ConditionFailed, metav1.ConditionTrue) ||
 		(resource.GetConditions()[0].Status == metav1.ConditionFalse &&
-			resource.GetConditions()[0].Type == servicesv1alpha1.ConditionSucceeded &&
+			resource.GetConditions()[0].Type == api.ConditionSucceeded &&
 			resource.GetConditions()[0].Reason == Blocked)
 }
 
-func getReadyCondition(object servicesv1alpha1.SAPBTPResource) metav1.Condition {
+func getReadyCondition(object api.SAPBTPResource) metav1.Condition {
 	status := metav1.ConditionFalse
 	reason := "NotProvisioned"
 	if object.GetReady() == metav1.ConditionTrue {
@@ -360,5 +360,5 @@ func getReadyCondition(object servicesv1alpha1.SAPBTPResource) metav1.Condition 
 		reason = "Provisioned"
 	}
 
-	return metav1.Condition{Type: servicesv1alpha1.ConditionReady, Status: status, Reason: reason}
+	return metav1.Condition{Type: api.ConditionReady, Status: status, Reason: reason}
 }

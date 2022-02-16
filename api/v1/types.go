@@ -1,4 +1,4 @@
-package v1alpha1
+package v1
 
 // ParametersFromSource represents the source of a set of Parameters
 type ParametersFromSource struct {

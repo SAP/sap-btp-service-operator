@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha1
+package v1
 
 import (
 	"github.com/Peripli/service-manager/pkg/types"
@@ -22,6 +22,7 @@ import (
 	v1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/conversion"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -105,7 +106,6 @@ type ServiceInstanceStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:storageversion
 // +kubebuilder:printcolumn:JSONPath=".spec.serviceOfferingName",name="Offering",type=string
 // +kubebuilder:printcolumn:JSONPath=".spec.servicePlanName",name="Plan",type=string
 // +kubebuilder:printcolumn:JSONPath=".status.conditions[0].reason",name="Status",type=string
@@ -179,4 +179,12 @@ func init() {
 	SchemeBuilder.Register(&ServiceInstance{}, &ServiceInstanceList{})
 }
 
-func (in *ServiceInstance) Hub() {}
+// ConvertTo converts this ServiceInstance to the Hub version (v1alpha1).
+func (in *ServiceInstance) ConvertTo(_ conversion.Hub) error {
+	return nil
+}
+
+// ConvertFrom converts from the Hub version (v1alpha1) to this version.
+func (in *ServiceInstance) ConvertFrom(_ conversion.Hub) error {
+	return nil
+}

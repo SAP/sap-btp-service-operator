@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/SAP/sap-btp-service-operator/api"
 	"time"
 
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -102,7 +103,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 	}
 
-	if meta.IsStatusConditionTrue(serviceBinding.Status.Conditions, v1alpha1.ConditionCredRotationInProgress) {
+	if meta.IsStatusConditionTrue(serviceBinding.Status.Conditions, api.ConditionCredRotationInProgress) {
 		if err := r.rotateCredentials(ctx, smClient, serviceBinding); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -249,7 +250,7 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 
 func (r *ServiceBindingReconciler) delete(ctx context.Context, smClient sm.Client, serviceBinding *v1alpha1.ServiceBinding) (ctrl.Result, error) {
 	log := GetLogger(ctx)
-	if controllerutil.ContainsFinalizer(serviceBinding, v1alpha1.FinalizerName) {
+	if controllerutil.ContainsFinalizer(serviceBinding, api.FinalizerName) {
 		if len(serviceBinding.Status.BindingID) == 0 {
 			log.Info("No binding id found validating binding does not exists in SM before removing finalizer")
 			smBinding, err := r.getBindingForRecovery(ctx, smClient, serviceBinding)
@@ -269,7 +270,7 @@ func (r *ServiceBindingReconciler) delete(ctx context.Context, smClient sm.Clien
 			}
 
 			log.Info("Binding does not exists in SM, removing finalizer")
-			if err := r.removeFinalizer(ctx, serviceBinding, v1alpha1.FinalizerName); err != nil {
+			if err := r.removeFinalizer(ctx, serviceBinding, api.FinalizerName); err != nil {
 				return ctrl.Result{}, err
 			}
 			return ctrl.Result{}, nil
@@ -568,7 +569,7 @@ func (r *ServiceBindingReconciler) removeBindingFromKubernetes(ctx context.Conte
 	}
 
 	// remove our finalizer from the list and update it.
-	if err := r.removeFinalizer(ctx, serviceBinding, v1alpha1.FinalizerName); err != nil {
+	if err := r.removeFinalizer(ctx, serviceBinding, api.FinalizerName); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -675,9 +676,9 @@ func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, smClie
 	oldSuffix := "-" + RandStringRunes(6)
 	log := GetLogger(ctx)
 	if binding.Annotations != nil {
-		if _, ok := binding.Annotations[v1alpha1.ForceRotateAnnotation]; ok {
+		if _, ok := binding.Annotations[api.ForceRotateAnnotation]; ok {
 			log.Info("Credentials rotation - deleting force rotate annotation")
-			delete(binding.Annotations, v1alpha1.ForceRotateAnnotation)
+			delete(binding.Annotations, api.ForceRotateAnnotation)
 			if err := r.Update(ctx, binding); err != nil {
 				log.Info("Credentials rotation - failed to delete force rotate annotation")
 				return err
@@ -686,7 +687,7 @@ func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, smClie
 	}
 
 	conditions := binding.GetConditions()
-	credInProgressCondition := meta.FindStatusCondition(conditions, v1alpha1.ConditionCredRotationInProgress)
+	credInProgressCondition := meta.FindStatusCondition(conditions, api.ConditionCredRotationInProgress)
 
 	if credInProgressCondition.Reason == CredRotating {
 		if len(binding.Status.BindingID) > 0 && binding.Status.Ready == metav1.ConditionTrue {
@@ -708,7 +709,7 @@ func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, smClie
 	}
 
 	bindings := &v1alpha1.ServiceBindingList{}
-	err := r.List(ctx, bindings, client.MatchingLabels{v1alpha1.StaleBindingLabel: binding.Status.BindingID}, client.InNamespace(binding.Namespace))
+	err := r.List(ctx, bindings, client.MatchingLabels{api.StaleBindingLabel: binding.Status.BindingID}, client.InNamespace(binding.Namespace))
 	if err != nil {
 		return err
 	}
@@ -746,7 +747,7 @@ func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, smClie
 
 func (r *ServiceBindingReconciler) stopRotation(ctx context.Context, binding *v1alpha1.ServiceBinding) error {
 	conditions := binding.GetConditions()
-	meta.RemoveStatusCondition(&conditions, v1alpha1.ConditionCredRotationInProgress)
+	meta.RemoveStatusCondition(&conditions, api.ConditionCredRotationInProgress)
 	binding.Status.Conditions = conditions
 	return r.updateStatus(ctx, binding)
 }
@@ -756,10 +757,10 @@ func (r *ServiceBindingReconciler) credRotationEnabled(binding *v1alpha1.Service
 }
 
 func (r *ServiceBindingReconciler) initCredRotationIfRequired(binding *v1alpha1.ServiceBinding) bool {
-	if isFailed(binding) || !r.credRotationEnabled(binding) || meta.IsStatusConditionTrue(binding.Status.Conditions, v1alpha1.ConditionCredRotationInProgress) {
+	if isFailed(binding) || !r.credRotationEnabled(binding) || meta.IsStatusConditionTrue(binding.Status.Conditions, api.ConditionCredRotationInProgress) {
 		return false
 	}
-	_, forceRotate := binding.Annotations[v1alpha1.ForceRotateAnnotation]
+	_, forceRotate := binding.Annotations[api.ForceRotateAnnotation]
 
 	lastCredentialRotationTime := binding.Status.LastCredentialsRotationTime
 	if lastCredentialRotationTime == nil {
@@ -779,7 +780,7 @@ func (r *ServiceBindingReconciler) initCredRotationIfRequired(binding *v1alpha1.
 func (r *ServiceBindingReconciler) createOldBinding(ctx context.Context, suffix string, binding *v1alpha1.ServiceBinding) error {
 	oldBinding := newBindingObject(binding.Name+suffix, binding.Namespace)
 	oldBinding.Labels = map[string]string{
-		v1alpha1.StaleBindingLabel: binding.Status.BindingID,
+		api.StaleBindingLabel: binding.Status.BindingID,
 	}
 	spec := binding.Spec.DeepCopy()
 	spec.CredRotationPolicy.Enabled = false
@@ -824,7 +825,7 @@ func (r *ServiceBindingReconciler) isStaleServiceBinding(binding *v1alpha1.Servi
 	}
 
 	if binding.Labels != nil {
-		if _, ok := binding.Labels[v1alpha1.StaleBindingLabel]; ok {
+		if _, ok := binding.Labels[api.StaleBindingLabel]; ok {
 			if binding.Spec.CredRotationPolicy != nil {
 				keepFor, _ := time.ParseDuration(binding.Spec.CredRotationPolicy.RotatedBindingTTL)
 				if time.Since(binding.CreationTimestamp.Time) > keepFor {

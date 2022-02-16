@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"fmt"
+	"github.com/SAP/sap-btp-service-operator/api"
 	"reflect"
 	"time"
 
@@ -66,7 +67,7 @@ func (sb *ServiceBinding) ValidateUpdate(old runtime.Object) error {
 	specChanged := sb.specChanged(old)
 	isStale := false
 	if sb.Labels != nil {
-		if _, ok := sb.Labels[StaleBindingLabel]; ok {
+		if _, ok := sb.Labels[api.StaleBindingLabel]; ok {
 			isStale = true
 		}
 	}

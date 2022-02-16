@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/SAP/sap-btp-service-operator/api"
 	"net/http"
 	"reflect"
 
@@ -35,9 +36,9 @@ func (s *ServiceInstanceDefaulter) Handle(_ context.Context, req admission.Reque
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	if instance.DeletionTimestamp.IsZero() && !controllerutil.ContainsFinalizer(instance, v1alpha1.FinalizerName) {
-		controllerutil.AddFinalizer(instance, v1alpha1.FinalizerName)
-		instancelog.Info(fmt.Sprintf("added finalizer '%s' to service instance", v1alpha1.FinalizerName))
+	if instance.DeletionTimestamp.IsZero() && !controllerutil.ContainsFinalizer(instance, api.FinalizerName) {
+		controllerutil.AddFinalizer(instance, api.FinalizerName)
+		instancelog.Info(fmt.Sprintf("added finalizer '%s' to service instance", api.FinalizerName))
 	}
 
 	// mutate the fields

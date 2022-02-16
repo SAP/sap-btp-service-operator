@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"github.com/SAP/sap-btp-service-operator/api"
 	"github.com/SAP/sap-btp-service-operator/api/v1alpha1/webhooks"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
 	"github.com/SAP/sap-btp-service-operator/client/sm/smfakes"
@@ -179,6 +180,6 @@ var _ = AfterSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 })
 
-func isReady(resource servicesv1alpha1.SAPBTPResource) bool {
-	return meta.IsStatusConditionPresentAndEqual(resource.GetConditions(), servicesv1alpha1.ConditionSucceeded, metav1.ConditionTrue)
+func isReady(resource api.SAPBTPResource) bool {
+	return meta.IsStatusConditionPresentAndEqual(resource.GetConditions(), api.ConditionSucceeded, metav1.ConditionTrue)
 }

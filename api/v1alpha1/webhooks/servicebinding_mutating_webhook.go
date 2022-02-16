@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/SAP/sap-btp-service-operator/api"
 	"net/http"
 
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -33,9 +34,9 @@ func (s *ServiceBindingDefaulter) Handle(_ context.Context, req admission.Reques
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	if binding.DeletionTimestamp.IsZero() && !controllerutil.ContainsFinalizer(binding, v1alpha1.FinalizerName) {
-		controllerutil.AddFinalizer(binding, v1alpha1.FinalizerName)
-		bindinglog.Info(fmt.Sprintf("added finalizer '%s' to service binding", v1alpha1.FinalizerName))
+	if binding.DeletionTimestamp.IsZero() && !controllerutil.ContainsFinalizer(binding, api.FinalizerName) {
+		controllerutil.AddFinalizer(binding, api.FinalizerName)
+		bindinglog.Info(fmt.Sprintf("added finalizer '%s' to service binding", api.FinalizerName))
 	}
 
 	// mutate the fields
@@ -49,7 +50,7 @@ func (s *ServiceBindingDefaulter) Handle(_ context.Context, req admission.Reques
 	}
 
 	if binding.Labels != nil {
-		if _, ok := binding.Labels[v1alpha1.StaleBindingLabel]; ok {
+		if _, ok := binding.Labels[api.StaleBindingLabel]; ok {
 			if binding.Spec.CredRotationPolicy != nil {
 				binding.Spec.CredRotationPolicy.Enabled = false
 			}

@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/SAP/sap-btp-service-operator/api"
 
 	"github.com/google/uuid"
 
@@ -158,7 +159,7 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client
 		setSuccessConditions(smTypes.OperationCategory(status.Type), serviceInstance)
 		if serviceInstance.Status.OperationType == smTypes.DELETE {
 			// delete was successful - remove our finalizer from the list and update it.
-			if err := r.removeFinalizer(ctx, serviceInstance, v1alpha1.FinalizerName); err != nil {
+			if err := r.removeFinalizer(ctx, serviceInstance, api.FinalizerName); err != nil {
 				return ctrl.Result{}, err
 			}
 		} else if serviceInstance.Status.OperationType == smTypes.CREATE {
@@ -291,7 +292,7 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 
 func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient sm.Client, serviceInstance *v1alpha1.ServiceInstance) (ctrl.Result, error) {
 	log := GetLogger(ctx)
-	if controllerutil.ContainsFinalizer(serviceInstance, v1alpha1.FinalizerName) {
+	if controllerutil.ContainsFinalizer(serviceInstance, api.FinalizerName) {
 		if len(serviceInstance.Status.InstanceID) == 0 {
 			log.Info("No instance id found validating instance does not exists in SM before removing finalizer")
 
@@ -306,7 +307,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 				return ctrl.Result{}, r.updateStatus(ctx, serviceInstance)
 			}
 			log.Info("instance does not exists in SM, removing finalizer")
-			return ctrl.Result{}, r.removeFinalizer(ctx, serviceInstance, v1alpha1.FinalizerName)
+			return ctrl.Result{}, r.removeFinalizer(ctx, serviceInstance, api.FinalizerName)
 		}
 
 		log.Info(fmt.Sprintf("Deleting instance with id %v from SM", serviceInstance.Status.InstanceID))
@@ -336,7 +337,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 		}
 
 		// remove our finalizer from the list and update it.
-		if err := r.removeFinalizer(ctx, serviceInstance, v1alpha1.FinalizerName); err != nil {
+		if err := r.removeFinalizer(ctx, serviceInstance, api.FinalizerName); err != nil {
 			return ctrl.Result{}, err
 		}
 
