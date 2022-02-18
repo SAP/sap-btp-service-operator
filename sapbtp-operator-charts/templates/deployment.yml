@@ -12,8 +12,6 @@ spec:
       control-plane: controller-manager
   template:
     metadata:
-      annotations:
-        rollme: {{ randAlphaNum 5 | quote }}
       labels:
         control-plane: controller-manager
     spec:
