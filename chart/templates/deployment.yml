@@ -13,7 +13,6 @@ spec:
   template:
     metadata:
       annotations:
-        rollme: {{ randAlphaNum 5 | quote }}
         sidecar.istio.io/inject: "false"
       labels:
         control-plane: controller-manager
