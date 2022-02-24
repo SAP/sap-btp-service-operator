@@ -385,6 +385,8 @@ Use the `namespace` parameter to specify the location of the secret containing t
 Usually it is the namespace in which you installed the operator.
 If not specified, the `default` namespace is used.
 
+[Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes).
+
 ## Credentials Rotation
 To enable automatic credentials rotation, you need to set the following parameters of the `credentialsRotationPolicy` field in the `spec` field of the `ServiceBinding` resource:
 
