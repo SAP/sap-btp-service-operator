@@ -21,6 +21,7 @@ The SAP BTP service operator is based on the [Kubernetes Operator pattern](https
     * [Service instance properties](#service-instance)
     * [Binding properties](#service-binding)
     * [Passing parameters](#passing-parameters)
+    * [Versions](#versions)
 * [SAP BTP kubectl Extension](#sap-btp-kubectl-plugin-experimental) 
 * [Credentials Rotation](#credentials-rotation)
 * [Multitenancy](#multitenancy)
@@ -348,6 +349,14 @@ Multiple parameters could be listed in the secret - simply separate key/value pa
     }'
 ```
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes).
+
+### Versions
+Review the supported Kubernetes API versions for the following SAP BTP Service Operator versions.
+
+| Operator version | Kubernetes API version |
+| --- | --- |
+| `v0.2` or later | `v1` |
+| `v0.1` | `v1alpha1` |
 
 ## SAP BTP kubectl Plugin (Experimental)
 The SAP BTP kubectl plugin extends kubectl with commands for getting the available services in your SAP BTP account by
