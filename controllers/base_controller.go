@@ -95,15 +95,17 @@ func (r *BaseReconciler) getSMClient(ctx context.Context, object api.SAPBTPResou
 		SSLDisabled:    false,
 	}
 
-	tls, err := r.SecretResolver.GetSecretForResource(ctx, object.GetNamespace(), secrets.SAPBTPOperatorTLSSecretName)
-	if client.IgnoreNotFound(err) != nil {
-		return nil, err
-	}
+	if len(cfg.ClientSecret) == 0 {
+		tls, err := r.SecretResolver.GetSecretForResource(ctx, object.GetNamespace(), secrets.SAPBTPOperatorTLSSecretName)
+		if client.IgnoreNotFound(err) != nil {
+			return nil, err
+		}
 
-	if tls != nil {
-		cfg.TLSCertKey = string(tls.Data[v1.TLSCertKey])
-		cfg.TLSPrivateKey = string(tls.Data[v1.TLSPrivateKeyKey])
-		log.Info("found tls configuration", "client", cfg.ClientID)
+		if tls != nil {
+			cfg.TLSCertKey = string(tls.Data[v1.TLSCertKey])
+			cfg.TLSPrivateKey = string(tls.Data[v1.TLSPrivateKeyKey])
+			log.Info("found tls configuration", "client", cfg.ClientID)
+		}
 	}
 
 	cl, err := sm.NewClient(ctx, cfg, nil)
