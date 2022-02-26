@@ -169,14 +169,14 @@ subjects:
 ---
 
 apiVersion: rbac.authorization.k8s.io/v1
-{{- if .Values.manager.cluster_access }}
+{{- if .Values.manager.allow_cluster_access }}
 kind: ClusterRoleBinding
 {{- else}}
 kind: RoleBinding
 {{- end}}
 metadata:
   name: sap-btp-operator-manager-rolebinding
-  {{- if .Values.manager.cluster_access }}
+  {{- if .Values.manager.allow_cluster_access }}
   namespace: {{.Release.Namespace}}
   {{- end }}
 roleRef:

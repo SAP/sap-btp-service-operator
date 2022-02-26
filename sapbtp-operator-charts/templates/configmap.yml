@@ -16,10 +16,11 @@ data:
   MANAGEMENT_NAMESPACE: {{.Release.Namespace}}
   {{- end }}
   RELEASE_NAMESPACE: {{.Release.Namespace}}
-  {{- if .Values.manager.allowed_namespaces }}
+  ALLOW_CLUSTER_ACCESS: {{ .Values.manager.allow_cluster_access | quote }}
+  {{- if not .Values.manager.allow_cluster_access }}
+  {{- if gt (len .Values.manager.allowed_namespaces) 0 }}
   ALLOWED_NAMESPACES: {{ join "," .Values.manager.allowed_namespaces }}
-  {{- else }}
-  ALLOWED_NAMESPACES: ""
+  {{- end }}
   {{- end }}
 kind: ConfigMap
 metadata:

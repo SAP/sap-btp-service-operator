@@ -76,8 +76,9 @@ func main() {
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "aa689ecc.cloud.sap.com",
 	}
-	allowedNamespaces := config.Get().AllowedNamespaces
-	if len(allowedNamespaces) > 0 {
+
+	if !config.Get().AllowClusterAccess {
+		allowedNamespaces := config.Get().AllowedNamespaces
 		allowedNamespaces = append(allowedNamespaces, config.Get().ReleaseNamespace)
 		setupLog.Info(fmt.Sprintf("Allowed namespaces are %v", allowedNamespaces))
 		mgrOptions.NewCache = cache.MultiNamespacedCacheBuilder(allowedNamespaces)

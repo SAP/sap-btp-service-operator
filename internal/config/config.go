@@ -18,6 +18,7 @@ type Config struct {
 	LongPollInterval       time.Duration `envconfig:"long_poll_interval"`
 	ManagementNamespace    string        `envconfig:"management_namespace"`
 	ReleaseNamespace       string        `envconfig:"release_namespace"`
+	AllowClusterAccess     bool          `envconfig:"allow_cluster_access"`
 	AllowedNamespaces      []string      `envconfig:"allowed_namespaces"`
 	EnableNamespaceSecrets bool          `envconfig:"enable_namespace_secrets"`
 	ClusterID              string        `envconfig:"cluster_id"`
@@ -30,6 +31,7 @@ func Get() Config {
 			PollInterval:           10 * time.Second,
 			LongPollInterval:       5 * time.Minute,
 			EnableNamespaceSecrets: true,
+			AllowClusterAccess:     true,
 		}
 		envconfig.MustProcess("", &config)
 	})

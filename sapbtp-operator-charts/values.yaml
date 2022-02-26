@@ -7,7 +7,7 @@ manager:
   cpu_limit: 250m  
   req_memory_limit: 20Mi
   req_cpu_limit: 100m
-  cluster_access: true
+  allow_cluster_access: true
   allowed_namespaces: []
   management_namespace:
   image:
