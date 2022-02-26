@@ -18,8 +18,9 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
-
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
 	"github.com/SAP/sap-btp-service-operator/api/v1/webhooks"
@@ -66,14 +67,21 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+	mgrOptions := ctrl.Options{
 		Scheme:                 scheme,
 		MetricsBindAddress:     metricsAddr,
 		Port:                   9443,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "aa689ecc.cloud.sap.com",
-	})
+	}
+	allowedNamespaces := config.Get().AllowedNamespaces
+	if len(allowedNamespaces) > 0 {
+		allowedNamespaces = append(allowedNamespaces, config.Get().ReleaseNamespace)
+		setupLog.Info(fmt.Sprintf("Allowed namespaces are %v", allowedNamespaces))
+		mgrOptions.NewCache = cache.MultiNamespacedCacheBuilder(allowedNamespaces)
+	}
+	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), mgrOptions)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
@@ -81,6 +89,7 @@ func main() {
 
 	secretResolver := &secrets.SecretResolver{
 		ManagementNamespace:    config.Get().ManagementNamespace,
+		ReleaseNamespace:       config.Get().ReleaseNamespace,
 		EnableNamespaceSecrets: config.Get().EnableNamespaceSecrets,
 		Client:                 mgr.GetClient(),
 		Log:                    logf.Log.WithName("secret-resolver"),
@@ -113,8 +122,8 @@ func main() {
 		os.Exit(1)
 	}
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-		mgr.GetWebhookServer().Register("/mutate-services-cloud-sap-com-v1-serviceinstance", &webhook.Admission{Handler: &webhooks.ServiceInstanceDefaulter{Client: mgr.GetClient()}})
-		mgr.GetWebhookServer().Register("/mutate-services-cloud-sap-com-v1-servicebinding", &webhook.Admission{Handler: &webhooks.ServiceBindingDefaulter{Client: mgr.GetClient()}})
+		mgr.GetWebhookServer().Register("/mutate-services-cloud-sap-com-v1-serviceinstance", &webhook.Admission{Handler: &webhooks.ServiceInstanceDefaulter{}})
+		mgr.GetWebhookServer().Register("/mutate-services-cloud-sap-com-v1-servicebinding", &webhook.Admission{Handler: &webhooks.ServiceBindingDefaulter{}})
 		if err = (&servicesv1.ServiceBinding{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "ServiceBinding")
 			os.Exit(1)

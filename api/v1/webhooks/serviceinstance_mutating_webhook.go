@@ -15,7 +15,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	servicesv1 "github.com/SAP/sap-btp-service-operator/api/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
@@ -25,7 +24,6 @@ import (
 var instancelog = logf.Log.WithName("serviceinstance-webhook")
 
 type ServiceInstanceDefaulter struct {
-	Client  client.Client
 	decoder *admission.Decoder
 }
 

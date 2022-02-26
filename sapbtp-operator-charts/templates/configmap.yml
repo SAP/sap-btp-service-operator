@@ -15,6 +15,12 @@ data:
   {{- else }}
   MANAGEMENT_NAMESPACE: {{.Release.Namespace}}
   {{- end }}
+  RELEASE_NAMESPACE: {{.Release.Namespace}}
+  {{- if .Values.manager.allowed_namespaces }}
+  ALLOWED_NAMESPACES: {{ join "," .Values.manager.allowed_namespaces }}
+  {{- else }}
+  ALLOWED_NAMESPACES: ""
+  {{- end }}
 kind: ConfigMap
 metadata:
   name: sap-btp-operator-config

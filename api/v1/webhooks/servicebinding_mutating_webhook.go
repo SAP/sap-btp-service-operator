@@ -13,7 +13,6 @@ import (
 	servicesv1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	v1admission "k8s.io/api/admission/v1"
 	v1 "k8s.io/api/authentication/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
@@ -23,7 +22,6 @@ import (
 var bindinglog = logf.Log.WithName("servicebinding-webhook")
 
 type ServiceBindingDefaulter struct {
-	Client  client.Client
 	decoder *admission.Decoder
 }
 

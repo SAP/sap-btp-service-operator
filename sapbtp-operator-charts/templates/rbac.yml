@@ -1,0 +1,207 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: sap-btp-operator-leader-election-role
+  namespace: {{.Release.Namespace}}
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps/status
+    verbs:
+      - get
+      - update
+      - patch
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: sap-btp-operator-manager-role
+rules:
+  - apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
+    verbs:
+      - create
+      - get
+      - list
+      - update
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - services.cloud.sap.com
+    resources:
+      - servicebindings
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - services.cloud.sap.com
+    resources:
+      - servicebindings/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - services.cloud.sap.com
+    resources:
+      - serviceinstances
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - services.cloud.sap.com
+    resources:
+      - serviceinstances/status
+    verbs:
+      - get
+      - patch
+      - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: sap-btp-operator-metrics-reader
+rules:
+  - nonResourceURLs:
+      - /metrics
+    verbs:
+      - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: sap-btp-operator-proxy-role
+rules:
+  - apiGroups:
+      - authentication.k8s.io
+    resources:
+      - tokenreviews
+    verbs:
+      - create
+  - apiGroups:
+      - authorization.k8s.io
+    resources:
+      - subjectaccessreviews
+    verbs:
+      - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: sap-btp-operator-leader-election-rolebinding
+  namespace: {{.Release.Namespace}}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: sap-btp-operator-leader-election-role
+subjects:
+  - kind: ServiceAccount
+    name: default
+    namespace: {{.Release.Namespace}}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: sap-btp-operator-proxy-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: sap-btp-operator-proxy-role
+subjects:
+  - kind: ServiceAccount
+    name: default
+    namespace: {{.Release.Namespace}}
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+{{- if .Values.manager.cluster_access }}
+kind: ClusterRoleBinding
+{{- else}}
+kind: RoleBinding
+{{- end}}
+metadata:
+  name: sap-btp-operator-manager-rolebinding
+  {{- if .Values.manager.cluster_access }}
+  namespace: {{.Release.Namespace}}
+  {{- end }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: sap-btp-operator-manager-role
+subjects:
+  - kind: ServiceAccount
+    name: default
+    namespace: {{.Release.Namespace}}
+
+{{- $releaseNamespace := .Release.Namespace }}
+{{- range $namespace := .Values.manager.allowed_namespaces }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: sap-btp-operator-manager-rolebinding
+  namespace: {{ $namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: sap-btp-operator-manager-role
+subjects:
+  - kind: ServiceAccount
+    name: default
+    namespace: {{ $releaseNamespace }}
+{{- end }}

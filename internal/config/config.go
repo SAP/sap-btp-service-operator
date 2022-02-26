@@ -17,6 +17,8 @@ type Config struct {
 	PollInterval           time.Duration `envconfig:"poll_interval"`
 	LongPollInterval       time.Duration `envconfig:"long_poll_interval"`
 	ManagementNamespace    string        `envconfig:"management_namespace"`
+	ReleaseNamespace       string        `envconfig:"release_namespace"`
+	AllowedNamespaces      []string      `envconfig:"allowed_namespaces"`
 	EnableNamespaceSecrets bool          `envconfig:"enable_namespace_secrets"`
 	ClusterID              string        `envconfig:"cluster_id"`
 }
