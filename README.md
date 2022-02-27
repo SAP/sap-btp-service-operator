@@ -14,6 +14,7 @@ The SAP BTP service operator is based on the [Kubernetes Operator pattern](https
 * [Architecture](#architecture)
 * [Prerequisites](#prerequisites)
 * [Setup](#setup)
+* [Versions](#versions)
 * [Using the SAP BTP Service Operator](#using-the-sap-btp-service-operator)
     * [Creating a service instance](#step-1-create-a-service-instance)
     * [Binding the service instance](#step-2-create-a-service-binding)
@@ -21,7 +22,7 @@ The SAP BTP service operator is based on the [Kubernetes Operator pattern](https
     * [Service instance properties](#service-instance)
     * [Binding properties](#service-binding)
     * [Passing parameters](#passing-parameters)
-    * [Versions](#versions)
+    * [Managing access](#managing-access)
 * [SAP BTP kubectl Extension](#sap-btp-kubectl-plugin-experimental) 
 * [Credentials Rotation](#credentials-rotation)
 * [Multitenancy](#multitenancy)
@@ -125,6 +126,14 @@ It is implemented using a [CRDs-based](https://kubernetes.io/docs/concepts/exten
         
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes).
+
+## Versions
+Review the supported Kubernetes API versions for the following SAP BTP Service Operator versions.
+
+| Operator version | Kubernetes API version |
+| --- | --- |
+| `v0.2` or later | `v1` |
+| `v0.1` | `v1alpha1` |
 
 ## Using the SAP BTP Service Operator
 
@@ -350,13 +359,16 @@ Multiple parameters could be listed in the secret - simply separate key/value pa
 ```
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes).
 
-### Versions
-Review the supported Kubernetes API versions for the following SAP BTP Service Operator versions.
+### Managing access
+By default SAP BTP operator has cluster wide permissions, it's possible to limit the permissions to one or more namespaces.
+You need to set 2 helm parameters:
 
-| Operator version | Kubernetes API version |
-| --- | --- |
-| `v0.2` or later | `v1` |
-| `v0.1` | `v1alpha1` |
+```
+--set manager.allow_cluster_access=false
+--set manager.allowed_namespaces={namespace1, namespace2..}
+```
+**Note:** If `allow_cluster_access` set to true `allowed_namespaces` parameter ignored.
+
 
 ## SAP BTP kubectl Plugin (Experimental)
 The SAP BTP kubectl plugin extends kubectl with commands for getting the available services in your SAP BTP account by

@@ -31,6 +31,7 @@ func Get() Config {
 			PollInterval:           10 * time.Second,
 			LongPollInterval:       5 * time.Minute,
 			EnableNamespaceSecrets: true,
+			AllowedNamespaces:      []string{},
 			AllowClusterAccess:     true,
 		}
 		envconfig.MustProcess("", &config)
