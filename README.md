@@ -416,7 +416,7 @@ You can also choose the `services.cloud.sap.com/forceRotate` annotation (value d
 
 **Note:**<br> It isn't possible to enable automatic credentials rotation to an already-rotated `ServiceBinding` (with the `services.cloud.sap.com/stale` label).
 
- 
+[Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
 ## Multitenancy
 You can configure the SAP BTP service operator to work with more than one subaccount in the same Kubernetes cluster. This means that different namespaces can be connected to different subaccounts.
