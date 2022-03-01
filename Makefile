@@ -105,6 +105,4 @@ lint-deps:
 	fi
 
 helm-charts:
-	cd config/default && kustomize edit set namespace releasenamespace
-	kustomize build config/default > ./sapbtp-operator-charts/templates/sap-operator.yml
-	$(SED) 's/releasenamespace/{{.Release.Namespace}}/g' ./sapbtp-operator-charts/templates/sap-operator.yml
+	kustomize build config/default > ./sapbtp-operator-charts/templates/crd.yml

@@ -10,13 +10,11 @@ With the SAP BTP service operator, you can consume [SAP BTP services](https://pl
 SAP BTP service operator allows you to provision and manage service instances and service bindings of SAP BTP services so that your Kubernetes-native applications can access and use needed services from the cluster.  
 The SAP BTP service operator is based on the [Kubernetes Operator pattern](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/).
 
-## Note
-This feature is still under development, review, and testing. 
-
 ## Table of Contents
 * [Architecture](#architecture)
 * [Prerequisites](#prerequisites)
 * [Setup](#setup)
+* [Versions](#versions)
 * [Using the SAP BTP Service Operator](#using-the-sap-btp-service-operator)
     * [Creating a service instance](#step-1-create-a-service-instance)
     * [Binding the service instance](#step-2-create-a-service-binding)
@@ -24,6 +22,7 @@ This feature is still under development, review, and testing.
     * [Service instance properties](#service-instance)
     * [Binding properties](#service-binding)
     * [Passing parameters](#passing-parameters)
+    * [Managing access](#managing-access)
 * [SAP BTP kubectl Extension](#sap-btp-kubectl-plugin-experimental) 
 * [Credentials Rotation](#credentials-rotation)
 * [Multitenancy](#multitenancy)
@@ -128,6 +127,14 @@ It is implemented using a [CRDs-based](https://kubernetes.io/docs/concepts/exten
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes).
 
+## Versions
+Review the supported Kubernetes API versions for the following SAP BTP Service Operator versions.
+
+| Operator version | Kubernetes API version |
+| --- | --- |
+| `v0.2` or later | `v1` |
+| `v0.1` | `v1alpha1` |
+
 ## Using the SAP BTP Service Operator
 
 #### Step 1: Create a service instance
@@ -135,7 +142,7 @@ It is implemented using a [CRDs-based](https://kubernetes.io/docs/concepts/exten
 1.  To create an instance of a service offered by SAP BTP, first create a `ServiceInstance` custom-resource file:
 
 ```yaml
-    apiVersion: services.cloud.sap.com/v1alpha1
+    apiVersion: services.cloud.sap.com/v1
     kind: ServiceInstance
     metadata:
         name: my-service-instance
@@ -176,7 +183,7 @@ It is implemented using a [CRDs-based](https://kubernetes.io/docs/concepts/exten
     The credentials are stored in a secret created in your cluster.
 
   ```yaml
-    apiVersion: services.cloud.sap.com/v1alpha1
+    apiVersion: services.cloud.sap.com/v1
     kind: ServiceBinding
     metadata:
         name: my-binding
@@ -352,6 +359,17 @@ Multiple parameters could be listed in the secret - simply separate key/value pa
 ```
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes).
 
+### Managing access
+By default SAP BTP operator has cluster wide permissions, it's possible to limit the permissions to one or more namespaces.
+You need to set 2 helm parameters:
+
+```
+--set manager.allow_cluster_access=false
+--set manager.allowed_namespaces={namespace1, namespace2..}
+```
+**Note:** If `allow_cluster_access` set to true `allowed_namespaces` parameter ignored.
+
+
 ## SAP BTP kubectl Plugin (Experimental)
 The SAP BTP kubectl plugin extends kubectl with commands for getting the available services in your SAP BTP account by
 using the access credentials stored in the cluster.
@@ -379,6 +397,8 @@ Use the `namespace` parameter to specify the location of the secret containing t
 Usually it is the namespace in which you installed the operator.
 If not specified, the `default` namespace is used.
 
+[Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes).
+
 ## Credentials Rotation
 To enable automatic credentials rotation, you need to set the following parameters of the `credentialsRotationPolicy` field in the `spec` field of the `ServiceBinding` resource:
 
@@ -396,7 +416,7 @@ You can also choose the `services.cloud.sap.com/forceRotate` annotation (value d
 
 **Note:**<br> It isn't possible to enable automatic credentials rotation to an already-rotated `ServiceBinding` (with the `services.cloud.sap.com/stale` label).
 
- 
+[Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
 ## Multitenancy
 You can configure the SAP BTP service operator to work with more than one subaccount in the same Kubernetes cluster. This means that different namespaces can be connected to different subaccounts.

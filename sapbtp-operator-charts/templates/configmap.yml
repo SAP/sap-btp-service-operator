@@ -15,6 +15,13 @@ data:
   {{- else }}
   MANAGEMENT_NAMESPACE: {{.Release.Namespace}}
   {{- end }}
+  RELEASE_NAMESPACE: {{.Release.Namespace}}
+  ALLOW_CLUSTER_ACCESS: {{ .Values.manager.allow_cluster_access | quote }}
+  {{- if not .Values.manager.allow_cluster_access }}
+  {{- if gt (len .Values.manager.allowed_namespaces) 0 }}
+  ALLOWED_NAMESPACES: {{ join "," .Values.manager.allowed_namespaces }}
+  {{- end }}
+  {{- end }}
 kind: ConfigMap
 metadata:
   name: sap-btp-operator-config

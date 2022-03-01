@@ -20,6 +20,7 @@ const (
 
 type SecretResolver struct {
 	ManagementNamespace    string
+	ReleaseNamespace       string
 	EnableNamespaceSecrets bool
 	Client                 client.Client
 	Log                    logr.Logger
@@ -34,6 +35,7 @@ func (sr *SecretResolver) GetSecretForResource(ctx context.Context, namespace, n
 		sr.Log.Info("Searching for secret in resource namespace", "namespace", namespace, "name", name)
 		secretForResource, err = sr.getSecretFromNamespace(ctx, namespace, name)
 		if client.IgnoreNotFound(err) != nil {
+			sr.Log.Error(err, "Could not fetch secret in resource namespace")
 			return nil, err
 		}
 
@@ -45,6 +47,7 @@ func (sr *SecretResolver) GetSecretForResource(ctx context.Context, namespace, n
 		sr.Log.Info("Searching for namespace secret in management namespace", "namespace", namespace, "managementNamespace", sr.ManagementNamespace, "name", name)
 		secretForResource, err = sr.getSecretForNamespace(ctx, namespace, name)
 		if client.IgnoreNotFound(err) != nil {
+			sr.Log.Error(err, "Could not fetch secret in management namespace")
 			return nil, err
 		}
 
@@ -53,9 +56,10 @@ func (sr *SecretResolver) GetSecretForResource(ctx context.Context, namespace, n
 
 	if !found {
 		// namespace-specific secret not found in management namespace, fallback to central cluster secret
-		sr.Log.Info("Searching for cluster secret", "managementNamespace", sr.ManagementNamespace, "name", name)
+		sr.Log.Info("Searching for cluster secret", "releaseNamespace", sr.ReleaseNamespace, "name", name)
 		secretForResource, err = sr.getClusterSecret(ctx, name)
 		if err != nil {
+			sr.Log.Error(err, "Could not fetch cluster secret")
 			return nil, err
 		}
 	}
@@ -77,6 +81,6 @@ func (sr *SecretResolver) getSecretForNamespace(ctx context.Context, namespace, 
 
 func (sr *SecretResolver) getClusterSecret(ctx context.Context, name string) (*v1.Secret, error) {
 	secret := &v1.Secret{}
-	err := sr.Client.Get(ctx, types.NamespacedName{Namespace: sr.ManagementNamespace, Name: name}, secret)
+	err := sr.Client.Get(ctx, types.NamespacedName{Namespace: sr.ReleaseNamespace, Name: name}, secret)
 	return secret, err
 }
