@@ -52,8 +52,9 @@ manager:
 
     ## ca-key.pem
     # key: "" # must be base64 encoded
-  # Use the following to avoid security context: securityContext: {}
-  securityContext:
-     runAsNonRoot: false
+  # Example of adding security context
+  #securityContext:
+  #   runAsNonRoot: true
+  securityContext: {}
 cluster:
   id:
