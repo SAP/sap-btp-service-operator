@@ -367,7 +367,7 @@ You need to set 2 helm parameters:
 --set manager.allow_cluster_access=false
 --set manager.allowed_namespaces={namespace1, namespace2..}
 ```
-**Note:** If `allow_cluster_access` set to true `allowed_namespaces` parameter ignored.
+**Note:** If `allow_cluster_access` set to true `allowed_namespaces` parameter is ignored.
 
 
 ## SAP BTP kubectl Plugin (Experimental)
