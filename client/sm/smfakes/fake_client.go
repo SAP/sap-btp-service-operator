@@ -139,7 +139,7 @@ type FakeClient struct {
 		result1 *types.ServicePlans
 		result2 error
 	}
-	ProvisionStub        func(*types.ServiceInstance, string, string, *sm.Parameters, string) (string, string, error)
+	ProvisionStub        func(*types.ServiceInstance, string, string, *sm.Parameters, string) (*sm.ProvisionResponse, error)
 	provisionMutex       sync.RWMutex
 	provisionArgsForCall []struct {
 		arg1 *types.ServiceInstance
@@ -149,14 +149,12 @@ type FakeClient struct {
 		arg5 string
 	}
 	provisionReturns struct {
-		result1 string
-		result2 string
-		result3 error
+		result1 *sm.ProvisionResponse
+		result2 error
 	}
 	provisionReturnsOnCall map[int]struct {
-		result1 string
-		result2 string
-		result3 error
+		result1 *sm.ProvisionResponse
+		result2 error
 	}
 	StatusStub        func(string, *sm.Parameters) (*types.Operation, error)
 	statusMutex       sync.RWMutex
@@ -799,7 +797,7 @@ func (fake *FakeClient) ListPlansReturnsOnCall(i int, result1 *types.ServicePlan
 	}{result1, result2}
 }
 
-func (fake *FakeClient) Provision(arg1 *types.ServiceInstance, arg2 string, arg3 string, arg4 *sm.Parameters, arg5 string) (string, string, error) {
+func (fake *FakeClient) Provision(arg1 *types.ServiceInstance, arg2 string, arg3 string, arg4 *sm.Parameters, arg5 string) (*sm.ProvisionResponse, error) {
 	fake.provisionMutex.Lock()
 	ret, specificReturn := fake.provisionReturnsOnCall[len(fake.provisionArgsForCall)]
 	fake.provisionArgsForCall = append(fake.provisionArgsForCall, struct {
@@ -817,9 +815,9 @@ func (fake *FakeClient) Provision(arg1 *types.ServiceInstance, arg2 string, arg3
 		return stub(arg1, arg2, arg3, arg4, arg5)
 	}
 	if specificReturn {
-		return ret.result1, ret.result2, ret.result3
+		return ret.result1, ret.result2
 	}
-	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakeClient) ProvisionCallCount() int {
@@ -828,7 +826,7 @@ func (fake *FakeClient) ProvisionCallCount() int {
 	return len(fake.provisionArgsForCall)
 }
 
-func (fake *FakeClient) ProvisionCalls(stub func(*types.ServiceInstance, string, string, *sm.Parameters, string) (string, string, error)) {
+func (fake *FakeClient) ProvisionCalls(stub func(*types.ServiceInstance, string, string, *sm.Parameters, string) (*sm.ProvisionResponse, error)) {
 	fake.provisionMutex.Lock()
 	defer fake.provisionMutex.Unlock()
 	fake.ProvisionStub = stub
@@ -841,33 +839,30 @@ func (fake *FakeClient) ProvisionArgsForCall(i int) (*types.ServiceInstance, str
 	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5
 }
 
-func (fake *FakeClient) ProvisionReturns(result1 string, result2 string, result3 error) {
+func (fake *FakeClient) ProvisionReturns(result1 *sm.ProvisionResponse, result2 error) {
 	fake.provisionMutex.Lock()
 	defer fake.provisionMutex.Unlock()
 	fake.ProvisionStub = nil
 	fake.provisionReturns = struct {
-		result1 string
-		result2 string
-		result3 error
-	}{result1, result2, result3}
+		result1 *sm.ProvisionResponse
+		result2 error
+	}{result1, result2}
 }
 
-func (fake *FakeClient) ProvisionReturnsOnCall(i int, result1 string, result2 string, result3 error) {
+func (fake *FakeClient) ProvisionReturnsOnCall(i int, result1 *sm.ProvisionResponse, result2 error) {
 	fake.provisionMutex.Lock()
 	defer fake.provisionMutex.Unlock()
 	fake.ProvisionStub = nil
 	if fake.provisionReturnsOnCall == nil {
 		fake.provisionReturnsOnCall = make(map[int]struct {
-			result1 string
-			result2 string
-			result3 error
+			result1 *sm.ProvisionResponse
+			result2 error
 		})
 	}
 	fake.provisionReturnsOnCall[i] = struct {
-		result1 string
-		result2 string
-		result3 error
-	}{result1, result2, result3}
+		result1 *sm.ProvisionResponse
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeClient) Status(arg1 string, arg2 *sm.Parameters) (*types.Operation, error) {

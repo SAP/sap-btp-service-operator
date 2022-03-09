@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
+	v1 "k8s.io/api/core/v1"
+
 	"k8s.io/client-go/tools/record"
 
 	"github.com/SAP/sap-btp-service-operator/client/sm"
@@ -60,27 +62,39 @@ type BaseReconciler struct {
 	Recorder       record.EventRecorder
 }
 
-func (r *BaseReconciler) getSMClient(ctx context.Context, object servicesv1alpha1.SAPBTPResource) (sm.Client, error) {
+func (r *BaseReconciler) getSMClient(ctx context.Context, object servicesv1alpha1.SAPBTPResource, log logr.Logger) (sm.Client, error) {
 	if r.SMClient != nil {
 		return r.SMClient(), nil
 	}
 
-	secret, err := r.SecretResolver.GetSecretForResource(ctx, object.GetNamespace())
+	secret, err := r.SecretResolver.GetSecretForResource(ctx, object.GetNamespace(), secrets.SAPBTPOperatorSecretName)
 	if err != nil {
 		return nil, err
 	}
 
 	secretData := secret.Data
-	cl := sm.NewClient(ctx, &sm.ClientConfig{
+	cfg := &sm.ClientConfig{
 		ClientID:       string(secretData["clientid"]),
 		ClientSecret:   string(secretData["clientsecret"]),
 		URL:            string(secretData["url"]),
 		TokenURL:       string(secretData["tokenurl"]),
 		TokenURLSuffix: string(secretData["tokenurlsuffix"]),
 		SSLDisabled:    false,
-	}, nil)
+	}
 
-	return cl, nil
+	tls, err := r.SecretResolver.GetSecretForResource(ctx, object.GetNamespace(), secrets.SAPBTPOperatorTLSSecretName)
+	if client.IgnoreNotFound(err) != nil {
+		return nil, err
+	}
+
+	if tls != nil {
+		cfg.TLSCertKey = string(tls.Data[v1.TLSCertKey])
+		cfg.TLSPrivateKey = string(tls.Data[v1.TLSPrivateKeyKey])
+		log.Info("found tls configuration", "client", cfg.ClientID)
+	}
+
+	cl, err := sm.NewClient(ctx, cfg, nil)
+	return cl, err
 }
 
 func (r *BaseReconciler) removeFinalizer(ctx context.Context, object servicesv1alpha1.SAPBTPResource, finalizerName string, log logr.Logger) error {
@@ -101,50 +115,14 @@ func (r *BaseReconciler) removeFinalizer(ctx context.Context, object servicesv1a
 	return nil
 }
 
-func (r *BaseReconciler) updateStatusWithRetries(ctx context.Context, object servicesv1alpha1.SAPBTPResource, log logr.Logger) error {
-	logFailedAttempt := func(retries int, err error) {
-		log.Info(fmt.Sprintf("failed to update status of %s attempt #%v, %s", object.GetControllerName(), retries, err.Error()))
-	}
-
-	log.Info(fmt.Sprintf("updating %s status with retries", object.GetControllerName()))
-	var err error
-	if err = r.Status().Update(ctx, object); err != nil {
-		logFailedAttempt(1, err)
-		for i := 2; i <= 3; i++ {
-			if err = r.updateStatus(ctx, object, log); err == nil {
-				break
-			}
-			logFailedAttempt(i, err)
-		}
-	}
-
-	if err != nil {
-		log.Error(err, fmt.Sprintf("failed to update status of %s giving up!!", object.GetControllerName()))
-		return err
-	}
-
-	log.Info(fmt.Sprintf("updated %s status in k8s", object.GetControllerName()))
-	return nil
+func (r *BaseReconciler) updateStatus(ctx context.Context, object servicesv1alpha1.SAPBTPResource) error {
+	return r.Status().Update(ctx, object)
 }
 
-func (r *BaseReconciler) updateStatus(ctx context.Context, object servicesv1alpha1.SAPBTPResource, log logr.Logger) error {
-	status := object.GetStatus()
-	if err := r.Get(ctx, apimachinerytypes.NamespacedName{Name: object.GetName(), Namespace: object.GetNamespace()}, object); err != nil {
-		log.Error(err, fmt.Sprintf("failed to fetch latest %s, unable to update status", object.GetControllerName()))
-		return err
-	}
-	clonedObj := object.DeepClone()
-	clonedObj.SetStatus(status)
-	if err := r.Status().Update(ctx, clonedObj); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (r *BaseReconciler) init(ctx context.Context, log logr.Logger, obj servicesv1alpha1.SAPBTPResource) error {
+func (r *BaseReconciler) init(ctx context.Context, obj servicesv1alpha1.SAPBTPResource) error {
 	obj.SetReady(metav1.ConditionFalse)
 	setInProgressConditions(smTypes.CREATE, "Pending", obj)
-	if err := r.updateStatusWithRetries(ctx, obj, log); err != nil {
+	if err := r.updateStatus(ctx, obj); err != nil {
 		return err
 	}
 	return nil
@@ -296,7 +274,7 @@ func isDelete(object metav1.ObjectMeta) bool {
 func isTransientError(err error, log logr.Logger) bool {
 	if smError, ok := err.(*sm.ServiceManagerError); ok {
 		log.Info(fmt.Sprintf("SM returned error status code %d", smError.StatusCode))
-		return smError.StatusCode == http.StatusTooManyRequests || smError.StatusCode == http.StatusServiceUnavailable || smError.StatusCode == http.StatusGatewayTimeout
+		return smError.StatusCode == http.StatusTooManyRequests || smError.StatusCode == http.StatusServiceUnavailable || smError.StatusCode == http.StatusGatewayTimeout || smError.StatusCode == http.StatusNotFound
 	}
 	return false
 }
@@ -307,7 +285,7 @@ func (r *BaseReconciler) markAsNonTransientError(ctx context.Context, operationT
 		log.Info(fmt.Sprintf("operation %s of %s encountered a non transient error %s, giving up operation :(", operationType, object.GetControllerName(), nonTransientErr.Error()))
 	}
 	object.SetObservedGeneration(object.GetGeneration())
-	err := r.updateStatusWithRetries(ctx, object, log)
+	err := r.updateStatus(ctx, object)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -320,7 +298,7 @@ func (r *BaseReconciler) markAsNonTransientError(ctx context.Context, operationT
 func (r *BaseReconciler) markAsTransientError(ctx context.Context, operationType smTypes.OperationCategory, transientErr error, object servicesv1alpha1.SAPBTPResource, log logr.Logger) (ctrl.Result, error) {
 	setInProgressConditions(operationType, transientErr.Error(), object)
 	log.Info(fmt.Sprintf("operation %s of %s encountered a transient error %s, retrying operation :)", operationType, object.GetControllerName(), transientErr.Error()))
-	if err := r.updateStatusWithRetries(ctx, object, log); err != nil {
+	if err := r.updateStatus(ctx, object); err != nil {
 		return ctrl.Result{}, err
 	}
 	return ctrl.Result{}, transientErr

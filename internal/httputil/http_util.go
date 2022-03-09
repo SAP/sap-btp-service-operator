@@ -19,6 +19,31 @@ func NormalizeURL(url string) string {
 
 // BuildHTTPClient builds custom http client with configured ssl validation
 func BuildHTTPClient(sslDisabled bool) *http.Client {
+	client := getClient()
+	if sslDisabled {
+		client.Transport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	}
+
+	return client
+}
+
+// BuildHTTPClient builds custom http client with configured ssl validation
+func BuildHTTPClientTLS(tlsCertKey, tlsPrivateKey string) (*http.Client, error) {
+	client := getClient()
+
+	cert, err := tls.X509KeyPair([]byte(tlsCertKey), []byte(tlsPrivateKey))
+	if err != nil {
+		return nil, err
+	}
+
+	client.Transport.(*http.Transport).TLSClientConfig = &tls.Config{
+		Certificates: []tls.Certificate{cert},
+	}
+
+	return client, nil
+}
+
+func getClient() *http.Client {
 	client := &http.Client{
 		Timeout: time.Second * 10,
 		Transport: &http.Transport{
@@ -33,10 +58,6 @@ func BuildHTTPClient(sslDisabled bool) *http.Client {
 			ExpectContinueTimeout: 1 * time.Second,
 		},
 	}
-	if sslDisabled {
-		client.Transport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-	}
-
 	return client
 }
 

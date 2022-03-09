@@ -18,7 +18,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -151,6 +150,7 @@ var _ = Describe("ServiceBinding controller", func() {
 				ExternalName:        externalName,
 				ServicePlanName:     "a-plan-name",
 				ServiceOfferingName: "an-offering-name",
+				CustomTags:          []string{"custom-tag"},
 			},
 		}
 		Expect(k8sClient.Create(ctx, instance)).Should(Succeed())
@@ -179,7 +179,7 @@ var _ = Describe("ServiceBinding controller", func() {
 		instanceName = "test-instance-" + guid
 		bindingName = "test-binding-" + guid
 		fakeClient = &smfakes.FakeClient{}
-		fakeClient.ProvisionReturns("12345678", "", nil)
+		fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: "12345678", Tags: []byte("[\"test\"]")}, nil)
 		fakeClient.BindReturns(&smclientTypes.ServiceBinding{ID: fakeBindingID, Credentials: json.RawMessage(`{"secret_key": "secret_value", "escaped": "{\"escaped_key\":\"escaped_val\"}"}`)}, "", nil)
 
 		smInstance := &smclientTypes.ServiceInstance{ID: fakeInstanceID, Ready: true, LastOperation: &smTypes.Operation{State: smTypes.SUCCEEDED, Type: smTypes.UPDATE}}
@@ -204,7 +204,7 @@ var _ = Describe("ServiceBinding controller", func() {
 			}, timeout, interval).Should(BeTrue())
 			if len(secretName) > 0 {
 				Eventually(func() bool {
-					err := k8sClient.Get(context.Background(), types.NamespacedName{Name: secretName, Namespace: bindingTestNamespace}, &v1.Secret{})
+					err := k8sClient.Get(context.Background(), types.NamespacedName{Name: secretName, Namespace: bindingTestNamespace}, &corev1.Secret{})
 					return apierrors.IsNotFound(err)
 				}, timeout, interval).Should(BeTrue())
 			}
@@ -246,25 +246,25 @@ var _ = Describe("ServiceBinding controller", func() {
 			When("referenced service instance exist in another namespace", func() {
 				var otherNamespace = "other-" + bindingTestNamespace
 				BeforeEach(func() {
-					nsSpec := &v1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: otherNamespace}}
+					nsSpec := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: otherNamespace}}
 					err := k8sClient.Create(context.Background(), nsSpec)
 					Expect(err).ToNot(HaveOccurred())
 				})
 				It("should fail", func() {
 					createBindingWithBlockedError(context.Background(), bindingName, otherNamespace, instanceName, "",
-						fmt.Sprintf("couldn't find the service instance"))
+						"couldn't find the service instance")
 				})
 			})
 
 			When("secret name is already taken", func() {
 				ctx := context.Background()
-				var secret *v1.Secret
+				var secret *corev1.Secret
 				JustBeforeEach(func() {
-					secret = &v1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "mysecret", Namespace: bindingTestNamespace}}
+					secret = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "mysecret", Namespace: bindingTestNamespace}}
 					Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
 					By("Verify secret created")
 					Eventually(func() bool {
-						err := k8sClient.Get(ctx, types.NamespacedName{Name: "mysecret", Namespace: bindingTestNamespace}, &v1.Secret{})
+						err := k8sClient.Get(ctx, types.NamespacedName{Name: "mysecret", Namespace: bindingTestNamespace}, &corev1.Secret{})
 						return err == nil
 					}, timeout, interval).Should(BeTrue())
 				})
@@ -305,6 +305,15 @@ var _ = Describe("ServiceBinding controller", func() {
 
 		Context("Valid parameters", func() {
 			Context("Sync", func() {
+
+				validateInstanceInfo := func(bindingSecret *corev1.Secret) {
+					validateSecretData(bindingSecret, "plan", `a-plan-name`)
+					validateSecretData(bindingSecret, "label", `an-offering-name`)
+					validateSecretData(bindingSecret, "tags", "[\"test\",\"custom-tag\"]")
+					validateSecretData(bindingSecret, "instance_name", instanceName)
+					Expect(bindingSecret.Data).To(HaveKey("instance_guid"))
+				}
+
 				It("Should create binding and store the binding credentials in a secret", func() {
 					ctx := context.Background()
 					createdBinding = createBinding(ctx, bindingName, bindingTestNamespace, instanceName, "binding-external-name")
@@ -315,6 +324,61 @@ var _ = Describe("ServiceBinding controller", func() {
 					bindingSecret := getSecret(ctx, createdBinding.Spec.SecretName, createdBinding.Namespace, true)
 					validateSecretData(bindingSecret, "secret_key", "secret_value")
 					validateSecretData(bindingSecret, "escaped", `{"escaped_key":"escaped_val"}`)
+					validateInstanceInfo(bindingSecret)
+				})
+
+				It("should put the raw broker response into the secret if spec.secretKey is provided", func() {
+					ctx := context.Background()
+					binding := newBinding("binding-with-secretkey", bindingTestNamespace)
+					binding.Spec.ServiceInstanceName = instanceName
+					binding.Spec.SecretName = "mysecret"
+					secretKey := "mycredentials"
+					binding.Spec.SecretKey = &secretKey
+
+					_ = k8sClient.Create(ctx, binding)
+					bindingLookupKey := types.NamespacedName{Name: binding.Name, Namespace: binding.Namespace}
+					Eventually(func() bool {
+						err := k8sClient.Get(ctx, bindingLookupKey, binding)
+						if err != nil {
+							return false
+						}
+						return isReady(binding)
+					}, timeout, interval).Should(BeTrue())
+
+					bindingSecret := getSecret(ctx, binding.Spec.SecretName, bindingTestNamespace, true)
+					validateSecretData(bindingSecret, secretKey, `{"secret_key": "secret_value", "escaped": "{\"escaped_key\":\"escaped_val\"}"}`)
+					validateInstanceInfo(bindingSecret)
+				})
+
+				It("should put binding data in single key if spec.secretRootKey is provided", func() {
+					ctx := context.Background()
+					binding := newBinding("binding-with-secretrootkey", bindingTestNamespace)
+					binding.Spec.ServiceInstanceName = instanceName
+					secretKey := "mycredentials"
+					binding.Spec.SecretKey = &secretKey
+					secretRootKey := "root"
+					binding.Spec.SecretRootKey = &secretRootKey
+
+					_ = k8sClient.Create(ctx, binding)
+					bindingLookupKey := types.NamespacedName{Name: binding.Name, Namespace: binding.Namespace}
+					Eventually(func() bool {
+						err := k8sClient.Get(ctx, bindingLookupKey, binding)
+						if err != nil {
+							return false
+						}
+						return isReady(binding)
+					}, timeout, interval).Should(BeTrue())
+
+					bindingSecret := getSecret(ctx, binding.Spec.SecretName, bindingTestNamespace, true)
+					Expect(len(bindingSecret.Data)).To(Equal(1))
+					Expect(bindingSecret.Data).To(HaveKey("root"))
+					res := make(map[string]string)
+					Expect(json.Unmarshal(bindingSecret.Data["root"], &res)).To(Succeed())
+					Expect(res[secretKey]).To(Equal(`{"secret_key": "secret_value", "escaped": "{\"escaped_key\":\"escaped_val\"}"}`))
+					Expect(res["plan"]).To(Equal("a-plan-name"))
+					Expect(res["label"]).To(Equal("an-offering-name"))
+					Expect(res["tags"]).To(Equal("[\"test\",\"custom-tag\"]"))
+					Expect(res).To(HaveKey("instance_guid"))
 				})
 
 				When("secret deleted by user", func() {
@@ -493,7 +557,7 @@ var _ = Describe("ServiceBinding controller", func() {
 					Expect(k8sClient.Create(context.Background(), binding)).Should(Succeed())
 
 					Eventually(func() bool {
-						secret := &v1.Secret{}
+						secret := &corev1.Secret{}
 						err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "my-special-secret", Namespace: bindingTestNamespace}, secret)
 						return err == nil
 					}, timeout, interval).Should(BeTrue())
@@ -592,6 +656,16 @@ var _ = Describe("ServiceBinding controller", func() {
 			})
 		})
 
+		When("secretKey is changed", func() {
+			It("should fail", func() {
+				secretKey := "not-nil"
+				createdBinding.Spec.SecretKey = &secretKey
+				err := k8sClient.Update(context.Background(), createdBinding)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("updating service bindings is not supported"))
+			})
+		})
+
 	})
 
 	Context("Delete", func() {
@@ -603,7 +677,7 @@ var _ = Describe("ServiceBinding controller", func() {
 			Eventually(func() bool {
 				err := k8sClient.Get(context.Background(), types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}, binding)
 				if apierrors.IsNotFound(err) {
-					err := k8sClient.Get(context.Background(), types.NamespacedName{Name: secretName, Namespace: bindingTestNamespace}, &v1.Secret{})
+					err := k8sClient.Get(context.Background(), types.NamespacedName{Name: secretName, Namespace: bindingTestNamespace}, &corev1.Secret{})
 					return apierrors.IsNotFound(err)
 				}
 				return false
@@ -634,7 +708,7 @@ var _ = Describe("ServiceBinding controller", func() {
 			Expect(createdBinding.Status.Conditions[2].Status).To(Equal(metav1.ConditionTrue))
 			Expect(createdBinding.Status.Conditions[2].Message).To(ContainSubstring(errorMessage))
 
-			err = k8sClient.Get(context.Background(), types.NamespacedName{Name: secretName, Namespace: bindingTestNamespace}, &v1.Secret{})
+			err = k8sClient.Get(context.Background(), types.NamespacedName{Name: secretName, Namespace: bindingTestNamespace}, &corev1.Secret{})
 			Expect(err).ToNot(HaveOccurred())
 		}
 
@@ -816,14 +890,14 @@ var _ = Describe("ServiceBinding controller", func() {
 	})
 })
 
-func validateSecretData(secret *v1.Secret, expectedKey string, expectedValue string) {
+func validateSecretData(secret *corev1.Secret, expectedKey string, expectedValue string) {
 	Expect(secret.Data).ToNot(BeNil())
-	Expect(len(secret.Data[expectedKey])).ToNot(BeNil())
+	Expect(secret.Data).To(HaveKey(expectedKey))
 	Expect(string(secret.Data[expectedKey])).To(Equal(expectedValue))
 }
 
-func getSecret(ctx context.Context, name, namespace string, failOnError bool) *v1.Secret {
-	secret := &v1.Secret{}
+func getSecret(ctx context.Context, name, namespace string, failOnError bool) *corev1.Secret {
+	secret := &corev1.Secret{}
 	err := k8sClient.Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, secret)
 	if failOnError {
 		Expect(err).ToNot(HaveOccurred())

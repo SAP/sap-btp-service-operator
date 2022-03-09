@@ -8,7 +8,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       TAG_NAME: ${{ github.event.release.tag_name }}
-      CHART_URL: https://github.com/SAP/sap-btp-service-operator/releases/download/${{ github.event.release.tag_name }}/sapbtp-operator-${{ github.event.release.tag_name }}.tgz
+      CHART_URL: https://github.com/SAP/sap-btp-service-operator/releases/download/${{ github.event.release.tag_name }}/sap-btp-operator-${{ github.event.release.tag_name }}.tgz
+      CHART_TGZ_NAME: sap-btp-operator-${{ github.event.release.tag_name }}.tgz
     steps:
       - name: Check out the repo
         uses: actions/checkout@v2
@@ -40,6 +41,9 @@ jobs:
           sed -i -e 's/tag: master/tag: '${TAG_NAME:-master}'/g' ./sapbtp-operator-charts/values.yaml | sh
           mkdir out
           helm package --app-version ${TAG_NAME} --version ${TAG_NAME} -d ./out sapbtp-operator-charts
+          wget https://sap.github.io/sap-btp-service-operator/index.yaml
+          helm repo index ./out --merge index.yaml
+          sed -i "s|${CHART_TGZ_NAME}|${CHART_URL}|g" ./out/index.yaml | sh
           mv ./hack/kubectl-sapbtp ./out/kubectl-sapbtp
 
       - name: Upload binaries to release

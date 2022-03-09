@@ -16,13 +16,14 @@ This feature is still under development, review, and testing.
 ## Table of Contents
 * [Prerequisites](#prerequisites)
 * [Setup Operator](#setup)
-* [SAP BTP kubectl extension](#sap-btp-kubectl-plugin-experimental)
 * [Using the SAP BTP Service Operator](#using-the-sap-btp-service-operator)
     * [Creating a service instance](#step-1-create-a-service-instance)
     * [Binding the service instance](#step-2-create-a-service-binding)
 * [Reference Documentation](#reference-documentation)
     * [Service instance properties](#service-instance)
-    * [Binding properties](#service-binding)    
+    * [Binding properties](#service-binding)
+    * [Passing parameters](#passing-parameters)
+* [SAP BTP kubectl extension](#sap-btp-kubectl-plugin-experimental)    
 
 ## Prerequisites
 - SAP BTP [Global Account](https://help.sap.com/viewer/65de2977205c403bbc107264b8eccf4b/Cloud/en-US/d61c2819034b48e68145c45c36acba6e.html) and [Subaccount](https://help.sap.com/viewer/65de2977205c403bbc107264b8eccf4b/Cloud/en-US/55d0b6d8b96846b8ae93b85194df0944.html) 
@@ -35,20 +36,22 @@ This feature is still under development, review, and testing.
 
 ## Setup
 1. Install [cert-manager](https://cert-manager.io/docs/installation/kubernetes)
+   - for releases v0.1.18 or higher use cert manager v1.6.0 or higher 
+   - for releases v0.1.17 or lower use cert manager lower then v1.6.0
 
 2. Obtain the access credentials for the SAP BTP service operator:
 
    a. Using the SAP BTP cockpit or CLI, create an instance of the SAP Service Manager service (technical name: `service-manager`) with the plan:
-    `service-operator-access`<br/>**Note**<br/> If you can't see the needed plan, you need to entitle your subaccount to use SAP Service Manager service.
+    `service-operator-access`<br/><br>*Note*<br/><br>*If you can't see the needed plan, you need to entitle your subaccount to use SAP Service Manager service.*<br>
 
-      For more information about how to entitle a service to a subaccount, see:
-      * [Configure Entitlements and Quotas for Subaccounts](https://help.sap.com/viewer/65de2977205c403bbc107264b8eccf4b/Cloud/en-US/5ba357b4fa1e4de4b9fcc4ae771609da.html)  
+      *For more information about how to entitle a service to a subaccount, see:*
+      * *[Configure Entitlements and Quotas for Subaccounts](https://help.sap.com/viewer/65de2977205c403bbc107264b8eccf4b/Cloud/en-US/5ba357b4fa1e4de4b9fcc4ae771609da.html)*
       
       
       <br/>For more information about creating service instances, see:     
       * [Creating Service Instances Using the SAP BTP Cockpit](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/bf71f6a7b7754dbd9dfc2569791ccc96.html)
         
-      * [Creating Service Instances using SMCTL](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/b327b66b711746b085ec5d2ea16e608e.html)  
+      * [Creating Service Instances using SMCTL](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/b327b66b711746b085ec5d2ea16e608e.html)<br> 
    
    b. Create a binding to the created service instance.
       
@@ -59,7 +62,7 @@ This feature is still under development, review, and testing.
    
    c. Retrieve the generated access credentials from the created binding:
    
-      The example of the credentials in the binding object
+      The example of the default binding object used if no credentials type is specified:
       
     ```json
      {
@@ -69,20 +72,50 @@ This feature is still under development, review, and testing.
          "xsappname": "b15166|service-manager!b1234",
          "sm_url": "https://service-manager.cfapps.eu10.hana.ondemand.com"
      }
-    ```  
+    ```
+    The example of the binding object with the specified X.509 credentials type:
+    
+    ```json
+    {
+         "clientid": "xxxxxxx",
+         "certificate": "-----BEGIN CERTIFICATE-----...-----END CERTIFICATE-----\n-----BEGIN CERTIFICATE-----..-----END CERTIFICATE-----\n-----BEGIN CERTIFICATE-----...-----END CERTIFICATE-----\n",
+         "key": "-----BEGIN RSA PRIVATE KEY-----...-----END RSA PRIVATE KEY-----\n",
+         "certurl": "https://mysubaccount.authentication.cert.eu10.hana.ondemand.com",
+         "xsappname": "b15166|service-manager!b1234",
+         "sm_url": "https://service-manager.cfapps.eu10.hana.ondemand.com"
+     }
+    ```
+3. Add SAP BTP service operator chart repository  
+   ```bash
+    helm repo add sap-btp-operator https://sap.github.io/sap-btp-service-operator
+   ```
+4. Deploy the the SAP BTP service operator in the cluster using the obtained access credentials:<br>
    
-3. Deploy the the SAP BTP service operator in the cluster using the obtained access credentials:
+   *Note:<br>
+    If you are deploying the SAP BTP service operator in the registered cluster based on the Service Catalog (svcat) and Service Manager agent so that you can migrate svcat-based content to service operator-based content, add ```--set cluster.id=<clusterID>  ``` to your deployment script.*<br>*For more information, see the step 2 of the Setup section of [Migration to SAP BTP service operator](https://github.com/SAP/sap-btp-service-operator-migration/blob/main/README.md).*
+   
+   The example of the deployment that uses the default access credentials type:
     ```bash
-    helm upgrade --install sap-btp-operator https://github.com/SAP/sap-btp-service-operator/releases/download/<release>/sap-btp-operator-<release>.tgz \
+    helm upgrade --install <release-name> sap-btp-operator/sap-btp-operator \
         --create-namespace \
-        --namespace=sap-btp-operator \
+        --namespace=sap-btp-operator \        
         --set manager.secret.clientid=<clientid> \
         --set manager.secret.clientsecret=<clientsecret> \
         --set manager.secret.url=<sm_url> \
         --set manager.secret.tokenurl=<url>
     ```
-
-    The list of available releases: [sapbtp-operator releases](https://github.com/SAP/sap-btp-service-operator/releases)
+   The example of the deployment that uses the X.509 access credentials type:
+    ```bash
+    helm upgrade --install <release-name> sap-btp-operator/sap-btp-operator \
+        --create-namespace \
+        --namespace=sap-btp-operator \        
+        --set manager.secret.clientid=<clientid> \
+        --set manager.secret.tls.crt="$(cat /path/to/cert)" \
+        --set manager.secret.tls.key="$(cat /path/to/key)" \
+        --set manager.secret.url=<sm_url> \
+        --set manager.secret.tokenurl=<certurl>
+    ```
+        
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes).
 
@@ -186,6 +219,7 @@ This feature is still under development, review, and testing.
 | externalName       | `string` | The name for the service instance in SAP BTP, defaults to the instance `metadata.name` if not specified. |
 | parameters       | `[]object` | Some services support the provisioning of additional configuration parameters during the instance creation.<br/>For the list of supported parameters, check the documentation of the particular service offering. |
 | parametersFrom | `[]object` | List of sources to populate parameters. |
+| customTags | `[]string` | List of custom tags describing the ServiceInstance, will be copied to `ServiceBinding` secret in the key called `tags`. |
 | userInfo | `object` | Contains information about the user that last modified this service instance. | 
 
 #### Status
@@ -195,6 +229,7 @@ This feature is still under development, review, and testing.
 | operationURL | `string` | The URL of the current operation performed on the service instance.  |
 | operationType   |  `string`| The type of the current operation. Possible values are CREATE, UPDATE, or DELETE. |
 | conditions       |  `[]condition`   | An array of conditions describing the status of the service instance.<br/>The possible condition types are:<br>- `Ready`: set to `true`  if the instance is ready and usable<br/>- `Failed`: set to `true` when an operation on the service instance fails.<br/> In the case of failure, the details about the error are available in the condition message.<br>- `Succeeded`: set to `true` when an operation on the service instance succeeded. In case of `false` operation considered as in progress unless `Failed` condition exists.
+| tags       |  `[]string`   | Tags describing the ServiceInstance as provided in service catalog, will be copied to `ServiceBinding` secret in the key called `tags`.
 
 
 
@@ -205,9 +240,13 @@ This feature is still under development, review, and testing.
 | serviceInstanceName`*`   | `string`   |  The Kubernetes name of the service instance to bind, should be in the namespace of the binding. |
 | externalName       | `string`   |  The name for the service binding in SAP BTP, defaults to the binding `metadata.name` if not specified. |
 | secretName       | `string`   |  The name of the secret where the credentials are stored, defaults to the binding `metadata.name` if not specified. |
-| parameters       |  `[]object`  |  Some services support the provisioning of additional configuration parameters during the bind request.<br/>For the list of supported                                  parameters, check the documentation of the particular service offering.|
+| secretKey | `string`  | The key inside the binding secret to store the credentials returned by the broker encoded as json to support complex data structures. |
+| secretRootKey | `string`  | The key inside the secret to store all binding data including credentials returned by the broker and additional info under single key.<br/>Convenient way to store whole binding data in single file when using `volumeMounts`. |
+| parameters       |  `[]object`  |  Some services support the provisioning of additional configuration parameters during the bind request.<br/>For the list of supported parameters, check the documentation of the particular service offering.|
 | parametersFrom | `[]object` | List of sources to populate parameters. |
-| userInfo | `object`  | Contains information about the user that last modified this service binding. | 
+| userInfo | `object`  | Contains information about the user that last modified this service binding. |
+
+
 
 #### Status
 | Parameter         | Type     | Description                                                                                                   |
@@ -220,14 +259,86 @@ This feature is still under development, review, and testing.
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
-## Support
-You're welcome to raise issues related to feature requests, bugs, or give us general feedback on this project's GitHub Issues page. 
-The SAP BTP service operator project maintainers will respond to the best of their abilities. 
+### Passing Parameters
+To set input parameters, you may use the `parameters` and `parametersFrom`
+fields in the `spec` field of the `ServiceInstance` or `ServiceBinding` resource:
+- `parameters` : can be used to specify a set of properties to be sent to the
+  broker. The data specified will be passed "as-is" to the broker without any
+  modifications - aside from converting it to JSON for transmission to the broker
+  in the case of the `spec` field being specified as `YAML`. Any valid `YAML` or
+  `JSON` constructs are supported. Only one parameters field may be specified per
+  `spec`.
+- `parametersFrom` : can be used to specify which secret, and key in that secret,
+  which contains a `string` that represents the json to include in the set of
+  parameters to be sent to the broker. The `parametersFrom` field is a list which
+  supports multiple sources referenced per `spec`.
 
-## Contributions
-We currently do not accept community contributions. 
+You may use either, or both, of these fields as needed.
 
-## SAP BTP kubectl Plugin (Experimental) 
+If multiple sources in `parameters` and `parametersFrom` blocks are specified,
+the final payload is a result of merging all of them at the top level.
+If there are any duplicate properties defined at the top level, the specification
+is considered to be invalid, the further processing of the `ServiceInstance`/`ServiceBinding`
+resource stops and its `status` is marked with error condition.
+
+The format of the `spec` will be (in YAML format):
+```yaml
+spec:
+  ...
+  parameters:
+    name: value
+  parametersFrom:
+    - secretKeyRef:
+        name: my-secret
+        key: secret-parameter
+```
+or, in JSON format
+```json
+"spec": {
+  "parameters": {
+    "name": "value"
+  },
+  "parametersFrom": {
+    "secretKeyRef": {
+      "name": "my-secret",
+      "key": "secret-parameter"
+    }
+  }
+}
+```
+and the secret would need to have a key named secret-parameter:
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: my-secret
+type: Opaque
+stringData:
+  secret-parameter:
+    '{
+      "password": "letmein"
+    }'
+```
+The final JSON payload to be sent to the broker would then look like:
+```json
+{
+  "name": "value",
+  "password": "letmein"
+}
+```
+
+Multiple parameters could be listed in the secret - simply separate key/value pairs with a comma as in this example:
+```yaml
+  secret-parameter:
+    '{
+      "password": "letmein",
+      "key2": "value2",
+      "key3": "value3"
+    }'
+```
+[Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes).
+
+## SAP BTP kubectl Plugin (Experimental)
 The SAP BTP kubectl plugin extends kubectl with commands for getting the available services in your SAP BTP account by
 using the access credentials stored in the cluster.
 
@@ -235,11 +346,13 @@ using the access credentials stored in the cluster.
 - [jq](https://stedolan.github.io/jq/)
 
 ### Limitations
-- The SAP BTP kubectl plugin is currently based on `bash`. If you're using Windows, you should utilize the SAP BTP plugin commands from a linux shell (e.g. [Cygwin](https://www.cygwin.com/)).  
+- The SAP BTP kubectl plugin is currently based on `bash`. If you're using Windows, you should utilize the SAP BTP plugin commands from a linux shell (e.g. [Cygwin](https://www.cygwin.com/)).
 
 ### Installation
-- Download https://github.com/SAP/sap-btp-service-operator/releases/download/v0.1.6/kubectl-sapbtp
+- Download `https://github.com/SAP/sap-btp-service-operator/releases/download/<release>/kubectl-sapbtp`
 - Move the executable file to any location in your `PATH`
+
+The list of available releases: [sapbtp-operator releases](https://github.com/SAP/sap-btp-service-operator/releases)
 
 ### Usage
 ```
@@ -249,11 +362,17 @@ using the access credentials stored in the cluster.
 ```
 
 Use the `namespace` parameter to specify the location of the secret containing the SAP BTP access credentials.  
-Usually it is the namespace in which you installed the operator. 
-If not specified, the `default` namespace is used. 
+Usually it is the namespace in which you installed the operator.
+If not specified, the `default` namespace is used.
 
+## Support
+You're welcome to raise issues related to feature requests, bugs, or give us general feedback on this project's GitHub Issues page. 
+The SAP BTP service operator project maintainers will respond to the best of their abilities. 
 
-[Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
+## Contributions
+We currently do not accept community contributions. 
 
 ## License
 This project is licensed under Apache 2.0 except as noted otherwise in the [license](./LICENSE) file.
+
+[Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)

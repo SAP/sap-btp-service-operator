@@ -16,7 +16,6 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -86,7 +85,7 @@ var _ = Describe("ServiceInstance controller", func() {
 	deleteInstance := func(ctx context.Context, instanceToDelete *v1alpha1.ServiceInstance, wait bool) {
 		err := k8sClient.Get(ctx, types.NamespacedName{Name: instanceToDelete.Name, Namespace: instanceToDelete.Namespace}, &v1alpha1.ServiceInstance{})
 		if err != nil {
-			Expect(errors.IsNotFound(err)).To(Equal(true))
+			Expect(apierrors.IsNotFound(err)).To(Equal(true))
 			return
 		}
 
@@ -96,7 +95,7 @@ var _ = Describe("ServiceInstance controller", func() {
 			Eventually(func() bool {
 				a := &v1alpha1.ServiceInstance{}
 				err := k8sClient.Get(ctx, types.NamespacedName{Name: instanceToDelete.Name, Namespace: instanceToDelete.Namespace}, a)
-				return errors.IsNotFound(err)
+				return apierrors.IsNotFound(err)
 			}, timeout, interval).Should(BeTrue())
 		}
 	}
@@ -128,7 +127,7 @@ var _ = Describe("ServiceInstance controller", func() {
 		defaultLookupKey = types.NamespacedName{Name: fakeInstanceName, Namespace: testNamespace}
 
 		fakeClient = &smfakes.FakeClient{}
-		fakeClient.ProvisionReturns(fakeInstanceID, "", nil)
+		fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
 		fakeClient.DeprovisionReturns("", nil)
 		fakeClient.GetInstanceByIDReturns(&smclientTypes.ServiceInstance{ID: fakeInstanceID, Ready: true, LastOperation: &smTypes.Operation{State: smTypes.SUCCEEDED, Type: smTypes.CREATE}}, nil)
 
@@ -194,7 +193,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						ServicePlanID:       "wrong-id",
 					}
 					BeforeEach(func() {
-						fakeClient.ProvisionReturns("", "", fmt.Errorf("provided plan id does not match the provided offeing name and plan name"))
+						fakeClient.ProvisionReturns(nil, fmt.Errorf("provided plan id does not match the provided offeing name and plan name"))
 					})
 
 					It("provisioning should fail", func() {
@@ -226,11 +225,11 @@ var _ = Describe("ServiceInstance controller", func() {
 				Context("with 400 status", func() {
 					JustBeforeEach(func() {
 						errMessage = "failed to provision instance"
-						fakeClient.ProvisionReturns("", "", &sm.ServiceManagerError{
+						fakeClient.ProvisionReturns(nil, &sm.ServiceManagerError{
 							StatusCode: http.StatusBadRequest,
 							Message:    errMessage,
 						})
-						fakeClient.ProvisionReturnsOnCall(1, fakeInstanceID, "", nil)
+						fakeClient.ProvisionReturnsOnCall(1, &sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
 
 					})
 
@@ -245,11 +244,11 @@ var _ = Describe("ServiceInstance controller", func() {
 				Context("with 429 status eventually succeeds", func() {
 					JustBeforeEach(func() {
 						errMessage = "failed to provision instance"
-						fakeClient.ProvisionReturnsOnCall(0, "", "", &sm.ServiceManagerError{
+						fakeClient.ProvisionReturnsOnCall(0, nil, &sm.ServiceManagerError{
 							StatusCode: http.StatusTooManyRequests,
 							Message:    errMessage,
 						})
-						fakeClient.ProvisionReturnsOnCall(1, fakeInstanceID, "", nil)
+						fakeClient.ProvisionReturnsOnCall(1, &sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
 					})
 
 					It("should retry until success", func() {
@@ -269,7 +268,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 		Context("Async", func() {
 			BeforeEach(func() {
-				fakeClient.ProvisionReturns(fakeInstanceID, "/v1/service_instances/fakeid/operations/1234", nil)
+				fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: fakeInstanceID, Location: "/v1/service_instances/fakeid/operations/1234"}, nil)
 				fakeClient.StatusReturns(&smclientTypes.Operation{
 					ID:    "1234",
 					Type:  string(smTypes.CREATE),
@@ -346,7 +345,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					//validate deletion
 					Eventually(func() bool {
 						err := k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-						return errors.IsNotFound(err)
+						return apierrors.IsNotFound(err)
 					}, timeout, interval).Should(BeTrue())
 				})
 			})
@@ -467,7 +466,7 @@ var _ = Describe("ServiceInstance controller", func() {
 							//validate deletion
 							Eventually(func() bool {
 								err := k8sClient.Get(ctx, defaultLookupKey, updatedInstance)
-								return errors.IsNotFound(err)
+								return apierrors.IsNotFound(err)
 							}, timeout, interval).Should(BeTrue())
 						})
 					})
@@ -649,7 +648,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					deleteInstance(ctx, serviceInstance, false)
 					Eventually(func() bool {
 						err := k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-						if errors.IsNotFound(err) {
+						if apierrors.IsNotFound(err) {
 							return false
 						}
 						return isFailed(serviceInstance)
@@ -705,7 +704,7 @@ var _ = Describe("ServiceInstance controller", func() {
 				LastOperation: &smTypes.Operation{State: smTypes.SUCCEEDED, Type: smTypes.CREATE},
 			}
 			BeforeEach(func() {
-				fakeClient.ProvisionReturns("", "", fmt.Errorf("ERROR"))
+				fakeClient.ProvisionReturns(nil, fmt.Errorf("ERROR"))
 			})
 			AfterEach(func() {
 				fakeClient.ListInstancesReturns(&smclientTypes.ServiceInstances{ServiceInstances: []smclientTypes.ServiceInstance{}}, nil)
