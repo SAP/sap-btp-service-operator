@@ -359,15 +359,14 @@ Multiple parameters could be listed in the secret - simply separate key/value pa
 ```
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes).
 
-### Managing access
-By default SAP BTP operator has cluster wide permissions, it's possible to limit the permissions to one or more namespaces.
-You need to set 2 helm parameters:
+### Managing Access
+By default, the SAP BTP operator has cluster-wide permissions.<br>You can also limit them to one or more namespaces; for this, you need to set the following two helm parameters:
 
 ```
 --set manager.allow_cluster_access=false
 --set manager.allowed_namespaces={namespace1, namespace2..}
 ```
-**Note:** If `allow_cluster_access` set to true `allowed_namespaces` parameter is ignored.
+**Note:**<br> If `allow_cluster_access` is set to true, then `allowed_namespaces` parameter is ignored.
 
 
 ## SAP BTP kubectl Plugin (Experimental)
