@@ -3,16 +3,11 @@ package webhooks
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"reflect"
 
-	"github.com/SAP/sap-btp-service-operator/api"
-
 	v1admission "k8s.io/api/admission/v1"
 	v1 "k8s.io/api/authentication/v1"
-
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	servicesv1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -33,11 +28,6 @@ func (s *ServiceInstanceDefaulter) Handle(_ context.Context, req admission.Reque
 	err := s.decoder.Decode(req, instance)
 	if err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
-	}
-
-	if instance.DeletionTimestamp.IsZero() && !controllerutil.ContainsFinalizer(instance, api.FinalizerName) {
-		controllerutil.AddFinalizer(instance, api.FinalizerName)
-		instancelog.Info(fmt.Sprintf("added finalizer '%s' to service instance", api.FinalizerName))
 	}
 
 	// mutate the fields
