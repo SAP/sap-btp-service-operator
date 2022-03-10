@@ -95,6 +95,14 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return r.delete(ctx, smClient, serviceBinding)
 	}
 
+	if !controllerutil.ContainsFinalizer(serviceBinding, api.FinalizerName) {
+		controllerutil.AddFinalizer(serviceBinding, api.FinalizerName)
+		log.Info(fmt.Sprintf("added finalizer '%s' to service binding", api.FinalizerName))
+		if err := r.Update(ctx, serviceBinding); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
 	if serviceBinding.Status.Ready == metav1.ConditionTrue {
 		if r.isStaleServiceBinding(serviceBinding) {
 			return ctrl.Result{}, r.Delete(ctx, serviceBinding)

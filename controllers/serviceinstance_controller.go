@@ -85,6 +85,14 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return r.deleteInstance(ctx, smClient, serviceInstance)
 	}
 
+	if !controllerutil.ContainsFinalizer(serviceInstance, api.FinalizerName) {
+		controllerutil.AddFinalizer(serviceInstance, api.FinalizerName)
+		log.Info(fmt.Sprintf("added finalizer '%s' to service instance", api.FinalizerName))
+		if err := r.Update(ctx, serviceInstance); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
 	if serviceInstance.Generation == serviceInstance.Status.ObservedGeneration && !isInProgress(serviceInstance) {
 		log.Info(fmt.Sprintf("Spec is not changed - ignoring... Generation is - %v", serviceInstance.Generation))
 		return ctrl.Result{}, nil

@@ -3,12 +3,9 @@ package webhooks
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/SAP/sap-btp-service-operator/api"
-
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	servicesv1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	v1admission "k8s.io/api/admission/v1"
@@ -31,11 +28,6 @@ func (s *ServiceBindingDefaulter) Handle(_ context.Context, req admission.Reques
 	err := s.decoder.Decode(req, binding)
 	if err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
-	}
-
-	if binding.DeletionTimestamp.IsZero() && !controllerutil.ContainsFinalizer(binding, api.FinalizerName) {
-		controllerutil.AddFinalizer(binding, api.FinalizerName)
-		bindinglog.Info(fmt.Sprintf("added finalizer '%s' to service binding", api.FinalizerName))
 	}
 
 	// mutate the fields
