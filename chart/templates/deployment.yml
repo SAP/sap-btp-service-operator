@@ -13,6 +13,11 @@ spec:
   template:
     metadata:
       annotations:
+        {{- $configmap := (include (print $.Template.BasePath "/configmap.yml") .) -}}
+        {{- $secret := (include (print $.Template.BasePath "/secret.yml") .) -}}
+        {{- $secretTls := (include (print $.Template.BasePath "/secret-tls.yml") .) -}}
+        {{- $configSha := (print $configmap $secret $secretTls) | sha256sum }}
+        checksum/config: {{ $configSha }}
         sidecar.istio.io/inject: "false"
       labels:
         control-plane: controller-manager
@@ -43,6 +48,18 @@ spec:
             - containerPort: 9443
               name: webhook-server
               protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8081
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8081
+            initialDelaySeconds: 5
+            periodSeconds: 10
           resources:
             limits:
               cpu: {{.Values.manager.cpu_limit}}
