@@ -7,10 +7,10 @@ metadata:
   namespace: {{.Release.Namespace}}
 spec:
   dnsNames:
-  - sap-btp-operator-webhook-service.{{.Release.Namespace}}.svc
-  - sap-btp-operator-webhook-service.{{.Release.Namespace}}.svc.cluster.local
+    - sap-btp-operator-webhook-service.{{.Release.Namespace}}.svc
+    - sap-btp-operator-webhook-service.{{.Release.Namespace}}.svc.cluster.local
   issuerRef:
     kind: Issuer
     name: sap-btp-operator-selfsigned-issuer
   secretName: webhook-server-cert
-{{- end }}
+{{- end}}

@@ -2,25 +2,31 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-installCRDs: true
-
 manager:
   memory_limit: 200Mi
   cpu_limit: 250m  
   req_memory_limit: 20Mi
   req_cpu_limit: 100m
+  allow_cluster_access: true
+  allowed_namespaces: []
+  management_namespace:
   image:
     repository: ghcr.io/sap/sap-btp-service-operator/controller
-    tag: v0.1.18
+    tag: v0.2.0
   secret:
+    b64encoded: false
+    enabled: true
+    tls:
+      crt:
+      key:
     clientid:
     clientsecret:
     url:
     tokenurl:
     tokenurlsuffix: "/oauth/token"
   certificates: {}
-  # certificates:
-
+    # Configure if https://github.com/jetstack/cert-manager is used
+    #certManager: true
     # Configure if self-generated, self-signed certificates are used
     # selfSigned: {}
     # selfSigned:
@@ -32,22 +38,19 @@ manager:
       # server-key.pem
       # key: "" # must be base64 encoded
 
-    # Configure if https://github.com/jetstack/cert-manager is used
-    # certManager: {}
-    # certManager: true
     # Configure if https://github.com/gardener/cert-management is used
+    # gardenerCertManager: {}
+    # gardenerCertManager:
+    ## set to use own issuer
+    # issuer:
 
-    # certManagement: {}
-      ## set to use own issuer
-      # issuer:
+    ## setup to create issuer with own CA. This requires a caBUndle (ca-cert and ca-key)
+    # caBundle: "" # must be base64 encoded
 
-      ## setup to create issuer with own CA. This requires a caBUndle (ca-cert and ca-key)
-      # caBundle: "" # must be base64 encoded
+    ## ca-cert.pem
+    # crt: "" # must be base64 encoded
 
-      ## ca-cert.pem
-      # crt: "" # must be base64 encoded
-
-      ## ca-key.pem
-      # key: "" # must be base64 encoded
+    ## ca-key.pem
+    # key: "" # must be base64 encoded
 cluster:
   id:
