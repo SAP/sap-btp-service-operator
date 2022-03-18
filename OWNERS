@@ -1,0 +1,21 @@
+filters:
+  '.*':
+    approvers:
+      - wozniakjan
+      - piotrmiskiewicz
+      - szwedm
+      - ralikio
+      - hanngos
+      - tillknuesting
+      - PK85
+    labels:
+      - area/service-management
+  '\.md$|/docs/|^milv\.config\.yaml$':
+    approvers:
+      - klaudiagrz
+      - mmitoraj
+      - majakurcius
+      - NHingerl
+      - grego952
+    labels:
+      - area/documentation
