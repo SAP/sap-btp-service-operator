@@ -9,6 +9,8 @@ manager:
   req_cpu_limit: 100m
   allow_cluster_access: true
   allowed_namespaces: []
+  replica_count: 2
+  enable_leader_election: true
   management_namespace:
   image:
     repository: ghcr.io/sap/sap-btp-service-operator/controller

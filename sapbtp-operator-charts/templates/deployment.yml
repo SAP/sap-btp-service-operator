@@ -6,7 +6,7 @@ metadata:
   name: sap-btp-operator-controller-manager
   namespace: {{.Release.Namespace}}
 spec:
-  replicas: 1
+  replicas: {{.Values.manager.replica_count}}
   selector:
     matchLabels:
       control-plane: controller-manager
@@ -38,7 +38,9 @@ spec:
               name: https
         - args:
             - --metrics-addr=127.0.0.1:8080
+            {{- if .Values.manager.enable_leader_election }}
             - --enable-leader-election
+            {{- end}}
           command:
             - /manager
           envFrom:
