@@ -33,9 +33,6 @@ metadata:
     cert-manager.io/inject-ca-from: {{.Release.Namespace}}/sap-btp-operator-serving-cert
   {{- end}}
   name: sap-btp-operator-mutating-webhook-configuration
-  labels:
-    alt1: {{ $altName1 }}
-    alt2: {{ $altName2 }}
 webhooks:
   - admissionReviewVersions:
       - v1beta1
