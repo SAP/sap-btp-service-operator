@@ -1,14 +1,5 @@
 {{- if .Values.manager.certificates.gardenerCertManager }}
 ---
-apiVersion: v1
-kind: Secret
-metadata:
-  name: abcd
-  namespace: {{ .Release.Namespace }}
-type: Opaque
-data:
-  key: value
----
 apiVersion: cert.gardener.cloud/v1alpha1
 kind: Certificate
 metadata:
