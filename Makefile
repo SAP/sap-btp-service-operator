@@ -105,4 +105,4 @@ lint-deps:
 	fi
 
 helm-charts:
-	kustomize build config/default > ./sapbtp-operator-charts/templates/crd.yml
+	kustomize build config/default > ./sapbtp-operator-charts/crds/crd.yml
