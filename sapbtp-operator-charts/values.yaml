@@ -19,12 +19,12 @@ manager:
     b64encoded: false
     enabled: true
     tls:
-      crt:
-      key:
-    clientid:
-    clientsecret:
-    url:
-    tokenurl:
+      crt: ""
+      key: ""
+    clientid: ""
+    clientsecret: ""
+    url: ""
+    tokenurl: ""
     tokenurlsuffix: "/oauth/token"
   certificates:
     # Configure if https://github.com/jetstack/cert-manager is used
