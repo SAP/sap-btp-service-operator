@@ -6,7 +6,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("ServiceBinding controller", func() {
+var _ = Describe("Controller Util", func() {
 
 	Context("normalize credentials", func() {
 		var credentialsJSON json.RawMessage
