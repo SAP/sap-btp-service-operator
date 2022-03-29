@@ -468,7 +468,6 @@ func (r *ServiceBindingReconciler) storeBindingSecret(ctx context.Context, k8sBi
 
 	var credentialsMap map[string][]byte
 	credentialProperties := make([]SecretMetadataProperty, 0)
-	metaDataProperties := make([]SecretMetadataProperty, 0)
 
 	if len(smBinding.Credentials) == 0 {
 		log.Info("Binding credentials are empty")
