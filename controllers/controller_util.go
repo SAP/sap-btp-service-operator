@@ -10,23 +10,42 @@ import (
 	v1 "k8s.io/api/authentication/v1"
 )
 
-func normalizeCredentials(credentialsJSON json.RawMessage) (map[string][]byte, error) {
+type SecretMetadataProperty struct {
+	Name       string `json:"name"`
+	SourceName string `json:"sourceName,omitempty"`
+	Format     string `json:"format"`
+}
+
+type format string
+
+const (
+	TEXT    format = "text"
+	JSON    format = "json"
+	UNKNOWN format = "unknown"
+)
+
+func normalizeCredentials(credentialsJSON json.RawMessage) (map[string][]byte, []SecretMetadataProperty, error) {
 	var credentialsMap map[string]interface{}
 	err := json.Unmarshal(credentialsJSON, &credentialsMap)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	normalized := make(map[string][]byte)
+	metadata := make([]SecretMetadataProperty, 0)
 	for propertyName, value := range credentialsMap {
 		keyString := strings.Replace(propertyName, " ", "_", -1)
-		normalizedValue, err := serialize(value)
+		normalizedValue, typpe, err := serialize(value)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
+		metadata = append(metadata, SecretMetadataProperty{
+			Name:   keyString,
+			Format: string(typpe),
+		})
 		normalized[keyString] = normalizedValue
 	}
-	return normalized, nil
+	return normalized, metadata, nil
 }
 
 func buildUserInfo(ctx context.Context, userInfo *v1.UserInfo) string {
@@ -43,18 +62,18 @@ func buildUserInfo(ctx context.Context, userInfo *v1.UserInfo) string {
 	return string(userInfoStr)
 }
 
-func serialize(value interface{}) ([]byte, error) {
+func serialize(value interface{}) ([]byte, format, error) {
 	if byteArrayVal, ok := value.([]byte); ok {
-		return byteArrayVal, nil
+		return byteArrayVal, JSON, nil
 	}
 	if strVal, ok := value.(string); ok {
-		return []byte(strVal), nil
+		return []byte(strVal), TEXT, nil
 	}
 	data, err := json.Marshal(value)
 	if err != nil {
-		return nil, err
+		return nil, UNKNOWN, err
 	}
-	return data, nil
+	return data, JSON, nil
 }
 
 func contains(slice []string, i string) bool {

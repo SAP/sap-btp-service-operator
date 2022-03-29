@@ -297,6 +297,7 @@ var _ = Describe("ServiceBinding controller", func() {
 				validateInstanceInfo := func(bindingSecret *corev1.Secret) {
 					validateSecretData(bindingSecret, "plan", `a-plan-name`)
 					validateSecretData(bindingSecret, "label", `an-offering-name`)
+					validateSecretData(bindingSecret, "type", `an-offering-name`)
 					validateSecretData(bindingSecret, "tags", "[\"test\",\"custom-tag\"]")
 					validateSecretData(bindingSecret, "instance_name", instanceName)
 					Expect(bindingSecret.Data).To(HaveKey("instance_guid"))
