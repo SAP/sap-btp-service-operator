@@ -503,9 +503,10 @@ func (r *ServiceBindingReconciler) storeBindingSecret(ctx context.Context, k8sBi
 			return err
 		}
 	} else {
-		metadata := make(map[string][]SecretMetadataProperty)
-		metadata["metaDataProperties"] = metaDataProperties
-		metadata["credentialProperties"] = credentialProperties
+		metadata := map[string][]SecretMetadataProperty{
+			"metaDataProperties":   metaDataProperties,
+			"credentialProperties": credentialProperties,
+		}
 		metadataByte, err := json.Marshal(metadata)
 		if err != nil {
 			log.Error(err, "failed to enrich binding with metadata")
