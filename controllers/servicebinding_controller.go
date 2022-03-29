@@ -509,8 +509,9 @@ func (r *ServiceBindingReconciler) storeBindingSecret(ctx context.Context, k8sBi
 		metadataByte, err := json.Marshal(metadata)
 		if err != nil {
 			log.Error(err, "failed to enrich binding with metadata")
+		} else {
+			credentialsMap[".metadata"] = metadataByte
 		}
-		credentialsMap[".metadata"] = metadataByte
 	}
 
 	secret := &corev1.Secret{
