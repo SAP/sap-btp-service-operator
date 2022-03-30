@@ -303,6 +303,18 @@ var _ = Describe("ServiceBinding controller", func() {
 					Expect(bindingSecret.Data).To(HaveKey("instance_guid"))
 				}
 
+				validateSecretMetadata := func(bindingSecret *corev1.Secret, credentialProperties []SecretMetadataProperty) {
+					metadata := make(map[string][]SecretMetadataProperty)
+					Expect(json.Unmarshal(bindingSecret.Data[".metadata"], &metadata)).To(Succeed())
+					Expect(metadata["credentialProperties"]).To(ContainElements(credentialProperties))
+					Expect(metadata["metaDataProperties"]).To(ContainElement(SecretMetadataProperty{Name: "instance_name", Format: string(TEXT)}))
+					Expect(metadata["metaDataProperties"]).To(ContainElement(SecretMetadataProperty{Name: "instance_guid", Format: string(TEXT)}))
+					Expect(metadata["metaDataProperties"]).To(ContainElement(SecretMetadataProperty{Name: "plan", Format: string(TEXT)}))
+					Expect(metadata["metaDataProperties"]).To(ContainElement(SecretMetadataProperty{Name: "label", Format: string(TEXT)}))
+					Expect(metadata["metaDataProperties"]).To(ContainElement(SecretMetadataProperty{Name: "type", Format: string(TEXT)}))
+					Expect(metadata["metaDataProperties"]).To(ContainElement(SecretMetadataProperty{Name: "tags", Format: string(JSON)}))
+				}
+
 				It("Should create binding and store the binding credentials in a secret", func() {
 					ctx := context.Background()
 					createdBinding = createBinding(ctx, bindingName, bindingTestNamespace, instanceName, "binding-external-name")
@@ -314,6 +326,17 @@ var _ = Describe("ServiceBinding controller", func() {
 					validateSecretData(bindingSecret, "secret_key", "secret_value")
 					validateSecretData(bindingSecret, "escaped", `{"escaped_key":"escaped_val"}`)
 					validateInstanceInfo(bindingSecret)
+					credentialProperties := []SecretMetadataProperty{
+						{
+							Name:   "secret_key",
+							Format: string(TEXT),
+						},
+						{
+							Name:   "escaped",
+							Format: string(TEXT),
+						},
+					}
+					validateSecretMetadata(bindingSecret, credentialProperties)
 				})
 
 				It("should put the raw broker response into the secret if spec.secretKey is provided", func() {
@@ -337,6 +360,13 @@ var _ = Describe("ServiceBinding controller", func() {
 					bindingSecret := getSecret(ctx, binding.Spec.SecretName, bindingTestNamespace, true)
 					validateSecretData(bindingSecret, secretKey, `{"secret_key": "secret_value", "escaped": "{\"escaped_key\":\"escaped_val\"}"}`)
 					validateInstanceInfo(bindingSecret)
+					credentialProperties := []SecretMetadataProperty{
+						{
+							Name:   "mycredentials",
+							Format: string(JSON),
+						},
+					}
+					validateSecretMetadata(bindingSecret, credentialProperties)
 				})
 
 				It("should put binding data in single key if spec.secretRootKey is provided", func() {
