@@ -369,7 +369,7 @@ var _ = Describe("ServiceBinding controller", func() {
 					validateSecretMetadata(bindingSecret, credentialProperties)
 				})
 
-				FIt("should put binding data in single key if spec.secretRootKey is provided", func() {
+				It("should put binding data in single key if spec.secretRootKey is provided", func() {
 					ctx := context.Background()
 					binding := newBindingObject("binding-with-secretrootkey", bindingTestNamespace)
 					binding.Spec.ServiceInstanceName = instanceName
