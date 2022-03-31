@@ -113,19 +113,6 @@ The deployment and service must contain btp operator specific labels (deployment
 app.kubernetes.io/instance: sap-btp-operator
 app.kubernetes.io/name: sap-btp-operator
 ```
-Deployment spec, deployment:
-```
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      control-plane: controller-manager
-      app.kubernetes.io/instance: sap-btp-operator
-      app.kubernetes.io/name: sap-btp-operator
-```
-
-Deployment - template:
-
 
 # How to publish a new version of a chart
 ## Download the original chart from helm repository
