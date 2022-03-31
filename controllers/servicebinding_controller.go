@@ -468,7 +468,6 @@ func (r *ServiceBindingReconciler) storeBindingSecret(ctx context.Context, k8sBi
 
 	var credentialsMap map[string][]byte
 	var credentialProperties []SecretMetadataProperty
-	var metaDataProperties []SecretMetadataProperty
 
 	if len(smBinding.Credentials) == 0 {
 		log.Info("Binding credentials are empty")
@@ -479,8 +478,9 @@ func (r *ServiceBindingReconciler) storeBindingSecret(ctx context.Context, k8sBi
 		}
 		credentialProperties = []SecretMetadataProperty{
 			{
-				Name:   *k8sBinding.Spec.SecretKey,
-				Format: string(JSON),
+				Name:      *k8sBinding.Spec.SecretKey,
+				Format:    string(JSON),
+				Container: true,
 			},
 		}
 	} else {
@@ -492,8 +492,7 @@ func (r *ServiceBindingReconciler) storeBindingSecret(ctx context.Context, k8sBi
 		}
 	}
 
-	var err error
-	metaDataProperties, err = r.addInstanceInfo(ctx, k8sBinding, credentialsMap)
+	metaDataProperties, err := r.addInstanceInfo(ctx, k8sBinding, credentialsMap)
 	if err != nil {
 		log.Error(err, "failed to enrich binding with service instance info")
 	}
@@ -504,24 +503,17 @@ func (r *ServiceBindingReconciler) storeBindingSecret(ctx context.Context, k8sBi
 		if err != nil {
 			return err
 		}
-		credentialProperties = []SecretMetadataProperty{
-			{
-				Name:   *k8sBinding.Spec.SecretRootKey,
-				Format: string(JSON),
-			},
-		}
-		metaDataProperties = credentialProperties
-	}
-
-	metadata := map[string][]SecretMetadataProperty{
-		"metaDataProperties":   metaDataProperties,
-		"credentialProperties": credentialProperties,
-	}
-	metadataByte, err := json.Marshal(metadata)
-	if err != nil {
-		log.Error(err, "failed to enrich binding with metadata")
 	} else {
-		credentialsMap[".metadata"] = metadataByte
+		metadata := map[string][]SecretMetadataProperty{
+			"metaDataProperties":   metaDataProperties,
+			"credentialProperties": credentialProperties,
+		}
+		metadataByte, err := json.Marshal(metadata)
+		if err != nil {
+			log.Error(err, "failed to enrich binding with metadata")
+		} else {
+			credentialsMap[".metadata"] = metadataByte
+		}
 	}
 
 	secret := &corev1.Secret{

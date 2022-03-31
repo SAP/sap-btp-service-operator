@@ -11,9 +11,9 @@ import (
 )
 
 type SecretMetadataProperty struct {
-	Name       string `json:"name"`
-	SourceName string `json:"sourceName,omitempty"`
-	Format     string `json:"format"`
+	Name      string `json:"name"`
+	Container bool   `json:"container,omitempty"`
+	Format    string `json:"format"`
 }
 
 type format string
