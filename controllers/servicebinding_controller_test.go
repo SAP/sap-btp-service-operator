@@ -369,7 +369,7 @@ var _ = Describe("ServiceBinding controller", func() {
 					validateSecretMetadata(bindingSecret, credentialProperties)
 				})
 
-				It("should put binding data in single key if spec.secretRootKey is provided", func() {
+				FIt("should put binding data in single key if spec.secretRootKey is provided", func() {
 					ctx := context.Background()
 					binding := newBindingObject("binding-with-secretrootkey", bindingTestNamespace)
 					binding.Spec.ServiceInstanceName = instanceName
@@ -389,8 +389,9 @@ var _ = Describe("ServiceBinding controller", func() {
 					}, timeout, interval).Should(BeTrue())
 
 					bindingSecret := getSecret(ctx, binding.Spec.SecretName, bindingTestNamespace, true)
-					Expect(len(bindingSecret.Data)).To(Equal(1))
+					Expect(len(bindingSecret.Data)).To(Equal(2))
 					Expect(bindingSecret.Data).To(HaveKey("root"))
+					Expect(bindingSecret.Data).To(HaveKey(".metadata"))
 					res := make(map[string]string)
 					Expect(json.Unmarshal(bindingSecret.Data["root"], &res)).To(Succeed())
 					Expect(res[secretKey]).To(Equal(`{"secret_key": "secret_value", "escaped": "{\"escaped_key\":\"escaped_val\"}"}`))
@@ -398,6 +399,10 @@ var _ = Describe("ServiceBinding controller", func() {
 					Expect(res["label"]).To(Equal("an-offering-name"))
 					Expect(res["tags"]).To(Equal("[\"test\",\"custom-tag\"]"))
 					Expect(res).To(HaveKey("instance_guid"))
+					metadata := make(map[string][]SecretMetadataProperty)
+					Expect(json.Unmarshal(bindingSecret.Data[".metadata"], &metadata)).To(Succeed())
+					Expect(metadata["metaDataProperties"]).To(ContainElement(SecretMetadataProperty{Name: "root", Format: string(JSON)}))
+					Expect(metadata["credentialProperties"]).To(ContainElement(SecretMetadataProperty{Name: "root", Format: string(JSON)}))
 				})
 
 				When("secret deleted by user", func() {
