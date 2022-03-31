@@ -10,6 +10,8 @@ spec:
   selector:
     matchLabels:
       control-plane: controller-manager
+      app.kubernetes.io/instance: sap-btp-operator
+      app.kubernetes.io/name: sap-btp-operator
   template:
     metadata:
       annotations:
@@ -20,6 +22,8 @@ spec:
         sidecar.istio.io/inject: "false"
       labels:
         control-plane: controller-manager
+        app.kubernetes.io/instance: sap-btp-operator
+        app.kubernetes.io/name: sap-btp-operator
     spec:
       containers:
         - args:

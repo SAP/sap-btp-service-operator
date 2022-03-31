@@ -106,6 +106,14 @@ caBundle: {{ b64enc $ca.Cert }}
 {{- end }}
 ```
 
+### Add sap-btp-operator labels
+
+The deployment and service must contain btp operator specific labels (deployment spec, deployment template and the service label selector):
+```yaml
+app.kubernetes.io/instance: sap-btp-operator
+app.kubernetes.io/name: sap-btp-operator
+```
+
 # How to publish a new version of a chart
 ## Download the original chart from helm repository
 Configure helm repository:

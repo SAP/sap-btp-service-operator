@@ -9,12 +9,16 @@ spec:
       targetPort: 9443
   selector:
     control-plane: controller-manager
+    app.kubernetes.io/instance: sap-btp-operator
+    app.kubernetes.io/name: sap-btp-operator
 ---
 apiVersion: v1
 kind: Service
 metadata:
   labels:
     control-plane: controller-manager
+    app.kubernetes.io/instance: sap-btp-operator
+    app.kubernetes.io/name: sap-btp-operator
   name: sap-btp-operator-controller-manager-metrics-service
   namespace: {{.Release.Namespace}}
 spec:
@@ -24,3 +28,5 @@ spec:
       targetPort: https
   selector:
     control-plane: controller-manager
+    app.kubernetes.io/instance: sap-btp-operator
+    app.kubernetes.io/name: sap-btp-operator
