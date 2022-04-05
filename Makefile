@@ -89,6 +89,7 @@ ifeq (, $(shell which controller-gen))
 	cd $$CONTROLLER_GEN_TMP_DIR ;\
 	go mod init tmp ;\
 	go get sigs.k8s.io/controller-tools/cmd/controller-gen@v0.5.0 ;\
+	ls -lrt ;\
 	rm -rf $$CONTROLLER_GEN_TMP_DIR ;\
 	cd $(GOBIN) ;\
     ls -lrt ;\
