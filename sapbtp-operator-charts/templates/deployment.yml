@@ -3,6 +3,8 @@ kind: Deployment
 metadata:
   labels:
     control-plane: controller-manager
+    app.kubernetes.io/instance: sap-btp-operator
+    app.kubernetes.io/name: sap-btp-operator
   name: sap-btp-operator-controller-manager
   namespace: {{.Release.Namespace}}
 spec:
@@ -20,6 +22,8 @@ spec:
         checksum/config: {{ $configSha }}
       labels:
         control-plane: controller-manager
+        app.kubernetes.io/instance: sap-btp-operator
+        app.kubernetes.io/name: sap-btp-operator
     spec:
       containers:
         - args:
