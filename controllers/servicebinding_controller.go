@@ -467,6 +467,8 @@ func (r *ServiceBindingReconciler) storeBindingSecret(ctx context.Context, k8sBi
 	logger := log.WithValues("bindingName", k8sBinding.Name, "secretName", k8sBinding.Spec.SecretName)
 
 	var credentialsMap map[string][]byte
+	var credentialProperties []SecretMetadataProperty
+
 	if len(smBinding.Credentials) == 0 {
 		log.Info("Binding credentials are empty")
 		credentialsMap = make(map[string][]byte)
@@ -474,16 +476,24 @@ func (r *ServiceBindingReconciler) storeBindingSecret(ctx context.Context, k8sBi
 		credentialsMap = map[string][]byte{
 			*k8sBinding.Spec.SecretKey: smBinding.Credentials,
 		}
+		credentialProperties = []SecretMetadataProperty{
+			{
+				Name:      *k8sBinding.Spec.SecretKey,
+				Format:    string(JSON),
+				Container: true,
+			},
+		}
 	} else {
 		var err error
-		credentialsMap, err = normalizeCredentials(smBinding.Credentials)
+		credentialsMap, credentialProperties, err = normalizeCredentials(smBinding.Credentials)
 		if err != nil {
 			logger.Error(err, "Failed to store binding secret")
 			return fmt.Errorf("failed to create secret. Error: %v", err.Error())
 		}
 	}
 
-	if err := r.addInstanceInfo(ctx, k8sBinding, credentialsMap); err != nil {
+	metaDataProperties, err := r.addInstanceInfo(ctx, k8sBinding, credentialsMap)
+	if err != nil {
 		log.Error(err, "failed to enrich binding with service instance info")
 	}
 
@@ -492,6 +502,17 @@ func (r *ServiceBindingReconciler) storeBindingSecret(ctx context.Context, k8sBi
 		credentialsMap, err = r.singleKeyMap(credentialsMap, *k8sBinding.Spec.SecretRootKey)
 		if err != nil {
 			return err
+		}
+	} else {
+		metadata := map[string][]SecretMetadataProperty{
+			"metaDataProperties":   metaDataProperties,
+			"credentialProperties": credentialProperties,
+		}
+		metadataByte, err := json.Marshal(metadata)
+		if err != nil {
+			log.Error(err, "failed to enrich binding with metadata")
+		} else {
+			credentialsMap[".metadata"] = metadataByte
 		}
 	}
 
@@ -646,24 +667,52 @@ func (r *ServiceBindingReconciler) handleSecretError(ctx context.Context, op smT
 	return r.markAsTransientError(ctx, op, err, binding)
 }
 
-func (r *ServiceBindingReconciler) addInstanceInfo(ctx context.Context, binding *servicesv1.ServiceBinding, credentialsMap map[string][]byte) error {
+func (r *ServiceBindingReconciler) addInstanceInfo(ctx context.Context, binding *servicesv1.ServiceBinding, credentialsMap map[string][]byte) ([]SecretMetadataProperty, error) {
 	instance, err := r.getServiceInstanceForBinding(ctx, binding)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	credentialsMap["instance_name"] = []byte(binding.Spec.ServiceInstanceName)
 	credentialsMap["instance_guid"] = []byte(instance.Status.InstanceID)
 	credentialsMap["plan"] = []byte(instance.Spec.ServicePlanName)
 	credentialsMap["label"] = []byte(instance.Spec.ServiceOfferingName)
+	credentialsMap["type"] = []byte(instance.Spec.ServiceOfferingName)
 	if len(instance.Status.Tags) > 0 || len(instance.Spec.CustomTags) > 0 {
 		tagsBytes, err := json.Marshal(mergeInstanceTags(instance.Status.Tags, instance.Spec.CustomTags))
 		if err != nil {
-			return err
+			return nil, err
 		}
 		credentialsMap["tags"] = tagsBytes
 	}
-	return nil
+
+	metadata := []SecretMetadataProperty{
+		{
+			Name:   "instance_name",
+			Format: string(TEXT),
+		},
+		{
+			Name:   "instance_guid",
+			Format: string(TEXT),
+		},
+		{
+			Name:   "plan",
+			Format: string(TEXT),
+		},
+		{
+			Name:   "label",
+			Format: string(TEXT),
+		},
+		{
+			Name:   "type",
+			Format: string(TEXT),
+		},
+	}
+	if _, ok := credentialsMap["tags"]; ok {
+		metadata = append(metadata, SecretMetadataProperty{Name: "tags", Format: string(JSON)})
+	}
+
+	return metadata, nil
 }
 
 func (r *ServiceBindingReconciler) singleKeyMap(credentialsMap map[string][]byte, key string) (map[string][]byte, error) {
