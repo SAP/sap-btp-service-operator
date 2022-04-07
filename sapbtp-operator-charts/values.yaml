@@ -58,5 +58,7 @@ manager:
   #securityContext:
   #   runAsNonRoot: true
   securityContext: {}
+  health_service:
+    enabled: false
 cluster:
   id:
