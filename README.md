@@ -427,11 +427,51 @@ There are two options to maintain namespace-specific credentials, and they diffe
 
 ### Default Access Credentials
 - Define a secret named `sap-btp-service-operator` in the namespace. `ServiceInstance` and `ServiceBinding` that are applied in the namespace will belong to the subaccount from which the credentials were issued.  
-- Define different secrets for different namespaces in a [centrally managed namespace](./sapbtp-operator-charts/templates/configmap.yml), following the secret naming convention: `sap-btp-service-operator-<namespace>`. 
+- Define different secrets for different namespaces in a [centrally managed namespace](./sapbtp-operator-charts/templates/configmap.yml), following the secret naming convention: `sap-btp-service-operator-<namespace>`.
+#### Namespace Secret Structure
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sap-btp-service-operator
+  namespace: <namespace>
+type: Opaque
+data:
+  clientid: "<clientid>"
+  clientsecret: "<clientsecret>"
+  url: "<sm_url>"
+  tokenurl: "<auth_url>"
+  tokenurlsuffix: "/oauth/token"
+```
 
 ### TLS-Based Access Credentials
 - Define a secret pair named `sap-btp-service-operator` and `sap-btp-service-operator-tls`  in the namespace. `ServiceInstance` and `ServiceBinding` that are applied in the namespace will belong to the subaccount from which the credentials were issued.  
 - Define different secrets for different namespaces in a [centrally managed namespace](./sapbtp-operator-charts/templates/configmap.yml), following the secret naming convention: `sap-btp-service-operator-<namespace>` and `sap-btp-service-operator-tls-<namespace>` . For more information, see [tls secret](./sapbtp-operator-charts/templates/secret-tls.yml).
+#### Namespace Secrets Structure
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sap-btp-service-operator
+  namespace: <namespace>
+type: Opaque
+data:
+  clientid: "<clientid>"
+  url: "<sm_url>"
+  tokenurl: "<auth_url>"
+  tokenurlsuffix: "/oauth/token"
+```
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sap-btp-service-operator-tls
+  namespace: <namespace>
+type: kubernetes.io/tls
+data:
+  tls.crt: <crt> #base64 encoded
+  tls.key: <key> #base64 encoded
+```
 
 **Notes:**
 - If none of the those mentioned above options are set, `sap-btp-service-operator` secret of a release namespace is used.<br>
