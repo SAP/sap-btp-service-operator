@@ -23,7 +23,7 @@ manager:
       key: ""
     clientid: ""
     clientsecret: ""
-    url: ""
+    sm_url: ""
     tokenurl: ""
     tokenurlsuffix: "/oauth/token"
   certificates:

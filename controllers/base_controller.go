@@ -89,7 +89,7 @@ func (r *BaseReconciler) getSMClient(ctx context.Context, object api.SAPBTPResou
 	cfg := &sm.ClientConfig{
 		ClientID:       string(secretData["clientid"]),
 		ClientSecret:   string(secretData["clientsecret"]),
-		URL:            string(secretData["url"]),
+		URL:            string(secretData["sm_url"]),
 		TokenURL:       string(secretData["tokenurl"]),
 		TokenURLSuffix: string(secretData["tokenurlsuffix"]),
 		SSLDisabled:    false,

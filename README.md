@@ -109,7 +109,7 @@ It is implemented using a [CRDs-based](https://kubernetes.io/docs/concepts/exten
         --namespace=sap-btp-operator \        
         --set manager.secret.clientid=<clientid> \
         --set manager.secret.clientsecret=<clientsecret> \
-        --set manager.secret.url=<sm_url> \
+        --set manager.secret.sm_url=<sm_url> \
         --set manager.secret.tokenurl=<url>
     ```
    The example of the deployment that uses the X.509 access credentials type:
@@ -120,7 +120,7 @@ It is implemented using a [CRDs-based](https://kubernetes.io/docs/concepts/exten
         --set manager.secret.clientid=<clientid> \
         --set manager.secret.tls.crt="$(cat /path/to/cert)" \
         --set manager.secret.tls.key="$(cat /path/to/key)" \
-        --set manager.secret.url=<sm_url> \
+        --set manager.secret.sm_url=<sm_url> \
         --set manager.secret.tokenurl=<certurl>
     ```
         
@@ -439,7 +439,7 @@ type: Opaque
 data:
   clientid: "<clientid>"
   clientsecret: "<clientsecret>"
-  url: "<sm_url>"
+  sm_url: "<sm_url>"
   tokenurl: "<auth_url>"
   tokenurlsuffix: "/oauth/token"
 ```
@@ -457,7 +457,7 @@ metadata:
 type: Opaque
 data:
   clientid: "<clientid>"
-  url: "<sm_url>"
+  sm_url: "<sm_url>"
   tokenurl: "<auth_url>"
   tokenurlsuffix: "/oauth/token"
 ```
