@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"github.com/SAP/sap-btp-service-operator/api"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -90,6 +91,14 @@ var _ = Describe("Service Binding Webhook Test", func() {
 					err := newBinding.ValidateUpdate(binding)
 					Expect(err).To(HaveOccurred())
 				})
+
+				It("should fail on update with stale label", func() {
+					newBinding.Spec.ParametersFrom[0].SecretKeyRef.Name = "newName"
+					newBinding.Labels = map[string]string{api.StaleBindingLabel: "true"}
+					err := newBinding.ValidateUpdate(binding)
+					Expect(err).To(HaveOccurred())
+				})
+
 			})
 
 			When("Status changed", func() {
