@@ -81,6 +81,7 @@ var _ = Describe("Secrets Resolver", func() {
 		ctx = context.Background()
 		resolver = &secrets.SecretResolver{
 			ManagementNamespace: managementNamespace,
+			ReleaseNamespace:    managementNamespace,
 			Log:                 logf.Log.WithName("SecretResolver"),
 			Client:              k8sClient,
 		}

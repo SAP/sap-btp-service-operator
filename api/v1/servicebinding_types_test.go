@@ -1,4 +1,4 @@
-package v1alpha1
+package v1
 
 import (
 	"github.com/SAP/sap-btp-service-operator/api"

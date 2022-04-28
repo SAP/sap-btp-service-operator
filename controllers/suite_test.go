@@ -20,7 +20,8 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"github.com/SAP/sap-btp-service-operator/api/v1alpha1/webhooks"
+	"github.com/SAP/sap-btp-service-operator/api"
+	"github.com/SAP/sap-btp-service-operator/api/v1/webhooks"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
 	"github.com/SAP/sap-btp-service-operator/client/sm/smfakes"
 	"github.com/SAP/sap-btp-service-operator/internal/config"
@@ -36,7 +37,7 @@ import (
 
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	servicesv1alpha1 "github.com/SAP/sap-btp-service-operator/api/v1alpha1"
+	servicesv1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -87,7 +88,7 @@ var _ = BeforeSuite(func(done Done) {
 	Expect(err).ToNot(HaveOccurred())
 	Expect(cfg).ToNot(BeNil())
 
-	err = servicesv1alpha1.AddToScheme(scheme.Scheme)
+	err = servicesv1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	// +kubebuilder:scaffold:scheme
@@ -122,9 +123,9 @@ var _ = BeforeSuite(func(done Done) {
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	k8sManager.GetWebhookServer().Register("/mutate-services-cloud-sap-com-v1alpha1-serviceinstance", &webhook.Admission{Handler: &webhooks.ServiceInstanceDefaulter{Client: k8sManager.GetClient()}})
-	k8sManager.GetWebhookServer().Register("/mutate-services-cloud-sap-com-v1alpha1-servicebinding", &webhook.Admission{Handler: &webhooks.ServiceBindingDefaulter{Client: k8sManager.GetClient()}})
-	err = (&servicesv1alpha1.ServiceBinding{}).SetupWebhookWithManager(k8sManager)
+	k8sManager.GetWebhookServer().Register("/mutate-services-cloud-sap-com-v1-serviceinstance", &webhook.Admission{Handler: &webhooks.ServiceInstanceDefaulter{}})
+	k8sManager.GetWebhookServer().Register("/mutate-services-cloud-sap-com-v1-servicebinding", &webhook.Admission{Handler: &webhooks.ServiceBindingDefaulter{}})
+	err = (&servicesv1.ServiceBinding{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	err = (&ServiceBindingReconciler{
@@ -179,6 +180,6 @@ var _ = AfterSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 })
 
-func isReady(resource servicesv1alpha1.SAPBTPResource) bool {
-	return meta.IsStatusConditionPresentAndEqual(resource.GetConditions(), servicesv1alpha1.ConditionSucceeded, metav1.ConditionTrue)
+func isReady(resource api.SAPBTPResource) bool {
+	return meta.IsStatusConditionPresentAndEqual(resource.GetConditions(), api.ConditionSucceeded, metav1.ConditionTrue)
 }

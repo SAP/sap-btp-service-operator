@@ -14,7 +14,7 @@ webhooks:
       service:
         name: sap-btp-operator-webhook-service
         namespace: {{.Release.Namespace}}
-        path: /mutate-services-cloud-sap-com-v1alpha1-servicebinding
+        path: /mutate-services-cloud-sap-com-v1-servicebinding
       {{- if .Values.manager.certificates.selfSigned }}
       caBundle: {{.Values.manager.certificates.selfSigned.caBundle }}
       {{- end }}
@@ -27,7 +27,7 @@ webhooks:
       - apiGroups:
           - services.cloud.sap.com
         apiVersions:
-          - v1alpha1
+          - v1
         operations:
           - CREATE
           - UPDATE
@@ -41,14 +41,14 @@ webhooks:
       service:
         name: sap-btp-operator-webhook-service
         namespace: {{.Release.Namespace}}
-        path: /mutate-services-cloud-sap-com-v1alpha1-serviceinstance
+        path: /mutate-services-cloud-sap-com-v1-serviceinstance
     failurePolicy: Fail
     name: mserviceinstance.kb.io
     rules:
       - apiGroups:
           - services.cloud.sap.com
         apiVersions:
-          - v1alpha1
+          - v1
         operations:
           - CREATE
           - UPDATE
@@ -72,7 +72,7 @@ webhooks:
       service:
         name: sap-btp-operator-webhook-service
         namespace: {{.Release.Namespace}}
-        path: /validate-services-cloud-sap-com-v1alpha1-servicebinding
+        path: /validate-services-cloud-sap-com-v1-servicebinding
       {{- if .Values.manager.certificates.selfSigned }}
       caBundle: {{.Values.manager.certificates.selfSigned.caBundle }}
       {{- end }}
@@ -85,7 +85,7 @@ webhooks:
       - apiGroups:
           - services.cloud.sap.com
         apiVersions:
-          - v1alpha1
+          - v1
         operations:
           - CREATE
           - UPDATE

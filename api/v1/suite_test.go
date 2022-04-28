@@ -1,4 +1,4 @@
-package v1alpha1
+package v1
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -17,7 +17,7 @@ func TestServer(t *testing.T) {
 func getBinding() *ServiceBinding {
 	return &ServiceBinding{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "services.cloud.sap.com/v1alpha1",
+			APIVersion: "services.cloud.sap.com/v1",
 			Kind:       "ServiceBinding",
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -55,7 +55,7 @@ func getBinding() *ServiceBinding {
 func getInstance() *ServiceInstance {
 	return &ServiceInstance{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "services.cloud.sap.com/v1alpha1",
+			APIVersion: "services.cloud.sap.com/v1",
 			Kind:       "ServiceInstance",
 		},
 		ObjectMeta: metav1.ObjectMeta{
