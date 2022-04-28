@@ -5,13 +5,31 @@ metadata:
   namespace: {{.Release.Namespace}}
 spec:
   ports:
-    - port: 443
-      targetPort: 9443
+    - name: webhook-server
+      port: 443
+      targetPort: webhook-server
   selector:
     control-plane: controller-manager
     app.kubernetes.io/instance: sap-btp-operator
     app.kubernetes.io/name: sap-btp-operator
 ---
+{{- if .Values.manager.health_service.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: sap-btp-operator-health-service
+  namespace: {{.Release.Namespace}}
+spec:
+  ports:
+    - name: healthz
+      port: 2112
+      targetPort: 8081
+  selector:
+    control-plane: controller-manager
+    app.kubernetes.io/instance: sap-btp-operator
+    app.kubernetes.io/name: sap-btp-operator
+---
+{{- end }}
 apiVersion: v1
 kind: Service
 metadata:
