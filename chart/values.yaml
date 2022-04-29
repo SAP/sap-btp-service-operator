@@ -9,24 +9,26 @@ manager:
   req_cpu_limit: 100m
   allow_cluster_access: true
   allowed_namespaces: []
+  replica_count: 1
+  enable_leader_election: false
   management_namespace:
   image:
     repository: ghcr.io/sap/sap-btp-service-operator/controller
-    tag: v0.2.0
+    tag: v0.2.3
   secret:
     b64encoded: false
     enabled: true
     tls:
-      crt:
-      key:
-    clientid:
-    clientsecret:
-    url:
-    tokenurl:
+      crt: ""
+      key: ""
+    clientid: ""
+    clientsecret: ""
+    sm_url: ""
+    tokenurl: ""
     tokenurlsuffix: "/oauth/token"
   certificates: {}
     # Configure if https://github.com/jetstack/cert-manager is used
-    #certManager: true
+    # certManager: true
     # Configure if self-generated, self-signed certificates are used
     # selfSigned: {}
     # selfSigned:
@@ -52,5 +54,11 @@ manager:
 
     ## ca-key.pem
     # key: "" # must be base64 encoded
+  # Example of adding security context
+  #securityContext:
+  #   runAsNonRoot: true
+  securityContext: {}
+  health_service:
+    enabled: false
 cluster:
   id:

@@ -6,5 +6,5 @@ manager:
   secret:
     clientid: <REPLACE_ME>
     clientsecret: <REPLACE_ME>
-    url: <REPLACE_ME>
+    sm_url: <REPLACE_ME>
     tokenurl: <REPLACE_ME>

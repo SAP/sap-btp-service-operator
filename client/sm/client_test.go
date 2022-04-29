@@ -556,6 +556,15 @@ var _ = Describe("Client test", func() {
 	Describe("Bindings", func() {
 		var binding *types.ServiceBinding
 
+		BeforeEach(func() {
+			binding = &types.ServiceBinding{
+				ID:                  "bindingID",
+				Name:                "binding11",
+				ServiceInstanceName: "instance1",
+				Context:             json.RawMessage("{}"),
+			}
+		})
+
 		It("validate binding id extraction from operation url", func() {
 			bid := ExtractBindingID("/v1/service_bindings/1234/operations/5678")
 			Expect(bid).To(Equal("1234"))
@@ -950,6 +959,21 @@ TSTAhYWEQVZqRKYQMYGHpNlU
 					Expect(err).ShouldNot(HaveOccurred())
 					Expect(location).Should(BeEmpty())
 				})
+			})
+		})
+
+		Describe("Rename Binding", func() {
+			BeforeEach(func() {
+				responseBody, _ := json.Marshal(binding)
+				handlerDetails = []HandlerDetails{
+					{Method: http.MethodPatch, Path: web.ServiceBindingsURL + "/" + binding.ID, ResponseBody: responseBody, ResponseStatusCode: http.StatusOK},
+				}
+			})
+
+			It("should rename binding", func() {
+				res, err := client.RenameBinding(binding.ID, "newname", "newk8sname")
+				Expect(err).ToNot(HaveOccurred())
+				Expect(res.ID).To(Equal("bindingID"))
 			})
 		})
 	})

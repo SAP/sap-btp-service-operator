@@ -17,7 +17,6 @@ coverage.html
 
 # Kubernetes Generated files - skip generated files, except for vendored files
 !vendor/**/zz_generated.*
-sapbtp-operator-charts/templates/sap-operator.yml
 
 # editor and IDE paraphernalia
 .idea

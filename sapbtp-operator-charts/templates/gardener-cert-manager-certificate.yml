@@ -14,8 +14,10 @@ spec:
   issuerRef:
 {{- if .Values.manager.certificates.gardenerCertManager.issuer }}
     name: {{ .Values.manager.certificates.gardenerCertManager.issuer }}
+    namespace: {{.Release.Namespace}}
 {{- else }}
     name: issuer-ca
+    namespace: {{.Release.Namespace}}
 {{- end}}
   secretRef:
     name: webhook-server-cert

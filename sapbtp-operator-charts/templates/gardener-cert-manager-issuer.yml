@@ -10,6 +10,6 @@ spec:
   ca:
     privateKeySecretRef:
       name: issuer-ca-secret
-      namespace: default
+      namespace: {{.Release.Namespace}}
 {{- end}}
 {{- end}}
