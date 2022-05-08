@@ -20,7 +20,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-
 	servicesv1 "github.com/SAP/sap-btp-service-operator/api/v1"
 
 	"github.com/SAP/sap-btp-service-operator/api"
@@ -382,7 +381,14 @@ func (r *ServiceInstanceReconciler) resyncInstanceStatus(ctx context.Context, sm
 		k8sInstance.Status.Tags = tags
 	}
 
-	switch smInstance.LastOperation.State {
+	instanceState := smTypes.SUCCEEDED
+	if smInstance.LastOperation != nil {
+		instanceState = smInstance.LastOperation.State
+	} else if !smInstance.Ready {
+		instanceState = smTypes.FAILED
+	}
+
+	switch instanceState {
 	case smTypes.PENDING:
 		fallthrough
 	case smTypes.IN_PROGRESS:

@@ -448,7 +448,14 @@ func (r *ServiceBindingReconciler) resyncBindingStatus(k8sBinding *servicesv1.Se
 	k8sBinding.Status.InstanceID = serviceInstanceID
 	k8sBinding.Status.OperationURL = ""
 	k8sBinding.Status.OperationType = ""
-	switch smBinding.LastOperation.State {
+
+	bindingStatus := smTypes.SUCCEEDED
+	if smBinding.LastOperation != nil {
+		bindingStatus = smBinding.LastOperation.State
+	} else if !smBinding.Ready {
+		bindingStatus = smTypes.FAILED
+	}
+	switch bindingStatus {
 	case smTypes.PENDING:
 		fallthrough
 	case smTypes.IN_PROGRESS:
