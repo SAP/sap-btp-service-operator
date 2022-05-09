@@ -920,9 +920,6 @@ var _ = Describe("ServiceBinding controller", func() {
 						ServiceBindings: []smclientTypes.ServiceBinding{*smBinding},
 					}, nil)
 			})
-			JustAfterEach(func() {
-				fakeClient.StatusReturns(&smclientTypes.Operation{ResourceID: fakeBindingID, State: string(smTypes.SUCCEEDED)}, nil)
-			})
 			It("should resync successfully", func() {
 				var err error
 				createdBinding, err = createBindingWithoutAssertionsAndWait(context.Background(), bindingName, bindingTestNamespace, instanceName, "fake-binding-external-name", false)
