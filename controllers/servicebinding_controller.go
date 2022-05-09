@@ -177,8 +177,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			// Recovery - restore binding from SM
 			log.Info(fmt.Sprintf("found existing smBinding in SM with id %s, updating status", binding.ID))
 
-			if !(binding.LastOperation.Type == smTypes.CREATE && binding.LastOperation.State != smTypes.SUCCEEDED) {
-				// store secret unless binding is still being created or failed during creation
+			if binding.Credentials != nil {
 				if err := r.storeBindingSecret(ctx, serviceBinding, binding); err != nil {
 					return r.handleSecretError(ctx, binding.LastOperation.Type, err, serviceBinding)
 				}
