@@ -179,7 +179,11 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 			if binding.Credentials != nil {
 				if err := r.storeBindingSecret(ctx, serviceBinding, binding); err != nil {
-					return r.handleSecretError(ctx, binding.LastOperation.Type, err, serviceBinding)
+					operationType := smTypes.CREATE
+					if binding.LastOperation != nil {
+						operationType = binding.LastOperation.Type
+					}
+					return r.handleSecretError(ctx, operationType, err, serviceBinding)
 				}
 			}
 			r.resyncBindingStatus(serviceBinding, binding, serviceInstance.Status.InstanceID)
