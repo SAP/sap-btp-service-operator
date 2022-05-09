@@ -383,8 +383,10 @@ func (r *ServiceInstanceReconciler) resyncInstanceStatus(ctx context.Context, sm
 	}
 
 	instanceState := smTypes.SUCCEEDED
+	operationType := smTypes.CREATE
 	if smInstance.LastOperation != nil {
 		instanceState = smInstance.LastOperation.State
+		operationType = smInstance.LastOperation.Type
 	} else if !smInstance.Ready {
 		instanceState = smTypes.FAILED
 	}
@@ -397,9 +399,9 @@ func (r *ServiceInstanceReconciler) resyncInstanceStatus(ctx context.Context, sm
 		k8sInstance.Status.OperationType = smInstance.LastOperation.Type
 		setInProgressConditions(smInstance.LastOperation.Type, smInstance.LastOperation.Description, k8sInstance)
 	case smTypes.SUCCEEDED:
-		setSuccessConditions(smInstance.LastOperation.Type, k8sInstance)
+		setSuccessConditions(operationType, k8sInstance)
 	case smTypes.FAILED:
-		setFailureConditions(smInstance.LastOperation.Type, smInstance.LastOperation.Description, k8sInstance)
+		setFailureConditions(operationType, smInstance.LastOperation.Description, k8sInstance)
 	}
 }
 

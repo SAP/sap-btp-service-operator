@@ -450,8 +450,10 @@ func (r *ServiceBindingReconciler) resyncBindingStatus(k8sBinding *servicesv1.Se
 	k8sBinding.Status.OperationType = ""
 
 	bindingStatus := smTypes.SUCCEEDED
+	operationType := smTypes.CREATE
 	if smBinding.LastOperation != nil {
 		bindingStatus = smBinding.LastOperation.State
+		operationType = smBinding.LastOperation.Type
 	} else if !smBinding.Ready {
 		bindingStatus = smTypes.FAILED
 	}
@@ -463,9 +465,9 @@ func (r *ServiceBindingReconciler) resyncBindingStatus(k8sBinding *servicesv1.Se
 		k8sBinding.Status.OperationType = smBinding.LastOperation.Type
 		setInProgressConditions(smBinding.LastOperation.Type, smBinding.LastOperation.Description, k8sBinding)
 	case smTypes.SUCCEEDED:
-		setSuccessConditions(smBinding.LastOperation.Type, k8sBinding)
+		setSuccessConditions(operationType, k8sBinding)
 	case smTypes.FAILED:
-		setFailureConditions(smBinding.LastOperation.Type, smBinding.LastOperation.Description, k8sBinding)
+		setFailureConditions(operationType, smBinding.LastOperation.Description, k8sBinding)
 	}
 }
 
