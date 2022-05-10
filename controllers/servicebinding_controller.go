@@ -177,10 +177,13 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			// Recovery - restore binding from SM
 			log.Info(fmt.Sprintf("found existing smBinding in SM with id %s, updating status", binding.ID))
 
-			if !(binding.LastOperation.Type == smTypes.CREATE && binding.LastOperation.State != smTypes.SUCCEEDED) {
-				// store secret unless binding is still being created or failed during creation
+			if binding.Credentials != nil {
 				if err := r.storeBindingSecret(ctx, serviceBinding, binding); err != nil {
-					return r.handleSecretError(ctx, binding.LastOperation.Type, err, serviceBinding)
+					operationType := smTypes.CREATE
+					if binding.LastOperation != nil {
+						operationType = binding.LastOperation.Type
+					}
+					return r.handleSecretError(ctx, operationType, err, serviceBinding)
 				}
 			}
 			r.resyncBindingStatus(serviceBinding, binding, serviceInstance.Status.InstanceID)
@@ -450,8 +453,12 @@ func (r *ServiceBindingReconciler) resyncBindingStatus(k8sBinding *servicesv1.Se
 	k8sBinding.Status.OperationType = ""
 
 	bindingStatus := smTypes.SUCCEEDED
+	operationType := smTypes.CREATE
+	description := ""
 	if smBinding.LastOperation != nil {
 		bindingStatus = smBinding.LastOperation.State
+		operationType = smBinding.LastOperation.Type
+		description = smBinding.LastOperation.Description
 	} else if !smBinding.Ready {
 		bindingStatus = smTypes.FAILED
 	}
@@ -463,9 +470,9 @@ func (r *ServiceBindingReconciler) resyncBindingStatus(k8sBinding *servicesv1.Se
 		k8sBinding.Status.OperationType = smBinding.LastOperation.Type
 		setInProgressConditions(smBinding.LastOperation.Type, smBinding.LastOperation.Description, k8sBinding)
 	case smTypes.SUCCEEDED:
-		setSuccessConditions(smBinding.LastOperation.Type, k8sBinding)
+		setSuccessConditions(operationType, k8sBinding)
 	case smTypes.FAILED:
-		setFailureConditions(smBinding.LastOperation.Type, smBinding.LastOperation.Description, k8sBinding)
+		setFailureConditions(operationType, description, k8sBinding)
 	}
 }
 
