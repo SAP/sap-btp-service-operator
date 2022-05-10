@@ -722,7 +722,7 @@ var _ = Describe("ServiceInstance controller", func() {
 				Expect(smCallArgs.FieldQuery[2]).To(ContainSubstring("context/namespace"))
 			})
 
-			Context("last operation is CREATE/UPDATE", func() {
+			Context("last operation", func() {
 				When("last operation state is SUCCEEDED", func() {
 					BeforeEach(func() {
 						recoveredInstance.LastOperation = &smTypes.Operation{State: smTypes.SUCCEEDED, Type: smTypes.CREATE}
@@ -768,6 +768,19 @@ var _ = Describe("ServiceInstance controller", func() {
 						Expect(fakeClient.ProvisionCallCount()).To(Equal(0))
 						Expect(len(serviceInstance.Status.Conditions)).To(Equal(3))
 						Expect(serviceInstance.Status.Conditions[0].Reason).To(Equal(CreateFailed))
+					})
+				})
+
+				When("no last operation", func() {
+					BeforeEach(func() {
+						recoveredInstance.LastOperation = nil
+						fakeClient.ListInstancesReturns(&smclientTypes.ServiceInstances{
+							ServiceInstances: []smclientTypes.ServiceInstance{recoveredInstance}}, nil)
+					})
+					It("should recover the existing instance", func() {
+						serviceInstance = createInstance(ctx, instanceSpec)
+						Expect(serviceInstance.Status.InstanceID).To(Equal(fakeInstanceID))
+						Expect(fakeClient.ProvisionCallCount()).To(Equal(0))
 					})
 				})
 			})

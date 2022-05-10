@@ -908,6 +908,25 @@ var _ = Describe("ServiceBinding controller", func() {
 		} {
 			executeTestCase(testCase)
 		}
+
+		When("binding exists in SM without last operation", func() {
+			JustBeforeEach(func() {
+				smBinding := &smclientTypes.ServiceBinding{
+					ID:          fakeBindingID,
+					Name:        "fake-binding-external-name",
+					Credentials: json.RawMessage("{\"secret_key\": \"secret_value\"}"),
+				}
+				fakeClient.ListBindingsReturns(
+					&smclientTypes.ServiceBindings{
+						ServiceBindings: []smclientTypes.ServiceBinding{*smBinding},
+					}, nil)
+			})
+			It("should resync successfully", func() {
+				var err error
+				createdBinding, err = createBindingWithoutAssertionsAndWait(context.Background(), bindingName, bindingTestNamespace, instanceName, "fake-binding-external-name", false)
+				Expect(err).ToNot(HaveOccurred())
+			})
+		})
 	})
 
 	Context("Credential Rotation", func() {
