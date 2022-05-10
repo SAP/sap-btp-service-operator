@@ -2,6 +2,15 @@ apiVersion: v1
 entries:
   sap-btp-operator:
   - apiVersion: v2
+    appVersion: v0.2.5
+    created: "2022-05-10T06:45:38.45252179Z"
+    description: A Helm chart for SAP BTP Operator for Kubernetes
+    digest: b4e5107cf1343f133443c7b1c3f01271f893748755f0eb079ce06b180a8b7be4
+    name: sap-btp-operator
+    urls:
+    - https://github.com/SAP/sap-btp-service-operator/releases/download/v0.2.5/sap-btp-operator-v0.2.5.tgz
+    version: v0.2.5
+  - apiVersion: v2
     appVersion: v0.2.4
     created: "2022-05-09T14:31:06.777482224Z"
     description: A Helm chart for SAP BTP Operator for Kubernetes
@@ -109,4 +118,4 @@ entries:
     urls:
     - https://github.com/SAP/sap-btp-service-operator/releases/download/v0.1.16/sap-btp-operator-v0.1.16.tgz
     version: v0.1.16
-generated: "2022-05-09T14:31:06.776458921Z"
+generated: "2022-05-10T06:45:38.451574722Z"
