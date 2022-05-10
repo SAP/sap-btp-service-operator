@@ -15,6 +15,7 @@ manager:
   image:
     repository: ghcr.io/sap/sap-btp-service-operator/controller
     tag: master
+    sh: ""
   secret:
     b64encoded: false
     enabled: true
