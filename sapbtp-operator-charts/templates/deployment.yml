@@ -35,7 +35,7 @@ spec:
           {{- if .Values.manager.rbacProxy.image.sha }}
           image: "{{.Values.manager.rbacProxy.image.repository}}@sha256:{{.Values.manager.rbacProxy.image.sha}}"
           {{- else }}
-          image: "{{.Values.manager.rbacProxy.repository}}:{{.Values.manager.rbacProxy.image.tag}}"
+          image: "{{.Values.manager.rbacProxy.image.repository}}:{{.Values.manager.rbacProxy.image.tag}}"
           {{- end }}
  
           {{- if .Values.manager.securityContext }}
