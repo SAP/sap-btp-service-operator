@@ -61,7 +61,6 @@ spec:
           {{- else }}
           image: "{{.Values.manager.image.repository}}:{{.Values.manager.image.tag}}"
           {{- end }}
-          image: 
           imagePullPolicy: IfNotPresent
           {{- if .Values.manager.securityContext }}
           securityContext:
