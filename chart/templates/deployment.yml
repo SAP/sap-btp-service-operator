@@ -22,6 +22,7 @@ spec:
         {{- $secretTls := (include (print $.Template.BasePath "/secret-tls.yml") .) -}}
         {{- $configSha := (print $configmap $secret $secretTls) | sha256sum }}
         checksum/config: {{ $configSha }}
+        checksum/config-webhook: {{ include (print $.Template.BasePath "/webhook.yaml") . | sha256sum }}
         sidecar.istio.io/inject: "false"
       labels:
         control-plane: controller-manager
