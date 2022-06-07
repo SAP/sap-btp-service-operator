@@ -6,7 +6,7 @@ manager:
   memory_limit: 200Mi
   cpu_limit: 250m  
   req_memory_limit: 20Mi
-  req_cpu_limit: 100m
+  req_cpu_limit: 10m
   allow_cluster_access: true
   allowed_namespaces: []
   replica_count: 1
