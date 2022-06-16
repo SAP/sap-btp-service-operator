@@ -2,7 +2,7 @@
 
 marketplace() {
   local secret=$(kubectl get secret sap-btp-service-operator  -n "$1" -o json)
-  local url=$(jq -r .data.url <<< "$secret" | base64 --decode)
+  local url=$(jq -r .data.sm_url <<< "$secret" | base64 --decode)
   local token=$(_token "$secret")
 
   local services=$(curl -f -Ss -L  -H "Authorization: Bearer ${token}" "$url/v1/service_offerings")
@@ -29,7 +29,7 @@ marketplace() {
 
 plans() {
   local secret=$(kubectl get secret sap-btp-service-operator  -n "$1" -o json)
-  local url=$(jq -r .data.url <<< "$secret" | base64 --decode)
+  local url=$(jq -r .data.sm_url <<< "$secret" | base64 --decode)
   local token=$(_token "$secret")
   local plans=$(curl -f -Ss -L  -H "Authorization: Bearer ${token}" "$url/v1/service_plans")
 
@@ -41,7 +41,7 @@ plans() {
 
 services() {
   local secret=$(kubectl get secret sap-btp-service-operator  -n "$1" -o json)
-  local url=$(jq -r .data.url <<< "$secret" | base64 --decode)
+  local url=$(jq -r .data.sm_url <<< "$secret" | base64 --decode)
   local token=$(_token "$secret")
   local services=$(curl -f -Ss -L  -H "Authorization: Bearer ${token}" "$url/v1/service_offerings")
 
