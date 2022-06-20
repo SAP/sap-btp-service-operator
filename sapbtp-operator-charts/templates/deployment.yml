@@ -100,3 +100,9 @@ spec:
           secret:
             defaultMode: 420
             secretName: webhook-server-cert
+      {{ if .Values.deployment.nodeSelector - }}
+      nodeSelector: {{ toYaml .Values.deployment.nodeSelector | nindent 8 }}
+      {{ end - }}
+      {{ if .Values.deployment.tolerations - }}
+      tolerations: {{ toYaml .Values.deployment.tolerations | nindent 8 }}
+      {{ end - }}
