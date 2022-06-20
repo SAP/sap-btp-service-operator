@@ -5,13 +5,13 @@
 kube_rbac_proxy:
   cpu_limit: 50m
   memory_limit: 256Mi 
-  cpu_req: 5m
-  memory_req: 32Mi
+  req_cpu_limit: 5m
+  req_memory_limit: 32Mi
 manager:
   cpu_limit: 50m
   memory_limit: 256Mi 
-  cpu_req: 5m
-  memory_req: 32Mi
+  req_cpu_limit: 5m
+  req_memory_limit: 32Mi
   allow_cluster_access: true
   allowed_namespaces: []
   replica_count: 2
@@ -19,7 +19,7 @@ manager:
   management_namespace:
   image:
     repository: ghcr.io/sap/sap-btp-service-operator/controller
-    tag: v0.2.6
+    tag: master
     sha: ""
   secret:
     b64encoded: false
