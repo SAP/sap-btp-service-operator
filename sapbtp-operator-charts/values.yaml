@@ -2,11 +2,16 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
+kube_rbac_proxy:
+  cpu_limit: 50m
+  memory_limit: 256Mi 
+  cpu_req: 5m
+  memory_req: 32Mi
 manager:
-  memory_limit: 200Mi
-  cpu_limit: 250m  
-  req_memory_limit: 20Mi
-  req_cpu_limit: 100m
+  cpu_limit: 50m
+  memory_limit: 256Mi 
+  cpu_req: 5m
+  memory_req: 32Mi
   allow_cluster_access: true
   allowed_namespaces: []
   replica_count: 2
@@ -14,7 +19,7 @@ manager:
   management_namespace:
   image:
     repository: ghcr.io/sap/sap-btp-service-operator/controller
-    tag: master
+    tag: v0.2.6
     sha: ""
   secret:
     b64encoded: false
