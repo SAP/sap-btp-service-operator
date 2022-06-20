@@ -43,6 +43,13 @@ spec:
           {{ toYaml .Values.manager.securityContext | indent 2 }}
           {{- end }}
           name: kube-rbac-proxy
+          resources:
+            limits:
+              cpu: {{.Values.kube_rbac_proxy.cpu_limit}}
+              memory: {{.Values.kube_rbac_proxy.memory_limit}}
+            requests:
+              cpu: {{.Values.kube_rbac_proxy.cpu_req}}
+              memory: {{.Values.kube_rbac_proxy.memory_req}}        
           ports:
             - containerPort: 8443
               name: https
@@ -88,8 +95,8 @@ spec:
               cpu: {{.Values.manager.cpu_limit}}
               memory: {{.Values.manager.memory_limit}}
             requests:
-              cpu: {{.Values.manager.req_cpu_limit}}
-              memory: {{.Values.manager.req_memory_limit}}
+              cpu: {{.Values.manager.cpu_req}}
+              memory: {{.Values.manager.memory_req}}
           volumeMounts:
             - mountPath: /tmp/k8s-webhook-server/serving-certs
               name: cert
