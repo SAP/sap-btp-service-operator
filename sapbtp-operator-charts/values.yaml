@@ -3,15 +3,15 @@
 # Declare variables to be passed into your templates.
 
 kube_rbac_proxy:
-  cpu_limit: 50m
-  memory_limit: 256Mi 
-  req_cpu_limit: 5m
-  req_memory_limit: 32Mi
+  memory_limit: 200Mi
+  cpu_limit: 250m  
+  req_memory_limit: 20Mi
+  req_cpu_limit: 100m
 manager:
-  cpu_limit: 50m
-  memory_limit: 256Mi 
-  req_cpu_limit: 5m
-  req_memory_limit: 32Mi
+  memory_limit: 200Mi
+  cpu_limit: 250m  
+  req_memory_limit: 20Mi
+  req_cpu_limit: 100m
   allow_cluster_access: true
   allowed_namespaces: []
   replica_count: 2
