@@ -59,13 +59,9 @@ func (s *ServiceBindingDefaulter) Handle(_ context.Context, req admission.Reques
 	}
 
 	if req.Operation == v1admission.Create || req.Operation == v1admission.Delete {
-		uid := req.UserInfo.UID
-		if len(uid) == 0 {
-			uid = req.UserInfo.Username
-		}
 		binding.Spec.UserInfo = &v1.UserInfo{
 			Username: req.UserInfo.Username,
-			UID:      uid,
+			UID:      req.UserInfo.UID,
 			Groups:   req.UserInfo.Groups,
 			Extra:    req.UserInfo.Extra,
 		}

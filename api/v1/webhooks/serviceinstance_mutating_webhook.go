@@ -49,17 +49,12 @@ func (s *ServiceInstanceDefaulter) Handle(_ context.Context, req admission.Reque
 }
 
 func (s *ServiceInstanceDefaulter) setServiceInstanceUserInfo(req admission.Request, instance *servicesv1.ServiceInstance) error {
-	uid := req.UserInfo.UID
-	if len(uid) == 0 {
-		uid = req.UserInfo.Username
-	}
 	userInfo := &v1.UserInfo{
 		Username: req.UserInfo.Username,
 		UID:      req.UserInfo.UID,
 		Groups:   req.UserInfo.Groups,
 		Extra:    req.UserInfo.Extra,
 	}
-
 	if req.Operation == v1admission.Create || req.Operation == v1admission.Delete {
 		instance.Spec.UserInfo = userInfo
 	} else if req.Operation == v1admission.Update {
