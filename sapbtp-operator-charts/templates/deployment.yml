@@ -37,7 +37,6 @@ spec:
           {{- else }}
           image: "{{.Values.manager.rbacProxy.image.repository}}:{{.Values.manager.rbacProxy.image.tag}}"
           {{- end }}
-
           {{- if .Values.manager.securityContext }}
           securityContext:
           {{ toYaml .Values.manager.securityContext | indent 2 }}
