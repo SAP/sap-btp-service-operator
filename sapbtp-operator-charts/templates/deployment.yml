@@ -37,12 +37,26 @@ spec:
           {{- else }}
           image: "{{.Values.manager.rbacProxy.image.repository}}:{{.Values.manager.rbacProxy.image.tag}}"
           {{- end }}
- 
           {{- if .Values.manager.securityContext }}
           securityContext:
           {{ toYaml .Values.manager.securityContext | indent 2 }}
           {{- end }}
           name: kube-rbac-proxy
+          resources:
+            limits:
+              {{- if .Values.manager.rbacProxy.cpu_limit }}
+              cpu: {{ .Values.manager.rbacProxy.cpu_limit }}
+              {{- end }}
+              {{- if .Values.manager.rbacProxy.memory_limit }}
+              memory: {{ .Values.manager.rbacProxy.memory_limit }}
+              {{- end }}
+            requests:
+              {{- if .Values.manager.rbacProxy.req_cpu_limit }}
+              cpu: {{.Values.manager.rbacProxy.req_cpu_limit}}
+              {{- end }}
+              {{- if .Values.manager.rbacProxy.req_memory_limit }}
+              memory: {{.Values.manager.rbacProxy.req_memory_limit}}
+              {{- end }}
           ports:
             - containerPort: 8443
               name: https
@@ -100,9 +114,9 @@ spec:
           secret:
             defaultMode: 420
             secretName: webhook-server-cert
-      {{ if .Values.deployment.nodeSelector - }}
+      {{- if .Values.manager.nodeSelector }}
       nodeSelector: {{ toYaml .Values.deployment.nodeSelector | nindent 8 }}
-      {{ end - }}
-      {{ if .Values.deployment.tolerations - }}
+      {{- end }}
+      {{- if .Values.manager.tolerations }}
       tolerations: {{ toYaml .Values.deployment.tolerations | nindent 8 }}
-      {{ end - }}
+      {{- end }}

@@ -32,6 +32,10 @@ manager:
       repository: quay.io/brancz/kube-rbac-proxy
       sha: ""
       tag: v0.11.0
+    memory_limit: ""
+    cpu_limit: ""
+    req_memory_limit: ""
+    req_cpu_limit: ""
   certificates:
     # Configure if https://github.com/jetstack/cert-manager is used
     certManager: true
