@@ -45,17 +45,17 @@ spec:
           resources:
             limits:
               {{- if .Values.manager.rbacProxy.cpu_limit }}
-              cpu: {{.Values.rbacProxy.cpu_limit}}
+              cpu: {{ .Values.manager.rbacProxy.cpu_limit }}
               {{- end }}
               {{- if .Values.manager.rbacProxy.memory_limit }}
-              memory: {{.Values.rbacProxy.memory_limit}}
+              memory: {{ .Values.manager.rbacProxy.memory_limit }}
               {{- end }}
             requests:
               {{- if .Values.manager.rbacProxy.req_cpu_limit }}
-              cpu: {{.Values.rbacProxy.req_cpu_limit}}
+              cpu: {{.Values.manager.rbacProxy.req_cpu_limit}}
               {{- end }}
               {{- if .Values.manager.rbacProxy.req_memory_limit }}
-              memory: {{.Values.rbacProxy.req_memory_limit}}
+              memory: {{.Values.manager.rbacProxy.req_memory_limit}}
               {{- end }}
           ports:
             - containerPort: 8443
