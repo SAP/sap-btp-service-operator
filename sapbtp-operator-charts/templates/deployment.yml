@@ -16,10 +16,10 @@ spec:
     metadata:
       annotations:
         {{- $configmap := (include (print $.Template.BasePath "/configmap.yml") .) -}}
-          {{- $secret := (include (print $.Template.BasePath "/secret.yml") .) -}}
-          {{- $secretTls := (include (print $.Template.BasePath "/secret-tls.yml") .) -}}
-          {{- $configSha := (print $configmap $secret $secretTls) | sha256sum }}
-          checksum/config: {{ $configSha }}
+        {{- $secret := (include (print $.Template.BasePath "/secret.yml") .) -}}
+        {{- $secretTls := (include (print $.Template.BasePath "/secret-tls.yml") .) -}}
+        {{- $configSha := (print $configmap $secret $secretTls) | sha256sum }}
+        checksum/config: {{ $configSha }}
       labels:
         control-plane: controller-manager
         app.kubernetes.io/instance: sap-btp-operator
