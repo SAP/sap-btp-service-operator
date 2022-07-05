@@ -25,6 +25,18 @@ data:
   tls.key: {{ b64enc $cert.Key }}
 ---
 {{- end}}
+{{- if .Values.manager.certificates.selfSigned }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: webhook-server-cert
+  namespace: {{.Release.Namespace}}
+type: kubernetes.io/tls
+data:
+  tls.crt: "{{ .Values.manager.certificates.selfSigned.crt }}"
+  tls.key: "{{ .Values.manager.certificates.selfSigned.key }}"
+---
+{{- end}}
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
