@@ -27,6 +27,7 @@ import (
 	"github.com/SAP/sap-btp-service-operator/api"
 
 	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/google/uuid"
 
@@ -39,7 +40,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -532,9 +532,9 @@ func (r *ServiceBindingReconciler) storeBindingSecret(ctx context.Context, k8sBi
 
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      k8sBinding.Spec.SecretName,
-			Labels:    map[string]string{"binding": k8sBinding.Name},
-			Namespace: k8sBinding.Namespace,
+			Name:        k8sBinding.Spec.SecretName,
+			Annotations: map[string]string{"binding": k8sBinding.Name},
+			Namespace:   k8sBinding.Namespace,
 		},
 		Data: credentialsMap,
 	}
@@ -633,13 +633,24 @@ func (r *ServiceBindingReconciler) validateSecretNameIsAvailable(ctx context.Con
 	if err != nil {
 		return client.IgnoreNotFound(err)
 	}
-	if otherBindingName, ok := currentSecret.Labels["binding"]; otherBindingName != binding.Name || !ok {
-		if len(otherBindingName) > 0 {
-			return fmt.Errorf("secret %s belongs to another binding %s, choose a differnet name", binding.Spec.SecretName, otherBindingName)
-		}
-		return fmt.Errorf("the specified secret name '%s' is already taken. Choose another name and try again", binding.Spec.SecretName)
+
+	if metav1.IsControlledBy(currentSecret, binding) {
+		return nil
 	}
-	return nil
+
+	ownerRef := metav1.GetControllerOf(currentSecret)
+	if ownerRef != nil {
+		owner, err := schema.ParseGroupVersion(ownerRef.APIVersion)
+		if err != nil {
+			return err
+		}
+
+		if owner.Group == binding.GroupVersionKind().Group && ownerRef.Kind == binding.Kind {
+			return fmt.Errorf("secret %s belongs to another binding %s, choose a different name", binding.Spec.SecretName, ownerRef.Name)
+		}
+	}
+
+	return fmt.Errorf("the specified secret name '%s' is already taken. Choose another name and try again", binding.Spec.SecretName)
 }
 
 func (r *ServiceBindingReconciler) maintain(ctx context.Context, binding *servicesv1.ServiceBinding) (ctrl.Result, error) {
