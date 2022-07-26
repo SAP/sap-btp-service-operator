@@ -108,6 +108,12 @@ spec:
             - mountPath: /tmp/k8s-webhook-server/serving-certs
               name: cert
               readOnly: true
+    {{- if .Values.manager.imagePullSecrets }}
+      {{- with .Values.manager.imagePullSecrets }}
+      imagePullSecrets:
+          {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- end }}
       terminationGracePeriodSeconds: 10
       volumes:
         - name: cert
