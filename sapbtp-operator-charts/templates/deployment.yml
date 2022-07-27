@@ -31,7 +31,7 @@ spec:
             - --upstream=http://127.0.0.1:8080/
             - --logtostderr=true
             - --v=10
-          
+
           {{- if .Values.manager.rbacProxy.image.sha }}
           image: "{{.Values.manager.rbacProxy.image.repository}}@sha256:{{.Values.manager.rbacProxy.image.sha}}"
           {{- else }}
@@ -108,6 +108,9 @@ spec:
             - mountPath: /tmp/k8s-webhook-server/serving-certs
               name: cert
               readOnly: true
+    {{- if .Values.manager.imagePullSecrets }}
+      imagePullSecrets: {{ toYaml .Values.manager.imagePullSecrets | nindent 8 }}
+    {{- end }}
       terminationGracePeriodSeconds: 10
       volumes:
         - name: cert
