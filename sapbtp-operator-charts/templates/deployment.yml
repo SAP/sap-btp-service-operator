@@ -16,10 +16,10 @@ spec:
     metadata:
       annotations:
         {{- $configmap := (include (print $.Template.BasePath "/configmap.yml") .) -}}
-          {{- $secret := (include (print $.Template.BasePath "/secret.yml") .) -}}
-          {{- $secretTls := (include (print $.Template.BasePath "/secret-tls.yml") .) -}}
-          {{- $configSha := (print $configmap $secret $secretTls) | sha256sum }}
-          checksum/config: {{ $configSha }}
+        {{- $secret := (include (print $.Template.BasePath "/secret.yml") .) -}}
+        {{- $secretTls := (include (print $.Template.BasePath "/secret-tls.yml") .) -}}
+        {{- $configSha := (print $configmap $secret $secretTls) | sha256sum }}
+        checksum/config: {{ $configSha }}
       labels:
         control-plane: controller-manager
         app.kubernetes.io/instance: sap-btp-operator
@@ -37,7 +37,6 @@ spec:
           {{- else }}
           image: "{{.Values.manager.rbacProxy.image.repository}}:{{.Values.manager.rbacProxy.image.tag}}"
           {{- end }}
-
           {{- if .Values.manager.securityContext }}
           securityContext:
           {{ toYaml .Values.manager.securityContext | indent 2 }}
@@ -46,17 +45,17 @@ spec:
           resources:
             limits:
               {{- if .Values.manager.rbacProxy.cpu_limit }}
-              cpu: {{.Values.rbacProxy.cpu_limit}}
+              cpu: {{ .Values.manager.rbacProxy.cpu_limit }}
               {{- end }}
               {{- if .Values.manager.rbacProxy.memory_limit }}
-              memory: {{.Values.rbacProxy.memory_limit}}
+              memory: {{ .Values.manager.rbacProxy.memory_limit }}
               {{- end }}
             requests:
               {{- if .Values.manager.rbacProxy.req_cpu_limit }}
-              cpu: {{.Values.rbacProxy.req_cpu_limit}}
+              cpu: {{.Values.manager.rbacProxy.req_cpu_limit}}
               {{- end }}
               {{- if .Values.manager.rbacProxy.req_memory_limit }}
-              memory: {{.Values.rbacProxy.req_memory_limit}}
+              memory: {{.Values.manager.rbacProxy.req_memory_limit}}
               {{- end }}
           ports:
             - containerPort: 8443
