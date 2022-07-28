@@ -489,7 +489,7 @@ To delete the service binding once done
    ```bash
    smctl unbind INSTANCE_NAME BINDING_NAME --param force_k8s_binding=true
    ```
-**Note:** force_k8s_binding=true is supported only for kubernetes instances that are in `Delete Failed` state<br>
+**Note:** `force_k8s_binding=true` is supported only for kubernetes instances that are in `Delete Failed` state<br>
 <br>
 <br>
 You're welcome to raise issues related to feature requests, bugs, or give us general feedback on this project's GitHub Issues page. 
