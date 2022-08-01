@@ -106,7 +106,7 @@ It is implemented using a [CRDs-based](https://kubernetes.io/docs/concepts/exten
     ```bash
     helm upgrade --install <release-name> sap-btp-operator/sap-btp-operator \
         --create-namespace \
-        --namespace=sap-btp-operator \
+        --namespace=sap-btp-operator \        
         --set manager.secret.clientid=<clientid> \
         --set manager.secret.clientsecret=<clientsecret> \
         --set manager.secret.sm_url=<sm_url> \
@@ -116,7 +116,7 @@ It is implemented using a [CRDs-based](https://kubernetes.io/docs/concepts/exten
     ```bash
     helm upgrade --install <release-name> sap-btp-operator/sap-btp-operator \
         --create-namespace \
-        --namespace=sap-btp-operator \
+        --namespace=sap-btp-operator \        
         --set manager.secret.clientid=<clientid> \
         --set manager.secret.tls.crt="$(cat /path/to/cert)" \
         --set manager.secret.tls.key="$(cat /path/to/key)" \
@@ -479,9 +479,9 @@ data:
   
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
-## Troubleshooting & Support
-**Q: I cannot create a service binding because the instance is in `Delete Failed` state** <br>
-**A:** It is possible for a subaccount admin to create a service binding for an instance using smctl or postman by adding a query param `force_k8s_binding=true` to the bind request
+## Troubleshooting and Support
+- **I cannot create a service binding because the instance is in `Delete Failed` state** <br>
+It is possible for a subaccount admin to create a service binding for an instance using smctl or postman by adding a query param `force_k8s_binding=true` to the bind request
    ```bash
    smctl bind INSTANCE_NAME BINDING_NAME --param force_k8s_binding=true
    ```
@@ -489,7 +489,7 @@ To delete the service binding once done
    ```bash
    smctl unbind INSTANCE_NAME BINDING_NAME --param force_k8s_binding=true
    ```
-**Note:** `force_k8s_binding=true` is supported only for kubernetes instances that are in `Delete Failed` state<br>
+**Note:** force_k8s_binding=true is supported only for kubernetes instances that are in `Delete Failed` state<br>
 <br>
 <br>
 You're welcome to raise issues related to feature requests, bugs, or give us general feedback on this project's GitHub Issues page. 
