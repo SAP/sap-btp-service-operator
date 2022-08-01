@@ -302,7 +302,7 @@ If there are any duplicate properties defined at the top level, the specificatio
 is considered to be invalid, the further processing of the `ServiceInstance`/`ServiceBinding`
 resource stops and its `status` is marked with error condition.
 
-The format of the `spec` will be (in YAML format):
+The format of the `spec` in YAML
 ```yaml
 spec:
   ...
@@ -313,7 +313,8 @@ spec:
         name: my-secret
         key: secret-parameter
 ```
-or, in JSON format
+
+The format of the `spec` in JSON
 ```json
 "spec": {
   "parameters": {
@@ -327,7 +328,7 @@ or, in JSON format
   }
 }
 ```
-and the secret would need to have a key named secret-parameter:
+The `secret` with the `secret-parameter`- named key:
 ```yaml
 apiVersion: v1
 kind: Secret
@@ -340,7 +341,7 @@ stringData:
       "password": "letmein"
     }'
 ```
-The final JSON payload to be sent to the broker would then look like:
+The final JSON payload to send to the broker:
 ```json
 {
   "name": "value",
@@ -348,7 +349,7 @@ The final JSON payload to be sent to the broker would then look like:
 }
 ```
 
-Multiple parameters could be listed in the secret - simply separate key/value pairs with a comma as in this example:
+You can list multiple parameters in the `secret`. To do so, separate "key": "value" pairs with commas as in this example:
 ```yaml
   secret-parameter:
     '{
@@ -480,8 +481,12 @@ data:
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
 ## Troubleshooting and Support
->###I cannot create a service binding because the instance is in `Delete Failed` state
-> It is possible for a subaccount admin to create a service binding for an instance using smctl or postman by adding a query param `force_k8s_binding=true` to the bind request
+
+- I cannot create a service binding because its associated service instance is in `Delete Failed` state.
+- To avoid this issue, subaccount admins should create a service binding for a service instance with the `force_k8s_binding` query param set to true (`force_k8s_binding=true) by using the Service Manager Control CLI (smctl) or 'Create a Service Binding' Service Manager API.
+
+Smctl Example
+
 >   ```bash
 >   smctl bind INSTANCE_NAME BINDING_NAME --param force_k8s_binding=true
 >   ```
