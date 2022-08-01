@@ -482,8 +482,9 @@ data:
 
 ## Troubleshooting and Support
 
-- I cannot create a service binding because its associated service instance is in `Delete Failed` state.
-- To avoid this issue, subaccount admins should create a service binding for a service instance with the `force_k8s_binding` query param set to true (`force_k8s_binding=true) by using the Service Manager Control CLI (smctl) or 'Create a Service Binding' Service Manager API.
+  - **I cannot create a service binding because its associated service instance is in `Delete Failed` state.**
+ 
+ To avoid this issue, subaccount admins should create a service binding for a service instance with the `force_k8s_binding` query param set to true (`force_k8s_binding=true) by using the Service Manager Control CLI (smctl) or 'Create a Service Binding' Service Manager API.
 
 Smctl Example
 
