@@ -484,18 +484,20 @@ data:
 
   - **I cannot create a service binding because its associated service instance is in `Delete Failed` state.**
  
- To avoid this issue, subaccount admins should create a service binding for a service instance with the `force_k8s_binding` query param set to true (`force_k8s_binding=true) by using the Service Manager Control CLI (smctl) or 'Create a Service Binding' Service Manager API.
+ To avoid this issue, subaccount admins should create a service binding for a service instance (that they need to edit to enable its deletion) with the `force_k8s_binding` query param set to `true` (`force_k8s_binding=true`). You can do this by using the Service Manager Control CLI (smctl) or 'Create a Service Binding' Service Manager API.
 
 Smctl Example
 
 >   ```bash
 >   smctl bind INSTANCE_NAME BINDING_NAME --param force_k8s_binding=true
 >   ```
->    To delete the service binding once done
+
+Once you've finished working on the service instance, delete it by running the following command:
+
 >   ```bash
 >   smctl unbind INSTANCE_NAME BINDING_NAME --param force_k8s_binding=true
 >   ```
->    **Note:** force_k8s_binding=true is supported only for kubernetes instances that are in `Delete Failed` state<br>
+**Note:** `force_k8s_binding=true` is supported only for the Kubernetes instances that are in `Delete Failed` state.<br>
 > 
 You're welcome to raise issues related to feature requests, bugs, or give us general feedback on this project's GitHub Issues page. 
 The SAP BTP service operator project maintainers will respond to the best of their abilities. 
