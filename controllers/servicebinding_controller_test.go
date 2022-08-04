@@ -17,6 +17,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -264,15 +265,15 @@ var _ = Describe("ServiceBinding controller", func() {
 					binding.Spec.ServiceInstanceName = instanceName
 					binding.Spec.SecretName = "mysecret"
 
-					_ = k8sClient.Create(ctx, binding)
+					Expect(k8sClient.Create(ctx, binding)).To(Succeed())
 					bindingLookupKey := types.NamespacedName{Name: binding.Name, Namespace: binding.Namespace}
 					Eventually(func() bool {
 						if err := k8sClient.Get(ctx, bindingLookupKey, binding); err != nil {
 							return false
 						}
-						return isInProgress(binding) && binding.GetConditions()[0].Reason == Blocked
+						cond := meta.FindStatusCondition(binding.GetConditions(), api.ConditionSucceeded)
+						return cond != nil && cond.Reason == Blocked && strings.Contains(cond.Message, "is already taken. Choose another name and try again\"")
 					}, timeout, interval).Should(BeTrue())
-					Expect(binding.GetConditions()[0].Message).Should(ContainSubstring("is already taken. Choose another name and try again"))
 
 					binding.Spec.SecretName = "mynewsecret"
 					Expect(k8sClient.Update(ctx, binding)).Should(Succeed())
@@ -312,15 +313,15 @@ var _ = Describe("ServiceBinding controller", func() {
 					binding.Spec.ServiceInstanceName = instanceName
 					binding.Spec.SecretName = "mysecret"
 
-					_ = k8sClient.Create(ctx, binding)
+					Expect(k8sClient.Create(ctx, binding)).To(Succeed())
 					bindingLookupKey := types.NamespacedName{Name: binding.Name, Namespace: binding.Namespace}
 					Eventually(func() bool {
 						if err := k8sClient.Get(ctx, bindingLookupKey, binding); err != nil {
 							return false
 						}
-						return isInProgress(binding) && binding.GetConditions()[0].Reason == Blocked
+						cond := meta.FindStatusCondition(binding.GetConditions(), api.ConditionSucceeded)
+						return cond != nil && cond.Reason == Blocked && strings.Contains(cond.Message, "belongs to another binding")
 					}, timeout*2, interval).Should(BeTrue())
-					Expect(binding.GetConditions()[0].Message).Should(ContainSubstring("belongs to another binding"))
 
 					binding.Spec.SecretName = "mynewsecret"
 					Expect(k8sClient.Update(ctx, binding)).Should(Succeed())
