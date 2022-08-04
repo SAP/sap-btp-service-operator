@@ -271,7 +271,55 @@ var _ = Describe("ServiceBinding controller", func() {
 							return false
 						}
 						return isInProgress(binding) && binding.GetConditions()[0].Reason == Blocked &&
-							strings.Contains(binding.GetConditions()[0].Message, "already taken")
+							strings.Contains(binding.GetConditions()[0].Message, "is already taken. Choose another name and try again")
+					}, timeout, interval).Should(BeTrue())
+
+					binding.Spec.SecretName = "mynewsecret"
+					Expect(k8sClient.Update(ctx, binding)).Should(Succeed())
+					Eventually(func() bool {
+						err := k8sClient.Get(ctx, bindingLookupKey, binding)
+						if err != nil {
+							return false
+						}
+						return isReady(binding)
+					}, timeout, interval).Should(BeTrue())
+
+					By("Verify binding secret created")
+					bindingSecret := getSecret(ctx, binding.Spec.SecretName, binding.Namespace, true)
+					Expect(bindingSecret).ToNot(BeNil())
+				})
+			})
+
+			When("secret belong to a different binding", func() {
+				ctx := context.Background()
+				var tmpBinding *v1.ServiceBinding
+				JustBeforeEach(func() {
+					tmpBinding = newBindingObject("tmpbinding", bindingTestNamespace)
+					tmpBinding.Spec.ServiceInstanceName = instanceName
+					tmpBinding.Spec.SecretName = "mysecret"
+
+					_ = k8sClient.Create(ctx, tmpBinding)
+					Eventually(func() bool {
+						err := k8sClient.Get(ctx, types.NamespacedName{Name: "tmpbinding", Namespace: bindingTestNamespace}, &v1.ServiceBinding{})
+						return err == nil
+					}, timeout, interval).Should(BeTrue())
+				})
+				JustAfterEach(func() {
+					Expect(k8sClient.Delete(ctx, tmpBinding)).Should(Succeed())
+				})
+				It("should fail the request with relevant message and allow the user to replace secret name", func() {
+					binding := newBindingObject("newbinding", bindingTestNamespace)
+					binding.Spec.ServiceInstanceName = instanceName
+					binding.Spec.SecretName = "mysecret"
+
+					_ = k8sClient.Create(ctx, binding)
+					bindingLookupKey := types.NamespacedName{Name: binding.Name, Namespace: binding.Namespace}
+					Eventually(func() bool {
+						if err := k8sClient.Get(ctx, bindingLookupKey, binding); err != nil {
+							return false
+						}
+						return isInProgress(binding) && binding.GetConditions()[0].Reason == Blocked &&
+							strings.Contains(binding.GetConditions()[0].Message, "belongs to another binding")
 					}, timeout, interval).Should(BeTrue())
 
 					binding.Spec.SecretName = "mynewsecret"
