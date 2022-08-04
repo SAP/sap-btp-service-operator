@@ -270,9 +270,9 @@ var _ = Describe("ServiceBinding controller", func() {
 						if err := k8sClient.Get(ctx, bindingLookupKey, binding); err != nil {
 							return false
 						}
-						return isInProgress(binding) && binding.GetConditions()[0].Reason == Blocked &&
-							strings.Contains(binding.GetConditions()[0].Message, "is already taken. Choose another name and try again")
+						return isInProgress(binding) && binding.GetConditions()[0].Reason == Blocked
 					}, timeout, interval).Should(BeTrue())
+					Expect(binding.GetConditions()[0].Message).Should(ContainSubstring("is already taken. Choose another name and try again"))
 
 					binding.Spec.SecretName = "mynewsecret"
 					Expect(k8sClient.Update(ctx, binding)).Should(Succeed())
@@ -318,9 +318,9 @@ var _ = Describe("ServiceBinding controller", func() {
 						if err := k8sClient.Get(ctx, bindingLookupKey, binding); err != nil {
 							return false
 						}
-						return isInProgress(binding) && binding.GetConditions()[0].Reason == Blocked &&
-							strings.Contains(binding.GetConditions()[0].Message, "belongs to another binding")
-					}, timeout, interval).Should(BeTrue())
+						return isInProgress(binding) && binding.GetConditions()[0].Reason == Blocked
+					}, timeout*2, interval).Should(BeTrue())
+					Expect(binding.GetConditions()[0].Message).Should(ContainSubstring("belongs to another binding"))
 
 					binding.Spec.SecretName = "mynewsecret"
 					Expect(k8sClient.Update(ctx, binding)).Should(Succeed())
