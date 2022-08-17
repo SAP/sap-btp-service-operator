@@ -484,7 +484,7 @@ data:
 
   - **I need to create a service binding to access a service instance that's in the `Delete Failed` state, but this state prevents me from doing that.**
  
- To bypass this obstacle, subaccount admins should create the service binding with the `force_k8s_binding` query param set to `true` (`force_k8s_binding=true`). You can do this by using the Service Manager Control CLI (smctl) or 'Create a Service Binding' Service Manager API.
+ To overcome this obstacle, subaccount admins can create the service binding with the `force_k8s_binding` query param set to `true` (`force_k8s_binding=true`). You can do this by using the Service Manager Control CLI (smctl) or 'Create a Service Binding' Service Manager API.
 
 Smctl Example
 
