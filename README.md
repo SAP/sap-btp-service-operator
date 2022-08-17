@@ -482,9 +482,12 @@ data:
 
 ## Troubleshooting and Support
 
-  - **I need to create a service binding to access a service instance that's in the `Delete Failed` state, but this state prevents me from doing that.**
+  - The deletion of my service instance failed. To fix the failure, I have to create a service binding, but I can't do this because the instance is in the `Delete Failed` state.
+(for example, the main XSUAA instance cannot be deleted since clone instances still exist, a new binding has to be created to clean up the clones.)
  
- To overcome this obstacle, subaccount admins can create the service binding with the `force_k8s_binding` query param set to `true` (`force_k8s_binding=true`). You can do this by using the Service Manager Control CLI (smctl) or 'Create a Service Binding' Service Manager API.
+ **Solution** 
+ 
+ Use the `force_k8s_binding` query param when when you create a service binding and set it to `true` (`force_k8s_binding=true`). You can do this either with the Service Manager Control CLI (smctl) or 'Create a Service Binding' Service Manager API.
 
 Smctl Example
 
@@ -492,7 +495,9 @@ Smctl Example
 >   smctl bind INSTANCE_NAME BINDING_NAME --param force_k8s_binding=true
 >   ```
 
+<br>
 Once you've finished working on the service instance, delete it by running the following command:
+
 
 >   ```bash
 >   smctl unbind INSTANCE_NAME BINDING_NAME --param force_k8s_binding=true
