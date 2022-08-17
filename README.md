@@ -488,7 +488,7 @@ data:
  
  Use the `force_k8s_binding` query param when you create a service binding and set it to `true` (`force_k8s_binding=true`). You can do this either with the Service Manager Control CLI (smctl) [bind](https://help.sap.com/docs/SERVICEMANAGEMENT/09cc82baadc542a688176dce601398de/f53ff2634e0a46d6bfc72ec075418dcd.html) command or 'Create a Service Binding' [Service Manager API](https://api.sap.com/api/APIServiceManagment/resource).
 
-Smctl Example
+smctl Example
 
 >   ```bash
 >   smctl bind INSTANCE_NAME BINDING_NAME --param force_k8s_binding=true
