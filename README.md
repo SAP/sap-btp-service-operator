@@ -401,6 +401,7 @@ If not specified, the `default` namespace is used.
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes).
 
 ## Credentials Rotation
+### ServiceBinding
 To enable automatic credentials rotation, you need to set the following parameters of the `credentialsRotationPolicy` field in the `spec` field of the `ServiceBinding` resource:
 
 - `enabled` - Whether the credentials rotation option is enabled. Default value is false. 
@@ -416,6 +417,10 @@ During the transition period, there are two (or more) `ServiceBinding`: the orig
 You can also choose the `services.cloud.sap.com/forceRotate` annotation (value doesn't matter), upon which immediate credentials rotation is performed. Note that the prerequisite for the force action is that credentials rotation `enabled` field is set to true.).
 
 **Note:**<br> It isn't possible to enable automatic credentials rotation to an already-rotated `ServiceBinding` (with the `services.cloud.sap.com/stale` label).
+
+### SAP BTP Operator
+There is no automatic mechanism to rotate the operator's credentials. 
+A new binding should be created manually and the new credentials should be updated using helm command.
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
