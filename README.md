@@ -124,6 +124,7 @@ It is implemented using a [CRDs-based](https://kubernetes.io/docs/concepts/exten
         --set manager.secret.sm_url=<sm_url> \
         --set manager.secret.tokenurl=<certurl>
     ```
+**Note:**<br> In order to rotate the credentials between the BTP service operator and Service Manager, you have to create a new binding for the service-operator-access service instance, and then to execute the setup script again, with the new set of credentials. Afterwards you can delete the old binding.
         
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes).
