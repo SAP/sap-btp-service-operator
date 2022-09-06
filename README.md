@@ -26,6 +26,7 @@ The SAP BTP service operator is based on the [Kubernetes Operator pattern](https
 * [SAP BTP kubectl Extension](#sap-btp-kubectl-plugin-experimental) 
 * [Credentials Rotation](#credentials-rotation)
 * [Multitenancy](#multitenancy)
+* [Troubleshooting and Support](#troubleshooting-and-support)
 
 ## Architecture
 SAP BTP service operator communicates with [Service Manager](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/3a27b85a47fc4dff99184dd5bf181e14.html) that uses the [Open service broker API](https://github.com/openservicebrokerapi/servicebroker) to communicate with service brokers, acting as an intermediary for the Kubernetes API Server to negotiate the initial provisioning and retrieve the credentials necessary for the application to use a managed service.<br><br>
@@ -116,7 +117,7 @@ It is implemented using a [CRDs-based](https://kubernetes.io/docs/concepts/exten
     ```bash
     helm upgrade --install <release-name> sap-btp-operator/sap-btp-operator \
         --create-namespace \
-        --namespace=sap-btp-operator \   
+        --namespace=sap-btp-operator \
         --set manager.secret.clientid=<clientid> \
         --set manager.secret.tls.crt="$(cat /path/to/cert)" \
         --set manager.secret.tls.key="$(cat /path/to/key)" \
@@ -302,7 +303,7 @@ If there are any duplicate properties defined at the top level, the specificatio
 is considered to be invalid, the further processing of the `ServiceInstance`/`ServiceBinding`
 resource stops and its `status` is marked with error condition.
 
-The format of the `spec` will be (in YAML format):
+The format of the `spec` in YAML
 ```yaml
 spec:
   ...
@@ -313,7 +314,8 @@ spec:
         name: my-secret
         key: secret-parameter
 ```
-or, in JSON format
+
+The format of the `spec` in JSON
 ```json
 "spec": {
   "parameters": {
@@ -327,7 +329,7 @@ or, in JSON format
   }
 }
 ```
-and the secret would need to have a key named secret-parameter:
+The `secret` with the `secret-parameter`- named key:
 ```yaml
 apiVersion: v1
 kind: Secret
@@ -340,7 +342,7 @@ stringData:
       "password": "letmein"
     }'
 ```
-The final JSON payload to be sent to the broker would then look like:
+The final JSON payload to send to the broker:
 ```json
 {
   "name": "value",
@@ -348,7 +350,7 @@ The final JSON payload to be sent to the broker would then look like:
 }
 ```
 
-Multiple parameters could be listed in the secret - simply separate key/value pairs with a comma as in this example:
+You can list multiple parameters in the `secret`. To do so, separate "key": "value" pairs with commas as in this example:
 ```yaml
   secret-parameter:
     '{
@@ -479,7 +481,31 @@ data:
   
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
-## Support
+## Troubleshooting and Support
+
+  #### Cannot Create a Service Binding for Service Instance in `Delete Failed` State 
+
+  The deletion of my service instance failed. To fix the failure, I have to create a service binding, but I can't do this because the instance is in the `Delete  Failed` state.
+ 
+  **Solution** 
+ 
+ To overcome this issue, use the `force_k8s_binding` query param when you create a service binding and set it to `true` (`force_k8s_binding=true`). You can do & this   either with the Service Manager Control CLI (smctl) [bind](https://help.sap.com/docs/SERVICEMANAGEMENT/09cc82baadc542a688176dce601398de/f53ff2634e0a46d6bfc72ec075418dcd.html) command or 'Create a Service Binding' [Service Manager API](https://api.sap.com/api/APIServiceManagment/resource).
+
+  smctl Example
+
+  >   ```bash
+  >   smctl bind INSTANCE_NAME BINDING_NAME --param force_k8s_binding=true
+  >   ```
+
+<br>
+  Once you've finished working on the service instance, delete it by running the following command:
+
+
+  >   ```bash
+  >   smctl unbind INSTANCE_NAME BINDING_NAME --param force_k8s_binding=true
+  >   ```
+  **Note:** `force_k8s_binding` is supported only for the Kubernetes instances that are in `Delete Failed` state.<br>
+
 You're welcome to raise issues related to feature requests, bugs, or give us general feedback on this project's GitHub Issues page. 
 The SAP BTP service operator project maintainers will respond to the best of their abilities. 
 
