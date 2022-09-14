@@ -89,6 +89,9 @@ spec:
               name: cert
               readOnly: true
       terminationGracePeriodSeconds: 10
+      {{- if .Values.manager.priorityClassName }}
+      priorityClassName: {{ .Values.manager.priorityClassName }}
+      {{- end }}
       volumes:
         - name: cert
           secret:
