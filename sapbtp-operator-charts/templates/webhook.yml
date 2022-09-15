@@ -1,3 +1,32 @@
+{{- $cn := printf "sap-btp-operator-webhook-service"  }}
+{{- $ca := genCA (printf "%s-%s" $cn "ca") 3650 }}
+{{- $altName1 := printf "%s.%s" $cn .Release.Namespace }}
+{{- $altName2 := printf "%s.%s.svc" $cn .Release.Namespace }}
+{{- $cert := genSignedCert $cn nil (list $altName1 $altName2) 3650 $ca }}
+{{- if not .Values.manager.certificates }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: webhook-server-cert
+  namespace: {{.Release.Namespace}}
+type: kubernetes.io/tls
+data:
+  tls.crt: {{ b64enc $cert.Cert }}
+  tls.key: {{ b64enc $cert.Key }}
+---
+{{- end}}
+{{- if .Values.manager.certificates.selfSigned }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: webhook-server-cert
+  namespace: {{.Release.Namespace}}
+type: kubernetes.io/tls
+data:
+  tls.crt: "{{ .Values.manager.certificates.selfSigned.crt }}"
+  tls.key: "{{ .Values.manager.certificates.selfSigned.key }}"
+---
+{{- end}}
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
@@ -15,6 +44,9 @@ webhooks:
         name: sap-btp-operator-webhook-service
         namespace: {{.Release.Namespace}}
         path: /mutate-services-cloud-sap-com-v1-servicebinding
+      {{- if not .Values.manager.certificates }}
+      caBundle: {{ b64enc $ca.Cert }}
+      {{- end }}
       {{- if .Values.manager.certificates.selfSigned }}
       caBundle: {{.Values.manager.certificates.selfSigned.caBundle }}
       {{- end }}
@@ -42,6 +74,15 @@ webhooks:
         name: sap-btp-operator-webhook-service
         namespace: {{.Release.Namespace}}
         path: /mutate-services-cloud-sap-com-v1-serviceinstance
+      {{- if not .Values.manager.certificates }}
+      caBundle: {{ b64enc $ca.Cert }}
+      {{- end }}
+      {{- if .Values.manager.certificates.selfSigned }}
+      caBundle: {{.Values.manager.certificates.selfSigned.caBundle }}
+      {{- end }}
+      {{- if .Values.manager.certificates.gardenerCertManager }}
+      caBundle: {{.Values.manager.certificates.gardenerCertManager.caBundle }}
+      {{- end }}
     failurePolicy: Fail
     name: mserviceinstance.kb.io
     rules:
@@ -73,6 +114,9 @@ webhooks:
         name: sap-btp-operator-webhook-service
         namespace: {{.Release.Namespace}}
         path: /validate-services-cloud-sap-com-v1-servicebinding
+      {{- if not .Values.manager.certificates }}
+      caBundle: {{ b64enc $ca.Cert }}
+      {{- end }}
       {{- if .Values.manager.certificates.selfSigned }}
       caBundle: {{.Values.manager.certificates.selfSigned.caBundle }}
       {{- end }}
