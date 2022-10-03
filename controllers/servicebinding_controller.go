@@ -105,37 +105,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	if serviceBinding.Status.Ready == metav1.ConditionTrue {
 		if r.isStaleServiceBinding(serviceBinding) {
-			originalBindingName, ok := serviceBinding.Labels[api.StaleBindingRotationOfLabel]
-			if !ok {
-				//if the user deleted the rotation of label the stale binding should be deleted otherwise it will remain forever
-				log.Info("missing rotationOf label, unable to fetch original binding, deleting stale")
-				return ctrl.Result{}, r.Delete(ctx, serviceBinding)
-			}
-			origBinding := &servicesv1.ServiceBinding{}
-			if err := r.Get(ctx, types.NamespacedName{Namespace: req.NamespacedName.Namespace, Name: originalBindingName}, origBinding); err != nil {
-				if apierrors.IsNotFound(err) {
-					log.Info("original binding not found, deleting stale binding")
-					return ctrl.Result{}, r.Delete(ctx, serviceBinding)
-				}
-				return ctrl.Result{}, err
-			}
-			if meta.IsStatusConditionTrue(origBinding.Status.Conditions, api.ConditionReady) {
-				return ctrl.Result{}, r.Delete(ctx, serviceBinding)
-			} else {
-				log.Info("not deleting stale binding since original binding is not ready")
-				if !meta.IsStatusConditionPresentAndEqual(serviceBinding.Status.Conditions, api.ConditionPendingTermination, metav1.ConditionTrue) {
-					pendingTerminationCondition := metav1.Condition{
-						Type:               api.ConditionPendingTermination,
-						Status:             metav1.ConditionTrue,
-						Reason:             api.ConditionPendingTermination,
-						Message:            "waiting for new credentials to be ready",
-						ObservedGeneration: serviceBinding.GetGeneration(),
-					}
-					meta.SetStatusCondition(&serviceBinding.Status.Conditions, pendingTerminationCondition)
-					return ctrl.Result{}, r.updateStatus(ctx, serviceBinding)
-				}
-				return ctrl.Result{}, nil
-			}
+			return r.handleStaleServiceBinding(ctx, serviceBinding)
 		}
 
 		if r.initCredRotationIfRequired(serviceBinding) {
@@ -950,6 +920,41 @@ func (r *ServiceBindingReconciler) isStaleServiceBinding(binding *servicesv1.Ser
 		}
 	}
 	return false
+}
+
+func (r *ServiceBindingReconciler) handleStaleServiceBinding(ctx context.Context, serviceBinding *servicesv1.ServiceBinding) (ctrl.Result, error) {
+	log := GetLogger(ctx)
+	originalBindingName, ok := serviceBinding.Labels[api.StaleBindingRotationOfLabel]
+	if !ok {
+		//if the user removed the "rotationOf" label the stale binding should be deleted otherwise it will remain forever
+		log.Info("missing rotationOf label, unable to fetch original binding, deleting stale")
+		return ctrl.Result{}, r.Delete(ctx, serviceBinding)
+	}
+	origBinding := &servicesv1.ServiceBinding{}
+	if err := r.Get(ctx, types.NamespacedName{Namespace: serviceBinding.Namespace, Name: originalBindingName}, origBinding); err != nil {
+		if apierrors.IsNotFound(err) {
+			log.Info("original binding not found, deleting stale binding")
+			return ctrl.Result{}, r.Delete(ctx, serviceBinding)
+		}
+		return ctrl.Result{}, err
+	}
+	if meta.IsStatusConditionTrue(origBinding.Status.Conditions, api.ConditionReady) {
+		return ctrl.Result{}, r.Delete(ctx, serviceBinding)
+	} else {
+		log.Info("not deleting stale binding since original binding is not ready")
+		if !meta.IsStatusConditionPresentAndEqual(serviceBinding.Status.Conditions, api.ConditionPendingTermination, metav1.ConditionTrue) {
+			pendingTerminationCondition := metav1.Condition{
+				Type:               api.ConditionPendingTermination,
+				Status:             metav1.ConditionTrue,
+				Reason:             api.ConditionPendingTermination,
+				Message:            "waiting for new credentials to be ready",
+				ObservedGeneration: serviceBinding.GetGeneration(),
+			}
+			meta.SetStatusCondition(&serviceBinding.Status.Conditions, pendingTerminationCondition)
+			return ctrl.Result{}, r.updateStatus(ctx, serviceBinding)
+		}
+		return ctrl.Result{}, nil
+	}
 }
 
 func mergeInstanceTags(offeringTags, customTags []string) []string {
