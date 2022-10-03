@@ -105,7 +105,37 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	if serviceBinding.Status.Ready == metav1.ConditionTrue {
 		if r.isStaleServiceBinding(serviceBinding) {
-			return ctrl.Result{}, r.Delete(ctx, serviceBinding)
+			originalBindingName, ok := serviceBinding.Labels[api.StaleBindingRotationOfLabel]
+			if !ok {
+				//if the user deleted the rotation of label the stale binding should be deleted otherwise it will remain forever
+				log.Info("missing rotationOf label, unable to fetch original binding, deleting stale")
+				return ctrl.Result{}, r.Delete(ctx, serviceBinding)
+			}
+			origBinding := &servicesv1.ServiceBinding{}
+			if err := r.Get(ctx, types.NamespacedName{Namespace: req.NamespacedName.Namespace, Name: originalBindingName}, origBinding); err != nil {
+				if apierrors.IsNotFound(err) {
+					log.Info("original binding not found, deleting stale binding")
+					return ctrl.Result{}, r.Delete(ctx, serviceBinding)
+				}
+				return ctrl.Result{}, err
+			}
+			if meta.IsStatusConditionTrue(origBinding.Status.Conditions, api.ConditionReady) {
+				return ctrl.Result{}, r.Delete(ctx, serviceBinding)
+			} else {
+				log.Info("not deleting stale binding since original binding is not ready")
+				if !meta.IsStatusConditionPresentAndEqual(serviceBinding.Status.Conditions, api.ConditionPendingTermination, metav1.ConditionTrue) {
+					pendingTerminationCondition := metav1.Condition{
+						Type:               api.ConditionPendingTermination,
+						Status:             metav1.ConditionTrue,
+						Reason:             api.ConditionPendingTermination,
+						Message:            "waiting for new credentials to be ready",
+						ObservedGeneration: serviceBinding.GetGeneration(),
+					}
+					meta.SetStatusCondition(&serviceBinding.Status.Conditions, pendingTerminationCondition)
+					return ctrl.Result{}, r.updateStatus(ctx, serviceBinding)
+				}
+				return ctrl.Result{}, nil
+			}
 		}
 
 		if r.initCredRotationIfRequired(serviceBinding) {
@@ -793,7 +823,7 @@ func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, smClie
 	}
 
 	bindings := &servicesv1.ServiceBindingList{}
-	err := r.List(ctx, bindings, client.MatchingLabels{api.StaleBindingLabel: binding.Status.BindingID}, client.InNamespace(binding.Namespace))
+	err := r.List(ctx, bindings, client.MatchingLabels{api.StaleBindingIDLabel: binding.Status.BindingID}, client.InNamespace(binding.Namespace))
 	if err != nil {
 		return err
 	}
@@ -864,7 +894,8 @@ func (r *ServiceBindingReconciler) initCredRotationIfRequired(binding *servicesv
 func (r *ServiceBindingReconciler) createOldBinding(ctx context.Context, suffix string, binding *servicesv1.ServiceBinding) error {
 	oldBinding := newBindingObject(binding.Name+suffix, binding.Namespace)
 	oldBinding.Labels = map[string]string{
-		api.StaleBindingLabel: binding.Status.BindingID,
+		api.StaleBindingIDLabel:         binding.Status.BindingID,
+		api.StaleBindingRotationOfLabel: binding.Name,
 	}
 	spec := binding.Spec.DeepCopy()
 	spec.CredRotationPolicy.Enabled = false
@@ -909,7 +940,7 @@ func (r *ServiceBindingReconciler) isStaleServiceBinding(binding *servicesv1.Ser
 	}
 
 	if binding.Labels != nil {
-		if _, ok := binding.Labels[api.StaleBindingLabel]; ok {
+		if _, ok := binding.Labels[api.StaleBindingIDLabel]; ok {
 			if binding.Spec.CredRotationPolicy != nil {
 				keepFor, _ := time.ParseDuration(binding.Spec.CredRotationPolicy.RotatedBindingTTL)
 				if time.Since(binding.CreationTimestamp.Time) > keepFor {

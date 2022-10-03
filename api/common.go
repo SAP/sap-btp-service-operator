@@ -9,11 +9,12 @@ import (
 type ControllerName string
 
 const (
-	ServiceInstanceController ControllerName = "ServiceInstance"
-	ServiceBindingController  ControllerName = "ServiceBinding"
-	FinalizerName             string         = "services.cloud.sap.com/sap-btp-finalizer"
-	StaleBindingLabel         string         = "services.cloud.sap.com/stale"
-	ForceRotateAnnotation     string         = "services.cloud.sap.com/forceRotate"
+	ServiceInstanceController   ControllerName = "ServiceInstance"
+	ServiceBindingController    ControllerName = "ServiceBinding"
+	FinalizerName               string         = "services.cloud.sap.com/sap-btp-finalizer"
+	StaleBindingIDLabel         string         = "services.cloud.sap.com/stale"
+	StaleBindingRotationOfLabel string         = "services.cloud.sap.com/rotationOf"
+	ForceRotateAnnotation       string         = "services.cloud.sap.com/forceRotate"
 )
 
 const (
@@ -28,6 +29,9 @@ const (
 
 	// ConditionCredRotationInProgress represents if cred rotation is in progress
 	ConditionCredRotationInProgress = "CredRotationInProgress"
+
+	// ConditionPendingTermination resource is waiting for termination pre-conditions
+	ConditionPendingTermination = "PendingTermination"
 )
 
 // +kubebuilder:object:generate=false
