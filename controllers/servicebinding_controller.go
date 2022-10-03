@@ -296,8 +296,6 @@ func (r *ServiceBindingReconciler) delete(ctx context.Context, smClient sm.Clien
 		if unbindErr != nil {
 			log.Error(unbindErr, "failed to delete binding")
 			// delete will proceed anyway
-			fmt.Println(time.Now())
-			fmt.Println("***************************")
 			return r.markAsNonTransientError(ctx, smTypes.DELETE, unbindErr, serviceBinding)
 		}
 
