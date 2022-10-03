@@ -307,7 +307,8 @@ func isTransientError(ctx context.Context, err error) bool {
 	log := GetLogger(ctx)
 	if smError, ok := err.(*sm.ServiceManagerError); ok {
 		log.Info(fmt.Sprintf("SM returned error status code %d", smError.StatusCode))
-		return smError.StatusCode == http.StatusTooManyRequests || smError.StatusCode == http.StatusServiceUnavailable || smError.StatusCode == http.StatusGatewayTimeout || smError.StatusCode == http.StatusNotFound
+		return smError.StatusCode == http.StatusTooManyRequests || smError.StatusCode == http.StatusServiceUnavailable ||
+			smError.StatusCode == http.StatusGatewayTimeout || smError.StatusCode == http.StatusNotFound || smError.StatusCode == http.StatusBadGateway
 	}
 	return false
 }

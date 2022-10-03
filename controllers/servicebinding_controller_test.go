@@ -1043,7 +1043,7 @@ var _ = Describe("ServiceBinding controller", func() {
 			// old binding created
 			bindingList := &v1.ServiceBindingList{}
 			Eventually(func() bool {
-				Expect(k8sClient.List(ctx, bindingList, client.MatchingLabels{api.StaleBindingLabel: myBinding.Status.BindingID}, client.InNamespace(bindingTestNamespace))).To(Succeed())
+				Expect(k8sClient.List(ctx, bindingList, client.MatchingLabels{api.StaleBindingIDLabel: myBinding.Status.BindingID}, client.InNamespace(bindingTestNamespace))).To(Succeed())
 				return len(bindingList.Items) > 0
 			}, timeout, interval).Should(BeTrue())
 			oldBinding := bindingList.Items[0]
@@ -1077,19 +1077,90 @@ var _ = Describe("ServiceBinding controller", func() {
 			Expect(ok).To(BeFalse())
 		})
 
-		It("should delete old binding when stale", func() {
-			Expect(k8sClient.Get(context.Background(), types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}, createdBinding)).To(Succeed())
-			createdBinding.Spec.CredRotationPolicy = &v1.CredentialsRotationPolicy{
-				Enabled: false,
-			}
-			createdBinding.Labels = map[string]string{
-				api.StaleBindingLabel: createdBinding.Status.BindingID,
-			}
-			Expect(k8sClient.Update(ctx, createdBinding)).To(Succeed())
-			Eventually(func() bool {
-				err := k8sClient.Get(ctx, types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}, createdBinding)
-				return apierrors.IsNotFound(err)
-			}, timeout, interval).Should(BeTrue())
+		When("original binding ready=true", func() {
+			It("should delete old binding when stale", func() {
+				Expect(k8sClient.Get(context.Background(), types.NamespacedName{Name: createdBinding.Name, Namespace: bindingTestNamespace}, createdBinding)).To(Succeed())
+				staleBinding := &v1.ServiceBinding{}
+				staleBinding.Spec = createdBinding.Spec
+				staleBinding.Spec.SecretName = createdBinding.Spec.SecretName + "-stale"
+				staleBinding.Name = createdBinding.Name + "-stale"
+				staleBinding.Namespace = createdBinding.Namespace
+				staleBinding.Labels = map[string]string{
+					api.StaleBindingIDLabel:         createdBinding.Status.BindingID,
+					api.StaleBindingRotationOfLabel: createdBinding.Name,
+				}
+				staleBinding.Spec.CredRotationPolicy = &v1.CredentialsRotationPolicy{
+					Enabled: false,
+				}
+				Expect(k8sClient.Create(ctx, staleBinding)).To(Succeed())
+				Eventually(func() bool {
+					err := k8sClient.Get(ctx, types.NamespacedName{Name: staleBinding.Name, Namespace: bindingTestNamespace}, staleBinding)
+					return apierrors.IsNotFound(err)
+				}, timeout, interval).Should(BeTrue())
+			})
+		})
+
+		When("original binding ready=false (rotation failed)", func() {
+			var failedBinding *v1.ServiceBinding
+			JustBeforeEach(func() {
+				failedBinding = newBindingObject("failedbinding", bindingTestNamespace)
+				failedBinding.Spec.ServiceInstanceName = "notexistinstance"
+				Expect(k8sClient.Create(ctx, failedBinding)).To(Succeed())
+				Eventually(func() bool {
+					err := k8sClient.Get(ctx, types.NamespacedName{Name: failedBinding.Name, Namespace: bindingTestNamespace}, failedBinding)
+					if err != nil {
+						return false
+					}
+					return meta.IsStatusConditionFalse(failedBinding.Status.Conditions, api.ConditionSucceeded)
+				}, timeout, interval).Should(BeTrue())
+			})
+			It("should not delete old binding when stale", func() {
+				Expect(k8sClient.Get(context.Background(), types.NamespacedName{Name: createdBinding.Name, Namespace: bindingTestNamespace}, createdBinding)).To(Succeed())
+				staleBinding := &v1.ServiceBinding{}
+				staleBinding.Spec = createdBinding.Spec
+				staleBinding.Spec.SecretName = createdBinding.Spec.SecretName + "-stale"
+				staleBinding.Name = createdBinding.Name + "-stale"
+				staleBinding.Namespace = createdBinding.Namespace
+				staleBinding.Labels = map[string]string{
+					api.StaleBindingIDLabel:         "1234",
+					api.StaleBindingRotationOfLabel: failedBinding.Name,
+				}
+				staleBinding.Spec.CredRotationPolicy = &v1.CredentialsRotationPolicy{
+					Enabled: false,
+				}
+				Expect(k8sClient.Create(ctx, staleBinding)).To(Succeed())
+
+				Eventually(func() bool {
+					err := k8sClient.Get(ctx, types.NamespacedName{Name: staleBinding.Name, Namespace: bindingTestNamespace}, staleBinding)
+					if err != nil {
+						return false
+					}
+					return meta.IsStatusConditionTrue(staleBinding.Status.Conditions, api.ConditionPendingTermination)
+
+				}, timeout, interval).Should(BeTrue())
+			})
+		})
+
+		When("stale binding is missing rotationOf label", func() {
+			It("should delete the binding", func() {
+				Expect(k8sClient.Get(context.Background(), types.NamespacedName{Name: createdBinding.Name, Namespace: bindingTestNamespace}, createdBinding)).To(Succeed())
+				staleBinding := &v1.ServiceBinding{}
+				staleBinding.Spec = createdBinding.Spec
+				staleBinding.Spec.SecretName = createdBinding.Spec.SecretName + "-stale"
+				staleBinding.Name = createdBinding.Name + "-stale"
+				staleBinding.Namespace = createdBinding.Namespace
+				staleBinding.Labels = map[string]string{
+					api.StaleBindingIDLabel: createdBinding.Status.BindingID,
+				}
+				staleBinding.Spec.CredRotationPolicy = &v1.CredentialsRotationPolicy{
+					Enabled: false,
+				}
+				Expect(k8sClient.Create(ctx, staleBinding)).To(Succeed())
+				Eventually(func() bool {
+					err := k8sClient.Get(ctx, types.NamespacedName{Name: staleBinding.Name, Namespace: bindingTestNamespace}, staleBinding)
+					return apierrors.IsNotFound(err)
+				}, timeout, interval).Should(BeTrue())
+			})
 		})
 	})
 })
@@ -1102,10 +1173,14 @@ func validateSecretData(secret *corev1.Secret, expectedKey string, expectedValue
 
 func getSecret(ctx context.Context, name, namespace string, failOnError bool) *corev1.Secret {
 	secret := &corev1.Secret{}
-	err := k8sClient.Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, secret)
-	if failOnError {
-		Expect(err).ToNot(HaveOccurred())
-	}
 
+	if failOnError {
+		Eventually(func() bool {
+			err := k8sClient.Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, secret)
+			return err == nil
+		}, timeout, interval).Should(BeTrue())
+	} else {
+		_ = k8sClient.Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, secret)
+	}
 	return secret
 }

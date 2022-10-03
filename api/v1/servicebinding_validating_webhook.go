@@ -68,7 +68,7 @@ func (sb *ServiceBinding) ValidateUpdate(old runtime.Object) error {
 	specChanged := sb.specChanged(old)
 	isStale := false
 	if sb.Labels != nil {
-		if _, ok := sb.Labels[api.StaleBindingLabel]; ok {
+		if _, ok := sb.Labels[api.StaleBindingIDLabel]; ok {
 			isStale = true
 		}
 	}
