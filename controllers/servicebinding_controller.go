@@ -940,21 +940,21 @@ func (r *ServiceBindingReconciler) handleStaleServiceBinding(ctx context.Context
 	}
 	if meta.IsStatusConditionTrue(origBinding.Status.Conditions, api.ConditionReady) {
 		return ctrl.Result{}, r.Delete(ctx, serviceBinding)
-	} else {
-		log.Info("not deleting stale binding since original binding is not ready")
-		if !meta.IsStatusConditionPresentAndEqual(serviceBinding.Status.Conditions, api.ConditionPendingTermination, metav1.ConditionTrue) {
-			pendingTerminationCondition := metav1.Condition{
-				Type:               api.ConditionPendingTermination,
-				Status:             metav1.ConditionTrue,
-				Reason:             api.ConditionPendingTermination,
-				Message:            "waiting for new credentials to be ready",
-				ObservedGeneration: serviceBinding.GetGeneration(),
-			}
-			meta.SetStatusCondition(&serviceBinding.Status.Conditions, pendingTerminationCondition)
-			return ctrl.Result{}, r.updateStatus(ctx, serviceBinding)
-		}
-		return ctrl.Result{}, nil
 	}
+
+	log.Info("not deleting stale binding since original binding is not ready")
+	if !meta.IsStatusConditionPresentAndEqual(serviceBinding.Status.Conditions, api.ConditionPendingTermination, metav1.ConditionTrue) {
+		pendingTerminationCondition := metav1.Condition{
+			Type:               api.ConditionPendingTermination,
+			Status:             metav1.ConditionTrue,
+			Reason:             api.ConditionPendingTermination,
+			Message:            "waiting for new credentials to be ready",
+			ObservedGeneration: serviceBinding.GetGeneration(),
+		}
+		meta.SetStatusCondition(&serviceBinding.Status.Conditions, pendingTerminationCondition)
+		return ctrl.Result{}, r.updateStatus(ctx, serviceBinding)
+	}
+	return ctrl.Result{}, nil
 }
 
 func mergeInstanceTags(offeringTags, customTags []string) []string {
