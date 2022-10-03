@@ -22,6 +22,8 @@ type Config struct {
 	AllowedNamespaces      []string      `envconfig:"allowed_namespaces"`
 	EnableNamespaceSecrets bool          `envconfig:"enable_namespace_secrets"`
 	ClusterID              string        `envconfig:"cluster_id"`
+	RetryBaseDelay         time.Duration `envconfig:"retry_base_delay"`
+	RetryMaxDelay          time.Duration `envconfig:"retry_max_delay"`
 }
 
 func Get() Config {
@@ -33,6 +35,8 @@ func Get() Config {
 			EnableNamespaceSecrets: true,
 			AllowedNamespaces:      []string{},
 			AllowClusterAccess:     true,
+			RetryBaseDelay:         10 * time.Second,
+			RetryMaxDelay:          time.Hour,
 		}
 		envconfig.MustProcess("", &config)
 	})

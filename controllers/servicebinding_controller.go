@@ -20,6 +20,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"time"
 
 	servicesv1 "github.com/SAP/sap-btp-service-operator/api/v1"
@@ -294,6 +296,8 @@ func (r *ServiceBindingReconciler) delete(ctx context.Context, smClient sm.Clien
 		if unbindErr != nil {
 			log.Error(unbindErr, "failed to delete binding")
 			// delete will proceed anyway
+			fmt.Println(time.Now())
+			fmt.Println("***************************")
 			return r.markAsNonTransientError(ctx, smTypes.DELETE, unbindErr, serviceBinding)
 		}
 
@@ -439,6 +443,7 @@ func (r *ServiceBindingReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&servicesv1.ServiceBinding{}).
 		Owns(&corev1.Secret{}).
+		WithOptions(controller.Options{RateLimiter: workqueue.NewItemExponentialFailureRateLimiter(r.Config.RetryBaseDelay, r.Config.RetryMaxDelay)}).
 		Complete(r)
 }
 
