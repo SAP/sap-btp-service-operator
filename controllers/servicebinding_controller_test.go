@@ -1142,7 +1142,7 @@ var _ = Describe("ServiceBinding controller", func() {
 		})
 
 		When("stale binding is missing rotationOf label", func() {
-			FIt("should delete the binding", func() {
+			It("should delete the binding", func() {
 				Expect(k8sClient.Get(context.Background(), types.NamespacedName{Name: createdBinding.Name, Namespace: bindingTestNamespace}, createdBinding)).To(Succeed())
 				staleBinding := &v1.ServiceBinding{}
 				staleBinding.Spec = createdBinding.Spec
