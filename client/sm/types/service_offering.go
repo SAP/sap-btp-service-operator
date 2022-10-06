@@ -18,9 +18,9 @@ package types
 
 import (
 	"encoding/json"
-
-	"github.com/Peripli/service-manager/pkg/types"
 )
+
+const ServiceOfferingsURL = "/v1/service_offerings"
 
 // ServiceOffering defines the data of a service offering.
 type ServiceOffering struct {
@@ -45,7 +45,7 @@ type ServiceOffering struct {
 	BrokerID   string        `json:"broker_id,omitempty" yaml:"broker_id,omitempty"`
 	BrokerName string        `json:"broker_name,omitempty" yaml:"broker_name,omitempty"`
 	Plans      []ServicePlan `json:"plans,omitempty" yaml:"plans,omitempty"`
-	Labels     types.Labels  `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Labels     Labels        `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Ready      bool          `json:"ready,omitempty" yaml:"ready,omitempty"`
 }
 

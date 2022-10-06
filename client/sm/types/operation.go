@@ -18,20 +18,20 @@ package types
 
 import (
 	"encoding/json"
-
-	"github.com/Peripli/service-manager/pkg/types"
 )
+
+const ResourceOperationsURL = "/operations"
 
 // Operation defines the data of a operation.
 type Operation struct {
-	ID           string          `json:"id,omitempty" yaml:"id,omitempty"`
-	Description  string          `json:"description,omitempty" yaml:"description,omitempty"`
-	Type         string          `json:"type,omitempty" yaml:"type,omitempty"`
-	State        string          `json:"state,omitempty" yaml:"state,omitempty"`
-	ResourceID   string          `json:"resource_id,omitempty" yaml:"resource_id,omitempty"`
-	ResourceType string          `json:"resource_type,omitempty" yaml:"resource_type,omitempty"`
-	Errors       json.RawMessage `json:"errors,omitempty" yaml:"errors,omitempty"`
-	Created      string          `json:"created_at,omitempty" yaml:"created_at,omitempty"`
-	Updated      string          `json:"updated_at,omitempty" yaml:"updated_at,omitempty"`
-	Labels       types.Labels    `json:"labels,omitempty" yaml:"labels,omitempty"`
+	ID           string            `json:"id,omitempty" yaml:"id,omitempty"`
+	Description  string            `json:"description,omitempty" yaml:"description,omitempty"`
+	Type         OperationCategory `json:"type,omitempty" yaml:"type,omitempty"`
+	State        OperationState    `json:"state,omitempty" yaml:"state,omitempty"`
+	ResourceID   string            `json:"resource_id,omitempty" yaml:"resource_id,omitempty"`
+	ResourceType string            `json:"resource_type,omitempty" yaml:"resource_type,omitempty"`
+	Errors       json.RawMessage   `json:"errors,omitempty" yaml:"errors,omitempty"`
+	Created      string            `json:"created_at,omitempty" yaml:"created_at,omitempty"`
+	Updated      string            `json:"updated_at,omitempty" yaml:"updated_at,omitempty"`
+	Labels       Labels            `json:"labels,omitempty" yaml:"labels,omitempty"`
 }

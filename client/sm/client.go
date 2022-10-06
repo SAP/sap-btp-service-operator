@@ -22,15 +22,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
+	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
 
-	smtypes "github.com/Peripli/service-manager/pkg/types"
-
-	"github.com/Peripli/service-manager/pkg/log"
-	"github.com/Peripli/service-manager/pkg/util"
-	"github.com/Peripli/service-manager/pkg/web"
 	"github.com/SAP/sap-btp-service-operator/client/sm/types"
 	"github.com/SAP/sap-btp-service-operator/internal/auth"
 	"github.com/SAP/sap-btp-service-operator/internal/httputil"
@@ -133,7 +131,7 @@ func (client *serviceManagerClient) Provision(instance *types.ServiceInstance, s
 
 	instance.ServicePlanID = planInfo.planID
 
-	location, err := client.register(instance, web.ServiceInstancesURL, q, user, &newInstance)
+	location, err := client.register(instance, types.ServicePlansURL, q, user, &newInstance)
 	if err != nil {
 		return nil, err
 	}
@@ -161,7 +159,7 @@ func (client *serviceManagerClient) Provision(instance *types.ServiceInstance, s
 // Bind creates binding to an instance in service manager
 func (client *serviceManagerClient) Bind(binding *types.ServiceBinding, q *Parameters, user string) (*types.ServiceBinding, string, error) {
 	var newBinding *types.ServiceBinding
-	location, err := client.register(binding, web.ServiceBindingsURL, q, user, &newBinding)
+	location, err := client.register(binding, types.ServiceBindingsURL, q, user, &newBinding)
 	if err != nil {
 		return nil, "", err
 	}
@@ -171,7 +169,7 @@ func (client *serviceManagerClient) Bind(binding *types.ServiceBinding, q *Param
 // ListInstances returns service instances registered in the Service Manager satisfying provided queries
 func (client *serviceManagerClient) ListInstances(q *Parameters) (*types.ServiceInstances, error) {
 	instances := &types.ServiceInstances{}
-	err := client.list(&instances.ServiceInstances, web.ServiceInstancesURL, q)
+	err := client.list(&instances.ServiceInstances, types.ServicePlansURL, q)
 
 	return instances, err
 }
@@ -179,7 +177,7 @@ func (client *serviceManagerClient) ListInstances(q *Parameters) (*types.Service
 // GetInstanceByID returns instance registered in the Service Manager satisfying provided queries
 func (client *serviceManagerClient) GetInstanceByID(id string, q *Parameters) (*types.ServiceInstance, error) {
 	instance := &types.ServiceInstance{}
-	err := client.get(instance, web.ServiceInstancesURL+"/"+id, q)
+	err := client.get(instance, types.ServicePlansURL+"/"+id, q)
 
 	return instance, err
 }
@@ -187,7 +185,7 @@ func (client *serviceManagerClient) GetInstanceByID(id string, q *Parameters) (*
 // ListBindings returns service bindings registered in the Service Manager satisfying provided queries
 func (client *serviceManagerClient) ListBindings(q *Parameters) (*types.ServiceBindings, error) {
 	bindings := &types.ServiceBindings{}
-	err := client.list(&bindings.ServiceBindings, web.ServiceBindingsURL, q)
+	err := client.list(&bindings.ServiceBindings, types.ServiceBindingsURL, q)
 
 	return bindings, err
 }
@@ -195,7 +193,7 @@ func (client *serviceManagerClient) ListBindings(q *Parameters) (*types.ServiceB
 // GetBindingByID returns binding registered in the Service Manager satisfying provided queries
 func (client *serviceManagerClient) GetBindingByID(id string, q *Parameters) (*types.ServiceBinding, error) {
 	binding := &types.ServiceBinding{}
-	err := client.get(binding, web.ServiceBindingsURL+"/"+id, q)
+	err := client.get(binding, types.ServiceBindingsURL+"/"+id, q)
 
 	return binding, err
 }
@@ -208,11 +206,11 @@ func (client *serviceManagerClient) Status(url string, q *Parameters) (*types.Op
 }
 
 func (client *serviceManagerClient) Deprovision(id string, q *Parameters, user string) (string, error) {
-	return client.delete(web.ServiceInstancesURL+"/"+id, q, user)
+	return client.delete(types.ServicePlansURL+"/"+id, q, user)
 }
 
 func (client *serviceManagerClient) Unbind(id string, q *Parameters, user string) (string, error) {
-	return client.delete(web.ServiceBindingsURL+"/"+id, q, user)
+	return client.delete(types.ServiceBindingsURL+"/"+id, q, user)
 }
 
 func (client *serviceManagerClient) UpdateInstance(id string, updatedInstance *types.ServiceInstance, serviceName string, planName string, q *Parameters, user string) (*types.ServiceInstance, string, error) {
@@ -223,7 +221,7 @@ func (client *serviceManagerClient) UpdateInstance(id string, updatedInstance *t
 		return nil, "", err
 	}
 	updatedInstance.ServicePlanID = planInfo.planID
-	location, err := client.update(updatedInstance, web.ServiceInstancesURL, id, q, user, &result)
+	location, err := client.update(updatedInstance, types.ServicePlansURL, id, q, user, &result)
 	if err != nil {
 		return nil, "", err
 	}
@@ -234,38 +232,60 @@ func (client *serviceManagerClient) RenameBinding(id, newName, newK8SName string
 	const k8sNameLabel = "_k8sname"
 	renameRequest := map[string]interface{}{
 		"name": newName,
-		"labels": []*smtypes.LabelChange{
+		"labels": []*types.LabelChange{
 			{
 				Key:       k8sNameLabel,
-				Operation: smtypes.AddLabelValuesOperation,
+				Operation: types.AddLabelValuesOperation,
 				Values:    []string{newK8SName},
 			},
 		},
 	}
 
 	var result *types.ServiceBinding
-	_, err := client.update(renameRequest, web.ServiceBindingsURL, id, nil, "", &result)
+	_, err := client.update(renameRequest, types.ServiceBindingsURL, id, nil, "", &result)
 	if err != nil {
 		return nil, err
 	}
 	return result, err
 }
 
-func (client *serviceManagerClient) list(result interface{}, url string, q *Parameters) error {
-	fullURL := httputil.NormalizeURL(client.Config.URL) + BuildURL(url, q)
-	return util.ListAll(client.Context, client.HTTPClient.Do, fullURL, result)
+func (client *serviceManagerClient) list(items interface{}, url string, q *Parameters) error {
+	itemsType := reflect.TypeOf(items)
+	if itemsType.Kind() != reflect.Ptr || itemsType.Elem().Kind() != reflect.Slice {
+		return fmt.Errorf("items should be a pointer to a slice, but got %v", itemsType)
+	}
+
+	allItems := reflect.MakeSlice(itemsType.Elem(), 0, 0)
+	iter := listIterator{
+		URL:    url,
+		Params: q,
+		Client: client,
+	}
+
+	more := true
+	for more {
+		var err error
+		pageSlice := reflect.New(itemsType.Elem())
+		more, _, err = iter.nextPage(pageSlice.Interface(), -1)
+		if err != nil {
+			return err
+		}
+		allItems = reflect.AppendSlice(allItems, pageSlice.Elem())
+	}
+	reflect.ValueOf(items).Elem().Set(allItems)
+	return nil
 }
 
 func (client *serviceManagerClient) ListOfferings(q *Parameters) (*types.ServiceOfferings, error) {
 	offerings := &types.ServiceOfferings{}
-	err := client.list(&offerings.ServiceOfferings, web.ServiceOfferingsURL, q)
+	err := client.list(&offerings.ServiceOfferings, types.ServiceOfferingsURL, q)
 
 	return offerings, err
 }
 
 func (client *serviceManagerClient) ListPlans(q *Parameters) (*types.ServicePlans, error) {
 	plans := &types.ServicePlans{}
-	err := client.list(&plans.ServicePlans, web.ServicePlansURL, q)
+	err := client.list(&plans.ServicePlans, types.ServicePlansURL, q)
 
 	return plans, err
 }
@@ -345,7 +365,7 @@ func (client *serviceManagerClient) update(resource interface{}, url string, id 
 }
 
 func handleFailedResponse(response *http.Response) error {
-	err := util.HandleResponseError(response)
+	err := handleResponseError(response)
 	return &ServiceManagerError{
 		StatusCode: response.StatusCode,
 		Message:    err.Error(),
@@ -368,7 +388,6 @@ func (client *serviceManagerClient) callWithUser(method string, smpath string, b
 		req.Header.Add(originatingIdentityHeader, user)
 	}
 
-	log.C(client.Context).Debugf("Sending request %s %s", req.Method, req.URL)
 	resp, err := client.HTTPClient.Do(req)
 	if err != nil {
 		return nil, err
@@ -477,5 +496,94 @@ func ExtractBindingID(operationURL string) string {
 }
 
 func BuildOperationURL(operationID, resourceID, resourceURL string) string {
-	return fmt.Sprintf("%s/%s%s/%s", resourceURL, resourceID, web.ResourceOperationsURL, operationID)
+	return fmt.Sprintf("%s/%s%s/%s", resourceURL, resourceID, types.ResourceOperationsURL, operationID)
+}
+
+func handleResponseError(response *http.Response) error {
+	body, err := bodyToBytes(response.Body)
+	if err != nil {
+		body = []byte(fmt.Sprintf("error reading response body: %s", err))
+	}
+
+	err = fmt.Errorf("StatusCode: %d Body: %s", response.StatusCode, body)
+	if response.Request != nil {
+		return fmt.Errorf("request %s %s failed: %s", response.Request.Method, response.Request.URL, err)
+	}
+	return fmt.Errorf("request failed: %s", err)
+}
+
+func bodyToBytes(closer io.ReadCloser) ([]byte, error) {
+	defer func() {
+		if err := closer.Close(); err != nil {
+			// todo log
+		}
+	}()
+
+	body, err := ioutil.ReadAll(closer)
+	if err != nil {
+		return nil, err
+	}
+	return body, nil
+}
+
+type listIterator struct {
+	Client
+	URL    string
+	Params *Parameters
+	next   string
+	done   bool
+}
+
+type listResponse struct {
+	Token    string      `json:"token"`
+	NumItems int64       `json:"num_items"`
+	Items    interface{} `json:"items"`
+}
+
+func (li *listIterator) nextPage(items interface{}, maxItems int) (more bool, count int64, err error) {
+	itemsType := reflect.TypeOf(items)
+	if itemsType != nil && (itemsType.Kind() != reflect.Ptr || itemsType.Elem().Kind() != reflect.Slice) {
+		return false, -1, fmt.Errorf("items should be nil or a pointer to a slice, but got %v", itemsType)
+	}
+
+	if li.done {
+		return false, -1, fmt.Errorf("iteration already complete")
+	}
+
+	if li.Params == nil {
+		li.Params = &Parameters{}
+	}
+	if maxItems >= 0 {
+		li.Params.GeneralParams = append(li.Params.GeneralParams, fmt.Sprintf("max_items=%s", strconv.Itoa(maxItems)))
+	}
+	if li.next != "" {
+		li.Params.GeneralParams = append(li.Params.GeneralParams, fmt.Sprintf("token=%s", li.next))
+	}
+
+	method := http.MethodGet
+	url := li.URL
+	response, err := li.Call(method, url, nil, li.Params)
+	if err != nil {
+		return false, -1, fmt.Errorf("error sending request %s %s: %s", method, url, err)
+	}
+	if response.Request != nil {
+		url = response.Request.URL.String() // should include also the query params
+	}
+	if response.StatusCode != http.StatusOK {
+		return false, -1, handleResponseError(response)
+	}
+	body, err := bodyToBytes(response.Body)
+	if err != nil {
+		return false, -1, fmt.Errorf("error reading response body of request %s %s: %s",
+			method, url, err)
+	}
+	responseBody := listResponse{Items: items}
+	if err = json.Unmarshal(body, &responseBody); err != nil {
+		return false, -1, fmt.Errorf("error parsing response body of request %s %s: %s",
+			method, url, err)
+	}
+
+	li.next = responseBody.Token
+	li.done = li.next == ""
+	return !li.done, responseBody.NumItems, nil
 }

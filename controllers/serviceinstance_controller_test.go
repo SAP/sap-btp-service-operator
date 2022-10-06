@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"strings"
 
-	smTypes "github.com/Peripli/service-manager/pkg/types"
 	"github.com/SAP/sap-btp-service-operator/api/v1"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
 	"github.com/SAP/sap-btp-service-operator/client/sm/smfakes"
+	smClientTypes "github.com/SAP/sap-btp-service-operator/client/sm/types"
 	smclientTypes "github.com/SAP/sap-btp-service-operator/client/sm/types"
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo"
@@ -129,7 +129,7 @@ var _ = Describe("ServiceInstance controller", func() {
 		fakeClient = &smfakes.FakeClient{}
 		fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
 		fakeClient.DeprovisionReturns("", nil)
-		fakeClient.GetInstanceByIDReturns(&smclientTypes.ServiceInstance{ID: fakeInstanceID, Ready: true, LastOperation: &smTypes.Operation{State: smTypes.SUCCEEDED, Type: smTypes.CREATE}}, nil)
+		fakeClient.GetInstanceByIDReturns(&smclientTypes.ServiceInstance{ID: fakeInstanceID, Ready: true, LastOperation: &smClientTypes.Operation{State: smClientTypes.SUCCEEDED, Type: smClientTypes.CREATE}}, nil)
 
 		secret := &corev1.Secret{}
 		err := k8sClient.Get(ctx, types.NamespacedName{Namespace: testNamespace, Name: "param-secret"}, secret)
@@ -271,8 +271,8 @@ var _ = Describe("ServiceInstance controller", func() {
 				fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: fakeInstanceID, Location: "/v1/service_instances/fakeid/operations/1234"}, nil)
 				fakeClient.StatusReturns(&smclientTypes.Operation{
 					ID:    "1234",
-					Type:  string(smTypes.CREATE),
-					State: string(smTypes.IN_PROGRESS),
+					Type:  smClientTypes.CREATE,
+					State: smClientTypes.IN_PROGRESS,
 				}, nil)
 			})
 
@@ -281,8 +281,8 @@ var _ = Describe("ServiceInstance controller", func() {
 					serviceInstance = createInstance(ctx, instanceSpec)
 					fakeClient.StatusReturns(&smclientTypes.Operation{
 						ID:    "1234",
-						Type:  string(smTypes.CREATE),
-						State: string(smTypes.SUCCEEDED),
+						Type:  smClientTypes.CREATE,
+						State: smClientTypes.SUCCEEDED,
 					}, nil)
 					Eventually(func() bool {
 						_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
@@ -296,8 +296,8 @@ var _ = Describe("ServiceInstance controller", func() {
 					serviceInstance = createInstance(ctx, instanceSpec)
 					fakeClient.StatusReturns(&smclientTypes.Operation{
 						ID:    "1234",
-						Type:  string(smTypes.CREATE),
-						State: string(smTypes.FAILED),
+						Type:  smClientTypes.CREATE,
+						State: smClientTypes.FAILED,
 					}, nil)
 					Eventually(func() bool {
 						_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
@@ -317,8 +317,8 @@ var _ = Describe("ServiceInstance controller", func() {
 					//stop polling state
 					fakeClient.StatusReturns(&smclientTypes.Operation{
 						ID:    "1234",
-						Type:  string(smTypes.CREATE),
-						State: string(smTypes.SUCCEEDED),
+						Type:  smClientTypes.CREATE,
+						State: smClientTypes.SUCCEEDED,
 					}, nil)
 
 					Eventually(func() bool {
@@ -338,8 +338,8 @@ var _ = Describe("ServiceInstance controller", func() {
 					//stop polling state
 					fakeClient.StatusReturns(&smclientTypes.Operation{
 						ID:    "1234",
-						Type:  string(smTypes.CREATE),
-						State: string(smTypes.SUCCEEDED),
+						Type:  smClientTypes.CREATE,
+						State: smClientTypes.SUCCEEDED,
 					}, nil)
 
 					//validate deletion
@@ -404,8 +404,8 @@ var _ = Describe("ServiceInstance controller", func() {
 						fakeClient.UpdateInstanceReturns(nil, "/v1/service_instances/id/operations/1234", nil)
 						fakeClient.StatusReturns(&smclientTypes.Operation{
 							ID:    "1234",
-							Type:  string(smTypes.UPDATE),
-							State: string(smTypes.IN_PROGRESS),
+							Type:  smClientTypes.UPDATE,
+							State: smClientTypes.IN_PROGRESS,
 						}, nil)
 					})
 
@@ -416,8 +416,8 @@ var _ = Describe("ServiceInstance controller", func() {
 						Expect(updatedInstance.Status.Conditions[0].Reason).To(Equal(UpdateInProgress))
 						fakeClient.StatusReturns(&smclientTypes.Operation{
 							ID:    "1234",
-							Type:  string(smTypes.UPDATE),
-							State: string(smTypes.SUCCEEDED),
+							Type:  smClientTypes.UPDATE,
+							State: smClientTypes.SUCCEEDED,
 						}, nil)
 						Eventually(func() bool {
 							_ = k8sClient.Get(ctx, defaultLookupKey, updatedInstance)
@@ -441,8 +441,8 @@ var _ = Describe("ServiceInstance controller", func() {
 							//stop polling state
 							fakeClient.StatusReturns(&smclientTypes.Operation{
 								ID:    "1234",
-								Type:  string(smTypes.UPDATE),
-								State: string(smTypes.SUCCEEDED),
+								Type:  smClientTypes.UPDATE,
+								State: smClientTypes.SUCCEEDED,
 							}, nil)
 							Eventually(func() bool {
 								_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
@@ -459,8 +459,8 @@ var _ = Describe("ServiceInstance controller", func() {
 							//stop update polling
 							fakeClient.StatusReturns(&smclientTypes.Operation{
 								ID:    "1234",
-								Type:  string(smTypes.UPDATE),
-								State: string(smTypes.SUCCEEDED),
+								Type:  smClientTypes.UPDATE,
+								State: smClientTypes.SUCCEEDED,
 							}, nil)
 
 							//validate deletion
@@ -495,8 +495,8 @@ var _ = Describe("ServiceInstance controller", func() {
 						fakeClient.UpdateInstanceReturns(nil, "/v1/service_instances/id/operations/1234", nil)
 						fakeClient.StatusReturns(&smclientTypes.Operation{
 							ID:    "1234",
-							Type:  string(smTypes.UPDATE),
-							State: string(smTypes.IN_PROGRESS),
+							Type:  smClientTypes.UPDATE,
+							State: smClientTypes.IN_PROGRESS,
 						}, nil)
 					})
 
@@ -507,8 +507,8 @@ var _ = Describe("ServiceInstance controller", func() {
 						Expect(updatedInstance.Status.Conditions[0].Reason).To(Equal(UpdateInProgress))
 						fakeClient.StatusReturns(&smclientTypes.Operation{
 							ID:    "1234",
-							Type:  string(smTypes.UPDATE),
-							State: string(smTypes.FAILED),
+							Type:  smClientTypes.UPDATE,
+							State: smClientTypes.FAILED,
 						}, nil)
 						Eventually(func() bool {
 							_ = k8sClient.Get(ctx, defaultLookupKey, updatedInstance)
@@ -522,7 +522,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						fakeClient.UpdateInstanceReturnsOnCall(0, nil, "/v1/service_instances/id/operations/1234", nil)
 						fakeClient.UpdateInstanceReturnsOnCall(1, nil, "", nil)
 						fakeClient.StatusReturns(nil, &sm.ServiceManagerError{StatusCode: http.StatusNotFound})
-						smInstance := &smclientTypes.ServiceInstance{ID: fakeInstanceID, Ready: true, LastOperation: &smTypes.Operation{State: smTypes.SUCCEEDED, Type: smTypes.UPDATE}}
+						smInstance := &smclientTypes.ServiceInstance{ID: fakeInstanceID, Ready: true, LastOperation: &smClientTypes.Operation{State: smClientTypes.SUCCEEDED, Type: smClientTypes.UPDATE}}
 						fakeClient.GetInstanceByIDReturns(smInstance, nil)
 						fakeClient.ListInstancesReturns(&smclientTypes.ServiceInstances{
 							ServiceInstances: []smclientTypes.ServiceInstance{*smInstance},
@@ -605,8 +605,8 @@ var _ = Describe("ServiceInstance controller", func() {
 				fakeClient.DeprovisionReturns("/v1/service_instances/id/operations/1234", nil)
 				fakeClient.StatusReturns(&smclientTypes.Operation{
 					ID:    "1234",
-					Type:  string(smTypes.DELETE),
-					State: string(smTypes.IN_PROGRESS),
+					Type:  smClientTypes.DELETE,
+					State: smClientTypes.IN_PROGRESS,
 				}, nil)
 				deleteInstance(ctx, serviceInstance, false)
 				Eventually(func() bool {
@@ -622,8 +622,8 @@ var _ = Describe("ServiceInstance controller", func() {
 				JustBeforeEach(func() {
 					fakeClient.StatusReturns(&smclientTypes.Operation{
 						ID:    "1234",
-						Type:  string(smTypes.DELETE),
-						State: string(smTypes.SUCCEEDED),
+						Type:  smClientTypes.DELETE,
+						State: smClientTypes.SUCCEEDED,
 					}, nil)
 				})
 				It("should delete the k8s instance", func() {
@@ -635,8 +635,8 @@ var _ = Describe("ServiceInstance controller", func() {
 				JustBeforeEach(func() {
 					fakeClient.StatusReturns(&smclientTypes.Operation{
 						ID:    "1234",
-						Type:  string(smTypes.DELETE),
-						State: string(smTypes.FAILED),
+						Type:  smClientTypes.DELETE,
+						State: smClientTypes.FAILED,
 					}, nil)
 				})
 
@@ -670,14 +670,14 @@ var _ = Describe("ServiceInstance controller", func() {
 			})
 
 			type TestCase struct {
-				lastOpType  smTypes.OperationCategory
-				lastOpState smTypes.OperationState
+				lastOpType  smClientTypes.OperationCategory
+				lastOpState smClientTypes.OperationState
 			}
 			DescribeTable("instance exist in SM", func(testCase TestCase) {
 				recoveredInstance := smclientTypes.ServiceInstance{
 					ID:            fakeInstanceID,
 					Name:          fakeInstanceName,
-					LastOperation: &smTypes.Operation{State: testCase.lastOpState, Type: testCase.lastOpType},
+					LastOperation: &smClientTypes.Operation{State: testCase.lastOpState, Type: testCase.lastOpType},
 				}
 				fakeClient.ListInstancesReturns(&smclientTypes.ServiceInstances{
 					ServiceInstances: []smclientTypes.ServiceInstance{recoveredInstance}}, nil)
@@ -686,13 +686,13 @@ var _ = Describe("ServiceInstance controller", func() {
 				deleteInstance(ctx, serviceInstance, true)
 				Expect(fakeClient.DeprovisionCallCount()).To(Equal(1))
 			},
-				Entry("last operation is CREATE SUCCEEDED", TestCase{lastOpType: smTypes.CREATE, lastOpState: smTypes.SUCCEEDED}),
-				Entry("last operation is CREATE FAILED", TestCase{lastOpType: smTypes.CREATE, lastOpState: smTypes.FAILED}),
-				Entry("last operation is UPDATE SUCCEEDED", TestCase{lastOpType: smTypes.UPDATE, lastOpState: smTypes.SUCCEEDED}),
-				Entry("last operation is UPDATE FAILED", TestCase{lastOpType: smTypes.UPDATE, lastOpState: smTypes.FAILED}),
-				Entry("last operation is CREATE IN_PROGRESS", TestCase{lastOpType: smTypes.CREATE, lastOpState: smTypes.IN_PROGRESS}),
-				Entry("last operation is UPDATE IN_PROGRESS", TestCase{lastOpType: smTypes.UPDATE, lastOpState: smTypes.IN_PROGRESS}),
-				Entry("last operation is DELETE IN_PROGRESS", TestCase{lastOpType: smTypes.DELETE, lastOpState: smTypes.IN_PROGRESS}))
+				Entry("last operation is CREATE SUCCEEDED", TestCase{lastOpType: smClientTypes.CREATE, lastOpState: smClientTypes.SUCCEEDED}),
+				Entry("last operation is CREATE FAILED", TestCase{lastOpType: smClientTypes.CREATE, lastOpState: smClientTypes.FAILED}),
+				Entry("last operation is UPDATE SUCCEEDED", TestCase{lastOpType: smClientTypes.UPDATE, lastOpState: smClientTypes.SUCCEEDED}),
+				Entry("last operation is UPDATE FAILED", TestCase{lastOpType: smClientTypes.UPDATE, lastOpState: smClientTypes.FAILED}),
+				Entry("last operation is CREATE IN_PROGRESS", TestCase{lastOpType: smClientTypes.CREATE, lastOpState: smClientTypes.IN_PROGRESS}),
+				Entry("last operation is UPDATE IN_PROGRESS", TestCase{lastOpType: smClientTypes.UPDATE, lastOpState: smClientTypes.IN_PROGRESS}),
+				Entry("last operation is DELETE IN_PROGRESS", TestCase{lastOpType: smClientTypes.DELETE, lastOpState: smClientTypes.IN_PROGRESS}))
 		})
 	})
 
@@ -701,7 +701,7 @@ var _ = Describe("ServiceInstance controller", func() {
 			recoveredInstance := smclientTypes.ServiceInstance{
 				ID:            fakeInstanceID,
 				Name:          fakeInstanceName,
-				LastOperation: &smTypes.Operation{State: smTypes.SUCCEEDED, Type: smTypes.CREATE},
+				LastOperation: &smClientTypes.Operation{State: smClientTypes.SUCCEEDED, Type: smClientTypes.CREATE},
 			}
 			BeforeEach(func() {
 				fakeClient.ProvisionReturns(nil, fmt.Errorf("ERROR"))
@@ -725,7 +725,7 @@ var _ = Describe("ServiceInstance controller", func() {
 			Context("last operation", func() {
 				When("last operation state is SUCCEEDED", func() {
 					BeforeEach(func() {
-						recoveredInstance.LastOperation = &smTypes.Operation{State: smTypes.SUCCEEDED, Type: smTypes.CREATE}
+						recoveredInstance.LastOperation = &smClientTypes.Operation{State: smClientTypes.SUCCEEDED, Type: smClientTypes.CREATE}
 						fakeClient.ListInstancesReturns(&smclientTypes.ServiceInstances{
 							ServiceInstances: []smclientTypes.ServiceInstance{recoveredInstance}}, nil)
 					})
@@ -738,17 +738,17 @@ var _ = Describe("ServiceInstance controller", func() {
 
 				When("last operation state is PENDING and ends with success", func() {
 					BeforeEach(func() {
-						recoveredInstance.LastOperation = &smTypes.Operation{State: smTypes.PENDING, Type: smTypes.CREATE}
+						recoveredInstance.LastOperation = &smClientTypes.Operation{State: smClientTypes.PENDING, Type: smClientTypes.CREATE}
 						fakeClient.ListInstancesReturns(&smclientTypes.ServiceInstances{
 							ServiceInstances: []smclientTypes.ServiceInstance{recoveredInstance}}, nil)
-						fakeClient.StatusReturns(&smclientTypes.Operation{ResourceID: fakeInstanceID, State: string(smTypes.PENDING), Type: string(smTypes.CREATE)}, nil)
+						fakeClient.StatusReturns(&smclientTypes.Operation{ResourceID: fakeInstanceID, State: smClientTypes.PENDING, Type: smClientTypes.CREATE}, nil)
 					})
 					It("should recover the existing instance and poll until instance is ready", func() {
 						serviceInstance = createInstance(ctx, instanceSpec)
 						Expect(serviceInstance.Status.InstanceID).To(Equal(fakeInstanceID))
 						Expect(fakeClient.ProvisionCallCount()).To(Equal(0))
 						Expect(serviceInstance.Status.Conditions[0].Reason).To(Equal(CreateInProgress))
-						fakeClient.StatusReturns(&smclientTypes.Operation{ResourceID: fakeInstanceID, State: string(smTypes.SUCCEEDED), Type: string(smTypes.CREATE)}, nil)
+						fakeClient.StatusReturns(&smclientTypes.Operation{ResourceID: fakeInstanceID, State: smClientTypes.SUCCEEDED, Type: smClientTypes.CREATE}, nil)
 						Eventually(func() bool {
 							Expect(k8sClient.Get(ctx, defaultLookupKey, serviceInstance)).Should(Succeed())
 							return isReady(serviceInstance)
@@ -758,7 +758,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 				When("last operation state is FAILED", func() {
 					BeforeEach(func() {
-						recoveredInstance.LastOperation = &smTypes.Operation{State: smTypes.FAILED, Type: smTypes.CREATE}
+						recoveredInstance.LastOperation = &smClientTypes.Operation{State: smClientTypes.FAILED, Type: smClientTypes.CREATE}
 						fakeClient.ListInstancesReturns(&smclientTypes.ServiceInstances{
 							ServiceInstances: []smclientTypes.ServiceInstance{recoveredInstance}}, nil)
 					})
