@@ -3,10 +3,8 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"time"
-
 	"github.com/SAP/sap-btp-service-operator/api"
+	"net/http"
 
 	v1 "k8s.io/api/core/v1"
 
@@ -277,7 +275,6 @@ func setFailureConditions(operationType smTypes.OperationCategory, errorMessage 
 		Reason:             reason,
 		Message:            message,
 		ObservedGeneration: object.GetGeneration(),
-		LastTransitionTime: metav1.NewTime(time.Now()),
 	}
 	meta.SetStatusCondition(&conditions, lastOpCondition)
 
@@ -287,7 +284,6 @@ func setFailureConditions(operationType smTypes.OperationCategory, errorMessage 
 		Reason:             reason,
 		Message:            message,
 		ObservedGeneration: object.GetGeneration(),
-		LastTransitionTime: metav1.NewTime(time.Now()),
 	}
 	meta.SetStatusCondition(&conditions, failedCondition)
 	meta.SetStatusCondition(&conditions, getReadyCondition(object))
