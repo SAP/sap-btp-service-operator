@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/SAP/sap-btp-service-operator/api"
 
@@ -269,13 +270,14 @@ func setFailureConditions(operationType smTypes.OperationCategory, errorMessage 
 		reason = object.GetConditions()[0].Reason
 	}
 
-	conditions := object.GetConditions()
+	conditions := []metav1.Condition{}
 	lastOpCondition := metav1.Condition{
 		Type:               api.ConditionSucceeded,
 		Status:             metav1.ConditionFalse,
 		Reason:             reason,
 		Message:            message,
 		ObservedGeneration: object.GetGeneration(),
+		LastTransitionTime: metav1.NewTime(time.Now()),
 	}
 	meta.SetStatusCondition(&conditions, lastOpCondition)
 
@@ -285,6 +287,7 @@ func setFailureConditions(operationType smTypes.OperationCategory, errorMessage 
 		Reason:             reason,
 		Message:            message,
 		ObservedGeneration: object.GetGeneration(),
+		LastTransitionTime: metav1.NewTime(time.Now()),
 	}
 	meta.SetStatusCondition(&conditions, failedCondition)
 	meta.SetStatusCondition(&conditions, getReadyCondition(object))
@@ -315,6 +318,19 @@ func isTransientError(ctx context.Context, err error) bool {
 
 func (r *BaseReconciler) markAsNonTransientError(ctx context.Context, operationType smTypes.OperationCategory, nonTransientErr error, object api.SAPBTPResource) (ctrl.Result, error) {
 	log := GetLogger(ctx)
+
+	// handle a situation when the broker returns a different error message for the same
+	// error type (for example including the correlation id which is different for each request in the error message)
+	failedCond := meta.FindStatusCondition(object.GetConditions(), api.ConditionFailed)
+	if failedCond != nil && failedCond.Status == metav1.ConditionTrue {
+		if time.Since(failedCond.LastTransitionTime.Time) < r.Config.RetryMaxDelay {
+			if operationType == smTypes.DELETE {
+				return ctrl.Result{}, nonTransientErr
+			}
+			return ctrl.Result{}, nil
+		}
+	}
+
 	setFailureConditions(operationType, nonTransientErr.Error(), object)
 	if operationType != smTypes.DELETE {
 		log.Info(fmt.Sprintf("operation %s of %s encountered a non transient error %s, giving up operation :(", operationType, object.GetControllerName(), nonTransientErr.Error()))
