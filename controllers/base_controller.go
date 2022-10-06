@@ -3,8 +3,9 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"github.com/SAP/sap-btp-service-operator/api"
 	"net/http"
+
+	"github.com/SAP/sap-btp-service-operator/api"
 
 	v1 "k8s.io/api/core/v1"
 
