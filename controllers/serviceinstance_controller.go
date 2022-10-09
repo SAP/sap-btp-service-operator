@@ -21,6 +21,9 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+
 	servicesv1 "github.com/SAP/sap-btp-service-operator/api/v1"
 
 	"github.com/SAP/sap-btp-service-operator/api"
@@ -442,6 +445,7 @@ func getOfferingTags(smClient sm.Client, planID string) ([]string, error) {
 func (r *ServiceInstanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&servicesv1.ServiceInstance{}).
+		WithOptions(controller.Options{RateLimiter: workqueue.NewItemExponentialFailureRateLimiter(r.Config.RetryBaseDelay, r.Config.RetryMaxDelay)}).
 		Complete(r)
 }
 

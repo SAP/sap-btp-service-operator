@@ -22,6 +22,9 @@ import (
 	"fmt"
 	"time"
 
+	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+
 	servicesv1 "github.com/SAP/sap-btp-service-operator/api/v1"
 
 	"github.com/SAP/sap-btp-service-operator/api"
@@ -292,7 +295,6 @@ func (r *ServiceBindingReconciler) delete(ctx context.Context, smClient sm.Clien
 		log.Info(fmt.Sprintf("Deleting binding with id %v from SM", serviceBinding.Status.BindingID))
 		operationURL, unbindErr := smClient.Unbind(serviceBinding.Status.BindingID, nil, buildUserInfo(ctx, serviceBinding.Spec.UserInfo))
 		if unbindErr != nil {
-			log.Error(unbindErr, "failed to delete binding")
 			// delete will proceed anyway
 			return r.markAsNonTransientError(ctx, smTypes.DELETE, unbindErr, serviceBinding)
 		}
@@ -439,6 +441,7 @@ func (r *ServiceBindingReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&servicesv1.ServiceBinding{}).
 		Owns(&corev1.Secret{}).
+		WithOptions(controller.Options{RateLimiter: workqueue.NewItemExponentialFailureRateLimiter(r.Config.RetryBaseDelay, r.Config.RetryMaxDelay)}).
 		Complete(r)
 }
 

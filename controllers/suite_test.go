@@ -110,7 +110,9 @@ var _ = BeforeSuite(func(done Done) {
 	Expect(err).ToNot(HaveOccurred())
 
 	fakeClient = &smfakes.FakeClient{}
-	testConfig := config.Config{SyncPeriod: syncPeriod, PollInterval: pollInterval}
+	testConfig := config.Get()
+	testConfig.SyncPeriod = syncPeriod
+	testConfig.PollInterval = pollInterval
 	err = (&ServiceInstanceReconciler{
 		BaseReconciler: &BaseReconciler{
 			Client:   k8sManager.GetClient(),
