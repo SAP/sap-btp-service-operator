@@ -525,7 +525,7 @@ var _ = Describe("Client test", func() {
 						handlerDetails = append(handlerDetails,
 							HandlerDetails{Method: http.MethodPatch, Path: types.ServiceInstancesURL + "/" + instance.ID, ResponseBody: responseBody, ResponseStatusCode: http.StatusBadRequest})
 					})
-					FIt("should return error without url and description if invalid response body", func() {
+					It("should return error without url and description if invalid response body", func() {
 						responseInstance, location, err := client.UpdateInstance(instance.ID, instance, serviceName, planName, params, "test-user")
 
 						Expect(err).Should(HaveOccurred())
