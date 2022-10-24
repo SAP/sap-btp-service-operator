@@ -100,7 +100,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	serviceInstance.SetObservedGeneration(serviceInstance.Generation)
 
 	if serviceInstance.Status.InstanceID == "" {
-		//Recovery
+		// Recovery
 		log.Info("Instance ID is empty, checking if instance exist in SM")
 		instance, err := r.getInstanceForRecovery(ctx, smClient, serviceInstance)
 		if err != nil {
@@ -113,11 +113,11 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			return ctrl.Result{}, r.updateStatus(ctx, serviceInstance)
 		}
 
-		//if instance was not recovered then create new instance
+		// if instance was not recovered then create new instance
 		return r.createInstance(ctx, smClient, serviceInstance)
 	}
 
-	//Update
+	// Update
 	if serviceInstance.Status.Ready == metav1.ConditionTrue {
 		return r.updateInstance(ctx, smClient, serviceInstance)
 	}
@@ -187,7 +187,7 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	log.Info("Creating instance in SM")
 	_, instanceParameters, err := buildParameters(r.Client, serviceInstance.Namespace, serviceInstance.Spec.ParametersFrom, serviceInstance.Spec.Parameters)
 	if err != nil {
-		//if parameters are invalid there is nothing we can do, the user should fix it according to the error message in the condition
+		// if parameters are invalid there is nothing we can do, the user should fix it according to the error message in the condition
 		log.Error(err, "failed to parse instance parameters")
 		return r.markAsNonTransientError(ctx, smClientTypes.CREATE, err, serviceInstance)
 	}
@@ -358,8 +358,8 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 
 func (r *ServiceInstanceReconciler) resyncInstanceStatus(ctx context.Context, smClient sm.Client, k8sInstance *servicesv1.ServiceInstance, smInstance *smClientTypes.ServiceInstance) {
 	log := GetLogger(ctx)
-	//set observed generation to 0 because we dont know which generation the current state in SM represents,
-	//unless the generation is 1 and SM is in the same state as operator
+	// set observed generation to 0 because we dont know which generation the current state in SM represents,
+	// unless the generation is 1 and SM is in the same state as operator
 	if k8sInstance.Generation == 1 {
 		k8sInstance.SetObservedGeneration(1)
 	} else {
@@ -395,7 +395,7 @@ func (r *ServiceInstanceReconciler) resyncInstanceStatus(ctx context.Context, sm
 	case smClientTypes.PENDING:
 		fallthrough
 	case smClientTypes.IN_PROGRESS:
-		k8sInstance.Status.OperationURL = sm.BuildOperationURL(smInstance.LastOperation.ID, smInstance.ID, smClientTypes.ServicePlansURL)
+		k8sInstance.Status.OperationURL = sm.BuildOperationURL(smInstance.LastOperation.ID, smInstance.ID, smClientTypes.ServiceInstancesURL)
 		k8sInstance.Status.OperationType = smInstance.LastOperation.Type
 		setInProgressConditions(smInstance.LastOperation.Type, smInstance.LastOperation.Description, k8sInstance)
 	case smClientTypes.SUCCEEDED:

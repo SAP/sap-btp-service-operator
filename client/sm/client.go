@@ -131,7 +131,7 @@ func (client *serviceManagerClient) Provision(instance *types.ServiceInstance, s
 
 	instance.ServicePlanID = planInfo.planID
 
-	location, err := client.register(instance, types.ServicePlansURL, q, user, &newInstance)
+	location, err := client.register(instance, types.ServiceInstancesURL, q, user, &newInstance)
 	if err != nil {
 		return nil, err
 	}
@@ -169,7 +169,7 @@ func (client *serviceManagerClient) Bind(binding *types.ServiceBinding, q *Param
 // ListInstances returns service instances registered in the Service Manager satisfying provided queries
 func (client *serviceManagerClient) ListInstances(q *Parameters) (*types.ServiceInstances, error) {
 	instances := &types.ServiceInstances{}
-	err := client.list(&instances.ServiceInstances, types.ServicePlansURL, q)
+	err := client.list(&instances.ServiceInstances, types.ServiceInstancesURL, q)
 
 	return instances, err
 }
@@ -177,7 +177,7 @@ func (client *serviceManagerClient) ListInstances(q *Parameters) (*types.Service
 // GetInstanceByID returns instance registered in the Service Manager satisfying provided queries
 func (client *serviceManagerClient) GetInstanceByID(id string, q *Parameters) (*types.ServiceInstance, error) {
 	instance := &types.ServiceInstance{}
-	err := client.get(instance, types.ServicePlansURL+"/"+id, q)
+	err := client.get(instance, types.ServiceInstancesURL+"/"+id, q)
 
 	return instance, err
 }
@@ -206,7 +206,7 @@ func (client *serviceManagerClient) Status(url string, q *Parameters) (*types.Op
 }
 
 func (client *serviceManagerClient) Deprovision(id string, q *Parameters, user string) (string, error) {
-	return client.delete(types.ServicePlansURL+"/"+id, q, user)
+	return client.delete(types.ServiceInstancesURL+"/"+id, q, user)
 }
 
 func (client *serviceManagerClient) Unbind(id string, q *Parameters, user string) (string, error) {
@@ -221,7 +221,7 @@ func (client *serviceManagerClient) UpdateInstance(id string, updatedInstance *t
 		return nil, "", err
 	}
 	updatedInstance.ServicePlanID = planInfo.planID
-	location, err := client.update(updatedInstance, types.ServicePlansURL, id, q, user, &result)
+	location, err := client.update(updatedInstance, types.ServiceInstancesURL, id, q, user, &result)
 	if err != nil {
 		return nil, "", err
 	}
