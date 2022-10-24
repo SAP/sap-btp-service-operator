@@ -272,7 +272,7 @@ var _ = Describe("ServiceInstance controller", func() {
 				fakeClient.StatusReturns(&smclientTypes.Operation{
 					ID:    "1234",
 					Type:  smClientTypes.CREATE,
-					State: smClientTypes.IN_PROGRESS,
+					State: smClientTypes.INPROGRESS,
 				}, nil)
 			})
 
@@ -314,7 +314,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					err := k8sClient.Update(ctx, serviceInstance)
 					Expect(err).ToNot(HaveOccurred())
 
-					//stop polling state
+					// stop polling state
 					fakeClient.StatusReturns(&smclientTypes.Operation{
 						ID:    "1234",
 						Type:  smClientTypes.CREATE,
@@ -335,14 +335,14 @@ var _ = Describe("ServiceInstance controller", func() {
 					serviceInstance.Spec.ExternalName = newName
 					deleteInstance(ctx, serviceInstance, false)
 
-					//stop polling state
+					// stop polling state
 					fakeClient.StatusReturns(&smclientTypes.Operation{
 						ID:    "1234",
 						Type:  smClientTypes.CREATE,
 						State: smClientTypes.SUCCEEDED,
 					}, nil)
 
-					//validate deletion
+					// validate deletion
 					Eventually(func() bool {
 						err := k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
 						return apierrors.IsNotFound(err)
@@ -405,7 +405,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						fakeClient.StatusReturns(&smclientTypes.Operation{
 							ID:    "1234",
 							Type:  smClientTypes.UPDATE,
-							State: smClientTypes.IN_PROGRESS,
+							State: smClientTypes.INPROGRESS,
 						}, nil)
 					})
 
@@ -438,7 +438,7 @@ var _ = Describe("ServiceInstance controller", func() {
 							err := k8sClient.Update(ctx, updatedInstance)
 							Expect(err).ToNot(HaveOccurred())
 
-							//stop polling state
+							// stop polling state
 							fakeClient.StatusReturns(&smclientTypes.Operation{
 								ID:    "1234",
 								Type:  smClientTypes.UPDATE,
@@ -456,14 +456,14 @@ var _ = Describe("ServiceInstance controller", func() {
 							serviceInstance.Spec = updateSpec()
 							updatedInstance := updateInstance(ctx, serviceInstance)
 							deleteInstance(ctx, updatedInstance, false)
-							//stop update polling
+							// stop update polling
 							fakeClient.StatusReturns(&smclientTypes.Operation{
 								ID:    "1234",
 								Type:  smClientTypes.UPDATE,
 								State: smClientTypes.SUCCEEDED,
 							}, nil)
 
-							//validate deletion
+							// validate deletion
 							Eventually(func() bool {
 								err := k8sClient.Get(ctx, defaultLookupKey, updatedInstance)
 								return apierrors.IsNotFound(err)
@@ -496,7 +496,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						fakeClient.StatusReturns(&smclientTypes.Operation{
 							ID:    "1234",
 							Type:  smClientTypes.UPDATE,
-							State: smClientTypes.IN_PROGRESS,
+							State: smClientTypes.INPROGRESS,
 						}, nil)
 					})
 
@@ -606,7 +606,7 @@ var _ = Describe("ServiceInstance controller", func() {
 				fakeClient.StatusReturns(&smclientTypes.Operation{
 					ID:    "1234",
 					Type:  smClientTypes.DELETE,
-					State: smClientTypes.IN_PROGRESS,
+					State: smClientTypes.INPROGRESS,
 				}, nil)
 				deleteInstance(ctx, serviceInstance, false)
 				Eventually(func() bool {
@@ -690,9 +690,9 @@ var _ = Describe("ServiceInstance controller", func() {
 				Entry("last operation is CREATE FAILED", TestCase{lastOpType: smClientTypes.CREATE, lastOpState: smClientTypes.FAILED}),
 				Entry("last operation is UPDATE SUCCEEDED", TestCase{lastOpType: smClientTypes.UPDATE, lastOpState: smClientTypes.SUCCEEDED}),
 				Entry("last operation is UPDATE FAILED", TestCase{lastOpType: smClientTypes.UPDATE, lastOpState: smClientTypes.FAILED}),
-				Entry("last operation is CREATE IN_PROGRESS", TestCase{lastOpType: smClientTypes.CREATE, lastOpState: smClientTypes.IN_PROGRESS}),
-				Entry("last operation is UPDATE IN_PROGRESS", TestCase{lastOpType: smClientTypes.UPDATE, lastOpState: smClientTypes.IN_PROGRESS}),
-				Entry("last operation is DELETE IN_PROGRESS", TestCase{lastOpType: smClientTypes.DELETE, lastOpState: smClientTypes.IN_PROGRESS}))
+				Entry("last operation is CREATE IN_PROGRESS", TestCase{lastOpType: smClientTypes.CREATE, lastOpState: smClientTypes.INPROGRESS}),
+				Entry("last operation is UPDATE IN_PROGRESS", TestCase{lastOpType: smClientTypes.UPDATE, lastOpState: smClientTypes.INPROGRESS}),
+				Entry("last operation is DELETE IN_PROGRESS", TestCase{lastOpType: smClientTypes.DELETE, lastOpState: smClientTypes.INPROGRESS}))
 		})
 	})
 

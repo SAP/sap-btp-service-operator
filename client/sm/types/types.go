@@ -21,8 +21,8 @@ const (
 type OperationState string
 
 const (
-	PENDING     OperationState = "pending"
-	SUCCEEDED   OperationState = "succeeded"
-	IN_PROGRESS OperationState = "in progress"
-	FAILED      OperationState = "failed"
+	PENDING    OperationState = "pending"
+	SUCCEEDED  OperationState = "succeeded"
+	INPROGRESS OperationState = "in progress"
+	FAILED     OperationState = "failed"
 )

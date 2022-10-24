@@ -337,12 +337,12 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, smClient sm.Client,
 		return r.markAsTransientError(ctx, serviceBinding.Status.OperationType, err, serviceBinding)
 	}
 	switch status.State {
-	case smClientTypes.IN_PROGRESS:
+	case smClientTypes.INPROGRESS:
 		fallthrough
 	case smClientTypes.PENDING:
 		return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, nil
 	case smClientTypes.FAILED:
-		//non transient error - should not retry
+		// non transient error - should not retry
 		setFailureConditions(smClientTypes.OperationCategory(status.Type), status.Description, serviceBinding)
 		if serviceBinding.Status.OperationType == smClientTypes.DELETE {
 			serviceBinding.Status.OperationURL = ""
@@ -463,7 +463,7 @@ func (r *ServiceBindingReconciler) resyncBindingStatus(k8sBinding *servicesv1.Se
 	switch bindingStatus {
 	case smClientTypes.PENDING:
 		fallthrough
-	case smClientTypes.IN_PROGRESS:
+	case smClientTypes.INPROGRESS:
 		k8sBinding.Status.OperationURL = sm.BuildOperationURL(smBinding.LastOperation.ID, smBinding.ID, smClientTypes.ServiceBindingsURL)
 		k8sBinding.Status.OperationType = smBinding.LastOperation.Type
 		setInProgressConditions(smBinding.LastOperation.Type, smBinding.LastOperation.Description, k8sBinding)

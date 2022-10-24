@@ -664,7 +664,7 @@ var _ = Describe("ServiceBinding controller", func() {
 
 			When("referenced service instance is not ready", func() {
 				JustBeforeEach(func() {
-					fakeClient.StatusReturns(&smclientTypes.Operation{ResourceID: fakeInstanceID, State: smClientTypes.IN_PROGRESS}, nil)
+					fakeClient.StatusReturns(&smclientTypes.Operation{ResourceID: fakeInstanceID, State: smClientTypes.INPROGRESS}, nil)
 					setInProgressConditions(smClientTypes.CREATE, "", createdInstance)
 					createdInstance.Status.OperationURL = "/1234"
 					createdInstance.Status.OperationType = smClientTypes.CREATE
@@ -916,7 +916,7 @@ var _ = Describe("ServiceBinding controller", func() {
 						&smclientTypes.ServiceBindings{
 							ServiceBindings: []smclientTypes.ServiceBinding{*fakeBinding(testCase.lastOpState)},
 						}, nil)
-					fakeClient.StatusReturns(&smclientTypes.Operation{ResourceID: fakeBindingID, State: smClientTypes.IN_PROGRESS}, nil)
+					fakeClient.StatusReturns(&smclientTypes.Operation{ResourceID: fakeBindingID, State: smClientTypes.INPROGRESS}, nil)
 				})
 				JustAfterEach(func() {
 					fakeClient.StatusReturns(&smclientTypes.Operation{ResourceID: fakeBindingID, State: smClientTypes.SUCCEEDED}, nil)
@@ -941,7 +941,7 @@ var _ = Describe("ServiceBinding controller", func() {
 						switch testCase.lastOpState {
 						case smClientTypes.FAILED:
 							Expect(isFailed(createdBinding))
-						case smClientTypes.IN_PROGRESS:
+						case smClientTypes.INPROGRESS:
 							Expect(isInProgress(createdBinding))
 						case smClientTypes.SUCCEEDED:
 							Expect(isReady(createdBinding))
@@ -953,10 +953,10 @@ var _ = Describe("ServiceBinding controller", func() {
 
 		for _, testCase := range []recoveryTestCase{
 			{lastOpType: smClientTypes.CREATE, lastOpState: smClientTypes.SUCCEEDED},
-			{lastOpType: smClientTypes.CREATE, lastOpState: smClientTypes.IN_PROGRESS},
+			{lastOpType: smClientTypes.CREATE, lastOpState: smClientTypes.INPROGRESS},
 			{lastOpType: smClientTypes.CREATE, lastOpState: smClientTypes.FAILED},
 			{lastOpType: smClientTypes.DELETE, lastOpState: smClientTypes.SUCCEEDED},
-			{lastOpType: smClientTypes.DELETE, lastOpState: smClientTypes.IN_PROGRESS},
+			{lastOpType: smClientTypes.DELETE, lastOpState: smClientTypes.INPROGRESS},
 			{lastOpType: smClientTypes.DELETE, lastOpState: smClientTypes.FAILED},
 		} {
 			executeTestCase(testCase)

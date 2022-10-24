@@ -52,7 +52,7 @@ const (
 	Blocked = "Blocked"
 	Unknown = "Unknown"
 
-	//Cred Rotation
+	// Cred Rotation
 	CredPreparing = "Preparing"
 	CredRotating  = "Rotating"
 )
@@ -156,7 +156,7 @@ func getConditionReason(opType smClientTypes.OperationCategory, state smClientTy
 		} else {
 			return Finished
 		}
-	case smClientTypes.IN_PROGRESS, smClientTypes.PENDING:
+	case smClientTypes.INPROGRESS, smClientTypes.PENDING:
 		if opType == smClientTypes.CREATE {
 			return CreateInProgress
 		} else if opType == smClientTypes.UPDATE {
@@ -199,7 +199,7 @@ func setInProgressConditions(operationType smClientTypes.OperationCategory, mess
 	lastOpCondition := metav1.Condition{
 		Type:               api.ConditionSucceeded,
 		Status:             metav1.ConditionFalse,
-		Reason:             getConditionReason(operationType, smClientTypes.IN_PROGRESS),
+		Reason:             getConditionReason(operationType, smClientTypes.INPROGRESS),
 		Message:            message,
 		ObservedGeneration: object.GetGeneration(),
 	}
@@ -292,7 +292,7 @@ func setFailureConditions(operationType smClientTypes.OperationCategory, errorMe
 	object.SetConditions(conditions)
 }
 
-//blocked condition marks to the user that action from his side is required, this is considered as in progress operation
+// blocked condition marks to the user that action from his side is required, this is considered as in progress operation
 func setBlockedCondition(message string, object api.SAPBTPResource) {
 	setInProgressConditions(Unknown, message, object)
 	lastOpCondition := meta.FindStatusCondition(object.GetConditions(), api.ConditionSucceeded)

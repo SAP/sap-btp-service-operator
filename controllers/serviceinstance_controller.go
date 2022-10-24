@@ -144,7 +144,7 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client
 	}
 
 	switch status.State {
-	case smClientTypes.IN_PROGRESS:
+	case smClientTypes.INPROGRESS:
 		fallthrough
 	case smClientTypes.PENDING:
 		return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, nil
@@ -394,7 +394,7 @@ func (r *ServiceInstanceReconciler) resyncInstanceStatus(ctx context.Context, sm
 	switch instanceState {
 	case smClientTypes.PENDING:
 		fallthrough
-	case smClientTypes.IN_PROGRESS:
+	case smClientTypes.INPROGRESS:
 		k8sInstance.Status.OperationURL = sm.BuildOperationURL(smInstance.LastOperation.ID, smInstance.ID, smClientTypes.ServiceInstancesURL)
 		k8sInstance.Status.OperationType = smInstance.LastOperation.Type
 		setInProgressConditions(smInstance.LastOperation.Type, smInstance.LastOperation.Description, k8sInstance)
