@@ -513,11 +513,7 @@ func handleResponseError(response *http.Response) error {
 }
 
 func bodyToBytes(closer io.ReadCloser) ([]byte, error) {
-	defer func() {
-		if err := closer.Close(); err != nil {
-			// todo log
-		}
-	}()
+	defer closer.Close()
 
 	body, err := ioutil.ReadAll(closer)
 	if err != nil {
