@@ -3,30 +3,23 @@ package controllers
 import (
 	"context"
 	"fmt"
-	smClientTypes "github.com/SAP/sap-btp-service-operator/client/sm/types"
 	"net/http"
 
 	"github.com/SAP/sap-btp-service-operator/api"
-
-	v1 "k8s.io/api/core/v1"
-
-	"k8s.io/client-go/tools/record"
-
 	"github.com/SAP/sap-btp-service-operator/client/sm"
-
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-
-	ctrl "sigs.k8s.io/controller-runtime"
-
-	"k8s.io/apimachinery/pkg/api/meta"
-	apimachinerytypes "k8s.io/apimachinery/pkg/types"
-
+	smClientTypes "github.com/SAP/sap-btp-service-operator/client/sm/types"
 	"github.com/SAP/sap-btp-service-operator/internal/config"
 	"github.com/SAP/sap-btp-service-operator/internal/secrets"
 	"github.com/go-logr/logr"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	apimachinerytypes "k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (

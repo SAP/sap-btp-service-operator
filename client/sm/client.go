@@ -41,6 +41,7 @@ const (
 )
 
 // Client should be implemented by SM clients
+//
 //go:generate counterfeiter . Client
 type Client interface {
 	ListInstances(*Parameters) (*types.ServiceInstances, error)
