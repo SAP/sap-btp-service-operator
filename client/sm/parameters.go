@@ -3,8 +3,6 @@ package sm
 import (
 	"net/url"
 	"strings"
-
-	smquery "github.com/Peripli/service-manager/pkg/query"
 )
 
 // Parameters holds common query parameters
@@ -13,6 +11,11 @@ type Parameters struct {
 	LabelQuery    []string
 	GeneralParams []string
 }
+
+const (
+	fieldQuery = "fieldQuery"
+	labelQuery = "labelQuery"
+)
 
 // Encode encodes the parameters as URL query parameters
 func (p *Parameters) Encode() string {
@@ -23,11 +26,11 @@ func (p *Parameters) Encode() string {
 	v := url.Values{}
 
 	if len(p.FieldQuery) > 0 {
-		v.Set(string(smquery.FieldQuery), strings.Join(p.FieldQuery, " and "))
+		v.Set(fieldQuery, strings.Join(p.FieldQuery, " and "))
 	}
 
 	if len(p.LabelQuery) > 0 {
-		v.Set(string(smquery.LabelQuery), strings.Join(p.LabelQuery, " and "))
+		v.Set(labelQuery, strings.Join(p.LabelQuery, " and "))
 	}
 
 	for _, param := range p.GeneralParams {

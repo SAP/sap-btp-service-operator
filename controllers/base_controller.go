@@ -6,27 +6,20 @@ import (
 	"net/http"
 
 	"github.com/SAP/sap-btp-service-operator/api"
-
-	v1 "k8s.io/api/core/v1"
-
-	"k8s.io/client-go/tools/record"
-
 	"github.com/SAP/sap-btp-service-operator/client/sm"
-
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-
-	ctrl "sigs.k8s.io/controller-runtime"
-
-	"k8s.io/apimachinery/pkg/api/meta"
-	apimachinerytypes "k8s.io/apimachinery/pkg/types"
-
-	smTypes "github.com/Peripli/service-manager/pkg/types"
+	smClientTypes "github.com/SAP/sap-btp-service-operator/client/sm/types"
 	"github.com/SAP/sap-btp-service-operator/internal/config"
 	"github.com/SAP/sap-btp-service-operator/internal/secrets"
 	"github.com/go-logr/logr"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	apimachinerytypes "k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
@@ -52,7 +45,7 @@ const (
 	Blocked = "Blocked"
 	Unknown = "Unknown"
 
-	//Cred Rotation
+	// Cred Rotation
 	CredPreparing = "Preparing"
 	CredRotating  = "Rotating"
 )
@@ -137,41 +130,41 @@ func (r *BaseReconciler) updateStatus(ctx context.Context, object api.SAPBTPReso
 
 func (r *BaseReconciler) init(ctx context.Context, obj api.SAPBTPResource) error {
 	obj.SetReady(metav1.ConditionFalse)
-	setInProgressConditions(smTypes.CREATE, "Pending", obj)
+	setInProgressConditions(smClientTypes.CREATE, "Pending", obj)
 	if err := r.updateStatus(ctx, obj); err != nil {
 		return err
 	}
 	return nil
 }
 
-func getConditionReason(opType smTypes.OperationCategory, state smTypes.OperationState) string {
+func getConditionReason(opType smClientTypes.OperationCategory, state smClientTypes.OperationState) string {
 	switch state {
-	case smTypes.SUCCEEDED:
-		if opType == smTypes.CREATE {
+	case smClientTypes.SUCCEEDED:
+		if opType == smClientTypes.CREATE {
 			return Created
-		} else if opType == smTypes.UPDATE {
+		} else if opType == smClientTypes.UPDATE {
 			return Updated
-		} else if opType == smTypes.DELETE {
+		} else if opType == smClientTypes.DELETE {
 			return Deleted
 		} else {
 			return Finished
 		}
-	case smTypes.IN_PROGRESS, smTypes.PENDING:
-		if opType == smTypes.CREATE {
+	case smClientTypes.INPROGRESS, smClientTypes.PENDING:
+		if opType == smClientTypes.CREATE {
 			return CreateInProgress
-		} else if opType == smTypes.UPDATE {
+		} else if opType == smClientTypes.UPDATE {
 			return UpdateInProgress
-		} else if opType == smTypes.DELETE {
+		} else if opType == smClientTypes.DELETE {
 			return DeleteInProgress
 		} else {
 			return InProgress
 		}
-	case smTypes.FAILED:
-		if opType == smTypes.CREATE {
+	case smClientTypes.FAILED:
+		if opType == smClientTypes.CREATE {
 			return CreateFailed
-		} else if opType == smTypes.UPDATE {
+		} else if opType == smClientTypes.UPDATE {
 			return UpdateFailed
-		} else if opType == smTypes.DELETE {
+		} else if opType == smClientTypes.DELETE {
 			return DeleteFailed
 		} else {
 			return Failed
@@ -181,13 +174,13 @@ func getConditionReason(opType smTypes.OperationCategory, state smTypes.Operatio
 	return Unknown
 }
 
-func setInProgressConditions(operationType smTypes.OperationCategory, message string, object api.SAPBTPResource) {
+func setInProgressConditions(operationType smClientTypes.OperationCategory, message string, object api.SAPBTPResource) {
 	if len(message) == 0 {
-		if operationType == smTypes.CREATE {
+		if operationType == smClientTypes.CREATE {
 			message = fmt.Sprintf("%s is being created", object.GetControllerName())
-		} else if operationType == smTypes.UPDATE {
+		} else if operationType == smClientTypes.UPDATE {
 			message = fmt.Sprintf("%s is being updated", object.GetControllerName())
-		} else if operationType == smTypes.DELETE {
+		} else if operationType == smClientTypes.DELETE {
 			message = fmt.Sprintf("%s is being deleted", object.GetControllerName())
 		}
 	}
@@ -199,7 +192,7 @@ func setInProgressConditions(operationType smTypes.OperationCategory, message st
 	lastOpCondition := metav1.Condition{
 		Type:               api.ConditionSucceeded,
 		Status:             metav1.ConditionFalse,
-		Reason:             getConditionReason(operationType, smTypes.IN_PROGRESS),
+		Reason:             getConditionReason(operationType, smClientTypes.INPROGRESS),
 		Message:            message,
 		ObservedGeneration: object.GetGeneration(),
 	}
@@ -209,13 +202,13 @@ func setInProgressConditions(operationType smTypes.OperationCategory, message st
 	object.SetConditions(conditions)
 }
 
-func setSuccessConditions(operationType smTypes.OperationCategory, object api.SAPBTPResource) {
+func setSuccessConditions(operationType smClientTypes.OperationCategory, object api.SAPBTPResource) {
 	var message string
-	if operationType == smTypes.CREATE {
+	if operationType == smClientTypes.CREATE {
 		message = fmt.Sprintf("%s provisioned successfully", object.GetControllerName())
-	} else if operationType == smTypes.UPDATE {
+	} else if operationType == smClientTypes.UPDATE {
 		message = fmt.Sprintf("%s updated successfully", object.GetControllerName())
-	} else if operationType == smTypes.DELETE {
+	} else if operationType == smClientTypes.DELETE {
 		message = fmt.Sprintf("%s deleted successfully", object.GetControllerName())
 	}
 
@@ -226,7 +219,7 @@ func setSuccessConditions(operationType smTypes.OperationCategory, object api.SA
 	lastOpCondition := metav1.Condition{
 		Type:               api.ConditionSucceeded,
 		Status:             metav1.ConditionTrue,
-		Reason:             getConditionReason(operationType, smTypes.SUCCEEDED),
+		Reason:             getConditionReason(operationType, smClientTypes.SUCCEEDED),
 		Message:            message,
 		ObservedGeneration: object.GetGeneration(),
 	}
@@ -252,19 +245,19 @@ func setCredRotationInProgressConditions(reason, message string, object api.SAPB
 	object.SetConditions(conditions)
 }
 
-func setFailureConditions(operationType smTypes.OperationCategory, errorMessage string, object api.SAPBTPResource) {
+func setFailureConditions(operationType smClientTypes.OperationCategory, errorMessage string, object api.SAPBTPResource) {
 	var message string
-	if operationType == smTypes.CREATE {
+	if operationType == smClientTypes.CREATE {
 		message = fmt.Sprintf("%s create failed: %s", object.GetControllerName(), errorMessage)
-	} else if operationType == smTypes.UPDATE {
+	} else if operationType == smClientTypes.UPDATE {
 		message = fmt.Sprintf("%s update failed: %s", object.GetControllerName(), errorMessage)
-	} else if operationType == smTypes.DELETE {
+	} else if operationType == smClientTypes.DELETE {
 		message = fmt.Sprintf("%s deletion failed: %s", object.GetControllerName(), errorMessage)
 	}
 
 	var reason string
 	if operationType != Unknown {
-		reason = getConditionReason(operationType, smTypes.FAILED)
+		reason = getConditionReason(operationType, smClientTypes.FAILED)
 	} else {
 		reason = object.GetConditions()[0].Reason
 	}
@@ -292,7 +285,7 @@ func setFailureConditions(operationType smTypes.OperationCategory, errorMessage 
 	object.SetConditions(conditions)
 }
 
-//blocked condition marks to the user that action from his side is required, this is considered as in progress operation
+// blocked condition marks to the user that action from his side is required, this is considered as in progress operation
 func setBlockedCondition(message string, object api.SAPBTPResource) {
 	setInProgressConditions(Unknown, message, object)
 	lastOpCondition := meta.FindStatusCondition(object.GetConditions(), api.ConditionSucceeded)
@@ -313,10 +306,10 @@ func isTransientError(ctx context.Context, err error) bool {
 	return false
 }
 
-func (r *BaseReconciler) markAsNonTransientError(ctx context.Context, operationType smTypes.OperationCategory, nonTransientErr error, object api.SAPBTPResource) (ctrl.Result, error) {
+func (r *BaseReconciler) markAsNonTransientError(ctx context.Context, operationType smClientTypes.OperationCategory, nonTransientErr error, object api.SAPBTPResource) (ctrl.Result, error) {
 	log := GetLogger(ctx)
 	setFailureConditions(operationType, nonTransientErr.Error(), object)
-	if operationType != smTypes.DELETE {
+	if operationType != smClientTypes.DELETE {
 		log.Info(fmt.Sprintf("operation %s of %s encountered a non transient error %s, giving up operation :(", operationType, object.GetControllerName(), nonTransientErr.Error()))
 	}
 	object.SetObservedGeneration(object.GetGeneration())
@@ -324,13 +317,13 @@ func (r *BaseReconciler) markAsNonTransientError(ctx context.Context, operationT
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	if operationType == smTypes.DELETE {
+	if operationType == smClientTypes.DELETE {
 		return ctrl.Result{}, nonTransientErr
 	}
 	return ctrl.Result{}, nil
 }
 
-func (r *BaseReconciler) markAsTransientError(ctx context.Context, operationType smTypes.OperationCategory, transientErr error, object api.SAPBTPResource) (ctrl.Result, error) {
+func (r *BaseReconciler) markAsTransientError(ctx context.Context, operationType smClientTypes.OperationCategory, transientErr error, object api.SAPBTPResource) (ctrl.Result, error) {
 	log := GetLogger(ctx)
 	setInProgressConditions(operationType, transientErr.Error(), object)
 	log.Info(fmt.Sprintf("operation %s of %s encountered a transient error %s, retrying operation :)", operationType, object.GetControllerName(), transientErr.Error()))

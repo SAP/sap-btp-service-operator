@@ -10,6 +10,7 @@ import (
 )
 
 // HTTPClient interface
+//
 //go:generate counterfeiter . HTTPClient
 type HTTPClient interface {
 	Do(req *http.Request) (*http.Response, error)
