@@ -1,6 +1,6 @@
 module github.com/SAP/sap-btp-service-operator
 
-go 1.15
+go 1.18
 
 require (
 	github.com/go-logr/logr v0.3.0
