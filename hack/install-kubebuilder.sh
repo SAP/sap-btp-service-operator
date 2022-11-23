@@ -6,5 +6,5 @@ curl -L https://github.com/kubernetes-sigs/kubebuilder/releases/download/v3.7.0/
 
 # move to a long-term location and put it on your path
 # (you'll need to set the KUBEBUILDER_ASSETS env var if you put it somewhere else)
-sudo mv /tmp/kubebuilder_3.7.0_${os}_${arch} /usr/local/kubebuilder
+sudo mv /tmp/kubebuilder_${os}_${arch} /usr/local/kubebuilder
 export PATH=$PATH:/usr/local/kubebuilder/bin
