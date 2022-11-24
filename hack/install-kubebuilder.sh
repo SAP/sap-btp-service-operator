@@ -14,4 +14,4 @@ curl -L https://github.com/etcd-io/etcd/releases/download/${ETCD_VER}/etcd-${ETC
 tar xzvf /tmp/etcd-${ETCD_VER}-${os}-${arch}.tar.gz -C /usr/local/bin --strip-components=1
 rm -f /tmp/etcd-${ETCD_VER}-${os}-${arch}.tar.gz
 
-export PATH=$PATH:/usr/local/kubebuilder/bin
+export TEST_ASSET_ETCD=/usr/local/bin
