@@ -11,7 +11,7 @@ sudo mv kubebuilder /usr/local/kubebuilder
 
 ETCD_VER=v3.5.6
 curl -L https://github.com/etcd-io/etcd/releases/download/${ETCD_VER}/etcd-${ETCD_VER}-${os}-${arch}.tar.gz -o /tmp/etcd-${ETCD_VER}-${os}-${arch}.tar.gz
-tar xzvf /tmp/etcd-${ETCD_VER}-${os}-${arch}.tar.gz -C /usr/local/kubebuilder --strip-components=1
+tar xzvf /tmp/etcd-${ETCD_VER}-${os}-${arch}.tar.gz -C /usr/local/bin --strip-components=1
 rm -f /tmp/etcd-${ETCD_VER}-${os}-${arch}.tar.gz
 
 export PATH=$PATH:/usr/local/kubebuilder/bin
