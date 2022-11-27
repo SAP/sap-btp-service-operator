@@ -98,7 +98,7 @@ endif
 
 envtest:
 	go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
-	KUBEBUILDER_ASSETS=/usr/local/kubebuilder setup-envtest use --use-env
+	setup-envtest use --use-env
 
 lint: lint-deps
 	golangci-lint run

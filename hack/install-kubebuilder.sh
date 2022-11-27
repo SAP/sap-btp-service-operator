@@ -8,3 +8,5 @@ curl -L -o kubebuilder https://github.com/kubernetes-sigs/kubebuilder/releases/d
 # (you'll need to set the KUBEBUILDER_ASSETS env var if you put it somewhere else)
 sudo chmod +x kubebuilder
 sudo mv kubebuilder /usr/local/kubebuilder
+export PATH=$PATH:/usr/local/kubebuilder/bin
+export KUBEBUILDER_ASSETS=/usr/local/kubebuilder/bin
