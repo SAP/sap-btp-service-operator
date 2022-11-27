@@ -25,6 +25,7 @@ jobs:
       run: |
         go get -v -t -d ./...
         ./hack/install-kubebuilder.sh
+        make envtest
 
     - name: Build
       run: go build -v ./...

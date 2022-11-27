@@ -2,7 +2,7 @@
 # Image URL to use all building/pushing image targets
 IMG ?= controller:latest
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
-CRD_OPTIONS ?= "crd:trivialVersions=true,crdVersions=v1"
+CRD_OPTIONS ?= "crd:crdVersions=v1"
 TEST_PROFILE ?= $(CURDIR)/profile.cov
 LINT_VERSION = 1.32.2
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
@@ -16,8 +16,10 @@ SED ?= sed -i
 ifeq ($(shell go env GOOS),darwin)
 SED = sed -i ''
 endif
-
+os=$(go env GOOS)
+arch=$(go env GOARCH)
 GO_TEST = go test ./... -coverpkg=$(go list ./... | egrep -v "fakes|test" | paste -sd "," -) -coverprofile=$(TEST_PROFILE) -ginkgo.flakeAttempts=3
+
 
 all: manager
 
@@ -87,14 +89,18 @@ ifeq (, $(shell which controller-gen))
 	CONTROLLER_GEN_TMP_DIR=$$(mktemp -d) ;\
 	cd $$CONTROLLER_GEN_TMP_DIR ;\
 	go mod init tmp ;\
-	go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.5.0 ;\
-	#go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.9.0 ;\
+	#go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.5.0 ;
+	go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.9.0 ;\
 	rm -rf $$CONTROLLER_GEN_TMP_DIR ;\
 	}
 CONTROLLER_GEN=$(GOBIN)/controller-gen
 else
 CONTROLLER_GEN=$(shell which controller-gen)
 endif
+
+envtest:
+	go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+	KUBEBUILDER_ASSETS=/usr/local/bin setup-envtest use -i --use-env
 
 lint: lint-deps
 	golangci-lint run
