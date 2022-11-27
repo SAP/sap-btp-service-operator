@@ -23,8 +23,7 @@ all: manager
 
 # Run tests go test and coverage
 test: generate fmt vet manifests
-	KUBEBUILDER_ASSETS=/usr/local/bin $(GO_TEST)
-
+	KUBEBUILDER_ASSETS="$(shell setup-envtest use --bin-dir /usr/local/bin -p path)" $(GO_TEST)
 
 # Build manager binary
 manager: generate fmt vet
@@ -98,7 +97,7 @@ endif
 
 envtest:
 	go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
-	KUBEBUILDER_ASSETS=/usr/local/bin setup-envtest use --use-env --bin-dir /usr/local/bin
+
 
 lint: lint-deps
 	golangci-lint run
