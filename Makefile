@@ -16,17 +16,13 @@ SED ?= sed -i
 ifeq ($(shell go env GOOS),darwin)
 SED = sed -i ''
 endif
-os=$(go env GOOS)
-arch=$(go env GOARCH)
 GO_TEST = go test ./... -coverpkg=$(go list ./... | egrep -v "fakes|test" | paste -sd "," -) -coverprofile=$(TEST_PROFILE) -ginkgo.flakeAttempts=3
-
 
 all: manager
 
 # Run tests go test and coverage
 test: generate fmt vet manifests
 	$(GO_TEST)
-
 
 # Build manager binary
 manager: generate fmt vet
@@ -84,18 +80,16 @@ docker-push:
 # download controller-gen if necessary
 controller-gen:
 ifeq (, $(shell which controller-gen))
-	@{ \
-	set -e ;\
-	CONTROLLER_GEN_TMP_DIR=$$(mktemp -d) ;\
-	cd $$CONTROLLER_GEN_TMP_DIR ;\
-	go mod init tmp ;\
+	set -e ;
+	CONTROLLER_GEN_TMP_DIR=$$(mktemp -d) ;
+	cd $$CONTROLLER_GEN_TMP_DIR ;
+	go mod init tmp ;
 	#go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.5.0 ;
-	go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.9.0 ;\
-	rm -rf $$CONTROLLER_GEN_TMP_DIR ;\
-	}
-CONTROLLER_GEN=$(GOBIN)/controller-gen
+	go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.9.0 ;
+	rm -rf $$CONTROLLER_GEN_TMP_DIR ;
+	CONTROLLER_GEN=$(GOBIN)/controller-gen
 else
-CONTROLLER_GEN=$(shell which controller-gen)
+	CONTROLLER_GEN=$(shell which controller-gen)
 endif
 
 envtest:
