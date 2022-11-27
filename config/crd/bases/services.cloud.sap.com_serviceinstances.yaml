@@ -1,9 +1,10 @@
+
 ---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.9.0
+    controller-gen.kubebuilder.io/version: v0.5.0
   creationTimestamp: null
   name: serviceinstances.services.cloud.sap.com
 spec:
@@ -45,14 +46,10 @@ spec:
         description: ServiceInstance is the Schema for the serviceinstances API
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
             type: string
           metadata:
             type: object
@@ -60,8 +57,7 @@ spec:
             description: ServiceInstanceSpec defines the desired state of ServiceInstance
             properties:
               customTags:
-                description: List of custom tags describing the ServiceInstance, will
-                  be copied to `ServiceBinding` secret in the key called `tags`.
+                description: List of custom tags describing the ServiceInstance, will be copied to `ServiceBinding` secret in the key called `tags`.
                 items:
                   type: string
                 type: array
@@ -69,33 +65,22 @@ spec:
                 description: The name of the instance in Service Manager
                 type: string
               parameters:
-                description: "Provisioning parameters for the instance. \n The Parameters
-                  field is NOT secret or secured in any way and should NEVER be used
-                  to hold sensitive information. To set parameters that contain secret
-                  information, you should ALWAYS store that information in a Secret
-                  and use the ParametersFrom field."
+                description: "Provisioning parameters for the instance. \n The Parameters field is NOT secret or secured in any way and should NEVER be used to hold sensitive information. To set parameters that contain secret information, you should ALWAYS store that information in a Secret and use the ParametersFrom field."
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
               parametersFrom:
-                description: List of sources to populate parameters. If a top-level
-                  parameter name exists in multiples sources among `Parameters` and
-                  `ParametersFrom` fields, it is considered to be a user error in
-                  the specification
+                description: List of sources to populate parameters. If a top-level parameter name exists in multiples sources among `Parameters` and `ParametersFrom` fields, it is considered to be a user error in the specification
                 items:
-                  description: ParametersFromSource represents the source of a set
-                    of Parameters
+                  description: ParametersFromSource represents the source of a set of Parameters
                   properties:
                     secretKeyRef:
-                      description: The Secret key to select from. The value must be
-                        a JSON object.
+                      description: The Secret key to select from. The value must be a JSON object.
                       properties:
                         key:
-                          description: The key of the secret to select from.  Must
-                            be a valid secret key.
+                          description: The key of the secret to select from.  Must be a valid secret key.
                           type: string
                         name:
-                          description: The name of the secret in the pod's namespace
-                            to select from.
+                          description: The name of the secret in the pod's namespace to select from.
                           type: string
                       required:
                       - key
@@ -108,18 +93,14 @@ spec:
                 minLength: 1
                 type: string
               servicePlanID:
-                description: The plan ID in case service offering and plan name are
-                  ambiguous
+                description: The plan ID in case service offering and plan name are ambiguous
                 type: string
               servicePlanName:
                 description: The name of the service plan
                 minLength: 1
                 type: string
               userInfo:
-                description: UserInfo contains information about the user that last
-                  modified this instance. This field is set by the API server and
-                  not settable by the end-user. User-provided values for this field
-                  are not saved.
+                description: UserInfo contains information about the user that last modified this instance. This field is set by the API server and not settable by the end-user. User-provided values for this field are not saved.
                 properties:
                   extra:
                     additionalProperties:
@@ -135,13 +116,10 @@ spec:
                       type: string
                     type: array
                   uid:
-                    description: A unique value that identifies this user across time.
-                      If this user is deleted and another user by the same name is
-                      added, they will have different UIDs.
+                    description: A unique value that identifies this user across time. If this user is deleted and another user by the same name is added, they will have different UIDs.
                     type: string
                   username:
-                    description: The name that uniquely identifies this user among
-                      all active users.
+                    description: The name that uniquely identifies this user among all active users.
                     type: string
                 type: object
             required:
@@ -154,44 +132,23 @@ spec:
               conditions:
                 description: Service instance conditions
                 items:
-                  description: "Condition contains details for one aspect of the current
-                    state of this API Resource. --- This struct is intended for direct
-                    use as an array at the field path .status.conditions.  For example,
-                    \n type FooStatus struct{ // Represents the observations of a
-                    foo's current state. // Known .status.conditions.type are: \"Available\",
-                    \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge
-                    // +listType=map // +listMapKey=type Conditions []metav1.Condition
-                    `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
-                    protobuf:\"bytes,1,rep,name=conditions\"` \n // other fields }"
+                  description: "Condition contains details for one aspect of the current state of this API Resource. --- This struct is intended for direct use as an array at the field path .status.conditions.  For example, type FooStatus struct{     // Represents the observations of a foo's current state.     // Known .status.conditions.type are: \"Available\", \"Progressing\", and \"Degraded\"     // +patchMergeKey=type     // +patchStrategy=merge     // +listType=map     // +listMapKey=type     Conditions []metav1.Condition `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"` \n     // other fields }"
                   properties:
                     lastTransitionTime:
-                      description: lastTransitionTime is the last time the condition
-                        transitioned from one status to another. This should be when
-                        the underlying condition changed.  If that is not known, then
-                        using the time when the API field changed is acceptable.
+                      description: lastTransitionTime is the last time the condition transitioned from one status to another. This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
                       format: date-time
                       type: string
                     message:
-                      description: message is a human readable message indicating
-                        details about the transition. This may be an empty string.
+                      description: message is a human readable message indicating details about the transition. This may be an empty string.
                       maxLength: 32768
                       type: string
                     observedGeneration:
-                      description: observedGeneration represents the .metadata.generation
-                        that the condition was set based upon. For instance, if .metadata.generation
-                        is currently 12, but the .status.conditions[x].observedGeneration
-                        is 9, the condition is out of date with respect to the current
-                        state of the instance.
+                      description: observedGeneration represents the .metadata.generation that the condition was set based upon. For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date with respect to the current state of the instance.
                       format: int64
                       minimum: 0
                       type: integer
                     reason:
-                      description: reason contains a programmatic identifier indicating
-                        the reason for the condition's last transition. Producers
-                        of specific condition types may define expected values and
-                        meanings for this field, and whether the values are considered
-                        a guaranteed API. The value should be a CamelCase string.
-                        This field may not be empty.
+                      description: reason contains a programmatic identifier indicating the reason for the condition's last transition. Producers of specific condition types may define expected values and meanings for this field, and whether the values are considered a guaranteed API. The value should be a CamelCase string. This field may not be empty.
                       maxLength: 1024
                       minLength: 1
                       pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
@@ -204,11 +161,7 @@ spec:
                       - Unknown
                       type: string
                     type:
-                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
-                        --- Many .condition.type values are consistent across resources
-                        like Available, but because arbitrary conditions can be useful
-                        (see .node.status.conditions), the ability to deconflict is
-                        important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase. --- Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be useful (see .node.status.conditions), the ability to deconflict is important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
                       maxLength: 316
                       pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                       type: string
@@ -221,16 +174,14 @@ spec:
                   type: object
                 type: array
               instanceID:
-                description: The generated ID of the instance, will be automatically
-                  filled once the instance is created
+                description: The generated ID of the instance, will be automatically filled once the instance is created
                 type: string
               observedGeneration:
                 description: Last generation that was acted on
                 format: int64
                 type: integer
               operationType:
-                description: The operation type (CREATE/UPDATE/DELETE) for ongoing
-                  operation
+                description: The operation type (CREATE/UPDATE/DELETE) for ongoing operation
                 type: string
               operationURL:
                 description: URL of ongoing operation for the service instance
@@ -239,9 +190,7 @@ spec:
                 description: Indicates whether instance is ready for usage
                 type: string
               tags:
-                description: Tags describing the ServiceInstance as provided in service
-                  catalog, will be copied to `ServiceBinding` secret in the key called
-                  `tags`.
+                description: Tags describing the ServiceInstance as provided in service catalog, will be copied to `ServiceBinding` secret in the key called `tags`.
                 items:
                   type: string
                 type: array
@@ -283,14 +232,10 @@ spec:
         description: ServiceInstance is the Schema for the serviceinstances API
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
             type: string
           metadata:
             type: object
@@ -298,8 +243,7 @@ spec:
             description: ServiceInstanceSpec defines the desired state of ServiceInstance
             properties:
               customTags:
-                description: List of custom tags describing the ServiceInstance, will
-                  be copied to `ServiceBinding` secret in the key called `tags`.
+                description: List of custom tags describing the ServiceInstance, will be copied to `ServiceBinding` secret in the key called `tags`.
                 items:
                   type: string
                 type: array
@@ -307,33 +251,22 @@ spec:
                 description: The name of the instance in Service Manager
                 type: string
               parameters:
-                description: "Provisioning parameters for the instance. \n The Parameters
-                  field is NOT secret or secured in any way and should NEVER be used
-                  to hold sensitive information. To set parameters that contain secret
-                  information, you should ALWAYS store that information in a Secret
-                  and use the ParametersFrom field."
+                description: "Provisioning parameters for the instance. \n The Parameters field is NOT secret or secured in any way and should NEVER be used to hold sensitive information. To set parameters that contain secret information, you should ALWAYS store that information in a Secret and use the ParametersFrom field."
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
               parametersFrom:
-                description: List of sources to populate parameters. If a top-level
-                  parameter name exists in multiples sources among `Parameters` and
-                  `ParametersFrom` fields, it is considered to be a user error in
-                  the specification
+                description: List of sources to populate parameters. If a top-level parameter name exists in multiples sources among `Parameters` and `ParametersFrom` fields, it is considered to be a user error in the specification
                 items:
-                  description: ParametersFromSource represents the source of a set
-                    of Parameters
+                  description: ParametersFromSource represents the source of a set of Parameters
                   properties:
                     secretKeyRef:
-                      description: The Secret key to select from. The value must be
-                        a JSON object.
+                      description: The Secret key to select from. The value must be a JSON object.
                       properties:
                         key:
-                          description: The key of the secret to select from.  Must
-                            be a valid secret key.
+                          description: The key of the secret to select from.  Must be a valid secret key.
                           type: string
                         name:
-                          description: The name of the secret in the pod's namespace
-                            to select from.
+                          description: The name of the secret in the pod's namespace to select from.
                           type: string
                       required:
                       - key
@@ -346,18 +279,14 @@ spec:
                 minLength: 1
                 type: string
               servicePlanID:
-                description: The plan ID in case service offering and plan name are
-                  ambiguous
+                description: The plan ID in case service offering and plan name are ambiguous
                 type: string
               servicePlanName:
                 description: The name of the service plan
                 minLength: 1
                 type: string
               userInfo:
-                description: UserInfo contains information about the user that last
-                  modified this instance. This field is set by the API server and
-                  not settable by the end-user. User-provided values for this field
-                  are not saved.
+                description: UserInfo contains information about the user that last modified this instance. This field is set by the API server and not settable by the end-user. User-provided values for this field are not saved.
                 properties:
                   extra:
                     additionalProperties:
@@ -373,13 +302,10 @@ spec:
                       type: string
                     type: array
                   uid:
-                    description: A unique value that identifies this user across time.
-                      If this user is deleted and another user by the same name is
-                      added, they will have different UIDs.
+                    description: A unique value that identifies this user across time. If this user is deleted and another user by the same name is added, they will have different UIDs.
                     type: string
                   username:
-                    description: The name that uniquely identifies this user among
-                      all active users.
+                    description: The name that uniquely identifies this user among all active users.
                     type: string
                 type: object
             required:
@@ -392,44 +318,23 @@ spec:
               conditions:
                 description: Service instance conditions
                 items:
-                  description: "Condition contains details for one aspect of the current
-                    state of this API Resource. --- This struct is intended for direct
-                    use as an array at the field path .status.conditions.  For example,
-                    \n type FooStatus struct{ // Represents the observations of a
-                    foo's current state. // Known .status.conditions.type are: \"Available\",
-                    \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge
-                    // +listType=map // +listMapKey=type Conditions []metav1.Condition
-                    `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
-                    protobuf:\"bytes,1,rep,name=conditions\"` \n // other fields }"
+                  description: "Condition contains details for one aspect of the current state of this API Resource. --- This struct is intended for direct use as an array at the field path .status.conditions.  For example, type FooStatus struct{     // Represents the observations of a foo's current state.     // Known .status.conditions.type are: \"Available\", \"Progressing\", and \"Degraded\"     // +patchMergeKey=type     // +patchStrategy=merge     // +listType=map     // +listMapKey=type     Conditions []metav1.Condition `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"` \n     // other fields }"
                   properties:
                     lastTransitionTime:
-                      description: lastTransitionTime is the last time the condition
-                        transitioned from one status to another. This should be when
-                        the underlying condition changed.  If that is not known, then
-                        using the time when the API field changed is acceptable.
+                      description: lastTransitionTime is the last time the condition transitioned from one status to another. This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
                       format: date-time
                       type: string
                     message:
-                      description: message is a human readable message indicating
-                        details about the transition. This may be an empty string.
+                      description: message is a human readable message indicating details about the transition. This may be an empty string.
                       maxLength: 32768
                       type: string
                     observedGeneration:
-                      description: observedGeneration represents the .metadata.generation
-                        that the condition was set based upon. For instance, if .metadata.generation
-                        is currently 12, but the .status.conditions[x].observedGeneration
-                        is 9, the condition is out of date with respect to the current
-                        state of the instance.
+                      description: observedGeneration represents the .metadata.generation that the condition was set based upon. For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date with respect to the current state of the instance.
                       format: int64
                       minimum: 0
                       type: integer
                     reason:
-                      description: reason contains a programmatic identifier indicating
-                        the reason for the condition's last transition. Producers
-                        of specific condition types may define expected values and
-                        meanings for this field, and whether the values are considered
-                        a guaranteed API. The value should be a CamelCase string.
-                        This field may not be empty.
+                      description: reason contains a programmatic identifier indicating the reason for the condition's last transition. Producers of specific condition types may define expected values and meanings for this field, and whether the values are considered a guaranteed API. The value should be a CamelCase string. This field may not be empty.
                       maxLength: 1024
                       minLength: 1
                       pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
@@ -442,11 +347,7 @@ spec:
                       - Unknown
                       type: string
                     type:
-                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
-                        --- Many .condition.type values are consistent across resources
-                        like Available, but because arbitrary conditions can be useful
-                        (see .node.status.conditions), the ability to deconflict is
-                        important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase. --- Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be useful (see .node.status.conditions), the ability to deconflict is important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
                       maxLength: 316
                       pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                       type: string
@@ -459,16 +360,14 @@ spec:
                   type: object
                 type: array
               instanceID:
-                description: The generated ID of the instance, will be automatically
-                  filled once the instance is created
+                description: The generated ID of the instance, will be automatically filled once the instance is created
                 type: string
               observedGeneration:
                 description: Last generation that was acted on
                 format: int64
                 type: integer
               operationType:
-                description: The operation type (CREATE/UPDATE/DELETE) for ongoing
-                  operation
+                description: The operation type (CREATE/UPDATE/DELETE) for ongoing operation
                 type: string
               operationURL:
                 description: URL of ongoing operation for the service instance
@@ -477,9 +376,7 @@ spec:
                 description: Indicates whether instance is ready for usage
                 type: string
               tags:
-                description: Tags describing the ServiceInstance as provided in service
-                  catalog, will be copied to `ServiceBinding` secret in the key called
-                  `tags`.
+                description: Tags describing the ServiceInstance as provided in service catalog, will be copied to `ServiceBinding` secret in the key called `tags`.
                 items:
                   type: string
                 type: array
@@ -491,3 +388,9 @@ spec:
     storage: false
     subresources:
       status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
