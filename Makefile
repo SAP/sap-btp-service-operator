@@ -23,7 +23,7 @@ all: manager
 
 # Run tests go test and coverage
 test: generate fmt vet manifests
-	$(GO_TEST)
+	KUBEBUILDER_ASSETS=/usr/local/bin $(GO_TEST)
 
 
 # Build manager binary
