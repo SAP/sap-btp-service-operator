@@ -2,6 +2,7 @@ package v1
 
 import (
 	"github.com/SAP/sap-btp-service-operator/api"
+	"github.com/lithammer/dedent"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -18,6 +19,30 @@ var _ = Describe("Service Binding Webhook Test", func() {
 			It("should succeed", func() {
 				err := binding.ValidateCreate()
 				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("should succeed if secretTemplate can be parsed", func() {
+				binding.Spec.SecretTemplate = dedent.Dedent(`
+					apiVersion: v1
+					kind: Secret
+					stringData:
+					  secretKey: {{ .secretValue | quote }}`)
+
+				err := binding.ValidateCreate()
+
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("should fail if secretTemplate cannot be parsed", func() {
+				binding.Spec.SecretTemplate = dedent.Dedent(`
+					apiVersion: v1
+					kind: Secret
+					stringData:
+					  secretKey: {{ .secretValue | quote`)
+
+				err := binding.ValidateCreate()
+
+				Expect(err).Should(MatchError(ContainSubstring("spec.secretTemplate is invalid")))
 			})
 		})
 
@@ -57,6 +82,19 @@ var _ = Describe("Service Binding Webhook Test", func() {
 				When("ParametersFrom were changed", func() {
 					It("should succeed", func() {
 						newBinding.Spec.ParametersFrom[0].SecretKeyRef.Name = "newName"
+						err := newBinding.ValidateUpdate(binding)
+						Expect(err).ToNot(HaveOccurred())
+					})
+				})
+
+				When("SecretTemplate changed", func() {
+					It("should succeed", func() {
+						modifiedSecretTemplate := `
+							apiVersion: v1
+							kind: Secret
+							stringData:
+							  key2: "value2"`
+						newBinding.Spec.SecretTemplate = modifiedSecretTemplate
 						err := newBinding.ValidateUpdate(binding)
 						Expect(err).ToNot(HaveOccurred())
 					})
@@ -195,6 +233,19 @@ var _ = Describe("Service Binding Webhook Test", func() {
 						Expect(err).To(HaveOccurred())
 					})
 
+				})
+
+				When("SecretTemplate changed", func() {
+					It("should fail", func() {
+						modifiedSecretTemplate := `
+							apiVersion: v1
+							kind: Secret
+							stringData:
+							  key2: value2`
+						newBinding.Spec.SecretTemplate = modifiedSecretTemplate
+						err := newBinding.ValidateUpdate(binding)
+						Expect(err).To(HaveOccurred())
+					})
 				})
 			})
 

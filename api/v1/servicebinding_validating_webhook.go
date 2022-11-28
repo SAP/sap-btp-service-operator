@@ -22,6 +22,8 @@ import (
 	"time"
 
 	"github.com/SAP/sap-btp-service-operator/api"
+	"github.com/SAP/sap-btp-service-operator/internal/secrets/template"
+	"github.com/pkg/errors"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -51,6 +53,11 @@ func (sb *ServiceBinding) ValidateCreate() error {
 	if sb.Spec.CredRotationPolicy != nil {
 		if err := sb.validateCredRotatingConfig(); err != nil {
 			return err
+		}
+	}
+	if sb.Spec.SecretTemplate != "" {
+		if err := sb.validateSecretTemplate(); err != nil {
+			return errors.Wrap(err, "spec.secretTemplate is invalid")
 		}
 	}
 	return nil
@@ -109,4 +116,11 @@ func (sb *ServiceBinding) validateCredRotatingConfig() error {
 	}
 
 	return nil
+}
+
+func (sb *ServiceBinding) validateSecretTemplate() error {
+	servicebindinglog.Info("validate specified secretTemplate")
+
+	_, err := template.ParseTemplate("", sb.Spec.SecretTemplate)
+	return err
 }

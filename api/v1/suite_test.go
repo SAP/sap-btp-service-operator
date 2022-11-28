@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"github.com/lithammer/dedent"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/authentication/v1"
@@ -46,6 +47,11 @@ func getBinding() *ServiceBinding {
 				RotationFrequency: "1s",
 				RotatedBindingTTL: "1s",
 			},
+			SecretTemplate: dedent.Dedent(`
+				apiVersion: v1
+				kind: Secret
+				stringData:
+				  key1: value1`),
 		},
 
 		Status: ServiceBindingStatus{},
