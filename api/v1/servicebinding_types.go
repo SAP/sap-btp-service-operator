@@ -84,6 +84,17 @@ type ServiceBindingSpec struct {
 	// CredentialsRotationPolicy holds automatic credentials rotation configuration.
 	// +optional
 	CredRotationPolicy *CredentialsRotationPolicy `json:"credentialsRotationPolicy,omitempty"`
+
+	// SecretTemplate is a Go template that generates a custom Kubernetes
+	// v1/Secret based on the data of the service binding returned by
+	// Service Manager.
+	// The generated secret is used instead of the default secret.
+	// This is useful if the consumer of service binding data expects them in
+	// a specific format.
+	// For Go templates see https://pkg.go.dev/text/template.
+	// +optional
+	// +kubebuilder:pruning:PreserveUnknownFields
+	SecretTemplate string `json:"secretTemplate,omitempty"`
 }
 
 // ServiceBindingStatus defines the observed state of ServiceBinding
