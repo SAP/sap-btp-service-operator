@@ -22,7 +22,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"reflect"
 	"regexp"
@@ -516,7 +515,7 @@ func handleResponseError(response *http.Response) error {
 func bodyToBytes(closer io.ReadCloser) ([]byte, error) {
 	defer closer.Close()
 
-	body, err := ioutil.ReadAll(closer)
+	body, err := io.ReadAll(closer)
 	if err != nil {
 		return nil, err
 	}
