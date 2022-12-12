@@ -18,18 +18,18 @@ package types
 
 import (
 	"encoding/json"
-
-	"github.com/Peripli/service-manager/pkg/types"
 )
+
+const ServiceBindingsURL = "/v1/service_bindings"
 
 // ServiceBinding defines the data of a service instance.
 type ServiceBinding struct {
-	ID             string       `json:"id,omitempty" yaml:"id,omitempty"`
-	Name           string       `json:"name,omitempty" yaml:"name,omitempty"`
-	CreatedAt      string       `json:"created_at,omitempty" yaml:"created_at,omitempty"`
-	UpdatedAt      string       `json:"updated_at,omitempty" yaml:"updated_at,omitempty"`
-	Labels         types.Labels `json:"labels,omitempty" yaml:"labels,omitempty"`
-	PagingSequence int64        `json:"-" yaml:"-"`
+	ID             string `json:"id,omitempty" yaml:"id,omitempty"`
+	Name           string `json:"name,omitempty" yaml:"name,omitempty"`
+	CreatedAt      string `json:"created_at,omitempty" yaml:"created_at,omitempty"`
+	UpdatedAt      string `json:"updated_at,omitempty" yaml:"updated_at,omitempty"`
+	Labels         Labels `json:"labels,omitempty" yaml:"labels,omitempty"`
+	PagingSequence int64  `json:"-" yaml:"-"`
 
 	Credentials json.RawMessage `json:"credentials,omitempty" yaml:"credentials,omitempty"`
 
@@ -46,7 +46,7 @@ type ServiceBinding struct {
 
 	Ready bool `json:"ready,omitempty" yaml:"ready,omitempty"`
 
-	LastOperation *types.Operation `json:"last_operation,omitempty" yaml:"last_operation,omitempty"`
+	LastOperation *Operation `json:"last_operation,omitempty" yaml:"last_operation,omitempty"`
 }
 
 // ServiceBindings wraps an array of service bindings

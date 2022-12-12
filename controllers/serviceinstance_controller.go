@@ -21,16 +21,17 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+
 	servicesv1 "github.com/SAP/sap-btp-service-operator/api/v1"
 
 	"github.com/SAP/sap-btp-service-operator/api"
 
 	"github.com/google/uuid"
 
-	smTypes "github.com/Peripli/service-manager/pkg/types"
-	"github.com/Peripli/service-manager/pkg/web"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
-	"github.com/SAP/sap-btp-service-operator/client/sm/types"
+	smClientTypes "github.com/SAP/sap-btp-service-operator/client/sm/types"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -102,7 +103,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	serviceInstance.SetObservedGeneration(serviceInstance.Generation)
 
 	if serviceInstance.Status.InstanceID == "" {
-		//Recovery
+		// Recovery
 		log.Info("Instance ID is empty, checking if instance exist in SM")
 		instance, err := r.getInstanceForRecovery(ctx, smClient, serviceInstance)
 		if err != nil {
@@ -115,11 +116,11 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			return ctrl.Result{}, r.updateStatus(ctx, serviceInstance)
 		}
 
-		//if instance was not recovered then create new instance
+		// if instance was not recovered then create new instance
 		return r.createInstance(ctx, smClient, serviceInstance)
 	}
 
-	//Update
+	// Update
 	if serviceInstance.Status.Ready == metav1.ConditionTrue {
 		return r.updateInstance(ctx, smClient, serviceInstance)
 	}
@@ -146,14 +147,14 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client
 	}
 
 	switch status.State {
-	case string(smTypes.IN_PROGRESS):
+	case smClientTypes.INPROGRESS:
 		fallthrough
-	case string(smTypes.PENDING):
+	case smClientTypes.PENDING:
 		return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, nil
-	case string(smTypes.FAILED):
-		setFailureConditions(smTypes.OperationCategory(status.Type), status.Description, serviceInstance)
+	case smClientTypes.FAILED:
+		setFailureConditions(smClientTypes.OperationCategory(status.Type), status.Description, serviceInstance)
 		// in order to delete eventually the object we need return with error
-		if serviceInstance.Status.OperationType == smTypes.DELETE {
+		if serviceInstance.Status.OperationType == smClientTypes.DELETE {
 			serviceInstance.Status.OperationURL = ""
 			serviceInstance.Status.OperationType = ""
 			if err := r.updateStatus(ctx, serviceInstance); err != nil {
@@ -165,16 +166,16 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client
 			}
 			return ctrl.Result{}, fmt.Errorf(errMsg)
 		}
-	case string(smTypes.SUCCEEDED):
-		setSuccessConditions(smTypes.OperationCategory(status.Type), serviceInstance)
-		if serviceInstance.Status.OperationType == smTypes.DELETE {
+	case smClientTypes.SUCCEEDED:
+		setSuccessConditions(smClientTypes.OperationCategory(status.Type), serviceInstance)
+		if serviceInstance.Status.OperationType == smClientTypes.DELETE {
 			// delete was successful - remove our finalizer from the list and update it.
 			if err := r.removeFinalizer(ctx, serviceInstance, api.FinalizerName); err != nil {
 				return ctrl.Result{}, err
 			}
-		} else if serviceInstance.Status.OperationType == smTypes.CREATE {
+		} else if serviceInstance.Status.OperationType == smClientTypes.CREATE {
 			serviceInstance.Status.Ready = metav1.ConditionTrue
-			setSuccessConditions(smTypes.OperationCategory(status.Type), serviceInstance)
+			setSuccessConditions(smClientTypes.OperationCategory(status.Type), serviceInstance)
 		}
 	}
 
@@ -189,16 +190,16 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	log.Info("Creating instance in SM")
 	_, instanceParameters, err := buildParameters(r.Client, serviceInstance.Namespace, serviceInstance.Spec.ParametersFrom, serviceInstance.Spec.Parameters)
 	if err != nil {
-		//if parameters are invalid there is nothing we can do, the user should fix it according to the error message in the condition
+		// if parameters are invalid there is nothing we can do, the user should fix it according to the error message in the condition
 		log.Error(err, "failed to parse instance parameters")
-		return r.markAsNonTransientError(ctx, smTypes.CREATE, err, serviceInstance)
+		return r.markAsNonTransientError(ctx, smClientTypes.CREATE, err, serviceInstance)
 	}
 
-	provision, provisionErr := smClient.Provision(&types.ServiceInstance{
+	provision, provisionErr := smClient.Provision(&smClientTypes.ServiceInstance{
 		Name:          serviceInstance.Spec.ExternalName,
 		ServicePlanID: serviceInstance.Spec.ServicePlanID,
 		Parameters:    instanceParameters,
-		Labels: smTypes.Labels{
+		Labels: smClientTypes.Labels{
 			namespaceLabel: []string{serviceInstance.Namespace},
 			k8sNameLabel:   []string{serviceInstance.Name},
 			clusterIDLabel: []string{r.Config.ClusterID},
@@ -209,9 +210,9 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 		log.Error(provisionErr, "failed to create service instance", "serviceOfferingName", serviceInstance.Spec.ServiceOfferingName,
 			"servicePlanName", serviceInstance.Spec.ServicePlanName)
 		if isTransientError(ctx, provisionErr) {
-			return r.markAsTransientError(ctx, smTypes.CREATE, provisionErr, serviceInstance)
+			return r.markAsTransientError(ctx, smClientTypes.CREATE, provisionErr, serviceInstance)
 		}
-		return r.markAsNonTransientError(ctx, smTypes.CREATE, provisionErr, serviceInstance)
+		return r.markAsNonTransientError(ctx, smClientTypes.CREATE, provisionErr, serviceInstance)
 	}
 
 	if provision.Location != "" {
@@ -227,8 +228,8 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 
 		log.Info("Provision request is in progress")
 		serviceInstance.Status.OperationURL = provision.Location
-		serviceInstance.Status.OperationType = smTypes.CREATE
-		setInProgressConditions(smTypes.CREATE, "", serviceInstance)
+		serviceInstance.Status.OperationType = smClientTypes.CREATE
+		setInProgressConditions(smClientTypes.CREATE, "", serviceInstance)
 		if err := r.updateStatus(ctx, serviceInstance); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -248,7 +249,7 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	}
 
 	serviceInstance.Status.Ready = metav1.ConditionTrue
-	setSuccessConditions(smTypes.CREATE, serviceInstance)
+	setSuccessConditions(smClientTypes.CREATE, serviceInstance)
 	return ctrl.Result{}, r.updateStatus(ctx, serviceInstance)
 }
 
@@ -267,10 +268,10 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 	_, instanceParameters, err := buildParameters(r.Client, serviceInstance.Namespace, serviceInstance.Spec.ParametersFrom, serviceInstance.Spec.Parameters)
 	if err != nil {
 		log.Error(err, "failed to parse instance parameters")
-		return r.markAsNonTransientError(ctx, smTypes.UPDATE, fmt.Errorf("failed to parse parameters: %v", err.Error()), serviceInstance)
+		return r.markAsNonTransientError(ctx, smClientTypes.UPDATE, fmt.Errorf("failed to parse parameters: %v", err.Error()), serviceInstance)
 	}
 
-	_, operationURL, err := smClient.UpdateInstance(serviceInstance.Status.InstanceID, &types.ServiceInstance{
+	_, operationURL, err := smClient.UpdateInstance(serviceInstance.Status.InstanceID, &smClientTypes.ServiceInstance{
 		Name:          serviceInstance.Spec.ExternalName,
 		ServicePlanID: serviceInstance.Spec.ServicePlanID,
 		Parameters:    instanceParameters,
@@ -278,16 +279,16 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 	if err != nil {
 		log.Error(err, fmt.Sprintf("failed to update service instance with ID %s", serviceInstance.Status.InstanceID))
 		if isTransientError(ctx, err) {
-			return r.markAsTransientError(ctx, smTypes.UPDATE, err, serviceInstance)
+			return r.markAsTransientError(ctx, smClientTypes.UPDATE, err, serviceInstance)
 		}
-		return r.markAsNonTransientError(ctx, smTypes.UPDATE, err, serviceInstance)
+		return r.markAsNonTransientError(ctx, smClientTypes.UPDATE, err, serviceInstance)
 	}
 
 	if operationURL != "" {
 		log.Info(fmt.Sprintf("Update request accepted, operation URL: %s", operationURL))
 		serviceInstance.Status.OperationURL = operationURL
-		serviceInstance.Status.OperationType = smTypes.UPDATE
-		setInProgressConditions(smTypes.UPDATE, "", serviceInstance)
+		serviceInstance.Status.OperationType = smClientTypes.UPDATE
+		setInProgressConditions(smClientTypes.UPDATE, "", serviceInstance)
 
 		if err := r.updateStatus(ctx, serviceInstance); err != nil {
 			return ctrl.Result{}, err
@@ -296,7 +297,7 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 		return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, nil
 	}
 	log.Info("Instance updated successfully")
-	setSuccessConditions(smTypes.UPDATE, serviceInstance)
+	setSuccessConditions(smClientTypes.UPDATE, serviceInstance)
 	return ctrl.Result{}, r.updateStatus(ctx, serviceInstance)
 }
 
@@ -313,7 +314,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 			if smInstance != nil {
 				log.Info("instance exists in SM continue with deletion")
 				serviceInstance.Status.InstanceID = smInstance.ID
-				setInProgressConditions(smTypes.DELETE, "delete after recovery", serviceInstance)
+				setInProgressConditions(smClientTypes.DELETE, "delete after recovery", serviceInstance)
 				return ctrl.Result{}, r.updateStatus(ctx, serviceInstance)
 			}
 			log.Info("instance does not exists in SM, removing finalizer")
@@ -324,14 +325,14 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 		operationURL, deprovisionErr := smClient.Deprovision(serviceInstance.Status.InstanceID, nil, buildUserInfo(ctx, serviceInstance.Spec.UserInfo))
 		if deprovisionErr != nil {
 			// delete will proceed anyway
-			return r.markAsNonTransientError(ctx, smTypes.DELETE, deprovisionErr, serviceInstance)
+			return r.markAsNonTransientError(ctx, smClientTypes.DELETE, deprovisionErr, serviceInstance)
 		}
 
 		if operationURL != "" {
 			log.Info("Deleting instance async")
 			serviceInstance.Status.OperationURL = operationURL
-			serviceInstance.Status.OperationType = smTypes.DELETE
-			setInProgressConditions(smTypes.DELETE, "", serviceInstance)
+			serviceInstance.Status.OperationType = smClientTypes.DELETE
+			setInProgressConditions(smClientTypes.DELETE, "", serviceInstance)
 
 			if err := r.updateStatus(ctx, serviceInstance); err != nil {
 				return ctrl.Result{}, err
@@ -341,7 +342,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 		}
 		log.Info("Instance was deleted successfully")
 		serviceInstance.Status.InstanceID = ""
-		setSuccessConditions(smTypes.DELETE, serviceInstance)
+		setSuccessConditions(smClientTypes.DELETE, serviceInstance)
 		if err := r.updateStatus(ctx, serviceInstance); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -358,10 +359,10 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 	return ctrl.Result{}, nil
 }
 
-func (r *ServiceInstanceReconciler) resyncInstanceStatus(ctx context.Context, smClient sm.Client, k8sInstance *servicesv1.ServiceInstance, smInstance *types.ServiceInstance) {
+func (r *ServiceInstanceReconciler) resyncInstanceStatus(ctx context.Context, smClient sm.Client, k8sInstance *servicesv1.ServiceInstance, smInstance *smClientTypes.ServiceInstance) {
 	log := GetLogger(ctx)
-	//set observed generation to 0 because we dont know which generation the current state in SM represents,
-	//unless the generation is 1 and SM is in the same state as operator
+	// set observed generation to 0 because we dont know which generation the current state in SM represents,
+	// unless the generation is 1 and SM is in the same state as operator
 	if k8sInstance.Generation == 1 {
 		k8sInstance.SetObservedGeneration(1)
 	} else {
@@ -382,27 +383,27 @@ func (r *ServiceInstanceReconciler) resyncInstanceStatus(ctx context.Context, sm
 		k8sInstance.Status.Tags = tags
 	}
 
-	instanceState := smTypes.SUCCEEDED
-	operationType := smTypes.CREATE
+	instanceState := smClientTypes.SUCCEEDED
+	operationType := smClientTypes.CREATE
 	description := ""
 	if smInstance.LastOperation != nil {
 		instanceState = smInstance.LastOperation.State
 		operationType = smInstance.LastOperation.Type
 		description = smInstance.LastOperation.Description
 	} else if !smInstance.Ready {
-		instanceState = smTypes.FAILED
+		instanceState = smClientTypes.FAILED
 	}
 
 	switch instanceState {
-	case smTypes.PENDING:
+	case smClientTypes.PENDING:
 		fallthrough
-	case smTypes.IN_PROGRESS:
-		k8sInstance.Status.OperationURL = sm.BuildOperationURL(smInstance.LastOperation.ID, smInstance.ID, web.ServiceInstancesURL)
+	case smClientTypes.INPROGRESS:
+		k8sInstance.Status.OperationURL = sm.BuildOperationURL(smInstance.LastOperation.ID, smInstance.ID, smClientTypes.ServiceInstancesURL)
 		k8sInstance.Status.OperationType = smInstance.LastOperation.Type
 		setInProgressConditions(smInstance.LastOperation.Type, smInstance.LastOperation.Description, k8sInstance)
-	case smTypes.SUCCEEDED:
+	case smClientTypes.SUCCEEDED:
 		setSuccessConditions(operationType, k8sInstance)
-	case smTypes.FAILED:
+	case smClientTypes.FAILED:
 		setFailureConditions(operationType, description, k8sInstance)
 	}
 }
@@ -442,10 +443,11 @@ func getOfferingTags(smClient sm.Client, planID string) ([]string, error) {
 func (r *ServiceInstanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&servicesv1.ServiceInstance{}).
+		WithOptions(controller.Options{RateLimiter: workqueue.NewItemExponentialFailureRateLimiter(r.Config.RetryBaseDelay, r.Config.RetryMaxDelay)}).
 		Complete(r)
 }
 
-func (r *ServiceInstanceReconciler) getInstanceForRecovery(ctx context.Context, smClient sm.Client, serviceInstance *servicesv1.ServiceInstance) (*types.ServiceInstance, error) {
+func (r *ServiceInstanceReconciler) getInstanceForRecovery(ctx context.Context, smClient sm.Client, serviceInstance *servicesv1.ServiceInstance) (*smClientTypes.ServiceInstance, error) {
 	log := GetLogger(ctx)
 	parameters := sm.Parameters{
 		FieldQuery: []string{

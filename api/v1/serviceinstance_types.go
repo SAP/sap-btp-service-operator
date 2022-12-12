@@ -17,8 +17,8 @@ limitations under the License.
 package v1
 
 import (
-	"github.com/Peripli/service-manager/pkg/types"
 	"github.com/SAP/sap-btp-service-operator/api"
+	"github.com/SAP/sap-btp-service-operator/client/sm/types"
 	v1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"

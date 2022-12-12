@@ -41,7 +41,7 @@ func (s *ServiceBindingDefaulter) Handle(_ context.Context, req admission.Reques
 	}
 
 	if binding.Labels != nil {
-		if _, ok := binding.Labels[api.StaleBindingLabel]; ok {
+		if _, ok := binding.Labels[api.StaleBindingIDLabel]; ok {
 			if binding.Spec.CredRotationPolicy != nil {
 				binding.Spec.CredRotationPolicy.Enabled = false
 			}

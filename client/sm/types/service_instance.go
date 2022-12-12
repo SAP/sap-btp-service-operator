@@ -18,9 +18,9 @@ package types
 
 import (
 	"encoding/json"
-
-	"github.com/Peripli/service-manager/pkg/types"
 )
+
+const ServiceInstancesURL = "/v1/service_instances"
 
 // ServiceInstance defines the data of a service instance.
 type ServiceInstance struct {
@@ -34,7 +34,7 @@ type ServiceInstance struct {
 	PlatformID    string `json:"platform_id,omitempty" yaml:"platform_id,omitempty"`
 
 	Parameters json.RawMessage `json:"parameters,omitempty" yaml:"parameters,omitempty"`
-	Labels     types.Labels    `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Labels     Labels          `json:"labels,omitempty" yaml:"labels,omitempty"`
 
 	MaintenanceInfo json.RawMessage `json:"maintenance_info,omitempty" yaml:"-"`
 	Context         json.RawMessage `json:"context,omitempty" yaml:"context,omitempty"`
@@ -43,7 +43,7 @@ type ServiceInstance struct {
 	Ready  bool `json:"ready" yaml:"ready"`
 	Usable bool `json:"usable" yaml:"usable"`
 
-	LastOperation *types.Operation `json:"last_operation,omitempty" yaml:"last_operation,omitempty"`
+	LastOperation *Operation `json:"last_operation,omitempty" yaml:"last_operation,omitempty"`
 }
 
 // ServiceInstances wraps an array of service instances
