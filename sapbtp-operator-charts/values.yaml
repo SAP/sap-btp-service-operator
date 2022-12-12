@@ -72,5 +72,7 @@ manager:
   securityContext: {}
   health_service:
     enabled: false
+  kubernetesMatchLabels:
+    enabled: false
 cluster:
   id:
