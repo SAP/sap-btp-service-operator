@@ -12,10 +12,10 @@ spec:
   selector:
     matchLabels:
       control-plane: controller-manager
-      {{- if .Values.manager.kubernetesMatchLabels.enabled }}
+      {{- if eq .Values.manager.kubernetesMatchLabels.enabled true }}
       app.kubernetes.io/instance: sap-btp-operator
       app.kubernetes.io/name: sap-btp-operator
-      { { - end } }
+      {{- end }}
   template:
     metadata:
       annotations:
