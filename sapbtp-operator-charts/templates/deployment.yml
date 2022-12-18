@@ -32,6 +32,7 @@ spec:
         app.kubernetes.io/instance: sap-btp-operator
         app.kubernetes.io/name: sap-btp-operator
     spec:
+      serviceAccountName: sap-btp-operator
       containers:
         - args:
             - --secure-listen-address=0.0.0.0:8443
