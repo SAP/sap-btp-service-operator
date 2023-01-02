@@ -42,6 +42,12 @@ webhooks:
         name: sap-btp-operator-webhook-service
         namespace: {{.Release.Namespace}}
         path: /mutate-services-cloud-sap-com-v1-serviceinstance
+      {{- if .Values.manager.certificates.selfSigned }}
+      caBundle: {{.Values.manager.certificates.selfSigned.caBundle }}
+      {{- end }}
+      {{- if .Values.manager.certificates.gardenerCertManager }}
+      caBundle: {{.Values.manager.certificates.gardenerCertManager.caBundle }}
+      {{- end }}
     failurePolicy: Fail
     name: mserviceinstance.kb.io
     rules:
