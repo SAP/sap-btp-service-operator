@@ -38,6 +38,12 @@ manager:
     req_cpu_limit: ""
   imagePullSecrets: []
 #   - name: registrySecretName
+#  imagePullSecretName: registrySecretName
+  pullSecrets: []
+#  - authentication:
+#      password: mypwd
+#      username: myuser
+#    host: myhost
   certificates:
     # Configure if https://github.com/jetstack/cert-manager is used
     certManager: true
