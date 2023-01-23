@@ -39,8 +39,10 @@ spec:
             - --logtostderr=true
             - --v=10
 
-          {{- if .Values.manager.rbacProxy.image.sha }}
+          {{- if and ( .Values.manager.rbacProxy.image.sha ) ( .Values.manager.rbacProxy.image.tag ) }}
           image: "{{.Values.manager.rbacProxy.image.repository}}:{{.Values.manager.rbacProxy.image.tag}}@sha256:{{.Values.manager.rbacProxy.image.sha}}"
+          {{- else if .Values.manager.rbacProxy.image.sha }}
+          image: "{{.Values.manager.rbacProxy.image.repository}}@sha256:{{.Values.manager.rbacProxy.image.sha}}"
           {{- else }}
           image: "{{.Values.manager.rbacProxy.image.repository}}:{{.Values.manager.rbacProxy.image.tag}}"
           {{- end }}
@@ -77,10 +79,12 @@ spec:
           envFrom:
             - configMapRef:
                 name: sap-btp-operator-config
-          {{- if .Values.manager.image.sha}}
+          {{- if and ( .Values.manager.image.sha ) ( .Values.manager.image.tag ) }}
+          image: "{{.Values.manager.image.repository}}:{{.Values.manager.image.tag}}@sha256:{{.Values.manager.image.sha}}"
+          {{- else if .Values.manager.image.sha}}
           image: "{{.Values.manager.image.repository}}@sha256:{{.Values.manager.image.sha}}"
           {{- else }}
-          image: "{{.Values.manager.image.repository}}:{{.Values.manager.image.tag}}@sha256:{{.Values.manager.image.sha}}"
+          image: "{{.Values.manager.image.repository}}:{{.Values.manager.image.tag}}"
           {{- end }}
           imagePullPolicy: IfNotPresent
           {{- if .Values.manager.securityContext }}
