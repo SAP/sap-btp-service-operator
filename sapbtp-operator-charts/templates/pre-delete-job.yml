@@ -1,0 +1,25 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pre-delete-job
+  namespace: {{ .Release.Namespace }}
+  labels:
+    release: {{ .Release.Name }}
+  annotations:
+    # This is what defines this resource as a hook. Without this line, the job is considered part of the release.
+    "helm.sh/hook": pre-delete
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": hook-succeeded
+spec:
+  template:
+    spec:
+      serviceAccountName: pre-delete-crd-job
+      containers:
+        - name: pre-delete-operator
+          image: "bitnami/kubectl:latest"
+          command: ["/bin/sh"]
+          args:
+            - "-c"
+            - |
+              kubectl delete crd servicebindings.services.cloud.sap.com serviceinstances.services.cloud.sap.com
+      restartPolicy: OnFailure
