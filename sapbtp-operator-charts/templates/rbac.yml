@@ -35,7 +35,6 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  creationTimestamp: null
   name: sap-btp-operator-manager-role
 rules:
   - apiGroups:
@@ -111,6 +110,26 @@ rules:
       - get
       - patch
       - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: pre-delete-operator-rolebinding
+  namespace: {{.Release.Namespace}}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: pre-delete-operator-role
+subjects:
+  - kind: ServiceAccount
+    name: pre-delete-crd-job
+    namespace: {{.Release.Namespace}}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: pre-delete-operator-role
+rules:
   - apiGroups:
       - apiextensions.k8s.io
     resources:
@@ -120,7 +139,6 @@ rules:
       - servicebindings.services.cloud.sap.com
     verbs:
       - delete
-
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -177,7 +195,6 @@ subjects:
     name: sap-btp-operator
     namespace: {{.Release.Namespace}}
 ---
-
 apiVersion: rbac.authorization.k8s.io/v1
 {{- if .Values.manager.allow_cluster_access }}
 kind: ClusterRoleBinding
@@ -197,10 +214,6 @@ subjects:
   - kind: ServiceAccount
     name: sap-btp-operator
     namespace: {{.Release.Namespace}}
-  - kind: ServiceAccount
-    name: pre-delete-crd-job
-    namespace: {{.Release.Namespace}}
-
 {{- $releaseNamespace := .Release.Namespace }}
 {{- range $namespace := .Values.manager.allowed_namespaces }}
 ---
@@ -217,7 +230,4 @@ subjects:
   - kind: ServiceAccount
     name: sap-btp-operator
     namespace: {{ $releaseNamespace }}
-  - kind: ServiceAccount
-    name: pre-delete-crd-job
-    namespace: {{.Release.Namespace}}
 {{- end }}
