@@ -22,4 +22,5 @@ spec:
             - "-c"
             - |
               kubectl delete crd servicebindings.services.cloud.sap.com serviceinstances.services.cloud.sap.com
+              sleep 10
       restartPolicy: OnFailure
