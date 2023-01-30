@@ -112,13 +112,13 @@ rules:
       - update
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
+kind: ClusterRoleBinding
 metadata:
   name: pre-delete-operator-rolebinding
   namespace: {{.Release.Namespace}}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: Role
+  kind: ClusterRole
   name: pre-delete-operator-role
 subjects:
   - kind: ServiceAccount
@@ -126,7 +126,7 @@ subjects:
     namespace: {{.Release.Namespace}}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
+kind: ClusterRole
 metadata:
   name: pre-delete-operator-role
 rules:
