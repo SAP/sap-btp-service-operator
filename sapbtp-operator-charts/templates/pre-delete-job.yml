@@ -13,7 +13,7 @@ metadata:
 spec:
   template:
     spec:
-      serviceAccountName: pre-delete-crd-job
+      serviceAccountName: sap-btp-operator
       containers:
         - name: pre-delete-operator
           image: "bitnami/kubectl:latest"
@@ -21,6 +21,14 @@ spec:
           args:
             - "-c"
             - |
-              kubectl delete crd servicebindings.services.cloud.sap.com serviceinstances.services.cloud.sap.com
-              sleep 15
+              serviceinstances=$(kubectl get serviceinstances.services.cloud.sap.com -A)
+              servicebindings=$(kubectl get servicebindings.services.cloud.sap.com -A)
+
+              echo "deleting the following service bindings: $servicebindings"
+              kubectl delete servicebindings.services.cloud.sap.com --all --all-namespaces
+
+              echo "deleting the following service instances: $serviceinstances"
+              kubectl delete serviceinstances.services.cloud.sap.com --all --all-namespaces
+
+              echo "All service instances and bindings got deleted"
       restartPolicy: OnFailure

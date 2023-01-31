@@ -112,35 +112,6 @@ rules:
       - update
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: pre-delete-operator-rolebinding
-  namespace: {{.Release.Namespace}}
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: pre-delete-operator-role
-subjects:
-  - kind: ServiceAccount
-    name: pre-delete-crd-job
-    namespace: {{.Release.Namespace}}
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: pre-delete-operator-role
-rules:
-  - apiGroups:
-      - apiextensions.k8s.io
-    resources:
-      - customresourcedefinitions
-    resourceNames:
-      - serviceinstances.services.cloud.sap.com
-      - servicebindings.services.cloud.sap.com
-    verbs:
-      - delete
----
-apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: sap-btp-operator-metrics-reader
