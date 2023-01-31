@@ -11,6 +11,7 @@ metadata:
     "helm.sh/hook-weight": "0"
     "helm.sh/hook-delete-policy": hook-succeeded
 spec:
+  ttlSecondsAfterFinished: 60
   template:
     spec:
       serviceAccountName: sap-btp-operator
@@ -31,4 +32,4 @@ spec:
               kubectl delete serviceinstances.services.cloud.sap.com --all --all-namespaces
 
               echo "All service instances and bindings got deleted"
-      restartPolicy: OnFailure
+      restartPolicy: Never
