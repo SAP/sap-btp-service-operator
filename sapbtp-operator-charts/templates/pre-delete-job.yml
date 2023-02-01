@@ -33,7 +33,7 @@ spec:
                   namespace="$line"
                   echo "Deleting binding with Name: $name, and Namespace: $namespace"
                   timeout 30 kubectl delete servicebindings.services.cloud.sap.com $name -n $namespace
-                   if [ $? -eq 124 ]; then
+                  if [ $? -eq 124 ]; then
                     echo "Failed to deleted service binding $name"
                     exit 1
                   fi
