@@ -6,7 +6,6 @@ metadata:
   labels:
     release: {{ .Release.Name }}
   annotations:
-    # This is what defines this resource as a hook. Without this line, the job is considered part of the release.
     "helm.sh/hook": pre-delete
     "helm.sh/hook-weight": "0"
     "helm.sh/hook-delete-policy": hook-succeeded
@@ -19,47 +18,36 @@ spec:
       serviceAccountName: sap-btp-operator
       containers:
         - name: pre-delete-operator
-          image: "bitnami/kubectl:latest"
+          image: "bitnami/kubectl"
           command: ["/bin/sh"]
           args:
             - "-c"
             - |
-              servicebindingCRD="servicebindings.services.cloud.sap.com"
-              serviceinstanceCRD="serviceinstances.services.cloud.sap.com"
-
-              bindingsoutput=$(kubectl get $servicebindingCRD -A -o=custom-columns=NAME:.metadata.name,NAMESPACE:.metadata.namespace | awk 'NR>1 {print $1,$2}')
-              counter=1
-              for line in $bindingsoutput; do
-                if [ $((counter % 2)) -eq 1 ]; then
-                  name="$line"
-                else
-                  namespace="$line"
-                  echo "Deleting binding with Name: $name, and Namespace: $namespace"
-                  timeout 30 kubectl delete $servicebindingCRD $name -n $namespace
-                  if [ $? -eq 124 ]; then
-                    echo "Failed to delete service binding $name"
-                    exit 1
-                  fi
+              kubectl get servicebindings.services.cloud.sap.com -A
+              kubectl get servicebindings.services.cloud.sap.com -A --output=custom-columns=NAME:.metadata.name,NAMESPACE:.metadata.namespace | tail -n +2 | while read -r line; do
+                name=$(echo $line | awk '{print $1}')
+                namespace=$(echo $line | awk '{print $2}')
+                echo "Deleting binding with Name: $name, and Namespace: $namespace"
+                timeout 30 kubectl delete servicebindings.services.cloud.sap.com $name -n $namespace
+                if [ $? -eq 124 ]; then
+                  echo "Failed to deleted service binding $name"
+                  exit 1
                 fi
-                counter=$((counter + 1))
               done
+              echo "No more bindings found"
 
-              instancesoutput=$(kubectl get $serviceinstanceCRD -A -o=custom-columns=NAME:.metadata.name,NAMESPACE:.metadata.namespace | awk 'NR>1 {print $1,$2}')
-              counter=1
-              for line in $instancesoutput; do
-                if [ $((counter % 2)) -eq 1 ]; then
-                  name="$line"
-                else
-                  namespace="$line"
-                  echo "Deleting instance with Name: $name, and Namespace: $namespace"
-                  timeout 30 kubectl delete $serviceinstanceCRD $name -n $namespace
-                  if [ $? -eq 124 ]; then
-                    echo "Failed to delete service instance $name"
-                    exit 1
-                  fi
+              kubectl get serviceinstances.services.cloud.sap.com -A
+              kubectl get serviceinstances.services.cloud.sap.com -A --output=custom-columns=NAME:.metadata.name,NAMESPACE:.metadata.namespace | tail -n +2 | while read -r line; do
+                name=$(echo $line | awk '{print $1}')
+                namespace=$(echo $line | awk '{print $2}')
+                echo "Deleting instance with Name: $name, and Namespace: $namespace"
+                timeout 30 kubectl delete serviceinstances.services.cloud.sap.com $name -n $namespace
+                if [ $? -eq 124 ]; then
+                  echo "Failed to deleted service instance $name"
+                  exit 1
                 fi
-                counter=$((counter + 1))
               done
+              echo "No more instances found"
+              exit 0
 
-              echo "All service instances and bindings got deleted"
       restartPolicy: Never
