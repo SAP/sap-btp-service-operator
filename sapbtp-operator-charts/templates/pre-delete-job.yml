@@ -37,7 +37,7 @@ spec:
                   echo "Deleting binding with Name: $name, and Namespace: $namespace"
                   timeout 30 kubectl delete $servicebindingCRD $name -n $namespace
                   if [ $? -eq 124 ]; then
-                    echo "Failed to deleted service binding $name"
+                    echo "Failed to delete service binding $name"
                     exit 1
                   fi
                 fi
@@ -54,7 +54,7 @@ spec:
                   echo "Deleting instance with Name: $name, and Namespace: $namespace"
                   timeout 30 kubectl delete $serviceinstanceCRD $name -n $namespace
                   if [ $? -eq 124 ]; then
-                    echo "Failed to deleted service instance $name"
+                    echo "Failed to delete service instance $name"
                     exit 1
                   fi
                 fi
