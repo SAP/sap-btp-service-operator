@@ -6,30 +6,38 @@ metadata:
   labels:
     release: {{ .Release.Name }}
   annotations:
-    # This is what defines this resource as a hook. Without this line, the job is considered part of the release.
     "helm.sh/hook": pre-delete
     "helm.sh/hook-weight": "0"
     "helm.sh/hook-delete-policy": hook-succeeded
 spec:
   ttlSecondsAfterFinished: 60
+  completions: 1
+  backoffLimit: 0
   template:
     spec:
       serviceAccountName: sap-btp-operator
       containers:
         - name: pre-delete-operator
-          image: "bitnami/kubectl:latest"
+          image: "bitnami/kubectl"
           command: ["/bin/sh"]
           args:
             - "-c"
             - |
-              serviceinstances=$(kubectl get serviceinstances.services.cloud.sap.com -A)
-              servicebindings=$(kubectl get servicebindings.services.cloud.sap.com -A)
-
-              echo "deleting the following service bindings: $servicebindings"
-              kubectl delete servicebindings.services.cloud.sap.com --all --all-namespaces
-
-              echo "deleting the following service instances: $serviceinstances"
-              kubectl delete serviceinstances.services.cloud.sap.com --all --all-namespaces
-
-              echo "All service instances and bindings got deleted"
+              kubectl get servicebindings.services.cloud.sap.com -A
+              timeout 30 kubectl delete servicebindings.services.cloud.sap.com --all --all-namespaces
+              if [ $? -eq 124 ]; then
+                echo "Failed to deleted service binding"
+                exit 1
+              else
+                echo "All service bindings were deleted successfully"
+              fi
+              
+              kubectl get serviceinstances.services.cloud.sap.com -A              
+              timeout 30 kubectl delete serviceinstances.services.cloud.sap.com --all --all-namespaces
+              if [ $? -eq 124 ]; then
+                echo "Failed to deleted service instance"
+                exit 1
+              else
+                echo "All service instances were deleted successfully"
+              fi
       restartPolicy: Never
