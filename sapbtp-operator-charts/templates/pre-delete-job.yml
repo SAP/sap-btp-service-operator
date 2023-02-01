@@ -24,6 +24,7 @@ spec:
             - "-c"
             - |
               servicebindingsCRD="servicebindings.services.cloud.sap.com -A"
+              kubectl get $servicebindingsCRD -A
               kubectl get $servicebindingsCRD -A --output=custom-columns=NAME:.metadata.name,NAMESPACE:.metadata.namespace | tail -n +2 | while read -r line; do
                 name=$(echo $line | awk '{print $1}')
                 namespace=$(echo $line | awk '{print $2}')
@@ -37,6 +38,7 @@ spec:
               echo "No more bindings found"
 
               serviceinstanceCRD="serviceinstances.services.cloud.sap.com -A"
+              kubectl get $serviceinstanceCRD -A
               kubectl get $serviceinstanceCRD -A --output=custom-columns=NAME:.metadata.name,NAMESPACE:.metadata.namespace | tail -n +2 | while read -r line; do
                 name=$(echo $line | awk '{print $1}')
                 namespace=$(echo $line | awk '{print $2}')
@@ -47,7 +49,7 @@ spec:
                   exit 1
                 fi
               done
-              
+
               echo "No more instances found"
               exit 0
 
