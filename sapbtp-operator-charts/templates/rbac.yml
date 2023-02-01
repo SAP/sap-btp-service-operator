@@ -35,6 +35,7 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
+  creationTimestamp: null
   name: sap-btp-operator-manager-role
 rules:
   - apiGroups:
@@ -166,6 +167,7 @@ subjects:
     name: sap-btp-operator
     namespace: {{.Release.Namespace}}
 ---
+
 apiVersion: rbac.authorization.k8s.io/v1
 {{- if .Values.manager.allow_cluster_access }}
 kind: ClusterRoleBinding
@@ -185,6 +187,7 @@ subjects:
   - kind: ServiceAccount
     name: sap-btp-operator
     namespace: {{.Release.Namespace}}
+
 {{- $releaseNamespace := .Release.Namespace }}
 {{- range $namespace := .Values.manager.allowed_namespaces }}
 ---
