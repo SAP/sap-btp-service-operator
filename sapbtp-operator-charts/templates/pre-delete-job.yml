@@ -23,12 +23,12 @@ spec:
           args:
             - "-c"
             - |
-              kubectl get servicebindings.services.cloud.sap.com -A
-              kubectl get servicebindings.services.cloud.sap.com -A --output=custom-columns=NAME:.metadata.name,NAMESPACE:.metadata.namespace | tail -n +2 | while read -r line; do
+              servicebindingsCRD="servicebindings.services.cloud.sap.com -A"
+              kubectl get $servicebindingsCRD -A --output=custom-columns=NAME:.metadata.name,NAMESPACE:.metadata.namespace | tail -n +2 | while read -r line; do
                 name=$(echo $line | awk '{print $1}')
                 namespace=$(echo $line | awk '{print $2}')
                 echo "Deleting binding with Name: $name, and Namespace: $namespace"
-                timeout 30 kubectl delete servicebindings.services.cloud.sap.com $name -n $namespace
+                timeout 30 kubectl delete $servicebindingsCRD $name -n $namespace
                 if [ $? -eq 124 ]; then
                   echo "Failed to deleted service binding $name"
                   exit 1
@@ -36,17 +36,18 @@ spec:
               done
               echo "No more bindings found"
 
-              kubectl get serviceinstances.services.cloud.sap.com -A
-              kubectl get serviceinstances.services.cloud.sap.com -A --output=custom-columns=NAME:.metadata.name,NAMESPACE:.metadata.namespace | tail -n +2 | while read -r line; do
+              serviceinstanceCRD="serviceinstances.services.cloud.sap.com -A"
+              kubectl get $serviceinstanceCRD -A --output=custom-columns=NAME:.metadata.name,NAMESPACE:.metadata.namespace | tail -n +2 | while read -r line; do
                 name=$(echo $line | awk '{print $1}')
                 namespace=$(echo $line | awk '{print $2}')
                 echo "Deleting instance with Name: $name, and Namespace: $namespace"
-                timeout 30 kubectl delete serviceinstances.services.cloud.sap.com $name -n $namespace
+                timeout 30 kubectl delete $serviceinstanceCRD $name -n $namespace
                 if [ $? -eq 124 ]; then
                   echo "Failed to deleted service instance $name"
                   exit 1
                 fi
               done
+              
               echo "No more instances found"
               exit 0
 
