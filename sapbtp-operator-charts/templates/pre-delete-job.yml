@@ -12,6 +12,8 @@ metadata:
     "helm.sh/hook-delete-policy": hook-succeeded
 spec:
   ttlSecondsAfterFinished: 60
+  completions: 1
+  backoffLimit: 0
   template:
     spec:
       serviceAccountName: sap-btp-operator
@@ -22,22 +24,7 @@ spec:
           args:
             - "-c"
             - |
-              bindingsoutput=$(kubectl get servicebindings.services.cloud.sap.com -A -o=custom-columns=NAME:.metadata.name,NAMESPACE:.metadata.namespace | awk 'NR>1 {print $1,$2}')
-              counter=1
-              for line in $bindingsoutput; do
-                if [ $((counter % 2)) -eq 1 ]; then
-                  name="$line"
-                else
-                  namespace="$line"
-                  echo "Deleting binding with Name: $name, and Namespace: $namespace"
-                  timeout 30 kubectl delete servicebindings.services.cloud.sap.com $name -n $namespace
-                   if [ $? -eq 124 ]; then
-                    echo "Failed to deleted service binding $name"
-                    exit 1
-                  fi
-                fi
-                counter=$((counter + 1))
-              done
+
 
               instancesoutput=$(kubectl get serviceinstances.services.cloud.sap.com -A -o=custom-columns=NAME:.metadata.name,NAMESPACE:.metadata.namespace | awk 'NR>1 {print $1,$2}')
               counter=1
