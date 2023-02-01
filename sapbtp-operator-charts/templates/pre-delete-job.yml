@@ -23,28 +23,28 @@ spec:
           args:
             - "-c"
             - |
-              servicebindingsCRD="servicebindings.services.cloud.sap.com -A"
+              servicebindingsCRD="servicebindings.services.cloud.sap.com"
               kubectl get $servicebindingsCRD -A
               kubectl get $servicebindingsCRD -A --output=custom-columns=NAME:.metadata.name,NAMESPACE:.metadata.namespace | tail -n +2 | while read -r line; do
                 name=$(echo $line | awk '{print $1}')
                 namespace=$(echo $line | awk '{print $2}')
                 echo "Deleting binding with Name: $name, and Namespace: $namespace"
                 timeout 30 kubectl delete $servicebindingsCRD $name -n $namespace
-                if [ $? -eq 124 ]; then
+                if [ $? -ne 0 ]; then
                   echo "Failed to deleted service binding $name"
                   exit 1
                 fi
               done
               echo "No more bindings found"
 
-              serviceinstanceCRD="serviceinstances.services.cloud.sap.com -A"
+              serviceinstanceCRD="serviceinstances.services.cloud.sap.com"
               kubectl get $serviceinstanceCRD -A
               kubectl get $serviceinstanceCRD -A --output=custom-columns=NAME:.metadata.name,NAMESPACE:.metadata.namespace | tail -n +2 | while read -r line; do
                 name=$(echo $line | awk '{print $1}')
                 namespace=$(echo $line | awk '{print $2}')
                 echo "Deleting instance with Name: $name, and Namespace: $namespace"
                 timeout 30 kubectl delete $serviceinstanceCRD $name -n $namespace
-                if [ $? -eq 124 ]; then
+                if [ $? -ne 0 ]; then
                   echo "Failed to deleted service instance $name"
                   exit 1
                 fi
