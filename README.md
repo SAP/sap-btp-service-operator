@@ -27,7 +27,7 @@ The SAP BTP service operator is based on the [Kubernetes Operator pattern](https
 * [Credentials Rotation](#credentials-rotation)
 * [Multitenancy](#multitenancy)
 * [Troubleshooting and Support](#troubleshooting-and-support)
-* [Deleting the operator](#deleting-the-operator)
+* [Deleting the Operator](#deleting-the-operator)
 
 ## Architecture
 SAP BTP service operator communicates with [Service Manager](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/3a27b85a47fc4dff99184dd5bf181e14.html) that uses the [Open service broker API](https://github.com/openservicebrokerapi/servicebroker) to communicate with service brokers, acting as an intermediary for the Kubernetes API Server to negotiate the initial provisioning and retrieve the credentials necessary for the application to use a managed service.<br><br>
@@ -513,21 +513,37 @@ The SAP BTP service operator project maintainers will respond to the best of the
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
-## Deleting the operator
+## Deleting the Operator
 
-In order to delete the operator you should run the following command:
-helm uninstall <release name> -n <name space>
-Example: 'helm uninstall sap-btp-operator -n sap-btp-operator'During the deletion of the operator - a deletion script will be triggered in order to delete
-all service bindings and service instances, with time out of 5 minutes.
-#### 2 options for deletion issues:
+To delete the operator, run the following command:
+`helm uninstall <release name> -n <name space>`
 
-1. The deletion of the instances and bindings takes more than 5 minutes:
-   You will get a timeout error and have to wait and manually re-trigger the delete command.
-   If you get "Error: warning: Hook pre-delete failed: jobs.batch "pre-delete-job" already exists" please wait for the job to finish.
-2. The deletion fails:
-   You will get a failure error meaning one of the bindings or instances failed to be deleted.
-   You will have to debug for that resource issue and fix it before you re-trigger the job.In order to debug the deletion script please log into the cluster and look for the logs in the pre-delete pod.
-   Denote that the pre-delete pod will be visible up to 1 minute after failing.
+Example: 
+
+ >   ```
+  >   helm uninstall sap-btp-operator -n sap-btp-operator
+
+
+**Note:** All service bindings and service instances are also deleted during this process and the expected time out is up to 5 minutes.
+
+#### Possible Issues
+
+   - The deletion of instances and bindings takes more than 5 minutes
+   
+     There are two scenarios and their respective resolutions:
+     
+      - If you get a timeout error, manually re-trigger the delete process.
+      
+      - If you get the following error: `Warning: Hook pre-delete failed: jobs.batch "pre-delete-job" already exists.` please wait for the job to finish.
+     
+   - One of the service instances or bindings could not be deleted.
+     
+     Solution:
+     
+     Debug that resource issue and fix it before re-triggering the job.
+     
+     To debug the deletion script, log on to the cluster and check the logs in the pre-delete pod.
+     Note that the pre-delete pod becomes visible in approximately one minute after failure.
 
 
 ## Contributions
