@@ -541,9 +541,8 @@ Example:
      Solution:
      
      Debug that resource issue and fix it before re-triggering the job.
-     
      To debug the deletion script, log on to the cluster and check the logs in the pre-delete pod.
-     Note that the pre-delete pod becomes visible in approximately one minute after failure.
+     Note that the pre-delete pod becomes visible approximately one minute after failure.
 
 
 ## Contributions
