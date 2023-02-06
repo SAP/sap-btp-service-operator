@@ -541,9 +541,10 @@ Example:
      Solution:
      
      Debug that resource issue and fix it before re-triggering the job.
-     To debug the deletion script, log on to the cluster and check the logs in the pre-delete pod.
-     Note that the pre-delete pod is only visible for approximately one minute after the job execution is completed. 
+     To debug the deletion script, log on to the cluster and check the logs in the pre-delete job.
+     Note that the pre-delete job is only visible for approximately one minute after the job execution is completed. 
   
+  
     If you don't have the access to the pre-delete pod, use kubectl to view details about the failed resource and check its status.
 
 
