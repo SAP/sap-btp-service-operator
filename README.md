@@ -524,7 +524,7 @@ Example:
   >   helm uninstall sap-btp-operator -n sap-btp-operator
 
 
-**Note:** All service bindings and service instances are also deleted during this process and the expected time out is up to 5 minutes.
+**Note:** All service bindings and service instances are also deleted during this process.
 
 #### Possible Issues
 
@@ -542,7 +542,9 @@ Example:
      
      Debug that resource issue and fix it before re-triggering the job.
      To debug the deletion script, log on to the cluster and check the logs in the pre-delete pod.
-     Note that the pre-delete pod becomes visible approximately one minute after failure.
+     Note that the pre-delete pod is only visible for approximately one minute after the job execution is completed. 
+  
+    If you don't have the access to the pre-delete pod, use kubectl to view details about the failed resource and check its status.
 
 
 ## Contributions
