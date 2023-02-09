@@ -513,9 +513,9 @@ The SAP BTP service operator project maintainers will respond to the best of the
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
-## Deleting the Operator
+## Uninstalling the Operator
 
-To delete the operator, run the following command:
+To uninstall the operator, run the following command:
 `helm uninstall <release name> -n <name space>`
 
 Example: 
@@ -523,8 +523,10 @@ Example:
  >   ```
   >   helm uninstall sap-btp-operator -n sap-btp-operator
 
+In a successful outcome, Operator is uninstalled and all associated service instances and bindings are deleted.
 
-**Note:** All service bindings and service instances are also deleted during this process.
+**Note:** Make sure to first address any possible issues that may arise during the deletion of service instances and bindings before you proceed with the deletion of the operator.
+
 
 #### Possible Issues
 
@@ -532,9 +534,10 @@ Example:
    
      There are two scenarios and their respective resolutions:
      
-      - If you get a timeout error, manually re-trigger the delete process.
+      - If you get the notification:`Error: job failed: BackoffLimitExceeded`, manually re-trigger the delete process by running `helm uninstall <release name> -n <name space>`.
       
       - If you get the following error: `Warning: Hook pre-delete failed: jobs.batch "pre-delete-job" already exists.` please wait for the job to finish.
+        To verify that the job has finished, verify that there is no pre-delete job in the cluster logs.
      
    - One of the service instances or bindings could not be deleted.
      
@@ -545,7 +548,7 @@ Example:
      Note that the pre-delete job is only visible for approximately one minute after the job execution is completed. 
   
   
-    If you don't have the access to the pre-delete pod, use kubectl to view details about the failed resource and check its status.
+   If you don't have the access to the pre-delete job, use kubectl to view details about the failed resource and check its status.
 
 
 ## Contributions
