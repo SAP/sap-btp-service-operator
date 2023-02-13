@@ -36,7 +36,7 @@ manager:
     cpu_limit: ""
     req_memory_limit: ""
     req_cpu_limit: ""
-  imagePullSecrets: [ ]
+  imagePullSecrets: []
   #   - name: registrySecretName
   pullSecretTemplate:
   # creates a secret to be used in imagePullSecrets from a template
