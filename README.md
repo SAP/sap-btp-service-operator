@@ -523,9 +523,9 @@ Example:
  >   ```
   >   helm uninstall sap-btp-operator -n sap-btp-operator
 
-In a successful outcome, Operator is uninstalled and all associated service instances and bindings are deleted.
 
-**Note:** Make sure to first address any possible issues that may arise during the deletion of service instances and bindings before you proceed with the deletion of the operator.
+
+**Note:** While the operator deletion process includes automatic deletion of associated service instances and bindings, we strongly recommend that you manually delete them first before you proceed to delete the operator. This way, you make sure all data stored with service instances or bindings is properly taken care of.
 
 
 #### Possible Issues
@@ -534,10 +534,12 @@ In a successful outcome, Operator is uninstalled and all associated service inst
    
      There are two scenarios and their respective resolutions:
      
-      - If you get the notification:`Error: job failed: BackoffLimitExceeded`, manually re-trigger the delete process by running `helm uninstall <release name> -n <name space>`.
-      
       - If you get the following error: `Warning: Hook pre-delete failed: jobs.batch "pre-delete-job" already exists.` please wait for the job to finish.
         To verify that the job has finished, verify that there is no pre-delete job in the cluster logs.
+  
+      - If you get the notification:`Error: job failed: BackoffLimitExceeded`, manually re-trigger the delete process by running `helm uninstall <release name> -n <name space>`.
+      
+      
      
    - One of the service instances or bindings could not be deleted.
      
