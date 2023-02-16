@@ -535,8 +535,8 @@ Wait until the following log: "release <release name> uninstalled"
      Solution:
    
      In this scenario you will have to wait for the job to finish and re trigger the uninstall.
-     To check the job status run: 'kubectl get jobs --namespace=<name space>'
-      
+     To check the job status run: 'kubectl get jobs --namespace=<name space>', or log to the cluster and check the job.
+     
      
    - One of the service instances or bindings could not be deleted ("Error: job failed: BackoffLimitExceeded")
      
