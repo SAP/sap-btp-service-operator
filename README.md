@@ -523,7 +523,7 @@ Example:
  >   ```
   >   helm uninstall sap-btp-operator -n sap-btp-operator
 
-Wait until the following log: "release <release name> uninstalled
+Wait until the following log: "release <release name> uninstalled"
 
 **Note:** While the operator deletion process includes automatic deletion of associated service instances and bindings, we strongly recommend that you manually delete them first before you proceed to delete the operator. This way, you make sure all data stored with service instances or bindings is properly taken care of.
 
