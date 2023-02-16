@@ -523,34 +523,33 @@ Example:
  >   ```
   >   helm uninstall sap-btp-operator -n sap-btp-operator
 
-
+Wait until the following log: "release <release name> uninstalled
 
 **Note:** While the operator deletion process includes automatic deletion of associated service instances and bindings, we strongly recommend that you manually delete them first before you proceed to delete the operator. This way, you make sure all data stored with service instances or bindings is properly taken care of.
 
 
 #### Possible Issues
 
-   - The deletion of instances and bindings takes more than 5 minutes
+   - The deletion of instances and bindings takes more than 5 minutes ("Error: Timed out waiting for condition")
+
+     Solution:
    
-     There are two scenarios and their respective resolutions:
-     
-      - If you get the following error: `Warning: Hook pre-delete failed: jobs.batch "pre-delete-job" already exists.` please wait for the job to finish.
-        To verify that the job has finished, verify that there is no pre-delete job in the cluster logs.
-  
-      - If you get the notification:`Error: job failed: BackoffLimitExceeded`, manually re-trigger the delete process by running `helm uninstall <release name> -n <name space>`.
-      
+     In this scenario you will have to wait for the job to finish and re trigger the uninstall.
+     To check the job status run: 'kubectl get jobs --namespace=<name space>'
       
      
-   - One of the service instances or bindings could not be deleted.
+   - One of the service instances or bindings could not be deleted ("Error: job failed: BackoffLimitExceeded")
      
      Solution:
      
      Debug that resource issue and fix it before re-triggering the job.
+
      To debug the deletion script, log on to the cluster and check the logs in the pre-delete job.
      Note that the pre-delete job is only visible for approximately one minute after the job execution is completed. 
   
-  
-   If you don't have the access to the pre-delete job, use kubectl to view details about the failed resource and check its status.
+
+     If you don't have the access to the pre-delete job, use kubectl to view details about the failed resource and check its status.
+     To debug resource run: 'kubectl describe <resource_type> <resource_name>' (check for deletion timestamp to be sure the resource tried to be deleted)
 
 
 ## Contributions
