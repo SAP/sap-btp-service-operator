@@ -515,6 +515,8 @@ The SAP BTP service operator project maintainers will respond to the best of the
 
 ## Uninstalling the Operator
 
+We strongly recommend that before you delete the operator you first manually delete all associated service instances and bindings. This way, you'll make sure all data stored with service instances and bindings is properly taken care of. Instances and bindings that were not manually deleted will be automatically deleted during the operator deletion.
+
 To uninstall the operator, run the following command:
 `helm uninstall <release name> -n <name space>`
 
@@ -523,33 +525,43 @@ Example:
  >   ```
   >   helm uninstall sap-btp-operator -n sap-btp-operator
 
-Once the operator has been successfully uninstalled, you'll see the following notification:  `release <release name> uninstalled`.
+#### Responses
 
-**Note:** While the operator deletion process includes automatic deletion of associated service instances and bindings, we strongly recommend that you manually delete them first before you proceed to delete the operator. This way, you make sure all data stored with service instances or bindings is properly taken care of.
+   - `release <release name> uninstalled` - The operator has been successfully uninstalled
 
-
-#### Possible Issues
-
-   - The deletion of instances and bindings takes more than 5 minutes (Error: `Timed out waiting for condition`)
-
-     Solution:
+   - `Timed out waiting for condition` 
    
-     Wait for the job to finish and re-trigger the uninstall process.
-     To check the job status, run 'kubectl get jobs --namespace=<name space>' or log on to the cluster and check the job log.
-     
-     
-   - One of the service instances or bindings could not be deleted (Error: `job failed: BackoffLimitExceeded`)
-     
-     Solution:
-     
-     Debug that resource issue and fix it before re-triggering the job.
+      - What happened?
+      
+        The deletion of instances and bindings takes more than 5 minutes. 
+      
+      - Why did this happen?
+      
+        This can happen if there is a large number of instances and bindings or if the deletion process of a specific service takes time.
 
-     To debug the deletion script, log on to the cluster and check the logs in the pre-delete job.
-     Note that the pre-delete job is only visible for approximately one minute after the job execution is completed. 
+      - What to do:
+     
+        Wait for the job to finish and re-trigger the uninstall process.
+        To check the job status, run 'kubectl get jobs --namespace=<name space>' or log on to the cluster and check the job log.
+        Note that you may have to repeat this step several times untill the operator is successfully deleted.
+     
+     
+   - `job failed: BackoffLimitExceeded`
+   
+     -  What happened?
+      
+        One of the service instances or bindings could not be deleted
+     
+      - What to do:
+     
+        Debug that resource issue and fix it before re-triggering the job.
+
+        To debug the deletion script, log on to the cluster and check the logs in the pre-delete job.
+        Note that the pre-delete job is only visible for approximately one minute after the job execution is completed. 
   
 
-     If you don't have an access to the pre-delete job, use kubectl to view details about the failed resource and check its status.
-     To debug resource, run 'kubectl describe <resource_type> <resource_name>' (check for the deletion timestamp to verify that the resource was being deleted)
+        If you don't have an access to the pre-delete job, use kubectl to view details about the failed resource and check its status.
+        To debug resource, run 'kubectl describe <resource_type> <resource_name>' (check for the deletion timestamp to verify that the resource was being deleted)
 
 
 ## Contributions
