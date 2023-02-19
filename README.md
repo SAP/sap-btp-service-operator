@@ -515,7 +515,7 @@ The SAP BTP service operator project maintainers will respond to the best of the
 
 ## Uninstalling the Operator
 
-We strongly recommend that before you delete the operator you first manually delete all associated service instances and bindings. This way, you'll make sure all data stored with service instances and bindings is properly taken care of. Instances and bindings that were not manually deleted will be automatically deleted during the operator deletion.
+Before you uninstall the operator, we recommend you manually delete all associated service instances and bindings. This way, you'll ensure all data stored with service instances and bindings are properly taken care of. Instances and bindings that were not manually deleted will be automatically deleted once you start the uninstallation process.
 
 To uninstall the operator, run the following command:
 `helm uninstall <release name> -n <name space>`
