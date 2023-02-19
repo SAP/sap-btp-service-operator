@@ -537,13 +537,13 @@ Example:
       
       - Why did this happen?
       
-        This can happen if there is a large number of instances and bindings or if the deletion process of a specific service takes time.
+        Either there is a large number of instances and bindings or the deletion process associated with a specific service takes time.
 
       - What to do:
      
         Wait for the job to finish and re-trigger the uninstall process.
-        To check the job status, run 'kubectl get jobs --namespace=<name space>' or log on to the cluster and check the job log.
-        Note that you may have to repeat this step several times untill the operator is successfully deleted.
+        To check the job status, run `kubectl get jobs --namespace=<name space>` or log on to the cluster and check the job log.
+        Note that you may have to repeat this step several times untill the installation process has been successfully completed.
      
      
    - `job failed: BackoffLimitExceeded`
