@@ -27,7 +27,7 @@ The SAP BTP service operator is based on the [Kubernetes Operator pattern](https
 * [Credentials Rotation](#credentials-rotation)
 * [Multitenancy](#multitenancy)
 * [Troubleshooting and Support](#troubleshooting-and-support)
-* [Deleting the Operator](#deleting-the-operator)
+* [Uninstalling the Operator](#uninstalling-the-operator)
 
 ## Architecture
 SAP BTP service operator communicates with [Service Manager](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/3a27b85a47fc4dff99184dd5bf181e14.html) that uses the [Open service broker API](https://github.com/openservicebrokerapi/servicebroker) to communicate with service brokers, acting as an intermediary for the Kubernetes API Server to negotiate the initial provisioning and retrieve the credentials necessary for the application to use a managed service.<br><br>
