@@ -555,7 +555,7 @@ Example:
         Check the job logs to determine the issued resource and fix it before re-triggering the job.
 
         To find out the issued resource, log on to the cluster and check the logs of the pre-delete job:
-         1. run 'kubectl get pods --all-namespaces| grep pre-delete' - the first string is the name space name, the second one is the job name.
+         1. run 'kubectl get pods --all-namespaces| grep pre-delete', the first string is the name-space name, the second one is the job name.
          2. run 'kubectl logs <job_name> --namespace=<name_space_name>'
         Note that the pre-delete job is only visible for approximately one minute after the job execution is completed. 
   
