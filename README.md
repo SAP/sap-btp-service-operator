@@ -533,17 +533,13 @@ Example:
    
       - What happened?
       
-        The deletion of instances and bindings takes more than 5 minutes. 
-      
-      - Why did this happen?
-      
-        Either there is a large number of instances and bindings or the deletion process associated with a specific service takes time.
+        The deletion of instances and bindings takes more than 5 minutes, this happens when there is a large number of instances and bindings.
 
       - What to do:
      
         Wait for the job to finish and re-trigger the uninstall process.
         To check the job status, run `kubectl get jobs --namespace=<name space>` or log on to the cluster and check the job log.
-        Note that you may have to repeat this step several times untill the installation process has been successfully completed.
+        Note that you may have to repeat this step several times untill the un-install process has been successfully completed.
      
      
    - `job failed: BackoffLimitExceeded`
@@ -553,15 +549,18 @@ Example:
         One of the service instances or bindings could not be deleted
      
       - What to do:
+      
+        You should first find the service instance / binding which failed to be deleted or the deletion is still running.
      
-        Debug that resource issue and fix it before re-triggering the job.
+        Check the job logs to determine the issued resource and fix it before re-triggering the job.
 
-        To debug the deletion script, log on to the cluster and check the logs in the pre-delete job.
+        To find out the issued resource, log on to the cluster and check the logs of the pre-delete job:
+         1. run 'kubectl get pods --all-namespaces| grep pre-delete' - the first string is the name space name, the second one is the job name.
+         2. run 'kubectl logs <job_name> --namespace=<name_space_name>'
         Note that the pre-delete job is only visible for approximately one minute after the job execution is completed. 
   
-
         If you don't have an access to the pre-delete job, use kubectl to view details about the failed resource and check its status.
-        To debug resource, run 'kubectl describe <resource_type> <resource_name>' (check for the deletion timestamp to verify that the resource was being deleted)
+        run 'kubectl describe <resource_type> <resource_name>' and check for the deletion timestamp to check the deletion status.
 
 
 ## Contributions
