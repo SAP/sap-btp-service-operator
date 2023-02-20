@@ -543,24 +543,29 @@ Example:
      
      
    - `job failed: BackoffLimitExceeded`
+      
+     
    
      -  What happened?
       
-        One of the service instances or bindings could not be deleted
+        One of the service instances or bindings could not be deleted.
      
       - What to do:
       
-        You should first find the service instance / binding which failed to be deleted or the deletion is still running.
-     
-        Check the job logs to determine the issued resource and fix it before re-triggering the job.
+        First find the service instance or binding in question and fix it, then re-trigger the uninstalation. 
 
-        To find out the issued resource, log on to the cluster and check the logs of the pre-delete job:
-         1. run 'kubectl get pods --all-namespaces| grep pre-delete', the first string is the name-space name, the second one is the job name.
-         2. run 'kubectl logs <job_name> --namespace=<name_space_name>'
+        To find it, log on to the cluster and check the pre-delete job logs by running the following two commands:
+        
+          - `kubectl get pods --all-namespaces| grep pre-delete`  - which gives you the list of all namespaces and pre-delete job logs
+          - `kubectl logs <job_name> --namespace=<name_space_name>` - where you specify the desired job and namespace
+          
         Note that the pre-delete job is only visible for approximately one minute after the job execution is completed. 
   
-        If you don't have an access to the pre-delete job, use kubectl to view details about the failed resource and check its status.
-        run 'kubectl describe <resource_type> <resource_name>' and check for the deletion timestamp to check the deletion status.
+        If you don't have an access to the pre-delete job, use kubectl to view details about the failed resource and check its status by running:
+        
+          - `kubectl describe <resource_type> <resource_name>` 
+          
+        The status is in the deletion timestamp. 
 
 
 ## Contributions
