@@ -563,7 +563,7 @@ Example:
         
           - `kubectl describe <resource_type> <resource_name>` 
           
-        The status is in the deletion timestamp. 
+        Check for resources with the deletion timestamp to determine if it tried to be deleted. 
 
 
 ## Contributions
