@@ -556,7 +556,7 @@ Example:
 
         To find it, log on to the cluster and check the pre-delete job logs by running the following two commands:
         
-          - `kubectl get pods --all-namespaces| grep pre-delete`  - which gives you the list of all namespaces and pre-delete job logs
+          - `kubectl get pods --all-namespaces| grep pre-delete`  - which gives you the list of all namespaces and jobs
           - `kubectl logs <job_name> --namespace=<name_space_name>` - where you specify the desired job and namespace
           
         Note that the pre-delete job is only visible for approximately one minute after the job execution is completed. 
