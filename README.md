@@ -552,7 +552,7 @@ Example:
       
         First find the service instance or binding in question and fix it, then re-trigger the uninstalation. 
 
-        To find it, log on to the cluster and check the pre-delete job logs by running the following two commands:
+        To find it, log on to the cluster and check the pre-delete job, or check the logs by running the following two commands:
         
           - `kubectl get pods --all-namespaces| grep pre-delete`  - which gives you the list of all namespaces and jobs
           - `kubectl logs <job_name> --namespace=<name_space_name>` - where you specify the desired job and namespace
