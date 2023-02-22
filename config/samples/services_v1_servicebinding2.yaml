@@ -1,0 +1,6 @@
+apiVersion: services.cloud.sap.com/v1
+kind: ServiceBinding
+metadata:
+  name: sample-binding-2
+spec:
+  serviceInstanceName: sample-instance-1

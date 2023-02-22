@@ -1,0 +1,60 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pre-delete-job
+  namespace: {{ .Release.Namespace }}
+  labels:
+    release: {{ .Release.Name }}
+  annotations:
+    "helm.sh/hook": pre-delete
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": hook-succeeded
+spec:
+  ttlSecondsAfterFinished: 60
+  completions: 1
+  backoffLimit: 0
+  template:
+    spec:
+      serviceAccountName: sap-btp-operator
+      containers:
+        - name: pre-delete-operator
+          image: "bitnami/kubectl"
+          command: ["/bin/sh"]
+          args:
+            - "-c"
+            - |
+              servicebindingsCRD="servicebindings.services.cloud.sap.com"
+              kubectl get $servicebindingsCRD -A
+              kubectl get $servicebindingsCRD -A --output=custom-columns=NAME:.metadata.name,NAMESPACE:.metadata.namespace | tail -n +2 | while read -r line; do
+                name=$(echo $line | awk '{print $1}')
+                namespace=$(echo $line | awk '{print $2}')
+                echo "Deleting binding with Name: $name, and Namespace: $namespace"
+                timeout 30 kubectl delete $servicebindingsCRD $name -n $namespace
+                if [ $? -ne 0 ]; then
+                  echo "Failed to delete service binding $name"
+                  exit 1
+                fi
+              done
+              echo "No more bindings found"
+
+              serviceinstanceCRD="serviceinstances.services.cloud.sap.com"
+              kubectl get $serviceinstanceCRD -A
+              kubectl get $serviceinstanceCRD -A --output=custom-columns=NAME:.metadata.name,NAMESPACE:.metadata.namespace | tail -n +2 | while read -r line; do
+                name=$(echo $line | awk '{print $1}')
+                namespace=$(echo $line | awk '{print $2}')
+                echo "Deleting instance with Name: $name, and Namespace: $namespace"
+                timeout 30 kubectl delete $serviceinstanceCRD $name -n $namespace
+                if [ $? -ne 0 ]; then
+                  echo "Failed to delete service instance $name"
+                  exit 1
+                fi
+              done
+
+              if [ $? -ne 0 ]; then
+                exit 1
+              fi
+
+              echo "No more instances found"
+              exit 0
+
+      restartPolicy: Never
