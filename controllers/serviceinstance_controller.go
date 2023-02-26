@@ -195,7 +195,7 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 		return r.markAsNonTransientError(ctx, smClientTypes.CREATE, err, serviceInstance)
 	}
 
-	provision, provisionErr := smClient.Provision(&smClientTypes.ServiceInstance{
+	provision, provisionErr := smClient.ProvisionWithDataCenter(&smClientTypes.ServiceInstance{
 		Name:          serviceInstance.Spec.ExternalName,
 		ServicePlanID: serviceInstance.Spec.ServicePlanID,
 		Parameters:    instanceParameters,
@@ -204,7 +204,7 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 			k8sNameLabel:   []string{serviceInstance.Name},
 			clusterIDLabel: []string{r.Config.ClusterID},
 		},
-	}, serviceInstance.Spec.ServiceOfferingName, serviceInstance.Spec.ServicePlanName, nil, buildUserInfo(ctx, serviceInstance.Spec.UserInfo))
+	}, serviceInstance.Spec.ServiceOfferingName, serviceInstance.Spec.ServicePlanName, nil, buildUserInfo(ctx, serviceInstance.Spec.UserInfo), serviceInstance.Spec.DataCenter)
 
 	if provisionErr != nil {
 		log.Error(provisionErr, "failed to create service instance", "serviceOfferingName", serviceInstance.Spec.ServiceOfferingName,

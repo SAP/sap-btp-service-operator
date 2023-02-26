@@ -347,6 +347,15 @@ var _ = Describe("Client test", func() {
 
 			})
 
+			Context("No service name on the data center", func() {
+				It("should not provision successfully", func() {
+					res, err := client.ProvisionWithDataCenter(instance, serviceName, planName, params, "test-user", "notExisting")
+
+					Expect(err).Should(HaveOccurred())
+					Expect(res).To(BeNil())
+					Expect(err.Error()).To(Equal("couldn't find the service offering 'mongo' on data center 'notExisting'"))
+				})
+			})
 		})
 
 		Describe("Deprovision", func() {

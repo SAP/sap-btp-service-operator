@@ -835,6 +835,10 @@ func (fake *FakeClient) Provision(arg1 *types.ServiceInstance, arg2 string, arg3
 	return fakeReturns.result1, fakeReturns.result2
 }
 
+func (fake *FakeClient) ProvisionWithDataCenter(arg1 *types.ServiceInstance, arg2 string, arg3 string, arg4 *sm.Parameters, arg5 string, arg6 string) (*sm.ProvisionResponse, error) {
+	return fake.Provision(arg1, arg2, arg3, arg4, arg5)
+}
+
 func (fake *FakeClient) ProvisionCallCount() int {
 	fake.provisionMutex.RLock()
 	defer fake.provisionMutex.RUnlock()
@@ -1075,6 +1079,10 @@ func (fake *FakeClient) UnbindReturnsOnCall(i int, result1 string, result2 error
 		result1 string
 		result2 error
 	}{result1, result2}
+}
+
+func (fake *FakeClient) UpdateInstanceWithDataCenter(arg1 string, arg2 *types.ServiceInstance, arg3 string, arg4 string, arg5 *sm.Parameters, arg6 string, arg7 string) (*types.ServiceInstance, string, error) {
+	return fake.UpdateInstance(arg1, arg2, arg3, arg4, arg5, arg6)
 }
 
 func (fake *FakeClient) UpdateInstance(arg1 string, arg2 *types.ServiceInstance, arg3 string, arg4 string, arg5 *sm.Parameters, arg6 string) (*types.ServiceInstance, string, error) {

@@ -40,6 +40,10 @@ type ServiceInstanceSpec struct {
 	// +kubebuilder:validation:MinLength=1
 	ServicePlanName string `json:"servicePlanName"`
 
+	// The DataCenter in case service offering and plan name exist in other data center and not on master
+	// +optional
+	DataCenter string `json:"dataCenter"`
+
 	// The plan ID in case service offering and plan name are ambiguous
 	// +optional
 	ServicePlanID string `json:"servicePlanID,omitempty"`
@@ -108,6 +112,7 @@ type ServiceInstanceStatus struct {
 // +kubebuilder:storageversion
 // +kubebuilder:printcolumn:JSONPath=".spec.serviceOfferingName",name="Offering",type=string
 // +kubebuilder:printcolumn:JSONPath=".spec.servicePlanName",name="Plan",type=string
+// +kubebuilder:printcolumn:JSONPath=".spec.DataCenter",name="dataCenter",type=string
 // +kubebuilder:printcolumn:JSONPath=".status.conditions[0].reason",name="Status",type=string
 // +kubebuilder:printcolumn:JSONPath=".status.ready",name="Ready",type=string
 // +kubebuilder:printcolumn:JSONPath=".metadata.creationTimestamp",name="Age",type=date
