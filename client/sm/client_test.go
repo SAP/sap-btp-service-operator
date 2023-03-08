@@ -3,6 +3,7 @@ package sm
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/SAP/sap-btp-service-operator/client/sm/types"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -347,13 +348,57 @@ var _ = Describe("Client test", func() {
 
 			})
 
-			Context("No service name on the data center", func() {
-				It("should not provision successfully", func() {
-					res, err := client.ProvisionWithDataCenter(instance, serviceName, planName, params, "test-user", "notExisting")
+			Context("with data center", func() {
+				const nonExistingDC = "notExisting"
+				const existingDC = "existing"
+				BeforeEach(func() {
+					instanceResponseBody, _ := json.Marshal(instance)
+					offering := &types.ServiceOffering{
+						ID:          "service_id",
+						Name:        serviceName,
+						CatalogName: serviceName,
+					}
+					offeringDC := &types.ServiceOffering{
+						ID:          "service_id_dc",
+						Name:        serviceName,
+						CatalogName: serviceName,
+						DataCenter:  existingDC,
+					}
+					plan := &types.ServicePlan{
+						ID:                planID,
+						Name:              planName,
+						CatalogName:       serviceName,
+						ServiceOfferingID: serviceID,
+					}
+
+					plansArray := []types.ServicePlan{*plan}
+					plans := types.ServicePlans{ServicePlans: plansArray}
+					plansBody, _ := json.Marshal(plans)
+
+					offeringArray := []types.ServiceOffering{*offering, *offeringDC}
+					offerings := types.ServiceOfferings{ServiceOfferings: offeringArray}
+					offeringResponseBody, _ := json.Marshal(offerings)
+					handlerDetails = []HandlerDetails{
+						{Method: http.MethodPost, Path: types.ServiceInstancesURL, ResponseBody: instanceResponseBody, ResponseStatusCode: http.StatusCreated},
+						{Method: http.MethodGet, Path: types.ServiceOfferingsURL, ResponseBody: offeringResponseBody, ResponseStatusCode: http.StatusOK},
+						{Method: http.MethodGet, Path: types.ServicePlansURL, ResponseBody: plansBody, ResponseStatusCode: http.StatusOK},
+					}
+				})
+				It("when No data center, should not provision successfully", func() {
+
+					res, err := client.ProvisionWithDataCenter(instance, serviceName, planName, params, "test-user", nonExistingDC)
 
 					Expect(err).Should(HaveOccurred())
 					Expect(res).To(BeNil())
-					Expect(err.Error()).To(Equal("couldn't find the service offering 'mongo' on data center 'notExisting'"))
+					Expect(err.Error()).To(Equal(fmt.Sprintf("couldn't find the service offering '%s' on data center '%s'", serviceName, nonExistingDC)))
+				})
+				It("when No data center, should not provision successfully", func() {
+
+					res, err := client.ProvisionWithDataCenter(instance, serviceName, planName, params, "test-user", existingDC)
+
+					Expect(err).ShouldNot(HaveOccurred())
+					Expect(res.Location).Should(HaveLen(0))
+					Expect(res.InstanceID).To(Equal(instance.ID))
 				})
 			})
 		})

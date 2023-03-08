@@ -409,7 +409,7 @@ func (client *serviceManagerClient) callWithUser(method string, smpath string, b
 
 func (client *serviceManagerClient) getPlanInfo(planID string, serviceName string, planName string, dataCenter string) (*planInfo, error) {
 
-	offerings, err := client.getServiceOfferingsByName(serviceName)
+	offerings, err := client.getServiceOfferingsByNameAndDataCenter(serviceName, dataCenter)
 	if err != nil {
 		return nil, err
 	}
@@ -419,15 +419,11 @@ func (client *serviceManagerClient) getPlanInfo(planID string, serviceName strin
 		return nil, fmt.Errorf("couldn't find the service offering '%s'", serviceName)
 	}
 
-	serviceOfferingIds := make([]string, 0)
+	serviceOfferingIds := make([]string, 0, len(offerings.ServiceOfferings))
 	for _, svc := range offerings.ServiceOfferings {
-		if svc.DataCenter == dataCenter {
-			serviceOfferingIds = append(serviceOfferingIds, svc.ID)
-		}
+		serviceOfferingIds = append(serviceOfferingIds, svc.ID)
 	}
-	if len(serviceOfferingIds) == 0 {
-		return nil, fmt.Errorf("couldn't find the service offering '%s' on data center '%s'", serviceName, dataCenter)
-	}
+
 	commaSepOfferingIds = "'" + strings.Join(serviceOfferingIds, "', '") + "'"
 
 	query := &Parameters{
@@ -464,9 +460,9 @@ func (client *serviceManagerClient) getPlanInfo(planID string, serviceName strin
 	return nil, err
 }
 
-func (client *serviceManagerClient) getServiceOfferingsByName(serviceName string) (*types.ServiceOfferings, error) {
+func (client *serviceManagerClient) getServiceOfferingsByNameAndDataCenter(serviceName string, dataCenter string) (*types.ServiceOfferings, error) {
 	query := &Parameters{
-		FieldQuery: []string{fmt.Sprintf("catalog_name eq '%s'", serviceName)},
+		FieldQuery: []string{fmt.Sprintf("catalog_name eq '%s' and data_center eq '%s'", serviceName, dataCenter)},
 	}
 	offerings, err := client.ListOfferings(query)
 	if err != nil {
