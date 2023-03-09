@@ -40,7 +40,7 @@ type ServiceInstanceSpec struct {
 	// +kubebuilder:validation:MinLength=1
 	ServicePlanName string `json:"servicePlanName"`
 
-	// The DataCenter in case service offering and plan name exist in other data center and not on master
+	// The DataCenter in case service offering and plan name exist in other data center and not on main
 	// +optional
 	DataCenter string `json:"dataCenter"`
 

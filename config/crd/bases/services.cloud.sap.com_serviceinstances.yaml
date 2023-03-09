@@ -70,7 +70,7 @@ spec:
                 type: array
               dataCenter:
                 description: The DataCenter in case service offering and plan name
-                  exist in other data center and not on master
+                  exist in other data center and not on main
                 type: string
               externalName:
                 description: The name of the instance in Service Manager

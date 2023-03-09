@@ -121,4 +121,5 @@ var _ = Describe("Service Instance Type Test", func() {
 		instance.SetStatus(status)
 		Expect(instance.GetStatus()).To(Equal(status))
 	})
+
 })
