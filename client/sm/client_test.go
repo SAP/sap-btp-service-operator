@@ -185,6 +185,7 @@ var _ = Describe("Client test", func() {
 					Expect(res.Location).Should(HaveLen(0))
 					Expect(res.InstanceID).To(Equal(instance.ID))
 				})
+
 				Context("When multiple matching plan names returned from SM", func() {
 					BeforeEach(func() {
 						plan1 := &types.ServicePlan{

@@ -416,7 +416,7 @@ func (client *serviceManagerClient) getPlanInfo(planID string, serviceName strin
 
 	var commaSepOfferingIds string
 	if len(offerings.ServiceOfferings) == 0 {
-		return nil, fmt.Errorf("couldn't find the service offering '%s'", serviceName)
+		return nil, fmt.Errorf("couldn't find the service offering '%s' on dataCenter '%s'", serviceName, dataCenter)
 	}
 
 	serviceOfferingIds := make([]string, 0, len(offerings.ServiceOfferings))
