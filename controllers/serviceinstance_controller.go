@@ -271,11 +271,11 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 		return r.markAsNonTransientError(ctx, smClientTypes.UPDATE, fmt.Errorf("failed to parse parameters: %v", err.Error()), serviceInstance)
 	}
 
-	_, operationURL, err := smClient.UpdateInstance(serviceInstance.Status.InstanceID, &smClientTypes.ServiceInstance{
+	_, operationURL, err := smClient.UpdateInstanceWithDataCenter(serviceInstance.Status.InstanceID, &smClientTypes.ServiceInstance{
 		Name:          serviceInstance.Spec.ExternalName,
 		ServicePlanID: serviceInstance.Spec.ServicePlanID,
 		Parameters:    instanceParameters,
-	}, serviceInstance.Spec.ServiceOfferingName, serviceInstance.Spec.ServicePlanName, nil, buildUserInfo(ctx, serviceInstance.Spec.UserInfo))
+	}, serviceInstance.Spec.ServiceOfferingName, serviceInstance.Spec.ServicePlanName, nil, buildUserInfo(ctx, serviceInstance.Spec.UserInfo), serviceInstance.Spec.DataCenter)
 	if err != nil {
 		log.Error(err, fmt.Sprintf("failed to update service instance with ID %s", serviceInstance.Status.InstanceID))
 		if isTransientError(ctx, err) {
