@@ -9,12 +9,13 @@ import (
 type ControllerName string
 
 const (
-	ServiceInstanceController   ControllerName = "ServiceInstance"
-	ServiceBindingController    ControllerName = "ServiceBinding"
-	FinalizerName               string         = "services.cloud.sap.com/sap-btp-finalizer"
-	StaleBindingIDLabel         string         = "services.cloud.sap.com/stale"
-	StaleBindingRotationOfLabel string         = "services.cloud.sap.com/rotationOf"
-	ForceRotateAnnotation       string         = "services.cloud.sap.com/forceRotate"
+	ServiceInstanceController       ControllerName = "ServiceInstance"
+	ServiceBindingController        ControllerName = "ServiceBinding"
+	SharedServiceInstanceController ControllerName = "SharedServiceInstance"
+	FinalizerName                   string         = "services.cloud.sap.com/sap-btp-finalizer"
+	StaleBindingIDLabel             string         = "services.cloud.sap.com/stale"
+	StaleBindingRotationOfLabel     string         = "services.cloud.sap.com/rotationOf"
+	ForceRotateAnnotation           string         = "services.cloud.sap.com/forceRotate"
 )
 
 const (
