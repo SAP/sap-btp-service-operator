@@ -542,7 +542,7 @@ spec:
     - jsonPath: .spec.servicePlanName
       name: Plan
       type: string
-    - jsonPath: .spec.DataCenter
+    - jsonPath: .spec.dataCenter
       name: dataCenter
       type: string
     - jsonPath: .status.conditions[0].reason
