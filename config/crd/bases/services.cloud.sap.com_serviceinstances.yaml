@@ -22,7 +22,7 @@ spec:
     - jsonPath: .spec.servicePlanName
       name: Plan
       type: string
-    - jsonPath: .spec.DataCenter
+    - jsonPath: .spec.dataCenter
       name: dataCenter
       type: string
     - jsonPath: .status.conditions[0].reason
@@ -69,7 +69,7 @@ spec:
                   type: string
                 type: array
               dataCenter:
-                description: The DataCenter in case service offering and plan name
+                description: The dataCenter in case service offering and plan name
                   exist in other data center and not on main
                 type: string
               externalName:
