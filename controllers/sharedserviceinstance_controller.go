@@ -18,7 +18,9 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	servicesv1 "github.com/SAP/sap-btp-service-operator/api/v1"
+	"github.com/SAP/sap-btp-service-operator/client/sm"
 	"github.com/google/uuid"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -66,6 +68,16 @@ func (r *SharedServiceInstanceReconciler) Reconcile(ctx context.Context, req ctr
 		}
 	}
 
+	smClient, err := r.getSMClient(ctx, sharedServiceInstance)
+	if err != nil {
+		return r.markAsTransientError(ctx, Unknown, err, sharedServiceInstance)
+	}
+
+	if len(sharedServiceInstance.Status.OperationURL) > 0 {
+		// ongoing operation - poll status from SM
+		return r.poll(ctx, smClient, sharedServiceInstance)
+	}
+
 	return ctrl.Result{}, nil
 }
 
@@ -74,4 +86,10 @@ func (r *SharedServiceInstanceReconciler) SetupWithManager(mgr ctrl.Manager) err
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&servicesv1.SharedServiceInstance{}).
 		Complete(r)
+}
+
+func (r *SharedServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client, sharedServiceInstance *servicesv1.SharedServiceInstance) (ctrl.Result, error) {
+	log := GetLogger(ctx)
+	log.Info(fmt.Sprintf("resource is in progress, found operation url %s", sharedServiceInstance.Status.OperationURL))
+	status, statusErr := smClient.Status(sharedServiceInstance.Status.OperationURL, nil)
 }
