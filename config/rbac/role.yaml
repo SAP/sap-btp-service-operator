@@ -78,3 +78,29 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - services.cloud.sap.com
+  resources:
+  - sharedserviceinstances
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - services.cloud.sap.com
+  resources:
+  - sharedserviceinstances/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - services.cloud.sap.com
+  resources:
+  - sharedserviceinstances/status
+  verbs:
+  - get
+  - patch
+  - update
