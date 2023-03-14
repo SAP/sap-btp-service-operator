@@ -196,14 +196,14 @@ func (si *ServiceInstance) getOldSharedState() metav1.ConditionStatus {
 }
 
 func (in *ServiceInstance) sharedStateChanged(newShareState *bool, oldShareState metav1.ConditionStatus) bool {
-	if newShareState == nil && oldShareState == metav1.ConditionTrue {
+	if *newShareState && oldShareState == metav1.ConditionUnknown {
 		return true
 	}
-	if *newShareState && oldShareState == metav1.ConditionTrue {
-		return false
+	if *newShareState && oldShareState == metav1.ConditionFalse {
+		return true
 	}
-	if !*newShareState && oldShareState == metav1.ConditionFalse {
-		return false
+	if !*newShareState && oldShareState == metav1.ConditionTrue {
+		return true
 	}
-	return true
+	return false
 }
