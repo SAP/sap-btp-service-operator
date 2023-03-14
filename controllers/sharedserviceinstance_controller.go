@@ -92,4 +92,7 @@ func (r *SharedServiceInstanceReconciler) poll(ctx context.Context, smClient sm.
 	log := GetLogger(ctx)
 	log.Info(fmt.Sprintf("resource is in progress, found operation url %s", sharedServiceInstance.Status.OperationURL))
 	status, statusErr := smClient.Status(sharedServiceInstance.Status.OperationURL, nil)
+
+	fmt.Println(status, statusErr)
+	return ctrl.Result{}, statusErr
 }
