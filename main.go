@@ -130,6 +130,10 @@ func main() {
 			setupLog.Error(err, "unable to create webhook", "webhook", "ServiceBinding")
 			os.Exit(1)
 		}
+		if err = (&servicesv1.ServiceInstance{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "ServiceInstance")
+			os.Exit(1)
+		}
 	}
 	// +kubebuilder:scaffold:builder
 
