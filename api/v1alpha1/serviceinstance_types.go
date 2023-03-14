@@ -47,6 +47,9 @@ type ServiceInstanceSpec struct {
 	// The name of the instance in Service Manager
 	ExternalName string `json:"externalName,omitempty"`
 
+	// Indicates if the instances is shareable
+	Shared bool `json:"shared,omitempty"`
+
 	// Provisioning parameters for the instance.
 	//
 	// The Parameters field is NOT secret or secured in any way and should
@@ -101,6 +104,9 @@ type ServiceInstanceStatus struct {
 
 	// Indicates whether instance is ready for usage
 	Ready metav1.ConditionStatus `json:"ready,omitempty"`
+
+	// Indicates whether instance is shared
+	Shared metav1.ConditionStatus `json:"shared,omitempty"`
 }
 
 // +kubebuilder:object:root=true

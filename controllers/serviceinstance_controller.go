@@ -249,6 +249,8 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	}
 
 	serviceInstance.Status.Ready = metav1.ConditionTrue
+	falsePtr := new(bool)
+	serviceInstance.Spec.Shared = falsePtr
 	setSuccessConditions(smClientTypes.CREATE, serviceInstance)
 	return ctrl.Result{}, r.updateStatus(ctx, serviceInstance)
 }
