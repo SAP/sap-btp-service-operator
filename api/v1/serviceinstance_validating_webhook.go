@@ -48,8 +48,8 @@ func (si *ServiceInstance) ValidateUpdate(old runtime.Object) error {
 	if !si.sharedStateChanged(newSharedState, oldShareState) {
 		return nil
 	}
-	specChanged := si.specChanged(old)
-	if specChanged {
+
+	if si.specChanged(old) {
 		return fmt.Errorf("updating share property is unabled with other spec changes")
 	}
 	return nil
