@@ -41,7 +41,7 @@ var _ webhook.Validator = &ServiceInstance{}
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (si *ServiceInstance) ValidateUpdate(old runtime.Object) error {
-	servicebindinglog.Info("validate update", "name", si.Name)
+	serviceinstanceglog.Info("validate update", "name", si.Name)
 
 	newSharedState := si.Spec.Shared
 	oldShareState := si.getOldSharedState()
