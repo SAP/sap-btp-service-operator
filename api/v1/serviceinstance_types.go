@@ -168,8 +168,12 @@ func (in *ServiceInstance) GetReady() metav1.ConditionStatus {
 	return in.Status.Ready
 }
 
-func (in *ServiceInstance) SetReady(ready metav1.ConditionStatus) {
-	in.Status.Ready = ready
+func (si *ServiceInstance) SetReady(ready metav1.ConditionStatus) {
+	si.Status.Ready = ready
+}
+
+func (si *ServiceInstance) SetShared(shared metav1.ConditionStatus) {
+	si.Status.Shared = shared
 }
 
 // +kubebuilder:object:root=true

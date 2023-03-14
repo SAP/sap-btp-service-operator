@@ -361,6 +361,16 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 	return ctrl.Result{}, nil
 }
 
+func (r *ServiceInstanceReconciler) init(ctx context.Context, si *servicesv1.ServiceInstance) error {
+	si.SetReady(metav1.ConditionFalse)
+	si.SetShared(metav1.ConditionFalse)
+	setInProgressConditions(smClientTypes.CREATE, "Pending", si)
+	if err := r.updateStatus(ctx, si); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (r *ServiceInstanceReconciler) resyncInstanceStatus(ctx context.Context, smClient sm.Client, k8sInstance *servicesv1.ServiceInstance, smInstance *smClientTypes.ServiceInstance) {
 	log := GetLogger(ctx)
 	// set observed generation to 0 because we dont know which generation the current state in SM represents,
