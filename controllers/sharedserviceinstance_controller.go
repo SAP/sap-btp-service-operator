@@ -19,17 +19,16 @@ package controllers
 import (
 	"context"
 	servicesv1 "github.com/SAP/sap-btp-service-operator/api/v1"
-
-	"k8s.io/apimachinery/pkg/runtime"
-	ctrl "sigs.k8s.io/controller-runtime"
+	"github.com/google/uuid"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
+
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 // SharedServiceInstanceReconciler reconciles a SharedServiceInstance object
 type SharedServiceInstanceReconciler struct {
-	client.Client
-	Scheme *runtime.Scheme
+	*BaseReconciler
 }
 
 //+kubebuilder:rbac:groups=services.cloud.sap.com,resources=sharedserviceinstances,verbs=get;list;watch;create;update;patch;delete
@@ -46,9 +45,19 @@ type SharedServiceInstanceReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.1/pkg/reconcile
 func (r *SharedServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	log := r.Log.WithValues("sharedserviceinstance", req.NamespacedName).WithValues("correlation_id", uuid.New().String())
+	ctx = context.WithValue(ctx, LogKey{}, log)
 
-	// TODO(user): your logic here
+	serviceInstance := &servicesv1.ServiceInstance{}
+	if err := r.Get(ctx, req.NamespacedName, serviceInstance); err != nil {
+		if !apierrors.IsNotFound(err) {
+			log.Error(err, "unable to fetch ServiceInstance")
+		}
+		// we'll ignore not-found errors, since they can't be fixed by an immediate
+		// requeue (we'll need to wait for a new notification), and we can get them
+		// on deleted requests.
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
 
 	return ctrl.Result{}, nil
 }
