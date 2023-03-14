@@ -15,7 +15,28 @@ spec:
     singular: sharedserviceinstance
   scope: Namespaced
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - jsonPath: .spec.serviceInstanceName
+      name: Instance
+      type: string
+    - jsonPath: .status.conditions[0].reason
+      name: Status
+      type: string
+    - jsonPath: .status.ready
+      name: Ready
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    - jsonPath: .status.bindingID
+      name: ID
+      priority: 1
+      type: string
+    - jsonPath: .status.conditions[0].message
+      name: Message
+      priority: 1
+      type: string
+    name: v1
     schema:
       openAPIV3Schema:
         description: SharedServiceInstance is the Schema for the sharedserviceinstances
@@ -187,10 +208,31 @@ spec:
             type: object
         type: object
     served: true
-    storage: false
+    storage: true
     subresources:
       status: {}
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .spec.serviceInstanceName
+      name: Instance
+      type: string
+    - jsonPath: .status.conditions[0].reason
+      name: Status
+      type: string
+    - jsonPath: .status.ready
+      name: Ready
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    - jsonPath: .status.bindingID
+      name: ID
+      priority: 1
+      type: string
+    - jsonPath: .status.conditions[0].message
+      name: Message
+      priority: 1
+      type: string
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: SharedServiceInstance is the Schema for the sharedserviceinstances

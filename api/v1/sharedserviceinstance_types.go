@@ -88,8 +88,15 @@ type SharedServiceInstanceStatus struct {
 	Ready metav1.ConditionStatus `json:"ready,omitempty"`
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:storageversion
+// +kubebuilder:printcolumn:JSONPath=".spec.serviceInstanceName",name="Instance",type=string
+// +kubebuilder:printcolumn:JSONPath=".status.conditions[0].reason",name="Status",type=string
+// +kubebuilder:printcolumn:JSONPath=".status.ready",name="Ready",type=string
+// +kubebuilder:printcolumn:JSONPath=".metadata.creationTimestamp",name="Age",type=date
+// +kubebuilder:printcolumn:JSONPath=".status.bindingID",name="ID",type=string,priority=1
+// +kubebuilder:printcolumn:JSONPath=".status.conditions[0].message",name="Message",type=string,priority=1
 
 // SharedServiceInstance is the Schema for the sharedserviceinstances API
 type SharedServiceInstance struct {
@@ -99,8 +106,6 @@ type SharedServiceInstance struct {
 	Spec   SharedServiceInstanceSpec   `json:"spec,omitempty"`
 	Status SharedServiceInstanceStatus `json:"status,omitempty"`
 }
-
-//+kubebuilder:object:root=true
 
 // SharedServiceInstanceList contains a list of SharedServiceInstance
 type SharedServiceInstanceList struct {
