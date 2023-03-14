@@ -1,0 +1,114 @@
+/*
+Copyright 2023.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package v1alpha1
+
+import (
+	v1 "k8s.io/api/authentication/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
+// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+
+// SharedServiceInstanceSpec defines the desired state of SharedServiceInstance
+type SharedServiceInstanceSpec struct {
+	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
+	// Important: Run "make" to regenerate code after modifying this file
+
+	// The k8s name of the service instance to bind, should be in the namespace of the binding
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	ServiceInstanceName string `json:"serviceInstanceName"`
+
+	// The name of the binding in Service Manager
+	// +optional
+	ExternalName string `json:"externalName"`
+
+	// SecretName is the name of the secret where credentials will be stored
+	// +optional
+	SecretName string `json:"secretName"`
+
+	// SecretKey is used as the key inside the secret to store the credentials
+	// returned by the broker encoded as json to support complex data structures.
+	// If not specified, the credentials returned by the broker will be used
+	// directly as the secrets data.
+	// +optional
+	SecretKey *string `json:"secretKey,omitempty"`
+
+	// SecretRootKey is used as the key inside the secret to store all binding
+	// data including credentials returned by the broker and additional info under single key.
+	// Convenient way to store whole binding data in single file when using `volumeMounts`.
+	// +optional
+	SecretRootKey *string `json:"secretRootKey,omitempty"`
+
+	// UserInfo contains information about the user that last modified this
+	// instance. This field is set by the API server and not settable by the
+	// end-user. User-provided values for this field are not saved.
+	// +optional
+	UserInfo *v1.UserInfo `json:"userInfo,omitempty"`
+}
+
+// SharedServiceInstanceStatus defines the observed state of SharedServiceInstance
+type SharedServiceInstanceStatus struct {
+	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
+	// Important: Run "make" to regenerate code after modifying this file
+
+	// The ID of the instance in SM associated with binding
+	// +optional
+	InstanceID string `json:"instanceID,omitempty"`
+
+	// The generated ID of the binding, will be automatically filled once the binding is created
+	// +optional
+	BindingID string `json:"bindingID,omitempty"`
+
+	// URL of ongoing operation for the service binding
+	OperationURL string `json:"operationURL,omitempty"`
+
+	// Service binding conditions
+	Conditions []metav1.Condition `json:"conditions"`
+
+	// Last generation that was acted on
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+
+	// Indicates whether binding is ready for usage
+	Ready metav1.ConditionStatus `json:"ready,omitempty"`
+}
+
+//+kubebuilder:object:root=true
+//+kubebuilder:subresource:status
+
+// SharedServiceInstance is the Schema for the sharedserviceinstances API
+type SharedServiceInstance struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Spec   SharedServiceInstanceSpec   `json:"spec,omitempty"`
+	Status SharedServiceInstanceStatus `json:"status,omitempty"`
+}
+
+//+kubebuilder:object:root=true
+
+// SharedServiceInstanceList contains a list of SharedServiceInstance
+type SharedServiceInstanceList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []SharedServiceInstance `json:"items"`
+}
+
+func init() {
+	SchemeBuilder.Register(&SharedServiceInstance{}, &SharedServiceInstanceList{})
+}
