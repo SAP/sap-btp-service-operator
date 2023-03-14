@@ -48,15 +48,22 @@ func (r *SharedServiceInstanceReconciler) Reconcile(ctx context.Context, req ctr
 	log := r.Log.WithValues("sharedserviceinstance", req.NamespacedName).WithValues("correlation_id", uuid.New().String())
 	ctx = context.WithValue(ctx, LogKey{}, log)
 
-	serviceInstance := &servicesv1.ServiceInstance{}
-	if err := r.Get(ctx, req.NamespacedName, serviceInstance); err != nil {
+	sharedServiceInstance := &servicesv1.SharedServiceInstance{}
+	if err := r.Get(ctx, req.NamespacedName, sharedServiceInstance); err != nil {
 		if !apierrors.IsNotFound(err) {
-			log.Error(err, "unable to fetch ServiceInstance")
+			log.Error(err, "unable to fetch SharedServiceInstance")
 		}
 		// we'll ignore not-found errors, since they can't be fixed by an immediate
 		// requeue (we'll need to wait for a new notification), and we can get them
 		// on deleted requests.
 		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+	sharedServiceInstance = sharedServiceInstance.DeepCopy()
+
+	if len(sharedServiceInstance.GetConditions()) == 0 {
+		if err := r.init(ctx, sharedServiceInstance); err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 
 	return ctrl.Result{}, nil

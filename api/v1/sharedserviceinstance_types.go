@@ -17,8 +17,10 @@ limitations under the License.
 package v1
 
 import (
+	"github.com/SAP/sap-btp-service-operator/api"
 	v1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -60,6 +62,16 @@ type SharedServiceInstanceSpec struct {
 	// end-user. User-provided values for this field are not saved.
 	// +optional
 	UserInfo *v1.UserInfo `json:"userInfo,omitempty"`
+
+	// Parameters for the binding.
+	//
+	// The Parameters field is NOT secret or secured in any way and should
+	// NEVER be used to hold sensitive information. To set parameters that
+	// contain secret information, you should ALWAYS store that information
+	// in a Secret and use the ParametersFrom field.
+	// +optional
+	// +kubebuilder:pruning:PreserveUnknownFields
+	Parameters *runtime.RawExtension `json:"parameters,omitempty"`
 }
 
 // SharedServiceInstanceStatus defines the observed state of SharedServiceInstance
@@ -107,11 +119,55 @@ type SharedServiceInstance struct {
 	Status SharedServiceInstanceStatus `json:"status,omitempty"`
 }
 
+func (ssi *SharedServiceInstance) GetParameters() *runtime.RawExtension {
+	return ssi.Spec.Parameters
+}
+
 // SharedServiceInstanceList contains a list of SharedServiceInstance
 type SharedServiceInstanceList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []SharedServiceInstance `json:"items"`
+}
+
+func (ssi *SharedServiceInstance) GetConditions() []metav1.Condition {
+	return ssi.Status.Conditions
+}
+
+func (ssi *SharedServiceInstance) SetConditions(conditions []metav1.Condition) {
+	ssi.Status.Conditions = conditions
+}
+
+func (ssi *SharedServiceInstance) GetControllerName() api.ControllerName {
+	return api.SharedServiceInstanceController
+}
+
+func (ssi *SharedServiceInstance) GetStatus() interface{} {
+	return ssi.Status
+}
+
+func (ssi *SharedServiceInstance) SetStatus(status interface{}) {
+	ssi.Status = status.(SharedServiceInstanceStatus)
+}
+
+func (ssi *SharedServiceInstance) GetObservedGeneration() int64 {
+	return ssi.Status.ObservedGeneration
+}
+
+func (ssi *SharedServiceInstance) SetObservedGeneration(newObserved int64) {
+	ssi.Status.ObservedGeneration = newObserved
+}
+
+func (ssi *SharedServiceInstance) DeepClone() api.SAPBTPResource {
+	return ssi.DeepCopy()
+}
+
+func (ssi *SharedServiceInstance) GetReady() metav1.ConditionStatus {
+	return ssi.Status.Ready
+}
+
+func (ssi *SharedServiceInstance) SetReady(ready metav1.ConditionStatus) {
+	ssi.Status.Ready = ready
 }
 
 func init() {
