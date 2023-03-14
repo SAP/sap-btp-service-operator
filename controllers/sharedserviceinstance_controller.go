@@ -23,7 +23,9 @@ import (
 	"github.com/SAP/sap-btp-service-operator/client/sm"
 	"github.com/google/uuid"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 )
@@ -85,6 +87,7 @@ func (r *SharedServiceInstanceReconciler) Reconcile(ctx context.Context, req ctr
 func (r *SharedServiceInstanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&servicesv1.SharedServiceInstance{}).
+		WithOptions(controller.Options{RateLimiter: workqueue.NewItemExponentialFailureRateLimiter(r.Config.RetryBaseDelay, r.Config.RetryMaxDelay)}).
 		Complete(r)
 }
 
