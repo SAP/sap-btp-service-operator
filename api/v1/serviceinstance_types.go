@@ -128,44 +128,44 @@ type ServiceInstance struct {
 	Status            ServiceInstanceStatus `json:"status,omitempty"`
 }
 
-func (in *ServiceInstance) GetConditions() []metav1.Condition {
-	return in.Status.Conditions
+func (si *ServiceInstance) GetConditions() []metav1.Condition {
+	return si.Status.Conditions
 }
 
-func (in *ServiceInstance) SetConditions(conditions []metav1.Condition) {
-	in.Status.Conditions = conditions
+func (si *ServiceInstance) SetConditions(conditions []metav1.Condition) {
+	si.Status.Conditions = conditions
 }
 
-func (in *ServiceInstance) GetControllerName() api.ControllerName {
+func (si *ServiceInstance) GetControllerName() api.ControllerName {
 	return api.ServiceInstanceController
 }
 
-func (in *ServiceInstance) GetParameters() *runtime.RawExtension {
-	return in.Spec.Parameters
+func (si *ServiceInstance) GetParameters() *runtime.RawExtension {
+	return si.Spec.Parameters
 }
 
-func (in *ServiceInstance) GetStatus() interface{} {
-	return in.Status
+func (si *ServiceInstance) GetStatus() interface{} {
+	return si.Status
 }
 
-func (in *ServiceInstance) SetStatus(status interface{}) {
-	in.Status = status.(ServiceInstanceStatus)
+func (si *ServiceInstance) SetStatus(status interface{}) {
+	si.Status = status.(ServiceInstanceStatus)
 }
 
-func (in *ServiceInstance) GetObservedGeneration() int64 {
-	return in.Status.ObservedGeneration
+func (si *ServiceInstance) GetObservedGeneration() int64 {
+	return si.Status.ObservedGeneration
 }
 
-func (in *ServiceInstance) SetObservedGeneration(newObserved int64) {
-	in.Status.ObservedGeneration = newObserved
+func (si *ServiceInstance) SetObservedGeneration(newObserved int64) {
+	si.Status.ObservedGeneration = newObserved
 }
 
-func (in *ServiceInstance) DeepClone() api.SAPBTPResource {
-	return in.DeepCopy()
+func (si *ServiceInstance) DeepClone() api.SAPBTPResource {
+	return si.DeepCopy()
 }
 
-func (in *ServiceInstance) GetReady() metav1.ConditionStatus {
-	return in.Status.Ready
+func (si *ServiceInstance) GetReady() metav1.ConditionStatus {
+	return si.Status.Ready
 }
 
 func (si *ServiceInstance) SetReady(ready metav1.ConditionStatus) {
@@ -189,13 +189,13 @@ func init() {
 	SchemeBuilder.Register(&ServiceInstance{}, &ServiceInstanceList{})
 }
 
-func (in *ServiceInstance) Hub() {}
+func (si *ServiceInstance) Hub() {}
 
 func (si *ServiceInstance) getOldSharedState() metav1.ConditionStatus {
 	return si.Status.Shared
 }
 
-func (in *ServiceInstance) sharedStateChanged(newShareState *bool, oldShareState metav1.ConditionStatus) bool {
+func (si *ServiceInstance) sharedStateChanged(newShareState *bool, oldShareState metav1.ConditionStatus) bool {
 	if *newShareState && oldShareState == metav1.ConditionUnknown || oldShareState == metav1.ConditionFalse {
 		return true
 	}
