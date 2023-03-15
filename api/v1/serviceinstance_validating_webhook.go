@@ -61,8 +61,8 @@ func (si *ServiceInstance) specChanged(old runtime.Object) bool {
 	newSpec := si.Spec.DeepCopy()
 
 	// We want to check if anything changed except of the shared
-	oldSpec.Shared = nil
-	newSpec.Shared = nil
+	oldSpec.Shared = false
+	newSpec.Shared = false
 	return !reflect.DeepEqual(oldSpec, newSpec)
 }
 

@@ -53,6 +53,8 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	log := r.Log.WithValues("serviceinstance", req.NamespacedName).WithValues("correlation_id", uuid.New().String())
 	ctx = context.WithValue(ctx, LogKey{}, log)
 
+	log.Info("Tal shor")
+
 	serviceInstance := &servicesv1.ServiceInstance{}
 	if err := r.Get(ctx, req.NamespacedName, serviceInstance); err != nil {
 		if !apierrors.IsNotFound(err) {
@@ -249,8 +251,10 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	}
 
 	serviceInstance.Status.Ready = metav1.ConditionTrue
-	falsePtr := new(bool)
-	serviceInstance.Spec.Shared = falsePtr
+	log.Info("Check tal shor")
+	if !serviceInstance.Spec.Shared {
+		serviceInstance.Status.Shared = metav1.ConditionFalse
+	}
 	setSuccessConditions(smClientTypes.CREATE, serviceInstance)
 	return ctrl.Result{}, r.updateStatus(ctx, serviceInstance)
 }

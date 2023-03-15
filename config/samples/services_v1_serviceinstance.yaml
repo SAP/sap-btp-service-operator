@@ -3,5 +3,6 @@ kind: ServiceInstance
 metadata:
   name: sample-instance-1
 spec:
+  shared: false
   serviceOfferingName: service-manager
   servicePlanName: subaccount-admin

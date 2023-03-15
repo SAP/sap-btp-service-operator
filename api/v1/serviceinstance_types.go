@@ -49,7 +49,7 @@ type ServiceInstanceSpec struct {
 
 	// Indicates if the instances is shareable
 	// +optional
-	Shared *bool `json:"shared,omitempty"`
+	Shared bool `json:"shared,omitempty"`
 
 	// Provisioning parameters for the instance.
 	//
@@ -198,11 +198,11 @@ func (si *ServiceInstance) getOldSharedState() metav1.ConditionStatus {
 	return si.Status.Shared
 }
 
-func (si *ServiceInstance) sharedStateChanged(newShareState *bool, oldShareState metav1.ConditionStatus) bool {
-	if *newShareState && oldShareState == metav1.ConditionUnknown || oldShareState == metav1.ConditionFalse {
+func (si *ServiceInstance) sharedStateChanged(newShareState bool, oldShareState metav1.ConditionStatus) bool {
+	if newShareState && oldShareState == metav1.ConditionUnknown || oldShareState == metav1.ConditionFalse {
 		return true
 	}
-	if !*newShareState && oldShareState == metav1.ConditionTrue {
+	if !newShareState && oldShareState == metav1.ConditionTrue {
 		return true
 	}
 	return false
