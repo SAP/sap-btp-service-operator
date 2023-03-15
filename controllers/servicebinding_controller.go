@@ -699,7 +699,11 @@ func (r *ServiceBindingReconciler) addInstanceInfo(ctx context.Context, binding 
 		return nil, err
 	}
 
-	credentialsMap["instance_name"] = []byte(binding.Spec.ServiceInstanceName)
+	if instance.Spec.ExternalName != "" {
+		credentialsMap["instance_name"] = []byte(instance.Spec.ExternalName)
+	} else {
+		credentialsMap["instance_name"] = []byte(binding.Spec.ServiceInstanceName)
+	}
 	credentialsMap["instance_guid"] = []byte(instance.Status.InstanceID)
 	credentialsMap["plan"] = []byte(instance.Spec.ServicePlanName)
 	credentialsMap["label"] = []byte(instance.Spec.ServiceOfferingName)
