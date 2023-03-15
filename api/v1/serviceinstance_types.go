@@ -48,6 +48,7 @@ type ServiceInstanceSpec struct {
 	ExternalName string `json:"externalName,omitempty"`
 
 	// Indicates if the instances is shareable
+	// +optional
 	Shared *bool `json:"shared,omitempty"`
 
 	// Provisioning parameters for the instance.
@@ -106,6 +107,7 @@ type ServiceInstanceStatus struct {
 	Ready metav1.ConditionStatus `json:"ready,omitempty"`
 
 	// Indicates whether instance is shared
+	// +optional
 	Shared metav1.ConditionStatus `json:"shared,omitempty"`
 }
 
