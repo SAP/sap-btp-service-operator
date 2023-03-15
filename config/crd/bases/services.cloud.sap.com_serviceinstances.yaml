@@ -243,7 +243,7 @@ spec:
                 type: string
               shared:
                 description: Indicates whether instance is shared
-                type: string
+                type: bool
               tags:
                 description: Tags describing the ServiceInstance as provided in service
                   catalog, will be copied to `ServiceBinding` secret in the key called
@@ -487,7 +487,7 @@ spec:
                 type: string
               shared:
                 description: Indicates whether instance is shared
-                type: string
+                type: bool
               tags:
                 description: Tags describing the ServiceInstance as provided in service
                   catalog, will be copied to `ServiceBinding` secret in the key called
