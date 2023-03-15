@@ -17,7 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	v1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -33,33 +32,6 @@ type SharedServiceInstanceSpec struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	ServiceInstanceName string `json:"serviceInstanceName"`
-
-	// The name of the binding in Service Manager
-	// +optional
-	ExternalName string `json:"externalName"`
-
-	// SecretName is the name of the secret where credentials will be stored
-	// +optional
-	SecretName string `json:"secretName"`
-
-	// SecretKey is used as the key inside the secret to store the credentials
-	// returned by the broker encoded as json to support complex data structures.
-	// If not specified, the credentials returned by the broker will be used
-	// directly as the secrets data.
-	// +optional
-	SecretKey *string `json:"secretKey,omitempty"`
-
-	// SecretRootKey is used as the key inside the secret to store all binding
-	// data including credentials returned by the broker and additional info under single key.
-	// Convenient way to store whole binding data in single file when using `volumeMounts`.
-	// +optional
-	SecretRootKey *string `json:"secretRootKey,omitempty"`
-
-	// UserInfo contains information about the user that last modified this
-	// instance. This field is set by the API server and not settable by the
-	// end-user. User-provided values for this field are not saved.
-	// +optional
-	UserInfo *v1.UserInfo `json:"userInfo,omitempty"`
 }
 
 // SharedServiceInstanceStatus defines the observed state of SharedServiceInstance
