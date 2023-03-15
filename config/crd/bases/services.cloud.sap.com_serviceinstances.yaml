@@ -115,6 +115,9 @@ spec:
                 description: The name of the service plan
                 minLength: 1
                 type: string
+              shared:
+                description: Indicates if the instances is shareable
+                type: boolean
               userInfo:
                 description: UserInfo contains information about the user that last
                   modified this instance. This field is set by the API server and
@@ -237,6 +240,9 @@ spec:
                 type: string
               ready:
                 description: Indicates whether instance is ready for usage
+                type: string
+              shared:
+                description: Indicates whether instance is shared
                 type: string
               tags:
                 description: Tags describing the ServiceInstance as provided in service
@@ -353,6 +359,9 @@ spec:
                 description: The name of the service plan
                 minLength: 1
                 type: string
+              shared:
+                description: Indicates if the instances aim to be shared or un-shared
+                type: boolean
               userInfo:
                 description: UserInfo contains information about the user that last
                   modified this instance. This field is set by the API server and
@@ -475,6 +484,9 @@ spec:
                 type: string
               ready:
                 description: Indicates whether instance is ready for usage
+                type: string
+              shared:
+                description: Indicates whether instance is shared
                 type: string
               tags:
                 description: Tags describing the ServiceInstance as provided in service
