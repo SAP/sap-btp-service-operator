@@ -18,7 +18,6 @@ package v1
 
 import (
 	"github.com/SAP/sap-btp-service-operator/api"
-	v1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -35,43 +34,6 @@ type SharedServiceInstanceSpec struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	ServiceInstanceName string `json:"serviceInstanceName"`
-
-	// The name of the binding in Service Manager
-	// +optional
-	ExternalName string `json:"externalName"`
-
-	// SecretName is the name of the secret where credentials will be stored
-	// +optional
-	SecretName string `json:"secretName"`
-
-	// SecretKey is used as the key inside the secret to store the credentials
-	// returned by the broker encoded as json to support complex data structures.
-	// If not specified, the credentials returned by the broker will be used
-	// directly as the secrets data.
-	// +optional
-	SecretKey *string `json:"secretKey,omitempty"`
-
-	// SecretRootKey is used as the key inside the secret to store all binding
-	// data including credentials returned by the broker and additional info under single key.
-	// Convenient way to store whole binding data in single file when using `volumeMounts`.
-	// +optional
-	SecretRootKey *string `json:"secretRootKey,omitempty"`
-
-	// UserInfo contains information about the user that last modified this
-	// instance. This field is set by the API server and not settable by the
-	// end-user. User-provided values for this field are not saved.
-	// +optional
-	UserInfo *v1.UserInfo `json:"userInfo,omitempty"`
-
-	// Parameters for the binding.
-	//
-	// The Parameters field is NOT secret or secured in any way and should
-	// NEVER be used to hold sensitive information. To set parameters that
-	// contain secret information, you should ALWAYS store that information
-	// in a Secret and use the ParametersFrom field.
-	// +optional
-	// +kubebuilder:pruning:PreserveUnknownFields
-	Parameters *runtime.RawExtension `json:"parameters,omitempty"`
 }
 
 // SharedServiceInstanceStatus defines the observed state of SharedServiceInstance
@@ -82,10 +44,6 @@ type SharedServiceInstanceStatus struct {
 	// The ID of the instance in SM associated with binding
 	// +optional
 	InstanceID string `json:"instanceID,omitempty"`
-
-	// The generated ID of the binding, will be automatically filled once the binding is created
-	// +optional
-	BindingID string `json:"bindingID,omitempty"`
 
 	// URL of ongoing operation for the service binding
 	OperationURL string `json:"operationURL,omitempty"`
@@ -107,7 +65,6 @@ type SharedServiceInstanceStatus struct {
 // +kubebuilder:printcolumn:JSONPath=".status.conditions[0].reason",name="Status",type=string
 // +kubebuilder:printcolumn:JSONPath=".status.ready",name="Ready",type=string
 // +kubebuilder:printcolumn:JSONPath=".metadata.creationTimestamp",name="Age",type=date
-// +kubebuilder:printcolumn:JSONPath=".status.bindingID",name="ID",type=string,priority=1
 // +kubebuilder:printcolumn:JSONPath=".status.conditions[0].message",name="Message",type=string,priority=1
 
 // SharedServiceInstance is the Schema for the sharedserviceinstances API
@@ -119,8 +76,8 @@ type SharedServiceInstance struct {
 	Status SharedServiceInstanceStatus `json:"status,omitempty"`
 }
 
-func (ssi *SharedServiceInstance) GetParameters() *runtime.RawExtension {
-	return ssi.Spec.Parameters
+func (in *SharedServiceInstance) GetParameters() *runtime.RawExtension {
+	return nil
 }
 
 // SharedServiceInstanceList contains a list of SharedServiceInstance
