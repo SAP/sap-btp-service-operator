@@ -29,7 +29,7 @@ var _ = Describe("Service Instance Webhook Test", func() {
 			When("Spec changed", func() {
 				It("should fail", func() {
 					newInstance.Spec.Shared = true
-					newInstance.Spec.ExternalName = "Hunni"
+					newInstance.Spec.ExternalName = "blabla"
 					err := newInstance.ValidateUpdate(instance)
 					Expect(err).To(HaveOccurred())
 				})
@@ -38,6 +38,31 @@ var _ = Describe("Service Instance Webhook Test", func() {
 			When("Spec did not change", func() {
 				It("should pass", func() {
 					newInstance.Spec.Shared = true
+					err := newInstance.ValidateUpdate(instance)
+					Expect(err).To(Not(HaveOccurred()))
+				})
+			})
+		})
+
+		Context("Validate shared instance", func() {
+			var newInstance *ServiceInstance
+			BeforeEach(func() {
+				newInstance = getSharedInstance()
+				newInstance.Status.InstanceID = "1234"
+			})
+
+			When("Spec changed", func() {
+				It("should fail", func() {
+					newInstance.Spec.Shared = false
+					newInstance.Spec.ExternalName = "blabla"
+					err := newInstance.ValidateUpdate(instance)
+					Expect(err).To(HaveOccurred())
+				})
+			})
+
+			When("Spec did not change", func() {
+				It("should pass", func() {
+					newInstance.Spec.Shared = false
 					err := newInstance.ValidateUpdate(instance)
 					Expect(err).To(Not(HaveOccurred()))
 				})
