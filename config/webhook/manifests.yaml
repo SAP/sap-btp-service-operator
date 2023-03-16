@@ -75,3 +75,23 @@ webhooks:
     resources:
     - servicebindings
   sideEffects: None
+- admissionReviewVersions:
+  - v1beta1
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-services-cloud-sap-com-v1-serviceinstance
+  failurePolicy: Fail
+  name: vserviceinstance.kb.io
+  rules:
+  - apiGroups:
+    - services.cloud.sap.com
+    apiVersions:
+    - v1
+    operations:
+    - UPDATE
+    resources:
+    - serviceinstances
+  sideEffects: None
