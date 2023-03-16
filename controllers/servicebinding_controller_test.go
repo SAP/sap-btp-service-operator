@@ -160,7 +160,7 @@ var _ = Describe("ServiceBinding controller", func() {
 	}
 
 	JustBeforeEach(func() {
-		createdInstance = createInstance(context.Background(), instanceName, bindingTestNamespace, "")
+		createdInstance = createInstance(context.Background(), instanceName, bindingTestNamespace, instanceName+"-external")
 	})
 
 	BeforeEach(func() {
@@ -379,6 +379,8 @@ var _ = Describe("ServiceBinding controller", func() {
 					bindingSecret := getSecret(ctx, createdBinding.Spec.SecretName, createdBinding.Namespace, true)
 					validateSecretData(bindingSecret, "secret_key", "secret_value")
 					validateSecretData(bindingSecret, "escaped", `{"escaped_key":"escaped_val"}`)
+					validateSecretData(bindingSecret, "instance_external_name", createdInstance.Spec.ExternalName)
+					validateSecretData(bindingSecret, "instance_name", createdInstance.Name)
 					validateInstanceInfo(bindingSecret)
 					credentialProperties := []SecretMetadataProperty{
 						{

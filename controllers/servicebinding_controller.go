@@ -700,6 +700,7 @@ func (r *ServiceBindingReconciler) addInstanceInfo(ctx context.Context, binding 
 	}
 
 	credentialsMap["instance_name"] = []byte(binding.Spec.ServiceInstanceName)
+	credentialsMap["instance_external_name"] = []byte(instance.Spec.ExternalName)
 	credentialsMap["instance_guid"] = []byte(instance.Status.InstanceID)
 	credentialsMap["plan"] = []byte(instance.Spec.ServicePlanName)
 	credentialsMap["label"] = []byte(instance.Spec.ServiceOfferingName)
