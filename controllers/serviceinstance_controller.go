@@ -483,3 +483,40 @@ func (r *ServiceInstanceReconciler) getInstanceForRecovery(ctx context.Context, 
 	log.Info("instance not found in SM")
 	return nil, nil
 }
+
+func (r *ServiceInstanceReconciler) shareInstance(ctx context.Context, smClient sm.Client, serviceInstance *servicesv1.ServiceInstance) (ctrl.Result, error) {
+	log := GetLogger(ctx)
+	log.Info(fmt.Sprintf("sharing instance %s in SM", serviceInstance.Status.InstanceID))
+
+	parameters := sm.Parameters{
+		FieldQuery: []string{
+			fmt.Sprintf("name eq '%s'", serviceInstance.Spec.ExternalName),
+			fmt.Sprintf("context/clusterid eq '%s'", r.Config.ClusterID),
+			fmt.Sprintf("context/namespace eq '%s'", serviceInstance.Namespace)},
+		LabelQuery: []string{
+			fmt.Sprintf("%s eq '%s'", k8sNameLabel, serviceInstance.Name)},
+		GeneralParams: []string{"attach_last_operations=true"},
+	}
+
+	shareInstanceBodyJson, err := json.Marshal(parameters)
+	if err != nil {
+
+	}
+
+	instance, _, err := smClient.UpdateInstance(serviceInstance.Status.InstanceID, &smClientTypes.ServiceInstance{
+		Name:          serviceInstance.Spec.ExternalName,
+		ServicePlanID: serviceInstance.Spec.ServicePlanID,
+		Parameters:    shareInstanceBodyJson,
+	}, serviceInstance.Spec.ServiceOfferingName, serviceInstance.Spec.ServicePlanName, nil, buildUserInfo(ctx, serviceInstance.Spec.UserInfo))
+	if err != nil {
+		log.Error(err, fmt.Sprintf("failed to share service instance with ID %s", serviceInstance.Status.InstanceID))
+		if isTransientError(ctx, err) {
+			return r.markAsTransientError(ctx, smClientTypes.UPDATE, err, serviceInstance)
+		}
+		return r.markAsNonTransientError(ctx, smClientTypes.UPDATE, err, serviceInstance)
+	}
+
+	fmt.Println(instance)
+
+	return ctrl.Result{}, nil
+}

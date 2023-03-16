@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"encoding/json"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/authentication/v1"
@@ -88,75 +89,35 @@ func getInstance() *ServiceInstance {
 }
 
 func getNonSharedInstance() *ServiceInstance {
-	return &ServiceInstance{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "services.cloud.sap.com/v1",
-			Kind:       "ServiceInstance",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "service-instance-1",
-			Namespace: "namespace-1",
-		},
-		Spec: ServiceInstanceSpec{
-			ServiceOfferingName: "service-offering-1",
-			ServicePlanName:     "service-plan-name-1",
-			ServicePlanID:       "service-plan-id-1",
-			ExternalName:        "my-service-instance-1",
-			Parameters:          &runtime.RawExtension{Raw: []byte(`{"key":"val"}`)},
-			ParametersFrom: []ParametersFromSource{
-				{
-					SecretKeyRef: &SecretKeyReference{
-						Name: "param-secret",
-						Key:  "secret-parameter",
-					},
-				},
-			},
-			UserInfo: &v1.UserInfo{
-				Username: "test-user",
-				Groups:   []string{"test-group"},
-				Extra:    map[string]v1.ExtraValue{"key": {"val"}},
-			},
-		},
-
-		Status: ServiceInstanceStatus{
-			Shared: metav1.ConditionFalse,
-		},
+	instance := getInstance()
+	var nonSharedInstance ServiceInstance
+	instanceJson, err := json.Marshal(instance)
+	if err != nil {
+		return nil
 	}
+
+	err = json.Unmarshal(instanceJson, &nonSharedInstance)
+	if err != nil {
+		return nil
+	}
+
+	nonSharedInstance.Status.Shared = metav1.ConditionFalse
+	return &nonSharedInstance
 }
 
 func getSharedInstance() *ServiceInstance {
-	return &ServiceInstance{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "services.cloud.sap.com/v1",
-			Kind:       "ServiceInstance",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "service-instance-1",
-			Namespace: "namespace-1",
-		},
-		Spec: ServiceInstanceSpec{
-			ServiceOfferingName: "service-offering-1",
-			ServicePlanName:     "service-plan-name-1",
-			ServicePlanID:       "service-plan-id-1",
-			ExternalName:        "my-service-instance-1",
-			Parameters:          &runtime.RawExtension{Raw: []byte(`{"key":"val"}`)},
-			ParametersFrom: []ParametersFromSource{
-				{
-					SecretKeyRef: &SecretKeyReference{
-						Name: "param-secret",
-						Key:  "secret-parameter",
-					},
-				},
-			},
-			UserInfo: &v1.UserInfo{
-				Username: "test-user",
-				Groups:   []string{"test-group"},
-				Extra:    map[string]v1.ExtraValue{"key": {"val"}},
-			},
-		},
-
-		Status: ServiceInstanceStatus{
-			Shared: metav1.ConditionTrue,
-		},
+	instance := getInstance()
+	var nonSharedInstance ServiceInstance
+	instanceJson, err := json.Marshal(instance)
+	if err != nil {
+		return nil
 	}
+
+	err = json.Unmarshal(instanceJson, &nonSharedInstance)
+	if err != nil {
+		return nil
+	}
+
+	nonSharedInstance.Status.Shared = metav1.ConditionTrue
+	return &nonSharedInstance
 }
