@@ -53,8 +53,6 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	log := r.Log.WithValues("serviceinstance", req.NamespacedName).WithValues("correlation_id", uuid.New().String())
 	ctx = context.WithValue(ctx, LogKey{}, log)
 
-	log.Info("Tal shor")
-
 	serviceInstance := &servicesv1.ServiceInstance{}
 	if err := r.Get(ctx, req.NamespacedName, serviceInstance); err != nil {
 		if !apierrors.IsNotFound(err) {
@@ -169,7 +167,7 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client
 			return ctrl.Result{}, fmt.Errorf(errMsg)
 		}
 	case smClientTypes.SUCCEEDED:
-		setSuccessConditions(smClientTypes.OperationCategory(status.Type), serviceInstance)
+		setSuccessConditions(status.Type, serviceInstance)
 		if serviceInstance.Status.OperationType == smClientTypes.DELETE {
 			// delete was successful - remove our finalizer from the list and update it.
 			if err := r.removeFinalizer(ctx, serviceInstance, api.FinalizerName); err != nil {
@@ -177,7 +175,7 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client
 			}
 		} else if serviceInstance.Status.OperationType == smClientTypes.CREATE {
 			serviceInstance.Status.Ready = metav1.ConditionTrue
-			setSuccessConditions(smClientTypes.OperationCategory(status.Type), serviceInstance)
+			setSuccessConditions(status.Type, serviceInstance)
 		}
 	}
 
@@ -251,7 +249,6 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	}
 
 	serviceInstance.Status.Ready = metav1.ConditionTrue
-	log.Info("Check tal shor")
 	if !serviceInstance.Spec.Shared {
 		serviceInstance.Status.Shared = metav1.ConditionFalse
 	}

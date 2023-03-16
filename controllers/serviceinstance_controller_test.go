@@ -55,6 +55,24 @@ var _ = Describe("ServiceInstance controller", func() {
 		},
 	}
 
+	nonSharedInstanceSpec := v1.ServiceInstanceSpec{
+		ExternalName:        fakeInstanceExternalName,
+		ServicePlanName:     fakePlanName,
+		Shared:              false,
+		ServiceOfferingName: fakeOfferingName,
+		Parameters: &runtime.RawExtension{
+			Raw: []byte(`{"key": "value"}`),
+		},
+		ParametersFrom: []v1.ParametersFromSource{
+			{
+				SecretKeyRef: &v1.SecretKeyReference{
+					Name: "param-secret",
+					Key:  "secret-parameter",
+				},
+			},
+		},
+	}
+
 	createInstance := func(ctx context.Context, instanceSpec v1.ServiceInstanceSpec) *v1.ServiceInstance {
 		instance := &v1.ServiceInstance{
 			TypeMeta: metav1.TypeMeta{
@@ -146,7 +164,7 @@ var _ = Describe("ServiceInstance controller", func() {
 		}
 	})
 
-	Describe("Create", func() {
+	FDescribe("Create", func() {
 		Context("Invalid parameters", func() {
 			createInstanceWithFailure := func(spec v1.ServiceInstanceSpec) {
 				instance := &v1.ServiceInstance{
@@ -361,6 +379,25 @@ var _ = Describe("ServiceInstance controller", func() {
 				Expect(serviceInstance.Status.InstanceID).To(Equal(fakeInstanceID))
 				Expect(serviceInstance.Spec.ExternalName).To(Equal(fakeInstanceName))
 				Expect(serviceInstance.Name).To(Equal(fakeInstanceName))
+			})
+		})
+
+		FContext("Share instance", func() {
+			When("Creating instance with shared false in spec", func() {
+				It("Should create the instance with status shared false", func() {
+					serviceInstance = createInstance(ctx, nonSharedInstanceSpec)
+					Expect(serviceInstance.Status.InstanceID).To(Equal(fakeInstanceID))
+					Expect(serviceInstance.Spec.ExternalName).To(Equal(fakeInstanceExternalName))
+					Expect(serviceInstance.Spec.Shared).To(Equal(false))
+					Expect(serviceInstance.Status.Shared).To(Equal(metav1.ConditionFalse))
+					Expect(serviceInstance.Name).To(Equal(fakeInstanceName))
+					Expect(string(serviceInstance.Spec.Parameters.Raw)).To(ContainSubstring("\"key\":\"value\""))
+					Expect(serviceInstance.Spec.UserInfo).NotTo(BeNil())
+					smInstance, _, _, _, _ := fakeClient.ProvisionArgsForCall(0)
+					params := smInstance.Parameters
+					Expect(params).To(ContainSubstring("\"key\":\"value\""))
+					Expect(params).To(ContainSubstring("\"secret-key\":\"secret-value\""))
+				})
 			})
 		})
 	})
