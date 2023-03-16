@@ -35,17 +35,19 @@ func (si *ServiceInstance) SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-// +kubebuilder:webhook:verbs=create;update,path=/validate-services-cloud-sap-com-v1-servicebinding,mutating=false,failurePolicy=fail,groups=services.cloud.sap.com,resources=servicebindings,versions=v1,name=vservicebinding.kb.io,sideEffects=None,admissionReviewVersions=v1beta1;v1
+// +kubebuilder:webhook:verbs=create;update,path=/validate-services-cloud-sap-com-v1-serviceinstance,mutating=false,failurePolicy=fail,groups=services.cloud.sap.com,resources=serviceinstances,versions=v1,name=mserviceinstance.kb.io,sideEffects=None,admissionReviewVersions=v1beta1;v1
 
 var _ webhook.Validator = &ServiceInstance{}
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (si *ServiceInstance) ValidateUpdate(old runtime.Object) error {
 	serviceinstanceglog.Info("validate update", "name", si.Name)
-
+	fmt.Println("instance validating webhook!!")
 	newSharedState := si.Spec.Shared
 	oldShareState := si.getOldSharedState()
+
 	if !si.sharedStateChanged(newSharedState, oldShareState) {
+		fmt.Println("no change!!")
 		return nil
 	}
 

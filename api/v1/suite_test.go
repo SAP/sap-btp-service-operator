@@ -86,3 +86,40 @@ func getInstance() *ServiceInstance {
 		Status: ServiceInstanceStatus{},
 	}
 }
+
+func getNonSharedInstance() *ServiceInstance {
+	return &ServiceInstance{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "services.cloud.sap.com/v1",
+			Kind:       "ServiceInstance",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "service-instance-1",
+			Namespace: "namespace-1",
+		},
+		Spec: ServiceInstanceSpec{
+			ServiceOfferingName: "service-offering-1",
+			ServicePlanName:     "service-plan-name-1",
+			ServicePlanID:       "service-plan-id-1",
+			ExternalName:        "my-service-instance-1",
+			Parameters:          &runtime.RawExtension{Raw: []byte(`{"key":"val"}`)},
+			ParametersFrom: []ParametersFromSource{
+				{
+					SecretKeyRef: &SecretKeyReference{
+						Name: "param-secret",
+						Key:  "secret-parameter",
+					},
+				},
+			},
+			UserInfo: &v1.UserInfo{
+				Username: "test-user",
+				Groups:   []string{"test-group"},
+				Extra:    map[string]v1.ExtraValue{"key": {"val"}},
+			},
+		},
+
+		Status: ServiceInstanceStatus{
+			Shared: metav1.ConditionFalse,
+		},
+	}
+}

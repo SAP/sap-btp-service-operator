@@ -164,7 +164,7 @@ var _ = Describe("ServiceInstance controller", func() {
 		}
 	})
 
-	FDescribe("Create", func() {
+	Describe("Create", func() {
 		Context("Invalid parameters", func() {
 			createInstanceWithFailure := func(spec v1.ServiceInstanceSpec) {
 				instance := &v1.ServiceInstance{
@@ -382,7 +382,7 @@ var _ = Describe("ServiceInstance controller", func() {
 			})
 		})
 
-		FContext("Share instance", func() {
+		Context("Share instance", func() {
 			When("Creating instance with shared false in spec", func() {
 				It("Should create the instance with status shared false", func() {
 					serviceInstance = createInstance(ctx, nonSharedInstanceSpec)
@@ -402,7 +402,7 @@ var _ = Describe("ServiceInstance controller", func() {
 		})
 	})
 
-	Describe("Update", func() {
+	FDescribe("Update", func() {
 
 		updateSpec := func() v1.ServiceInstanceSpec {
 			newExternalName := "my-new-external-name" + uuid.New().String()
