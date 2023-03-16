@@ -11,7 +11,7 @@ var _ = Describe("Service Instance Webhook Test", func() {
 		instance = getInstance()
 	})
 
-	FContext("Validator", func() {
+	Context("Validator", func() {
 		Context("Validate create", func() {
 			It("should succeed", func() {
 				err := instance.ValidateCreate()
