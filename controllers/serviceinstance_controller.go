@@ -253,6 +253,11 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	if serviceInstance.Spec.Shared == nil || (serviceInstance.Spec.Shared != nil && !*serviceInstance.Spec.Shared) {
 		serviceInstance.Status.Shared = metav1.ConditionFalse
 	}
+
+	if serviceInstance.Spec.Shared != nil && *serviceInstance.Spec.Shared {
+		// Need to add logic here of sharing!!!!!
+		serviceInstance.Status.Shared = metav1.ConditionTrue
+	}
 	setSuccessConditions(smClientTypes.CREATE, serviceInstance)
 	return ctrl.Result{}, r.updateStatus(ctx, serviceInstance)
 }
@@ -284,7 +289,11 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 	}, serviceInstance.Spec.ServiceOfferingName, serviceInstance.Spec.ServicePlanName, nil, buildUserInfo(ctx, serviceInstance.Spec.UserInfo))
 
 	if err != nil {
-		log.Error(err, fmt.Sprintf("failed to update service instance with ID %s", serviceInstance.Status.InstanceID))
+		if sharedChanged {
+			log.Error(err, fmt.Sprintf("failed to update sharing of instance with ID %s", serviceInstance.Status.InstanceID))
+		} else {
+			log.Error(err, fmt.Sprintf("failed to update service instance with ID %s", serviceInstance.Status.InstanceID))
+		}
 		if isTransientError(ctx, err) {
 			return r.markAsTransientError(ctx, smClientTypes.UPDATE, err, serviceInstance)
 		}
@@ -307,8 +316,13 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 	setSuccessConditions(smClientTypes.UPDATE, serviceInstance)
 
 	if sharedChanged {
-		setSuccessSharedConditions(smClientTypes.UPDATE, serviceInstance)
-		serviceInstance.Status.Shared = metav1.ConditionTrue
+		if serviceInstance.Status.Shared == metav1.ConditionTrue {
+			setSuccessUnSharedConditions(smClientTypes.UPDATE, serviceInstance)
+			serviceInstance.Status.Shared = metav1.ConditionFalse
+		} else {
+			setSuccessSharedConditions(smClientTypes.UPDATE, serviceInstance)
+			serviceInstance.Status.Shared = metav1.ConditionTrue
+		}
 	}
 	return ctrl.Result{}, r.updateStatus(ctx, serviceInstance)
 }

@@ -41,6 +41,7 @@ const (
 	UpdateFailed = "UpdateFailed"
 	DeleteFailed = "DeleteFailed"
 	Failed       = "Failed"
+	SharedFailed = "SharedFailed"
 
 	Blocked = "Blocked"
 	Unknown = "Unknown"
@@ -240,6 +241,20 @@ func setSuccessSharedConditions(operationType smClientTypes.OperationCategory, o
 		ObservedGeneration: object.GetGeneration(),
 	}
 	meta.SetStatusCondition(&conditions, sharedSucceededCondition)
+	object.SetConditions(conditions)
+}
+
+func setSuccessUnSharedConditions(operationType smClientTypes.OperationCategory, object api.SAPBTPResource) {
+	conditions := object.GetConditions()
+
+	unSharedSucceededCondition := metav1.Condition{
+		Type:               api.ConditionSucceeded,
+		Status:             metav1.ConditionTrue,
+		Reason:             getConditionReason(operationType, smClientTypes.SUCCEEDED),
+		Message:            "Un sharing instance succeeded",
+		ObservedGeneration: object.GetGeneration(),
+	}
+	meta.SetStatusCondition(&conditions, unSharedSucceededCondition)
 	object.SetConditions(conditions)
 }
 
