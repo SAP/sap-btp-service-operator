@@ -438,7 +438,7 @@ var _ = Describe("ServiceInstance controller", func() {
 				})
 			})
 
-			FContext("Async", func() {
+			Context("Async", func() {
 				Context("Sharing instance", func() {
 					It("should fail if shared changed and spec changed", func() {
 						newSpec := updateSpec()
