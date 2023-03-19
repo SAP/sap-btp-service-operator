@@ -446,6 +446,14 @@ var _ = Describe("ServiceInstance controller", func() {
 						}, nil)
 					})
 
+					It("should fail if shared also changed", func() {
+						newSpec := updateSpec()
+						newSpec.Shared = true
+						serviceInstance.Spec = newSpec
+						err := k8sClient.Update(context.Background(), serviceInstance)
+						Expect(err).To(HaveOccurred())
+					})
+
 					It("condition should be updated from in progress to Updated", func() {
 						newSpec := updateSpec()
 						serviceInstance.Spec = newSpec
