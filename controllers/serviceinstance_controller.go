@@ -249,7 +249,8 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	}
 
 	serviceInstance.Status.Ready = metav1.ConditionTrue
-	if serviceInstance.Spec.Shared != nil && !*serviceInstance.Spec.Shared {
+
+	if serviceInstance.Spec.Shared == nil || (serviceInstance.Spec.Shared != nil && !*serviceInstance.Spec.Shared) {
 		serviceInstance.Status.Shared = metav1.ConditionFalse
 	}
 	setSuccessConditions(smClientTypes.CREATE, serviceInstance)
