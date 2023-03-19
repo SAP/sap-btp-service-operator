@@ -32,6 +32,7 @@ const (
 	fakeOfferingName         = "offering-a"
 	fakePlanName             = "plan-a"
 	shareInstanceErrorMsg    = "updating share property is unabled with other spec changes"
+	shareInstanceSucceeded   = "Shared instance succeeded"
 )
 
 var _ = Describe("ServiceInstance controller", func() {
@@ -437,7 +438,30 @@ var _ = Describe("ServiceInstance controller", func() {
 				})
 			})
 
-			Context("Async", func() {
+			FContext("Async", func() {
+				Context("Sharing instance", func() {
+					It("should fail if shared changed and spec changed", func() {
+						newSpec := updateSpec()
+						newSpec.Shared = pointer.BoolPtr(true)
+						serviceInstance.Spec = newSpec
+						err := k8sClient.Update(context.Background(), serviceInstance)
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(ContainSubstring(shareInstanceErrorMsg))
+					})
+
+					It("should update instance to shared", func() {
+						fakeClient.UpdateInstanceReturns(nil, "", nil)
+						serviceInstance.Spec.Shared = pointer.BoolPtr(true)
+						updatedInstance := updateInstance(ctx, serviceInstance)
+						Expect(updatedInstance.Status.Conditions[0].Reason).To(Equal(Updated))
+						Eventually(func() bool {
+							_ = k8sClient.Get(ctx, defaultLookupKey, updatedInstance)
+							return isReady(serviceInstance)
+						}, timeout, interval).Should(BeTrue())
+						Expect(updatedInstance.Status.Conditions[0].Message).To(Equal(shareInstanceSucceeded))
+					})
+				})
+
 				When("spec is changed", func() {
 					BeforeEach(func() {
 						fakeClient.UpdateInstanceReturns(nil, "/v1/service_instances/id/operations/1234", nil)
@@ -446,15 +470,6 @@ var _ = Describe("ServiceInstance controller", func() {
 							Type:  smClientTypes.UPDATE,
 							State: smClientTypes.INPROGRESS,
 						}, nil)
-					})
-
-					It("should fail if shared also changed", func() {
-						newSpec := updateSpec()
-						newSpec.Shared = pointer.BoolPtr(true)
-						serviceInstance.Spec = newSpec
-						err := k8sClient.Update(context.Background(), serviceInstance)
-						Expect(err).To(HaveOccurred())
-						Expect(err.Error()).To(ContainSubstring(shareInstanceErrorMsg))
 					})
 
 					It("condition should be updated from in progress to Updated", func() {

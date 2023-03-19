@@ -48,7 +48,7 @@ func (si *ServiceInstance) ValidateUpdate(old runtime.Object) error {
 	oldShareState := si.getOldSharedState()
 	fmt.Println("old ", oldShareState)
 
-	if !si.sharedStateChanged(newSharedState, oldShareState) {
+	if !si.SharedStateChanged(newSharedState, oldShareState) {
 		fmt.Println("no change, moving on!!")
 		return nil
 	}

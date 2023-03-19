@@ -269,6 +269,8 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 	var err error
 	log := GetLogger(ctx)
 	log.Info(fmt.Sprintf("updating instance %s in SM", serviceInstance.Status.InstanceID))
+	sharedChanged := serviceInstance.SharedStateChanged(serviceInstance.Spec.Shared, serviceInstance.Status.Shared)
+
 	_, instanceParameters, err := buildParameters(r.Client, serviceInstance.Namespace, serviceInstance.Spec.ParametersFrom, serviceInstance.Spec.Parameters)
 	if err != nil {
 		log.Error(err, "failed to parse instance parameters")
@@ -280,6 +282,7 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 		ServicePlanID: serviceInstance.Spec.ServicePlanID,
 		Parameters:    instanceParameters,
 	}, serviceInstance.Spec.ServiceOfferingName, serviceInstance.Spec.ServicePlanName, nil, buildUserInfo(ctx, serviceInstance.Spec.UserInfo))
+
 	if err != nil {
 		log.Error(err, fmt.Sprintf("failed to update service instance with ID %s", serviceInstance.Status.InstanceID))
 		if isTransientError(ctx, err) {
@@ -302,6 +305,11 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 	}
 	log.Info("Instance updated successfully")
 	setSuccessConditions(smClientTypes.UPDATE, serviceInstance)
+
+	if sharedChanged {
+		setSuccessSharedConditions(smClientTypes.UPDATE, serviceInstance)
+		serviceInstance.Status.Shared = metav1.ConditionTrue
+	}
 	return ctrl.Result{}, r.updateStatus(ctx, serviceInstance)
 }
 
