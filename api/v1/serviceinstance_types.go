@@ -203,10 +203,6 @@ func (si *ServiceInstance) getOldSharedState() metav1.ConditionStatus {
 func (si *ServiceInstance) SharedStateChanged(newShareState *bool, oldShareState metav1.ConditionStatus) bool {
 	fmt.Println("Checking if state changed")
 
-	if oldShareState == "" {
-		oldShareState = metav1.ConditionFalse
-	}
-
 	if newShareState == nil {
 		if oldShareState == metav1.ConditionTrue {
 			return true
