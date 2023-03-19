@@ -44,13 +44,20 @@ func (si *ServiceInstance) ValidateUpdate(old runtime.Object) error {
 	serviceinstanceglog.Info("validate update", "name", si.Name)
 	fmt.Println("instance validating webhook!!")
 	newSharedState := si.Spec.Shared
+	fmt.Println("new ", newSharedState)
 	oldShareState := si.getOldSharedState()
-
-	if !si.sharedStateChanged(newSharedState, oldShareState) {
-		fmt.Println("no change!!")
+	fmt.Println("old ", oldShareState)
+	if oldShareState == "" {
+		fmt.Println("oldShareState is nil")
 		return nil
 	}
 
+	if !si.sharedStateChanged(newSharedState, oldShareState) {
+		fmt.Println("no change, moving on!!")
+		return nil
+	}
+
+	fmt.Println("keep validating")
 	if si.specChanged(old) {
 		return fmt.Errorf("updating share property is unabled with other spec changes")
 	}

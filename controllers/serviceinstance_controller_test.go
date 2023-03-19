@@ -402,7 +402,7 @@ var _ = Describe("ServiceInstance controller", func() {
 		})
 	})
 
-	FDescribe("Update", func() {
+	Describe("Update", func() {
 
 		updateSpec := func() v1.ServiceInstanceSpec {
 			newExternalName := "my-new-external-name" + uuid.New().String()
