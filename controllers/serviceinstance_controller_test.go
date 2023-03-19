@@ -32,6 +32,7 @@ const (
 	fakeOfferingName         = "offering-a"
 	fakePlanName             = "plan-a"
 	shareInstanceErrorMsg    = "updating share property is unabled with other spec changes"
+	shareInstancePendingMsg  = "Sharing of instance needs to be performed"
 	shareInstanceSucceeded   = "Shared instance succeeded"
 	unShareInstanceSucceeded = "Un sharing instance succeeded"
 )
@@ -419,6 +420,16 @@ var _ = Describe("ServiceInstance controller", func() {
 					params := smInstance.Parameters
 					Expect(params).To(ContainSubstring("\"key\":\"value\""))
 					Expect(params).To(ContainSubstring("\"secret-key\":\"secret-value\""))
+				})
+			})
+
+			When("Creating instance with shared true in spec", func() {
+				It("Should create the instance with status shared false", func() {
+					serviceInstance = createInstance(ctx, sharedInstanceSpec)
+					Expect(serviceInstance.Status.InstanceID).To(Equal(fakeInstanceID))
+					Expect(serviceInstance.Spec.ExternalName).To(Equal(fakeInstanceExternalName))
+					Expect(serviceInstance.Spec.Shared).To(Equal(pointer.BoolPtr(true)))
+					Expect(serviceInstance.Status.Conditions[2].Message).To(ContainSubstring(shareInstancePendingMsg))
 				})
 			})
 		})

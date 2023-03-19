@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"k8s.io/apimachinery/pkg/api/meta"
 
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -254,12 +255,28 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 		serviceInstance.Status.Shared = metav1.ConditionFalse
 	}
 
-	if serviceInstance.Spec.Shared != nil && *serviceInstance.Spec.Shared {
-		// Need to add logic here of sharing!!!!!
-		serviceInstance.Status.Shared = metav1.ConditionTrue
-	}
 	setSuccessConditions(smClientTypes.CREATE, serviceInstance)
+
+	if serviceInstance.SharedStateChanged(serviceInstance.Spec.Shared, serviceInstance.Status.Shared) {
+		setConditionForSharing(serviceInstance)
+	}
+
 	return ctrl.Result{}, r.updateStatus(ctx, serviceInstance)
+}
+
+func setConditionForSharing(object api.SAPBTPResource) {
+	conditions := object.GetConditions()
+
+	shouldShareCondition := metav1.Condition{
+		Type:               api.ConditionPendingSharing,
+		Status:             metav1.ConditionTrue,
+		Reason:             getConditionReason(Updated, smClientTypes.INPROGRESS),
+		Message:            "Sharing of instance needs to be performed",
+		ObservedGeneration: object.GetGeneration(),
+	}
+	meta.SetStatusCondition(&conditions, shouldShareCondition)
+
+	object.SetConditions(conditions)
 }
 
 func getTags(tags []byte) ([]string, error) {
@@ -510,8 +527,13 @@ func (r *ServiceInstanceReconciler) getInstanceForRecovery(ctx context.Context, 
 func (r *ServiceInstanceReconciler) shareInstance(ctx context.Context, smClient sm.Client, serviceInstance *servicesv1.ServiceInstance) (ctrl.Result, error) {
 	log := GetLogger(ctx)
 	log.Info(fmt.Sprintf("resource is in progress, found operation url %s", serviceInstance.Status.OperationURL))
-	status, statusErr := smClient.Status(serviceInstance.Status.OperationURL, nil)
-	fmt.Println(statusErr, status)
+	response, err := smClient.ShareInstance(serviceInstance.Status.InstanceID, buildUserInfo(ctx, serviceInstance.Spec.UserInfo))
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	//todo handle response
+	fmt.Println(response)
 
 	return ctrl.Result{}, nil
 }
