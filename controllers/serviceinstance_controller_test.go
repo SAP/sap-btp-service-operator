@@ -30,6 +30,7 @@ const (
 	testNamespace            = "ic-test-namespace"
 	fakeOfferingName         = "offering-a"
 	fakePlanName             = "plan-a"
+	shareInstanceErrorMsg    = "updating share property is unabled with other spec changes"
 )
 
 var _ = Describe("ServiceInstance controller", func() {
@@ -446,12 +447,13 @@ var _ = Describe("ServiceInstance controller", func() {
 						}, nil)
 					})
 
-					It("should fail if shared also changed", func() {
+					FIt("should fail if shared also changed", func() {
 						newSpec := updateSpec()
 						newSpec.Shared = true
 						serviceInstance.Spec = newSpec
 						err := k8sClient.Update(context.Background(), serviceInstance)
 						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(ContainSubstring(shareInstanceErrorMsg))
 					})
 
 					It("condition should be updated from in progress to Updated", func() {
