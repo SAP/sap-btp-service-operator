@@ -447,7 +447,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						}, nil)
 					})
 
-					FIt("should fail if shared also changed", func() {
+					It("should fail if shared also changed", func() {
 						newSpec := updateSpec()
 						newSpec.Shared = true
 						serviceInstance.Spec = newSpec
