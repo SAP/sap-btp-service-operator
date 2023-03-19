@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"k8s.io/utils/pointer"
 	"net/http"
 	"strings"
 
@@ -59,7 +60,7 @@ var _ = Describe("ServiceInstance controller", func() {
 	nonSharedInstanceSpec := v1.ServiceInstanceSpec{
 		ExternalName:        fakeInstanceExternalName,
 		ServicePlanName:     fakePlanName,
-		Shared:              false,
+		Shared:              pointer.BoolPtr(false),
 		ServiceOfferingName: fakeOfferingName,
 		Parameters: &runtime.RawExtension{
 			Raw: []byte(`{"key": "value"}`),
@@ -389,7 +390,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					serviceInstance = createInstance(ctx, nonSharedInstanceSpec)
 					Expect(serviceInstance.Status.InstanceID).To(Equal(fakeInstanceID))
 					Expect(serviceInstance.Spec.ExternalName).To(Equal(fakeInstanceExternalName))
-					Expect(serviceInstance.Spec.Shared).To(Equal(false))
+					Expect(serviceInstance.Spec.Shared).To(Equal(pointer.BoolPtr(false)))
 					Expect(serviceInstance.Status.Shared).To(Equal(metav1.ConditionFalse))
 					Expect(serviceInstance.Name).To(Equal(fakeInstanceName))
 					Expect(string(serviceInstance.Spec.Parameters.Raw)).To(ContainSubstring("\"key\":\"value\""))
@@ -449,7 +450,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 					It("should fail if shared also changed", func() {
 						newSpec := updateSpec()
-						newSpec.Shared = true
+						newSpec.Shared = pointer.BoolPtr(true)
 						serviceInstance.Spec = newSpec
 						err := k8sClient.Update(context.Background(), serviceInstance)
 						Expect(err).To(HaveOccurred())

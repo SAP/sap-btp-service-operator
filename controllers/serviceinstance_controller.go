@@ -249,7 +249,7 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	}
 
 	serviceInstance.Status.Ready = metav1.ConditionTrue
-	if !serviceInstance.Spec.Shared {
+	if serviceInstance.Spec.Shared != nil && !*serviceInstance.Spec.Shared {
 		serviceInstance.Status.Shared = metav1.ConditionFalse
 	}
 	setSuccessConditions(smClientTypes.CREATE, serviceInstance)
@@ -486,37 +486,9 @@ func (r *ServiceInstanceReconciler) getInstanceForRecovery(ctx context.Context, 
 
 func (r *ServiceInstanceReconciler) shareInstance(ctx context.Context, smClient sm.Client, serviceInstance *servicesv1.ServiceInstance) (ctrl.Result, error) {
 	log := GetLogger(ctx)
-	log.Info(fmt.Sprintf("sharing instance %s in SM", serviceInstance.Status.InstanceID))
-
-	parameters := sm.Parameters{
-		FieldQuery: []string{
-			fmt.Sprintf("name eq '%s'", serviceInstance.Spec.ExternalName),
-			fmt.Sprintf("context/clusterid eq '%s'", r.Config.ClusterID),
-			fmt.Sprintf("context/namespace eq '%s'", serviceInstance.Namespace)},
-		LabelQuery: []string{
-			fmt.Sprintf("%s eq '%s'", k8sNameLabel, serviceInstance.Name)},
-		GeneralParams: []string{"attach_last_operations=true"},
-	}
-
-	shareInstanceBodyJson, err := json.Marshal(parameters)
-	if err != nil {
-
-	}
-
-	instance, _, err := smClient.UpdateInstance(serviceInstance.Status.InstanceID, &smClientTypes.ServiceInstance{
-		Name:          serviceInstance.Spec.ExternalName,
-		ServicePlanID: serviceInstance.Spec.ServicePlanID,
-		Parameters:    shareInstanceBodyJson,
-	}, serviceInstance.Spec.ServiceOfferingName, serviceInstance.Spec.ServicePlanName, nil, buildUserInfo(ctx, serviceInstance.Spec.UserInfo))
-	if err != nil {
-		log.Error(err, fmt.Sprintf("failed to share service instance with ID %s", serviceInstance.Status.InstanceID))
-		if isTransientError(ctx, err) {
-			return r.markAsTransientError(ctx, smClientTypes.UPDATE, err, serviceInstance)
-		}
-		return r.markAsNonTransientError(ctx, smClientTypes.UPDATE, err, serviceInstance)
-	}
-
-	fmt.Println(instance)
+	log.Info(fmt.Sprintf("resource is in progress, found operation url %s", serviceInstance.Status.OperationURL))
+	status, statusErr := smClient.Status(serviceInstance.Status.OperationURL, nil)
+	fmt.Println(statusErr, status)
 
 	return ctrl.Result{}, nil
 }

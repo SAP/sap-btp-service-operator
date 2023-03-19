@@ -3,6 +3,7 @@ package v1
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("Service Instance Webhook Test", func() {
@@ -28,7 +29,7 @@ var _ = Describe("Service Instance Webhook Test", func() {
 
 			When("Spec changed", func() {
 				It("should fail", func() {
-					newInstance.Spec.Shared = true
+					newInstance.Spec.Shared = pointer.BoolPtr(true)
 					newInstance.Spec.ExternalName = "blabla"
 					err := newInstance.ValidateUpdate(instance)
 					Expect(err).To(HaveOccurred())
@@ -37,7 +38,7 @@ var _ = Describe("Service Instance Webhook Test", func() {
 
 			When("Spec did not change", func() {
 				It("should pass", func() {
-					newInstance.Spec.Shared = true
+					newInstance.Spec.Shared = pointer.BoolPtr(true)
 					err := newInstance.ValidateUpdate(instance)
 					Expect(err).To(Not(HaveOccurred()))
 				})
@@ -53,7 +54,7 @@ var _ = Describe("Service Instance Webhook Test", func() {
 
 			When("Spec changed", func() {
 				It("should fail", func() {
-					newInstance.Spec.Shared = false
+					newInstance.Spec.Shared = pointer.BoolPtr(false)
 					newInstance.Spec.ExternalName = "blabla"
 					err := newInstance.ValidateUpdate(instance)
 					Expect(err).To(HaveOccurred())
@@ -62,7 +63,7 @@ var _ = Describe("Service Instance Webhook Test", func() {
 
 			When("Spec did not change", func() {
 				It("should pass", func() {
-					newInstance.Spec.Shared = false
+					newInstance.Spec.Shared = pointer.BoolPtr(false)
 					err := newInstance.ValidateUpdate(instance)
 					Expect(err).To(Not(HaveOccurred()))
 				})

@@ -50,7 +50,8 @@ type ServiceInstanceSpec struct {
 
 	// Indicates if the instances is shareable
 	// +optional
-	Shared bool `json:"shared,omitempty"`
+	// +kubebuilder:default={}
+	Shared *bool `json:"shared,omitempty"`
 
 	// Provisioning parameters for the instance.
 	//
@@ -199,14 +200,24 @@ func (si *ServiceInstance) getOldSharedState() metav1.ConditionStatus {
 	return si.Status.Shared
 }
 
-func (si *ServiceInstance) sharedStateChanged(newShareState bool, oldShareState metav1.ConditionStatus) bool {
+func (si *ServiceInstance) sharedStateChanged(newShareState *bool, oldShareState metav1.ConditionStatus) bool {
 	fmt.Println("Checking if state changed")
-	fmt.Println("new state: ", newShareState)
-	fmt.Println("old state: ", oldShareState)
-	if newShareState && (oldShareState == metav1.ConditionUnknown || oldShareState == metav1.ConditionFalse) {
+
+	if oldShareState == "" {
+		oldShareState = metav1.ConditionFalse
+	}
+
+	if newShareState == nil {
+		if oldShareState == metav1.ConditionTrue {
+			return true
+		} else {
+			return false
+		}
+	}
+	if *newShareState && (oldShareState == metav1.ConditionUnknown || oldShareState == metav1.ConditionFalse) {
 		return true
 	}
-	if !newShareState && oldShareState == metav1.ConditionTrue {
+	if !(*newShareState) && oldShareState == metav1.ConditionTrue {
 		return true
 	}
 	return false

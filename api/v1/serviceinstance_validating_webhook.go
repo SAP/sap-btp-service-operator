@@ -47,10 +47,6 @@ func (si *ServiceInstance) ValidateUpdate(old runtime.Object) error {
 	fmt.Println("new ", newSharedState)
 	oldShareState := si.getOldSharedState()
 	fmt.Println("old ", oldShareState)
-	if oldShareState == "" {
-		fmt.Println("oldShareState is nil")
-		return nil
-	}
 
 	if !si.sharedStateChanged(newSharedState, oldShareState) {
 		fmt.Println("no change, moving on!!")
@@ -70,8 +66,8 @@ func (si *ServiceInstance) specChanged(old runtime.Object) bool {
 	newSpec := si.Spec.DeepCopy()
 
 	// We want to check if anything changed except of the shared
-	oldSpec.Shared = false
-	newSpec.Shared = false
+	oldSpec.Shared = nil
+	newSpec.Shared = nil
 	return !reflect.DeepEqual(oldSpec, newSpec)
 }
 
