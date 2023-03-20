@@ -17,7 +17,6 @@ limitations under the License.
 package v1
 
 import (
-	"fmt"
 	"github.com/SAP/sap-btp-service-operator/api"
 	"github.com/SAP/sap-btp-service-operator/client/sm/types"
 	v1 "k8s.io/api/authentication/v1"
@@ -201,8 +200,6 @@ func (si *ServiceInstance) getOldSharedState() metav1.ConditionStatus {
 }
 
 func (si *ServiceInstance) SharedStateChanged(newShareState *bool, oldShareState metav1.ConditionStatus) bool {
-	fmt.Println("Checking if state changed")
-
 	if newShareState == nil {
 		if oldShareState == metav1.ConditionTrue {
 			return true

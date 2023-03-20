@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"k8s.io/apimachinery/pkg/api/meta"
-
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 
@@ -95,6 +94,11 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 	}
 
+	if meta.IsStatusConditionPresentAndEqual(serviceInstance.GetConditions(), api.ConditionSharing, metav1.ConditionFalse) {
+		log.Info("Handling change in instance share")
+		return r.handleInstanceSharingChange(ctx, serviceInstance)
+	}
+
 	if serviceInstance.Generation == serviceInstance.Status.ObservedGeneration && !isInProgress(serviceInstance) {
 		log.Info(fmt.Sprintf("Spec is not changed - ignoring... Generation is - %v", serviceInstance.Generation))
 		return ctrl.Result{}, nil
@@ -123,9 +127,34 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	// Update
 	if serviceInstance.Status.Ready == metav1.ConditionTrue {
-		return r.updateInstance(ctx, smClient, serviceInstance)
+		if serviceInstance.SharedStateChanged(serviceInstance.Spec.Shared, serviceInstance.Status.Shared) {
+			log.Info("Handling change in instance share")
+			return r.handleInstanceSharingChange(ctx, serviceInstance)
+		} else {
+			return r.updateInstance(ctx, smClient, serviceInstance)
+		}
 	}
 	return ctrl.Result{}, nil
+}
+
+func (r *ServiceInstanceReconciler) handleInstanceSharingChange(ctx context.Context, serviceInstance *servicesv1.ServiceInstance) (ctrl.Result, error) {
+	succeeded, err := r.shareInstance(ctx, serviceInstance)
+	if succeeded {
+		setConditionForSharingSuccess(serviceInstance, serviceInstance.Status.Shared)
+		switchServiceInstanceShareStatus(serviceInstance)
+		if err := r.updateStatus(ctx, serviceInstance); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, nil
+	} else {
+		setConditionForFailedSharing(serviceInstance, serviceInstance.Status.Shared)
+	}
+	//share or un share failed
+	if err := r.updateStatus(ctx, serviceInstance); err != nil {
+		return ctrl.Result{}, err
+	}
+	return ctrl.Result{}, err
+
 }
 
 func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client, serviceInstance *servicesv1.ServiceInstance) (ctrl.Result, error) {
@@ -268,13 +297,56 @@ func setConditionForSharing(object api.SAPBTPResource) {
 	conditions := object.GetConditions()
 
 	shouldShareCondition := metav1.Condition{
-		Type:               api.ConditionPendingSharing,
-		Status:             metav1.ConditionTrue,
+		Type:               api.ConditionSharing,
+		Status:             metav1.ConditionFalse,
 		Reason:             getConditionReason(Updated, smClientTypes.INPROGRESS),
 		Message:            "Sharing of instance needs to be performed",
 		ObservedGeneration: object.GetGeneration(),
 	}
+	meta.RemoveStatusCondition(&conditions, api.ConditionSharing)
 	meta.SetStatusCondition(&conditions, shouldShareCondition)
+
+	object.SetConditions(conditions)
+}
+
+func setConditionForFailedSharing(object api.SAPBTPResource, currentSharedStatus metav1.ConditionStatus) {
+	conditions := object.GetConditions()
+
+	msg := "Sharing of instance failed"
+	if currentSharedStatus == metav1.ConditionTrue {
+		msg = "Un sharing of instance failed"
+	}
+
+	shouldShareCondition := metav1.Condition{
+		Type:               api.ConditionSharing,
+		Status:             metav1.ConditionFalse,
+		Reason:             getConditionReason(Updated, smClientTypes.FAILED),
+		Message:            msg,
+		ObservedGeneration: object.GetGeneration(),
+	}
+	meta.RemoveStatusCondition(&conditions, api.ConditionSharing)
+	meta.SetStatusCondition(&conditions, shouldShareCondition)
+
+	object.SetConditions(conditions)
+}
+
+func setConditionForSharingSuccess(object api.SAPBTPResource, currentSharedStatus metav1.ConditionStatus) {
+	conditions := object.GetConditions()
+
+	msg := "Sharing of instance succeeded"
+	if currentSharedStatus == metav1.ConditionTrue {
+		msg = "Un sharing of instance succeeded"
+	}
+
+	shareCondition := metav1.Condition{
+		Type:               api.ConditionSharing,
+		Status:             metav1.ConditionTrue,
+		Reason:             getConditionReason(Updated, smClientTypes.SUCCEEDED),
+		Message:            msg,
+		ObservedGeneration: object.GetGeneration(),
+	}
+	meta.RemoveStatusCondition(&conditions, api.ConditionSharing)
+	meta.SetStatusCondition(&conditions, shareCondition)
 
 	object.SetConditions(conditions)
 }
@@ -291,7 +363,6 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 	var err error
 	log := GetLogger(ctx)
 	log.Info(fmt.Sprintf("updating instance %s in SM", serviceInstance.Status.InstanceID))
-	sharedChanged := serviceInstance.SharedStateChanged(serviceInstance.Spec.Shared, serviceInstance.Status.Shared)
 
 	_, instanceParameters, err := buildParameters(r.Client, serviceInstance.Namespace, serviceInstance.Spec.ParametersFrom, serviceInstance.Spec.Parameters)
 	if err != nil {
@@ -306,11 +377,7 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 	}, serviceInstance.Spec.ServiceOfferingName, serviceInstance.Spec.ServicePlanName, nil, buildUserInfo(ctx, serviceInstance.Spec.UserInfo))
 
 	if err != nil {
-		if sharedChanged {
-			log.Error(err, fmt.Sprintf("failed to update sharing of instance with ID %s", serviceInstance.Status.InstanceID))
-		} else {
-			log.Error(err, fmt.Sprintf("failed to update service instance with ID %s", serviceInstance.Status.InstanceID))
-		}
+		log.Error(err, fmt.Sprintf("failed to update service instance with ID %s", serviceInstance.Status.InstanceID))
 		if isTransientError(ctx, err) {
 			return r.markAsTransientError(ctx, smClientTypes.UPDATE, err, serviceInstance)
 		}
@@ -332,15 +399,6 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 	log.Info("Instance updated successfully")
 	setSuccessConditions(smClientTypes.UPDATE, serviceInstance)
 
-	if sharedChanged {
-		if serviceInstance.Status.Shared == metav1.ConditionTrue {
-			setSuccessUnSharedConditions(smClientTypes.UPDATE, serviceInstance)
-			serviceInstance.Status.Shared = metav1.ConditionFalse
-		} else {
-			setSuccessSharedConditions(smClientTypes.UPDATE, serviceInstance)
-			serviceInstance.Status.Shared = metav1.ConditionTrue
-		}
-	}
 	return ctrl.Result{}, r.updateStatus(ctx, serviceInstance)
 }
 
@@ -524,16 +582,29 @@ func (r *ServiceInstanceReconciler) getInstanceForRecovery(ctx context.Context, 
 	return nil, nil
 }
 
-func (r *ServiceInstanceReconciler) shareInstance(ctx context.Context, smClient sm.Client, serviceInstance *servicesv1.ServiceInstance) (ctrl.Result, error) {
+func (r *ServiceInstanceReconciler) shareInstance(ctx context.Context, serviceInstance *servicesv1.ServiceInstance) (bool, error) {
 	log := GetLogger(ctx)
 	log.Info(fmt.Sprintf("resource is in progress, found operation url %s", serviceInstance.Status.OperationURL))
-	response, err := smClient.ShareInstance(serviceInstance.Status.InstanceID, buildUserInfo(ctx, serviceInstance.Spec.UserInfo))
+
+	smClient, err := r.getSMClient(ctx, serviceInstance)
 	if err != nil {
-		return ctrl.Result{}, err
+		return false, err
 	}
 
-	//todo handle response
+	response, err := smClient.ShareInstance(serviceInstance.Status.InstanceID, buildUserInfo(ctx, serviceInstance.Spec.UserInfo))
+	if err != nil {
+		return false, err
+	}
 	fmt.Println(response)
+	fmt.Println(err)
+	//todo handle response
+	return true, nil
+}
 
-	return ctrl.Result{}, nil
+func switchServiceInstanceShareStatus(instance *servicesv1.ServiceInstance) {
+	if instance.Status.Shared == metav1.ConditionTrue {
+		instance.Status.Shared = metav1.ConditionFalse
+	} else {
+		instance.Status.Shared = metav1.ConditionTrue
+	}
 }
