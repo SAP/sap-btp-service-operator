@@ -140,7 +140,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 func (r *ServiceInstanceReconciler) handleInstanceSharingChange(ctx context.Context, serviceInstance *servicesv1.ServiceInstance) (ctrl.Result, error) {
 	succeeded, err := r.shareInstance(ctx, serviceInstance)
 	if succeeded {
-		setConditionForFutureSharingSuccess(serviceInstance, serviceInstance.Status.Shared)
+		setConditionForSuccessShareChange(serviceInstance, serviceInstance.Status.Shared)
 		switchServiceInstanceShareStatus(serviceInstance)
 		if err := r.updateStatus(ctx, serviceInstance); err != nil {
 			return ctrl.Result{}, err
@@ -330,7 +330,7 @@ func setConditionForFailedSharing(object api.SAPBTPResource, currentSharedStatus
 	object.SetConditions(conditions)
 }
 
-func setConditionForFutureSharingSuccess(object api.SAPBTPResource, currentSharedStatus metav1.ConditionStatus) {
+func setConditionForSuccessShareChange(object api.SAPBTPResource, currentSharedStatus metav1.ConditionStatus) {
 	conditions := object.GetConditions()
 
 	msg := "Sharing of instance succeeded"

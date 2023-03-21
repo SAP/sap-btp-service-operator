@@ -230,34 +230,6 @@ func setSuccessConditions(operationType smClientTypes.OperationCategory, object 
 	object.SetConditions(conditions)
 }
 
-func setSuccessSharedConditions(operationType smClientTypes.OperationCategory, object api.SAPBTPResource) {
-	conditions := object.GetConditions()
-
-	sharedSucceededCondition := metav1.Condition{
-		Type:               api.ConditionSucceeded,
-		Status:             metav1.ConditionTrue,
-		Reason:             getConditionReason(operationType, smClientTypes.SUCCEEDED),
-		Message:            "Shared instance succeeded",
-		ObservedGeneration: object.GetGeneration(),
-	}
-	meta.SetStatusCondition(&conditions, sharedSucceededCondition)
-	object.SetConditions(conditions)
-}
-
-func setSuccessUnSharedConditions(operationType smClientTypes.OperationCategory, object api.SAPBTPResource) {
-	conditions := object.GetConditions()
-
-	unSharedSucceededCondition := metav1.Condition{
-		Type:               api.ConditionSucceeded,
-		Status:             metav1.ConditionTrue,
-		Reason:             getConditionReason(operationType, smClientTypes.SUCCEEDED),
-		Message:            "Un sharing instance succeeded",
-		ObservedGeneration: object.GetGeneration(),
-	}
-	meta.SetStatusCondition(&conditions, unSharedSucceededCondition)
-	object.SetConditions(conditions)
-}
-
 func setCredRotationInProgressConditions(reason, message string, object api.SAPBTPResource) {
 	if len(message) == 0 {
 		message = reason
