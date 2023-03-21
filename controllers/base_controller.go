@@ -130,8 +130,10 @@ func (r *BaseReconciler) updateStatus(ctx context.Context, object api.SAPBTPReso
 
 func (r *BaseReconciler) init(ctx context.Context, obj api.SAPBTPResource) error {
 	obj.SetReady(metav1.ConditionFalse)
+	fmt.Println("init!!")
 	setInProgressConditions(smClientTypes.CREATE, "Pending", obj)
 	if err := r.updateStatus(ctx, obj); err != nil {
+		fmt.Println("oh no", err.Error())
 		return err
 	}
 	return nil

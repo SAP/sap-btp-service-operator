@@ -68,29 +68,35 @@ func (r *SharedServiceInstanceReconciler) Reconcile(ctx context.Context, req ctr
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	sharedServiceInstance = sharedServiceInstance.DeepCopy()
+	fmt.Println("Got the shared instance")
 
 	if len(sharedServiceInstance.GetConditions()) == 0 {
+		fmt.Println("condition size is 0")
+		if err := r.init(ctx, sharedServiceInstance); err != nil {
+			return ctrl.Result{}, err
+		}
 		sharedServiceInstance.Status.Shared = false
 		if err := r.updateStatus(ctx, sharedServiceInstance); err != nil {
 			return ctrl.Result{}, err
 		}
-		if err := r.init(ctx, sharedServiceInstance); err != nil {
-			return ctrl.Result{}, err
-		}
 	}
+	fmt.Println("Passed init")
 
 	smClient, err := r.getSMClient(ctx, sharedServiceInstance)
 	if err != nil {
 		return r.markAsTransientError(ctx, Unknown, err, sharedServiceInstance)
 	}
+	fmt.Println("Got sm client")
 
 	if isDelete(sharedServiceInstance.ObjectMeta) {
 		return r.delete(ctx, smClient, sharedServiceInstance)
 	}
+	fmt.Println("Not delete")
 
 	log.Info(fmt.Sprintf("Current generation is %v and observed is %v", sharedServiceInstance.Generation, sharedServiceInstance.GetObservedGeneration()))
 	sharedServiceInstance.SetObservedGeneration(sharedServiceInstance.Generation)
 
+	fmt.Println("Trying to get service instance")
 	serviceInstance, err := r.getServiceInstanceForShareServiceInstance(ctx, sharedServiceInstance)
 	if err != nil || serviceNotUsable(serviceInstance) {
 		var shareInstanceErr error
@@ -107,14 +113,19 @@ func (r *SharedServiceInstanceReconciler) Reconcile(ctx context.Context, req ctr
 
 		return ctrl.Result{}, shareInstanceErr
 	}
+	fmt.Println("got - ", serviceInstance.Status.InstanceID)
 
 	if !sharedServiceInstance.Status.Shared {
+		fmt.Println("Not shared")
 		if sharedServiceInstance.Status.Ready != metav1.ConditionTrue {
+			fmt.Println("Ready")
 			return r.createShareServiceInstance(ctx, smClient, serviceInstance, sharedServiceInstance)
 		} else {
+			fmt.Println("not Ready")
 			return r.handleShareInstanceChange(ctx, smClient, sharedServiceInstance)
 		}
 	}
+	fmt.Println("shared")
 
 	return ctrl.Result{}, nil
 }
@@ -132,8 +143,10 @@ func (r *SharedServiceInstanceReconciler) handleShareInstanceChange(ctx context.
 	log.Info(fmt.Sprintf("Got instance share change request"))
 	shared := false
 
+	fmt.Println("handling sharing instance shared=", shared)
+
 	if sharedServiceInstance.Status.Shared {
-		setShareInProgressConditions("Got un-share request", sharedServiceInstance)
+		setShareInProgressConditions("Got unshare request", sharedServiceInstance)
 		shared = true
 	} else {
 		setShareInProgressConditions("Got share request", sharedServiceInstance)
@@ -141,16 +154,21 @@ func (r *SharedServiceInstanceReconciler) handleShareInstanceChange(ctx context.
 
 	err := smClient.ShareInstance(shared, sharedServiceInstance.Status.InstanceID)
 	if err != nil {
+		fmt.Println("Got err = ", err.Error())
 		return ctrl.Result{}, err
 	}
-
-	setSuccessShareCondition(shared, sharedServiceInstance)
 
 	sharedServiceInstance.Status.Shared = !sharedServiceInstance.Status.Shared
+	fmt.Println(sharedServiceInstance.Status.Shared)
+	sharedServiceInstance.Status.Ready = metav1.ConditionTrue
+	setSuccessShareCondition(shared, sharedServiceInstance)
+
+	fmt.Println("Done handling sharing")
 	if err := r.updateStatus(ctx, sharedServiceInstance); err != nil {
+		fmt.Println("ohohoh, ", err.Error())
 		return ctrl.Result{}, err
 	}
-
+	fmt.Println("finally done")
 	return ctrl.Result{}, nil
 }
 
@@ -195,7 +213,7 @@ func setShareInProgressConditions(message string, object api.SAPBTPResource) {
 	shareCondition := metav1.Condition{
 		Type:               api.ConditionShareInProgress,
 		Status:             metav1.ConditionTrue,
-		Reason:             message,
+		Reason:             getConditionReason(api.ConditionShareInProgress, smClientTypes.INPROGRESS),
 		Message:            message,
 		ObservedGeneration: object.GetGeneration(),
 	}
@@ -205,19 +223,31 @@ func setShareInProgressConditions(message string, object api.SAPBTPResource) {
 
 func setSuccessShareCondition(shared bool, object api.SAPBTPResource) {
 	message := "Instance got shared successfully"
-	if !shared {
-		message = "Instance got un-shared successfully"
+	if shared {
+		message = "Instance got unshared successfully"
 	}
 	conditions := object.GetConditions()
-	successShareCondition := metav1.Condition{
+	readyCondition := metav1.Condition{
 		Type:               api.ConditionReady,
 		Status:             metav1.ConditionTrue,
-		Reason:             message,
+		Reason:             getConditionReason(api.ConditionReady, smClientTypes.SUCCEEDED),
 		Message:            message,
 		ObservedGeneration: object.GetGeneration(),
 	}
+
+	successCondition := metav1.Condition{
+		Type:               api.ConditionSucceeded,
+		Status:             metav1.ConditionTrue,
+		Reason:             getConditionReason(api.ConditionSucceeded, smClientTypes.SUCCEEDED),
+		Message:            message,
+		ObservedGeneration: object.GetGeneration(),
+	}
+
 	meta.RemoveStatusCondition(&conditions, api.ConditionShareInProgress)
-	meta.SetStatusCondition(&conditions, successShareCondition)
+	meta.RemoveStatusCondition(&conditions, api.ConditionSucceeded)
+	meta.SetStatusCondition(&conditions, successCondition)
+	meta.SetStatusCondition(&conditions, readyCondition)
+
 	object.SetConditions(conditions)
 }
 
