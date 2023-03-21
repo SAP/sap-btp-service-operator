@@ -142,6 +142,18 @@ var _ = BeforeSuite(func(done Done) {
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
+	err = (&SharedServiceInstanceReconciler{
+		BaseReconciler: &BaseReconciler{
+			Client:   k8sManager.GetClient(),
+			Scheme:   k8sManager.GetScheme(),
+			Log:      ctrl.Log.WithName("controllers").WithName("ServiceBinding"),
+			SMClient: func() sm.Client { return fakeClient },
+			Config:   testConfig,
+			Recorder: k8sManager.GetEventRecorderFor("ServiceBinding"),
+		},
+	}).SetupWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
 	// +kubebuilder:scaffold:webhook
 
 	go func() {

@@ -123,6 +123,19 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "ServiceBinding")
 		os.Exit(1)
 	}
+	if err = (&controllers.SharedServiceInstanceReconciler{
+		BaseReconciler: &controllers.BaseReconciler{
+			Client:         mgr.GetClient(),
+			Log:            ctrl.Log.WithName("controllers").WithName("ServiceBinding"),
+			Scheme:         mgr.GetScheme(),
+			Config:         config.Get(),
+			SecretResolver: secretResolver,
+			Recorder:       mgr.GetEventRecorderFor("ServiceBinding"),
+		},
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ServiceBinding")
+		os.Exit(1)
+	}
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
 		mgr.GetWebhookServer().Register("/mutate-services-cloud-sap-com-v1-serviceinstance", &webhook.Admission{Handler: &webhooks.ServiceInstanceDefaulter{}})
 		mgr.GetWebhookServer().Register("/mutate-services-cloud-sap-com-v1-servicebinding", &webhook.Admission{Handler: &webhooks.ServiceBindingDefaulter{}})

@@ -27,6 +27,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -52,6 +53,7 @@ type SharedServiceInstanceReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.1/pkg/reconcile
 func (r *SharedServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	fmt.Println("SharedServiceInstanceReconciler reconciler")
 	log := r.Log.WithValues("sharedserviceinstance", req.NamespacedName).WithValues("correlation_id", uuid.New().String())
 	ctx = context.WithValue(ctx, LogKey{}, log)
 
@@ -89,8 +91,29 @@ func (r *SharedServiceInstanceReconciler) Reconcile(ctx context.Context, req ctr
 	log.Info(fmt.Sprintf("Current generation is %v and observed is %v", sharedServiceInstance.Generation, sharedServiceInstance.GetObservedGeneration()))
 	sharedServiceInstance.SetObservedGeneration(sharedServiceInstance.Generation)
 
+	serviceInstance, err := r.getServiceInstanceForShareServiceInstance(ctx, sharedServiceInstance)
+	if err != nil || serviceNotUsable(serviceInstance) {
+		var shareInstanceErr error
+		if err != nil {
+			shareInstanceErr = fmt.Errorf("couldn't find the service instance '%s'. Error: %v", sharedServiceInstance.Spec.ServiceInstanceName, err.Error())
+		} else {
+			shareInstanceErr = fmt.Errorf("service instance '%s' is not usable", sharedServiceInstance.Spec.ServiceInstanceName)
+		}
+
+		setBlockedCondition(shareInstanceErr.Error(), sharedServiceInstance)
+		if err := r.updateStatus(ctx, sharedServiceInstance); err != nil {
+			return ctrl.Result{}, err
+		}
+
+		return ctrl.Result{}, shareInstanceErr
+	}
+
 	if !sharedServiceInstance.Status.Shared {
-		return r.handleShareInstanceChange(ctx, smClient, sharedServiceInstance)
+		if sharedServiceInstance.Status.Ready != metav1.ConditionTrue {
+			return r.createShareServiceInstance(ctx, smClient, serviceInstance, sharedServiceInstance)
+		} else {
+			return r.handleShareInstanceChange(ctx, smClient, sharedServiceInstance)
+		}
 	}
 
 	return ctrl.Result{}, nil
@@ -151,6 +174,22 @@ func (r *SharedServiceInstanceReconciler) delete(ctx context.Context, smClient s
 	return r.handleShareInstanceChange(ctx, smClient, sharedServiceInstance)
 }
 
+func (r *SharedServiceInstanceReconciler) getServiceInstanceForShareServiceInstance(ctx context.Context, instance *servicesv1.SharedServiceInstance) (*servicesv1.ServiceInstance, error) {
+	serviceInstance := &servicesv1.ServiceInstance{}
+	if err := r.Get(ctx, types.NamespacedName{Name: instance.Spec.ServiceInstanceName, Namespace: instance.Namespace}, serviceInstance); err != nil {
+		return nil, err
+	}
+
+	return serviceInstance.DeepCopy(), nil
+}
+
+func (r *SharedServiceInstanceReconciler) createShareServiceInstance(ctx context.Context, smClient sm.Client, serviceInstance *servicesv1.ServiceInstance, sharedServiceInstance *servicesv1.SharedServiceInstance) (ctrl.Result, error) {
+	log := GetLogger(ctx)
+	log.Info("Creating shared service instance in SM")
+	sharedServiceInstance.Status.InstanceID = serviceInstance.Status.InstanceID
+	return r.handleShareInstanceChange(ctx, smClient, sharedServiceInstance)
+}
+
 func setShareInProgressConditions(message string, object api.SAPBTPResource) {
 	conditions := object.GetConditions()
 	shareCondition := metav1.Condition{
@@ -180,4 +219,17 @@ func setSuccessShareCondition(shared bool, object api.SAPBTPResource) {
 	meta.RemoveStatusCondition(&conditions, api.ConditionShareInProgress)
 	meta.SetStatusCondition(&conditions, successShareCondition)
 	object.SetConditions(conditions)
+}
+
+func newSharedInstanceObject(name, namespace string) *servicesv1.SharedServiceInstance {
+	return &servicesv1.SharedServiceInstance{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: servicesv1.GroupVersion.String(),
+			Kind:       "ShareServiceInstance",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+	}
 }
