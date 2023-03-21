@@ -145,13 +145,10 @@ func (r *SharedServiceInstanceReconciler) delete(ctx context.Context, smClient s
 		if err := r.updateStatus(ctx, sharedServiceInstance); err != nil {
 			return ctrl.Result{}, err
 		}
-	} else {
-		setFailureConditions(smClientTypes.DELETE, "Shared service instance is still shared", sharedServiceInstance)
-		if err := r.updateStatus(ctx, sharedServiceInstance); err != nil {
-			return ctrl.Result{}, err
-		}
+		return ctrl.Result{}, nil
 	}
-	return ctrl.Result{}, nil
+
+	return r.handleShareInstanceChange(ctx, smClient, sharedServiceInstance)
 }
 
 func setShareInProgressConditions(message string, object api.SAPBTPResource) {
