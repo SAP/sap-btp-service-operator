@@ -60,6 +60,8 @@ type Client interface {
 
 	Status(string, *Parameters) (*types.Operation, error)
 
+	ShareInstance(share bool, serviceInstanceId string) error
+
 	// Call makes HTTP request to the Service Manager server with authentication.
 	// It should be used only in case there is no already implemented method for such an operation
 	Call(method string, smpath string, body io.Reader, q *Parameters) (*http.Response, error)
@@ -164,6 +166,19 @@ func (client *serviceManagerClient) Bind(binding *types.ServiceBinding, q *Param
 		return nil, "", err
 	}
 	return newBinding, location, nil
+}
+
+func (client *serviceManagerClient) ShareInstance(share bool, serviceInstanceId string) error {
+	renameRequest := map[string]interface{}{
+		"shared": share,
+	}
+
+	var result *types.ServiceBinding
+	_, err := client.update(renameRequest, types.ServiceInstancesURL, serviceInstanceId, nil, "", &result)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // ListInstances returns service instances registered in the Service Manager satisfying provided queries

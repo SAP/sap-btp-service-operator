@@ -19,15 +19,18 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"github.com/SAP/sap-btp-service-operator/api"
 	servicesv1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
+	smClientTypes "github.com/SAP/sap-btp-service-operator/client/sm/types"
 	"github.com/google/uuid"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/workqueue"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-
-	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 // SharedServiceInstanceReconciler reconciles a SharedServiceInstance object
@@ -65,6 +68,10 @@ func (r *SharedServiceInstanceReconciler) Reconcile(ctx context.Context, req ctr
 	sharedServiceInstance = sharedServiceInstance.DeepCopy()
 
 	if len(sharedServiceInstance.GetConditions()) == 0 {
+		sharedServiceInstance.Status.Shared = false
+		if err := r.updateStatus(ctx, sharedServiceInstance); err != nil {
+			return ctrl.Result{}, err
+		}
 		if err := r.init(ctx, sharedServiceInstance); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -75,9 +82,15 @@ func (r *SharedServiceInstanceReconciler) Reconcile(ctx context.Context, req ctr
 		return r.markAsTransientError(ctx, Unknown, err, sharedServiceInstance)
 	}
 
-	if len(sharedServiceInstance.Status.OperationURL) > 0 {
-		// ongoing operation - poll status from SM
-		return r.poll(ctx, smClient, sharedServiceInstance)
+	if isDelete(sharedServiceInstance.ObjectMeta) {
+		return r.delete(ctx, smClient, sharedServiceInstance)
+	}
+
+	log.Info(fmt.Sprintf("Current generation is %v and observed is %v", sharedServiceInstance.Generation, sharedServiceInstance.GetObservedGeneration()))
+	sharedServiceInstance.SetObservedGeneration(sharedServiceInstance.Generation)
+
+	if !sharedServiceInstance.Status.Shared {
+		return r.handleShareInstanceChange(ctx, smClient, sharedServiceInstance)
 	}
 
 	return ctrl.Result{}, nil
@@ -91,11 +104,83 @@ func (r *SharedServiceInstanceReconciler) SetupWithManager(mgr ctrl.Manager) err
 		Complete(r)
 }
 
-func (r *SharedServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client, sharedServiceInstance *servicesv1.SharedServiceInstance) (ctrl.Result, error) {
+func (r *SharedServiceInstanceReconciler) handleShareInstanceChange(ctx context.Context, smClient sm.Client, sharedServiceInstance *servicesv1.SharedServiceInstance) (ctrl.Result, error) {
 	log := GetLogger(ctx)
-	log.Info(fmt.Sprintf("resource is in progress, found operation url %s", sharedServiceInstance.Status.OperationURL))
-	status, statusErr := smClient.Status(sharedServiceInstance.Status.OperationURL, nil)
+	log.Info(fmt.Sprintf("Got instance share change request"))
+	shared := false
 
-	fmt.Println(status, statusErr)
-	return ctrl.Result{}, statusErr
+	if sharedServiceInstance.Status.Shared {
+		setShareInProgressConditions("Got un-share request", sharedServiceInstance)
+		shared = true
+	} else {
+		setShareInProgressConditions("Got share request", sharedServiceInstance)
+	}
+
+	err := smClient.ShareInstance(shared, sharedServiceInstance.Status.InstanceID)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	setSuccessShareCondition(shared, sharedServiceInstance)
+
+	sharedServiceInstance.Status.Shared = !sharedServiceInstance.Status.Shared
+	if err := r.updateStatus(ctx, sharedServiceInstance); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	return ctrl.Result{}, nil
+}
+
+func (r *SharedServiceInstanceReconciler) delete(ctx context.Context, smClient sm.Client, sharedServiceInstance *servicesv1.SharedServiceInstance) (ctrl.Result, error) {
+	log := GetLogger(ctx)
+	log.Info("Trying to delete shared service instance object")
+
+	setInProgressConditions(smClientTypes.DELETE, "deleting shared service instance", sharedServiceInstance)
+	if err := r.updateStatus(ctx, sharedServiceInstance); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if sharedServiceInstance.Status.Shared == false {
+		setSuccessConditions(smClientTypes.DELETE, sharedServiceInstance)
+		if err := r.updateStatus(ctx, sharedServiceInstance); err != nil {
+			return ctrl.Result{}, err
+		}
+	} else {
+		setFailureConditions(smClientTypes.DELETE, "Shared service instance is still shared", sharedServiceInstance)
+		if err := r.updateStatus(ctx, sharedServiceInstance); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+	return ctrl.Result{}, nil
+}
+
+func setShareInProgressConditions(message string, object api.SAPBTPResource) {
+	conditions := object.GetConditions()
+	shareCondition := metav1.Condition{
+		Type:               api.ConditionShareInProgress,
+		Status:             metav1.ConditionTrue,
+		Reason:             message,
+		Message:            message,
+		ObservedGeneration: object.GetGeneration(),
+	}
+	meta.SetStatusCondition(&conditions, shareCondition)
+	object.SetConditions(conditions)
+}
+
+func setSuccessShareCondition(shared bool, object api.SAPBTPResource) {
+	message := "Instance got shared successfully"
+	if !shared {
+		message = "Instance got un-shared successfully"
+	}
+	conditions := object.GetConditions()
+	successShareCondition := metav1.Condition{
+		Type:               api.ConditionReady,
+		Status:             metav1.ConditionTrue,
+		Reason:             message,
+		Message:            message,
+		ObservedGeneration: object.GetGeneration(),
+	}
+	meta.RemoveStatusCondition(&conditions, api.ConditionShareInProgress)
+	meta.SetStatusCondition(&conditions, successShareCondition)
+	object.SetConditions(conditions)
 }

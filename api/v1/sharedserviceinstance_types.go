@@ -56,6 +56,9 @@ type SharedServiceInstanceStatus struct {
 
 	// Indicates whether binding is ready for usage
 	Ready metav1.ConditionStatus `json:"ready,omitempty"`
+
+	// Indicates if currently the state of the instance is shared or not
+	Shared bool `json:"shared,omitempty"`
 }
 
 // +kubebuilder:object:root=true

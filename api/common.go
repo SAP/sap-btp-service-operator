@@ -33,6 +33,9 @@ const (
 
 	// ConditionPendingTermination resource is waiting for termination pre-conditions
 	ConditionPendingTermination = "PendingTermination"
+
+	// ConditionShareInProgress represents that sharing is in progress
+	ConditionShareInProgress = "Share"
 )
 
 // +kubebuilder:object:generate=false
