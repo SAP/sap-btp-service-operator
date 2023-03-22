@@ -32,9 +32,9 @@ func (ssi *SharedServiceInstance) SetupWebhookWithManager(mgr ctrl.Manager) erro
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
-// +kubebuilder:webhook:verbs=create;update,path=/validate-services-cloud-sap-com-v1-sharedserviceinstance,mutating=false,failurePolicy=fail,groups=services.cloud.sap.com,resources=sharedserviceinstances,versions=v1,name=vsharedserviceinstance.kb.io,sideEffects=None,admissionReviewVersions=v1beta1;v1
+// +kubebuilder:webhook:verbs=update,path=/validate-services-cloud-sap-com-v1-sharedserviceinstance,mutating=false,failurePolicy=fail,groups=services.cloud.sap.com,resources=sharedserviceinstances,versions=v1,name=vsharedserviceinstance.kb.io,sideEffects=None,admissionReviewVersions=v1beta1;v1
 
-var _ webhook.Validator = &ServiceBinding{}
+var _ webhook.Validator = &SharedServiceInstance{}
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (ssi *SharedServiceInstance) ValidateUpdate(old runtime.Object) error {

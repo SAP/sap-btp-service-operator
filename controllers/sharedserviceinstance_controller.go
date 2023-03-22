@@ -68,10 +68,8 @@ func (r *SharedServiceInstanceReconciler) Reconcile(ctx context.Context, req ctr
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	sharedServiceInstance = sharedServiceInstance.DeepCopy()
-	fmt.Println("Got the shared instance")
 
 	if len(sharedServiceInstance.GetConditions()) == 0 {
-		fmt.Println("condition size is 0")
 		if err := r.init(ctx, sharedServiceInstance); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -80,23 +78,19 @@ func (r *SharedServiceInstanceReconciler) Reconcile(ctx context.Context, req ctr
 			return ctrl.Result{}, err
 		}
 	}
-	fmt.Println("Passed init")
 
 	smClient, err := r.getSMClient(ctx, sharedServiceInstance)
 	if err != nil {
 		return r.markAsTransientError(ctx, Unknown, err, sharedServiceInstance)
 	}
-	fmt.Println("Got sm client")
 
 	if isDelete(sharedServiceInstance.ObjectMeta) {
 		return r.delete(ctx, smClient, sharedServiceInstance)
 	}
-	fmt.Println("Not delete")
 
 	log.Info(fmt.Sprintf("Current generation is %v and observed is %v", sharedServiceInstance.Generation, sharedServiceInstance.GetObservedGeneration()))
 	sharedServiceInstance.SetObservedGeneration(sharedServiceInstance.Generation)
 
-	fmt.Println("Trying to get service instance")
 	serviceInstance, err := r.getServiceInstanceForShareServiceInstance(ctx, sharedServiceInstance)
 	if err != nil || serviceNotUsable(serviceInstance) {
 		var shareInstanceErr error
@@ -113,19 +107,11 @@ func (r *SharedServiceInstanceReconciler) Reconcile(ctx context.Context, req ctr
 
 		return ctrl.Result{}, shareInstanceErr
 	}
-	fmt.Println("got - ", serviceInstance.Status.InstanceID)
 
 	if !sharedServiceInstance.Status.Shared {
-		fmt.Println("Not shared")
-		if sharedServiceInstance.Status.Ready != metav1.ConditionTrue {
-			fmt.Println("Ready")
-			return r.createShareServiceInstance(ctx, smClient, serviceInstance, sharedServiceInstance)
-		} else {
-			fmt.Println("not Ready")
-			return r.handleShareInstanceChange(ctx, smClient, sharedServiceInstance)
-		}
+		sharedServiceInstance.Status.InstanceID = serviceInstance.Status.InstanceID
+		return r.handleShareInstance(ctx, smClient, sharedServiceInstance)
 	}
-	fmt.Println("shared")
 
 	return ctrl.Result{}, nil
 }
@@ -138,37 +124,49 @@ func (r *SharedServiceInstanceReconciler) SetupWithManager(mgr ctrl.Manager) err
 		Complete(r)
 }
 
-func (r *SharedServiceInstanceReconciler) handleShareInstanceChange(ctx context.Context, smClient sm.Client, sharedServiceInstance *servicesv1.SharedServiceInstance) (ctrl.Result, error) {
+func (r *SharedServiceInstanceReconciler) handleShareInstance(ctx context.Context, smClient sm.Client, sharedServiceInstance *servicesv1.SharedServiceInstance) (ctrl.Result, error) {
 	log := GetLogger(ctx)
 	log.Info(fmt.Sprintf("Got instance share change request"))
-	shared := false
 
-	fmt.Println("handling sharing instance shared=", shared)
+	fmt.Println("handling sharing instance shared")
 
-	if sharedServiceInstance.Status.Shared {
-		setShareInProgressConditions("Got unshare request", sharedServiceInstance)
-		shared = true
-	} else {
-		setShareInProgressConditions("Got share request", sharedServiceInstance)
-	}
+	setShareInProgressConditions("Got share request", sharedServiceInstance)
 
-	err := smClient.ShareInstance(shared, sharedServiceInstance.Status.InstanceID)
+	err := smClient.ShareInstance(true, sharedServiceInstance.Status.InstanceID)
 	if err != nil {
-		fmt.Println("Got err = ", err.Error())
 		return ctrl.Result{}, err
 	}
 
-	sharedServiceInstance.Status.Shared = !sharedServiceInstance.Status.Shared
-	fmt.Println(sharedServiceInstance.Status.Shared)
+	sharedServiceInstance.Status.Shared = true
 	sharedServiceInstance.Status.Ready = metav1.ConditionTrue
-	setSuccessShareCondition(shared, sharedServiceInstance)
-
-	fmt.Println("Done handling sharing")
+	setSuccessShareCondition(true, sharedServiceInstance)
 	if err := r.updateStatus(ctx, sharedServiceInstance); err != nil {
-		fmt.Println("ohohoh, ", err.Error())
 		return ctrl.Result{}, err
 	}
-	fmt.Println("finally done")
+
+	return ctrl.Result{}, nil
+}
+
+func (r *SharedServiceInstanceReconciler) handleUnShareInstance(ctx context.Context, smClient sm.Client, sharedServiceInstance *servicesv1.SharedServiceInstance) (ctrl.Result, error) {
+	log := GetLogger(ctx)
+	log.Info(fmt.Sprintf("Got instance share change request"))
+
+	fmt.Println("handling unsharing instance shared")
+
+	setShareInProgressConditions("Got unshare request", sharedServiceInstance)
+
+	err := smClient.ShareInstance(false, sharedServiceInstance.Status.InstanceID)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	sharedServiceInstance.Status.Shared = false
+	sharedServiceInstance.Status.Ready = metav1.ConditionTrue
+	setSuccessShareCondition(false, sharedServiceInstance)
+	if err := r.updateStatus(ctx, sharedServiceInstance); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	return ctrl.Result{}, nil
 }
 
@@ -181,7 +179,7 @@ func (r *SharedServiceInstanceReconciler) delete(ctx context.Context, smClient s
 		return ctrl.Result{}, err
 	}
 
-	return r.handleShareInstanceChange(ctx, smClient, sharedServiceInstance)
+	return r.handleUnShareInstance(ctx, smClient, sharedServiceInstance)
 }
 
 func (r *SharedServiceInstanceReconciler) getServiceInstanceForShareServiceInstance(ctx context.Context, instance *servicesv1.SharedServiceInstance) (*servicesv1.ServiceInstance, error) {
@@ -191,13 +189,6 @@ func (r *SharedServiceInstanceReconciler) getServiceInstanceForShareServiceInsta
 	}
 
 	return serviceInstance.DeepCopy(), nil
-}
-
-func (r *SharedServiceInstanceReconciler) createShareServiceInstance(ctx context.Context, smClient sm.Client, serviceInstance *servicesv1.ServiceInstance, sharedServiceInstance *servicesv1.SharedServiceInstance) (ctrl.Result, error) {
-	log := GetLogger(ctx)
-	log.Info("Creating shared service instance in SM")
-	sharedServiceInstance.Status.InstanceID = serviceInstance.Status.InstanceID
-	return r.handleShareInstanceChange(ctx, smClient, sharedServiceInstance)
 }
 
 func setShareInProgressConditions(message string, object api.SAPBTPResource) {

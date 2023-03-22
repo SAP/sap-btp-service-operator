@@ -80,6 +80,14 @@ type SharedServiceInstance struct {
 	Status SharedServiceInstanceStatus `json:"status,omitempty"`
 }
 
+func (ssi *SharedServiceInstance) ValidateCreate() error {
+	return nil
+}
+
+func (ssi *SharedServiceInstance) ValidateDelete() error {
+	return nil
+}
+
 func (in *SharedServiceInstance) GetParameters() *runtime.RawExtension {
 	return nil
 }

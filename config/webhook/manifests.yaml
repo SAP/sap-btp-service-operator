@@ -87,11 +87,11 @@ webhooks:
   name: vsharedserviceinstance.kb.io
   rules:
     - apiGroups:
-        - services.cloud.sap.com
+      - services.cloud.sap.com
       apiVersions:
-        - v1
+      - v1
       operations:
-        - UPDATE
+      - UPDATE
       resources:
-        - sharedserviceinstances
+      - sharedserviceinstances
   sideEffects: None

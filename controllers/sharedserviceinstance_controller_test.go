@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"github.com/SAP/sap-btp-service-operator/api"
 	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
 	"github.com/SAP/sap-btp-service-operator/client/sm/smfakes"
@@ -120,6 +121,8 @@ var _ = Describe("SharedServiceInstance controller", func() {
 		return createdSharedServiceInstance
 	}
 
+	ctx := context.Background()
+
 	BeforeEach(func() {
 		guid = uuid.New().String()
 		sharedInstanceName = "test-ssi-" + guid
@@ -150,23 +153,24 @@ var _ = Describe("SharedServiceInstance controller", func() {
 			})
 		})
 
-		Context("Valid params", func() {
-			It("Should create shared service instance", func() {
-				ctx := context.Background()
+		FContext("Valid params", func() {
+			It("Should eventually create shared service instance", func() {
 				fakeInstanceName = "ic-test-" + uuid.New().String()
 				defaultLookupKey = types.NamespacedName{Name: fakeInstanceName, Namespace: shareInstanceTestNamespace}
 				fakeClient.GetInstanceByIDReturns(&smclientTypes.ServiceInstance{ID: fakeInstanceID, Ready: true, LastOperation: &smClientTypes.Operation{State: smClientTypes.SUCCEEDED, Type: smClientTypes.CREATE}}, nil)
 				fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
 				serviceInstance := createInstance(ctx, instanceSpec)
+
 				fakeClient.GetInstanceByIDReturns(&smclientTypes.ServiceInstance{ID: fakeInstanceID, Ready: true, LastOperation: &smClientTypes.Operation{State: smClientTypes.SUCCEEDED, Type: smClientTypes.CREATE}}, nil)
 				fakeClient.ShareInstanceReturns(nil)
 				createdSharedServiceInstance = createSharedInstance(ctx, serviceInstance.Name, shareInstanceTestNamespace, sharedInstanceName)
+				Expect(createdSharedServiceInstance.Status.Conditions[0].Status).To(Equal(metav1.ConditionTrue))
+				Expect(createdSharedServiceInstance.Status.Conditions[0].Type).To(Equal(api.ConditionReady))
 			})
 		})
-
 	})
 
-	FContext("Update", func() {
+	Context("Update", func() {
 		It("should fail in the webhook", func() {
 			ctx := context.Background()
 			fakeInstanceName = "ic-test-" + uuid.New().String()
@@ -181,7 +185,7 @@ var _ = Describe("SharedServiceInstance controller", func() {
 			fmt.Println("Now updating")
 			err := k8sClient.Update(context.Background(), createdSharedServiceInstance)
 			Expect(err).To(HaveOccurred())
-			fmt.Println(err.Error())
+			Expect(err.Error()).To(ContainSubstring("updating shared service instance is not supported"))
 		})
 	})
 })
