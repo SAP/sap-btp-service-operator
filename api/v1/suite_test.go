@@ -86,3 +86,17 @@ func getInstance() *ServiceInstance {
 		Status: ServiceInstanceStatus{},
 	}
 }
+
+func getSharedServiceInstance() *SharedServiceInstance {
+	return &SharedServiceInstance{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: GroupVersion.String(),
+			Kind:       "ShareServiceInstance",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "service-instance-1",
+			Namespace: "namespace-1",
+		},
+		Status: SharedServiceInstanceStatus{},
+	}
+}

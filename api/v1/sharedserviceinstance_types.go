@@ -20,6 +20,7 @@ import (
 	"github.com/SAP/sap-btp-service-operator/api"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"reflect"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -136,6 +137,14 @@ func (ssi *SharedServiceInstance) GetReady() metav1.ConditionStatus {
 
 func (ssi *SharedServiceInstance) SetReady(ready metav1.ConditionStatus) {
 	ssi.Status.Ready = ready
+}
+
+func (ssi *SharedServiceInstance) specChanged(old runtime.Object) bool {
+	oldSharedServiceInstance := old.(*SharedServiceInstance)
+	oldSpec := oldSharedServiceInstance.Spec.DeepCopy()
+	newSpec := ssi.Spec.DeepCopy()
+
+	return !reflect.DeepEqual(oldSpec, newSpec)
 }
 
 func init() {

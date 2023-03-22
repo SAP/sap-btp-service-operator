@@ -129,6 +129,8 @@ var _ = BeforeSuite(func(done Done) {
 	k8sManager.GetWebhookServer().Register("/mutate-services-cloud-sap-com-v1-servicebinding", &webhook.Admission{Handler: &webhooks.ServiceBindingDefaulter{}})
 	err = (&servicesv1.ServiceBinding{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
+	err = (&servicesv1.SharedServiceInstance{}).SetupWebhookWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
 
 	err = (&ServiceBindingReconciler{
 		BaseReconciler: &BaseReconciler{

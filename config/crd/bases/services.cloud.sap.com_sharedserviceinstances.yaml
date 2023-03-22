@@ -27,10 +27,6 @@ spec:
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
-    - jsonPath: .status.bindingID
-      name: ID
-      priority: 1
-      type: string
     - jsonPath: .status.conditions[0].message
       name: Message
       priority: 1
@@ -56,59 +52,11 @@ spec:
           spec:
             description: SharedServiceInstanceSpec defines the desired state of SharedServiceInstance
             properties:
-              externalName:
-                description: The name of the binding in Service Manager
-                type: string
-              secretKey:
-                description: SecretKey is used as the key inside the secret to store
-                  the credentials returned by the broker encoded as json to support
-                  complex data structures. If not specified, the credentials returned
-                  by the broker will be used directly as the secrets data.
-                type: string
-              secretName:
-                description: SecretName is the name of the secret where credentials
-                  will be stored
-                type: string
-              secretRootKey:
-                description: SecretRootKey is used as the key inside the secret to
-                  store all binding data including credentials returned by the broker
-                  and additional info under single key. Convenient way to store whole
-                  binding data in single file when using `volumeMounts`.
-                type: string
               serviceInstanceName:
                 description: The k8s name of the service instance to bind, should
                   be in the namespace of the binding
                 minLength: 1
                 type: string
-              userInfo:
-                description: UserInfo contains information about the user that last
-                  modified this instance. This field is set by the API server and
-                  not settable by the end-user. User-provided values for this field
-                  are not saved.
-                properties:
-                  extra:
-                    additionalProperties:
-                      description: ExtraValue masks the value so protobuf can generate
-                      items:
-                        type: string
-                      type: array
-                    description: Any additional information provided by the authenticator.
-                    type: object
-                  groups:
-                    description: The names of groups this user is a part of.
-                    items:
-                      type: string
-                    type: array
-                  uid:
-                    description: A unique value that identifies this user across time.
-                      If this user is deleted and another user by the same name is
-                      added, they will have different UIDs.
-                    type: string
-                  username:
-                    description: The name that uniquely identifies this user among
-                      all active users.
-                    type: string
-                type: object
             required:
             - serviceInstanceName
             type: object
@@ -116,10 +64,6 @@ spec:
             description: SharedServiceInstanceStatus defines the observed state of
               SharedServiceInstance
             properties:
-              bindingID:
-                description: The generated ID of the binding, will be automatically
-                  filled once the binding is created
-                type: string
               conditions:
                 description: Service binding conditions
                 items:
@@ -196,9 +140,6 @@ spec:
                 description: Last generation that was acted on
                 format: int64
                 type: integer
-              operationURL:
-                description: URL of ongoing operation for the service binding
-                type: string
               ready:
                 description: Indicates whether binding is ready for usage
                 type: string
@@ -223,10 +164,6 @@ spec:
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
-    - jsonPath: .status.bindingID
-      name: ID
-      priority: 1
-      type: string
     - jsonPath: .status.conditions[0].message
       name: Message
       priority: 1
@@ -252,59 +189,11 @@ spec:
           spec:
             description: SharedServiceInstanceSpec defines the desired state of SharedServiceInstance
             properties:
-              externalName:
-                description: The name of the binding in Service Manager
-                type: string
-              secretKey:
-                description: SecretKey is used as the key inside the secret to store
-                  the credentials returned by the broker encoded as json to support
-                  complex data structures. If not specified, the credentials returned
-                  by the broker will be used directly as the secrets data.
-                type: string
-              secretName:
-                description: SecretName is the name of the secret where credentials
-                  will be stored
-                type: string
-              secretRootKey:
-                description: SecretRootKey is used as the key inside the secret to
-                  store all binding data including credentials returned by the broker
-                  and additional info under single key. Convenient way to store whole
-                  binding data in single file when using `volumeMounts`.
-                type: string
               serviceInstanceName:
                 description: The k8s name of the service instance to bind, should
                   be in the namespace of the binding
                 minLength: 1
                 type: string
-              userInfo:
-                description: UserInfo contains information about the user that last
-                  modified this instance. This field is set by the API server and
-                  not settable by the end-user. User-provided values for this field
-                  are not saved.
-                properties:
-                  extra:
-                    additionalProperties:
-                      description: ExtraValue masks the value so protobuf can generate
-                      items:
-                        type: string
-                      type: array
-                    description: Any additional information provided by the authenticator.
-                    type: object
-                  groups:
-                    description: The names of groups this user is a part of.
-                    items:
-                      type: string
-                    type: array
-                  uid:
-                    description: A unique value that identifies this user across time.
-                      If this user is deleted and another user by the same name is
-                      added, they will have different UIDs.
-                    type: string
-                  username:
-                    description: The name that uniquely identifies this user among
-                      all active users.
-                    type: string
-                type: object
             required:
             - serviceInstanceName
             type: object
@@ -312,10 +201,6 @@ spec:
             description: SharedServiceInstanceStatus defines the observed state of
               SharedServiceInstance
             properties:
-              bindingID:
-                description: The generated ID of the binding, will be automatically
-                  filled once the binding is created
-                type: string
               conditions:
                 description: Service binding conditions
                 items:
@@ -385,16 +270,10 @@ spec:
                   - type
                   type: object
                 type: array
-              instanceID:
-                description: The ID of the instance in SM associated with binding
-                type: string
               observedGeneration:
                 description: Last generation that was acted on
                 format: int64
                 type: integer
-              operationURL:
-                description: URL of ongoing operation for the service binding
-                type: string
               ready:
                 description: Indicates whether binding is ready for usage
                 type: string

@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
 	"github.com/SAP/sap-btp-service-operator/client/sm/smfakes"
@@ -163,5 +164,24 @@ var _ = Describe("SharedServiceInstance controller", func() {
 			})
 		})
 
+	})
+
+	FContext("Update", func() {
+		It("should fail in the webhook", func() {
+			ctx := context.Background()
+			fakeInstanceName = "ic-test-" + uuid.New().String()
+			defaultLookupKey = types.NamespacedName{Name: fakeInstanceName, Namespace: shareInstanceTestNamespace}
+			fakeClient.GetInstanceByIDReturns(&smclientTypes.ServiceInstance{ID: fakeInstanceID, Ready: true, LastOperation: &smClientTypes.Operation{State: smClientTypes.SUCCEEDED, Type: smClientTypes.CREATE}}, nil)
+			fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
+			serviceInstance := createInstance(ctx, instanceSpec)
+			fakeClient.GetInstanceByIDReturns(&smclientTypes.ServiceInstance{ID: fakeInstanceID, Ready: true, LastOperation: &smClientTypes.Operation{State: smClientTypes.SUCCEEDED, Type: smClientTypes.CREATE}}, nil)
+			fakeClient.ShareInstanceReturns(nil)
+			createdSharedServiceInstance = createSharedInstance(ctx, serviceInstance.Name, shareInstanceTestNamespace, sharedInstanceName)
+			createdSharedServiceInstance.Spec.ServiceInstanceName = "new-name"
+			fmt.Println("Now updating")
+			err := k8sClient.Update(context.Background(), createdSharedServiceInstance)
+			Expect(err).To(HaveOccurred())
+			fmt.Println(err.Error())
+		})
 	})
 })

@@ -176,14 +176,6 @@ func (r *SharedServiceInstanceReconciler) delete(ctx context.Context, smClient s
 	log := GetLogger(ctx)
 	log.Info("Trying to delete shared service instance object")
 
-	if sharedServiceInstance.Status.Shared == false {
-		setSuccessConditions(smClientTypes.DELETE, sharedServiceInstance)
-		if err := r.updateStatus(ctx, sharedServiceInstance); err != nil {
-			return ctrl.Result{}, err
-		}
-		return ctrl.Result{}, nil
-	}
-
 	setInProgressConditions(smClientTypes.DELETE, "deleting shared service instance", sharedServiceInstance)
 	if err := r.updateStatus(ctx, sharedServiceInstance); err != nil {
 		return ctrl.Result{}, err
