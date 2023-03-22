@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
 	"github.com/SAP/sap-btp-service-operator/client/sm/smfakes"
@@ -52,11 +51,9 @@ var _ = Describe("SharedServiceInstance controller", func() {
 	createSharedInstanceWithoutAssertionsAndWait := func(ctx context.Context, name string, namespace string, instanceName string, wait bool) (*v1.SharedServiceInstance, error) {
 		ssi := newSharedInstanceObject(name, namespace)
 		ssi.Spec.ServiceInstanceName = name
-		fmt.Println("creating")
 		if err := k8sClient.Create(ctx, ssi); err != nil {
 			return nil, err
 		}
-		fmt.Println("Done creating")
 		ssiLookupKey := types.NamespacedName{Name: name, Namespace: shareInstanceTestNamespace}
 		createdSharedServiceInstance = &v1.SharedServiceInstance{}
 
@@ -65,7 +62,6 @@ var _ = Describe("SharedServiceInstance controller", func() {
 			if err != nil {
 				return false
 			}
-			fmt.Println(createdSharedServiceInstance)
 			if wait {
 				return isReady(createdSharedServiceInstance) || isFailed(createdSharedServiceInstance)
 			} else {
@@ -146,7 +142,6 @@ var _ = Describe("SharedServiceInstance controller", func() {
 		Context("Invalid parameters", func() {
 			When("service instance name is not provided", func() {
 				It("should fail", func() {
-					fmt.Println("Starting test")
 					createSharedInstanceWithError(context.Background(), sharedInstanceName, shareInstanceTestNamespace, "",
 						"spec.serviceInstanceName in body should be at least 1 chars long")
 
@@ -154,7 +149,7 @@ var _ = Describe("SharedServiceInstance controller", func() {
 			})
 		})
 
-		FContext("Valid params", func() {
+		Context("Valid params", func() {
 			It("Should create shared service instance", func() {
 				ctx := context.Background()
 				fakeInstanceName = "ic-test-" + uuid.New().String()
@@ -162,13 +157,11 @@ var _ = Describe("SharedServiceInstance controller", func() {
 				fakeClient.GetInstanceByIDReturns(&smclientTypes.ServiceInstance{ID: fakeInstanceID, Ready: true, LastOperation: &smClientTypes.Operation{State: smClientTypes.SUCCEEDED, Type: smClientTypes.CREATE}}, nil)
 				fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
 				serviceInstance := createInstance(ctx, instanceSpec)
-				fmt.Println(serviceInstance)
-				fmt.Println("Created done")
 				fakeClient.GetInstanceByIDReturns(&smclientTypes.ServiceInstance{ID: fakeInstanceID, Ready: true, LastOperation: &smClientTypes.Operation{State: smClientTypes.SUCCEEDED, Type: smClientTypes.CREATE}}, nil)
 				fakeClient.ShareInstanceReturns(nil)
 				createdSharedServiceInstance = createSharedInstance(ctx, serviceInstance.Name, shareInstanceTestNamespace, sharedInstanceName)
-				fmt.Println("yay!!")
 			})
 		})
+
 	})
 })
