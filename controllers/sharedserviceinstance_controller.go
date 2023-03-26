@@ -58,10 +58,8 @@ func (r *SharedServiceInstanceReconciler) Reconcile(ctx context.Context, req ctr
 	log := r.Log.WithValues("sharedserviceinstance", req.NamespacedName).WithValues("correlation_id", uuid.New().String())
 	ctx = context.WithValue(ctx, LogKey{}, log)
 
-	fmt.Println(req.Namespace)
 	sharedServiceInstance := &servicesv1.SharedServiceInstance{}
 	if err := r.Get(ctx, req.NamespacedName, sharedServiceInstance); err != nil {
-		fmt.Println("oh no", err.Error())
 		if !apierrors.IsNotFound(err) {
 			log.Error(err, "unable to fetch SharedServiceInstance")
 		}
@@ -88,7 +86,6 @@ func (r *SharedServiceInstanceReconciler) Reconcile(ctx context.Context, req ctr
 	}
 
 	if isDelete(sharedServiceInstance.ObjectMeta) {
-		fmt.Println("Delete in reconcile")
 		return r.delete(ctx, smClient, sharedServiceInstance)
 	}
 
@@ -165,8 +162,6 @@ func (r *SharedServiceInstanceReconciler) handleShareInstance(ctx context.Contex
 func (r *SharedServiceInstanceReconciler) handleUnShareInstance(ctx context.Context, smClient sm.Client, sharedServiceInstance *servicesv1.SharedServiceInstance) error {
 	log := GetLogger(ctx)
 	log.Info(fmt.Sprintf("Got instance share change request"))
-
-	fmt.Println("handling unsharing instance shared")
 
 	err := smClient.ShareInstance(false, sharedServiceInstance.Status.InstanceID)
 	if err != nil {
