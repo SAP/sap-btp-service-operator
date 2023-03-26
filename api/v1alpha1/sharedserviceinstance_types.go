@@ -56,7 +56,7 @@ type SharedServiceInstanceStatus struct {
 	// Last generation that was acted on
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
-	// Indicates whether binding is ready for usage
+	// Indicates whether shared service instance is ready for usage
 	Ready metav1.ConditionStatus `json:"ready,omitempty"`
 }
 

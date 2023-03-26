@@ -46,20 +46,17 @@ type SharedServiceInstanceStatus struct {
 	// +optional
 	InstanceID string `json:"instanceID,omitempty"`
 
-	// URL of ongoing operation for the service binding
-	OperationURL string `json:"operationURL,omitempty"`
-
 	// Service binding conditions
 	Conditions []metav1.Condition `json:"conditions"`
 
 	// Last generation that was acted on
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
-	// Indicates whether binding is ready for usage
+	// Indicates whether shared service instance is ready for usage
 	Ready metav1.ConditionStatus `json:"ready,omitempty"`
 
 	// Indicates if currently the state of the instance is shared or not
-	Shared bool `json:"shared,omitempty"`
+	Shared metav1.ConditionStatus `json:"shared,omitempty"`
 }
 
 // +kubebuilder:object:root=true

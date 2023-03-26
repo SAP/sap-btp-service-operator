@@ -1,7 +1,7 @@
 apiVersion: services.cloud.sap.com/v1
 kind: ServiceInstance
 metadata:
-  name: sample-instance-1
+  name: xsuaa-sample-instance
 spec:
-  serviceOfferingName: service-manager
-  servicePlanName: subaccount-admin
+  serviceOfferingName: xsuaa
+  servicePlanName: application

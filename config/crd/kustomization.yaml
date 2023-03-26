@@ -4,6 +4,7 @@
 resources:
 - bases/services.cloud.sap.com_serviceinstances.yaml
 - bases/services.cloud.sap.com_servicebindings.yaml
+- bases/services.cloud.sap.com_sharedservicebindings.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
 
 patchesStrategicMerge:

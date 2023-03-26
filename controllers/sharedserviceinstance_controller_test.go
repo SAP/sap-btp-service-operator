@@ -27,7 +27,6 @@ const (
 
 var _ = Describe("SharedServiceInstance controller", func() {
 	var sharedInstanceName string
-	var serviceInstanceName string
 	var guid string
 	var createdSharedServiceInstance *v1.SharedServiceInstance
 	var fakeInstanceName string
@@ -50,7 +49,7 @@ var _ = Describe("SharedServiceInstance controller", func() {
 		},
 	}
 
-	createSharedInstanceWithoutAssertionsAndWait := func(ctx context.Context, name string, namespace string, instanceName string, wait bool) (*v1.SharedServiceInstance, error) {
+	createSharedInstanceWithoutAssertionsAndWait := func(ctx context.Context, name string, namespace string, wait bool) (*v1.SharedServiceInstance, error) {
 		ssi := newSharedInstanceObject(name, namespace)
 		ssi.Spec.ServiceInstanceName = name
 		if err := k8sClient.Create(ctx, ssi); err != nil {
@@ -73,8 +72,8 @@ var _ = Describe("SharedServiceInstance controller", func() {
 		return createdSharedServiceInstance, nil
 	}
 
-	createSharedInstanceWithError := func(ctx context.Context, name, namespace, instanceName, failureMessage string) {
-		ssi, err := createSharedInstanceWithoutAssertionsAndWait(ctx, name, namespace, instanceName, true)
+	createSharedInstanceWithError := func(ctx context.Context, name, namespace, failureMessage string) {
+		ssi, err := createSharedInstanceWithoutAssertionsAndWait(ctx, name, namespace, true)
 		if err != nil {
 			Expect(err.Error()).To(ContainSubstring(failureMessage))
 		} else {
@@ -109,16 +108,33 @@ var _ = Describe("SharedServiceInstance controller", func() {
 		return createdInstance
 	}
 
-	createSharedInstanceWithoutAssertions := func(ctx context.Context, name string, namespace string, instanceName string) (*v1.SharedServiceInstance, error) {
-		return createSharedInstanceWithoutAssertionsAndWait(ctx, name, namespace, instanceName, true)
+	createSharedInstanceWithoutAssertions := func(ctx context.Context, name string, namespace string) (*v1.SharedServiceInstance, error) {
+		return createSharedInstanceWithoutAssertionsAndWait(ctx, name, namespace, true)
 	}
 
-	createSharedInstance := func(ctx context.Context, instanceName, namespace, sharedInstanceName string) *v1.SharedServiceInstance {
-		createdSharedServiceInstance, err := createSharedInstanceWithoutAssertions(ctx, instanceName, namespace, sharedInstanceName)
+	createSharedInstance := func(ctx context.Context, instanceName, namespace string) *v1.SharedServiceInstance {
+		createdSharedServiceInstance, err := createSharedInstanceWithoutAssertions(ctx, instanceName, namespace)
 		Expect(err).ToNot(HaveOccurred())
-
 		Expect(int(createdSharedServiceInstance.Status.ObservedGeneration)).To(Equal(1))
 		return createdSharedServiceInstance
+	}
+
+	deleteInstance := func(ctx context.Context, instanceToDelete *v1.SharedServiceInstance, wait bool) {
+		err := k8sClient.Get(ctx, types.NamespacedName{Name: fakeInstanceName, Namespace: shareInstanceTestNamespace}, &v1.SharedServiceInstance{})
+		if err != nil {
+			Expect(apierrors.IsNotFound(err)).To(Equal(true))
+			return
+		}
+
+		Expect(k8sClient.Delete(ctx, instanceToDelete)).Should(Succeed())
+
+		if wait {
+			Eventually(func() bool {
+				a := &v1.SharedServiceInstance{}
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: fakeInstanceName, Namespace: shareInstanceTestNamespace}, a)
+				return apierrors.IsNotFound(err)
+			}, timeout, interval).Should(BeTrue())
+		}
 	}
 
 	ctx := context.Background()
@@ -126,9 +142,8 @@ var _ = Describe("SharedServiceInstance controller", func() {
 	BeforeEach(func() {
 		guid = uuid.New().String()
 		sharedInstanceName = "test-ssi-" + guid
-		serviceInstanceName = "fake-instance-name" + guid
 		fakeInstanceName = "fake-name" + guid
-		defaultLookupKey = types.NamespacedName{Name: serviceInstanceName, Namespace: shareInstanceTestNamespace}
+		defaultLookupKey = types.NamespacedName{Name: fakeInstanceName, Namespace: shareInstanceTestNamespace}
 		fakeClient = &smfakes.FakeClient{}
 		fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: "12345678", Tags: []byte("[\"test\"]")}, nil)
 		smInstance := &smclientTypes.ServiceInstance{ID: fakeInstanceID, Ready: true, LastOperation: &smClientTypes.Operation{State: smClientTypes.SUCCEEDED, Type: smClientTypes.UPDATE}}
@@ -144,16 +159,22 @@ var _ = Describe("SharedServiceInstance controller", func() {
 
 	Context("Create", func() {
 		Context("Invalid parameters", func() {
-			When("service instance name is not provided", func() {
+			When("namespace is not provided", func() {
 				It("should fail", func() {
-					createSharedInstanceWithError(context.Background(), sharedInstanceName, shareInstanceTestNamespace, "",
-						"spec.serviceInstanceName in body should be at least 1 chars long")
+					createSharedInstanceWithError(context.Background(), sharedInstanceName, "",
+						"an empty namespace may not be set during creation")
+				})
+			})
 
+			When("serviceInstanceName is not provided", func() {
+				It("should fail", func() {
+					createSharedInstanceWithError(context.Background(), "", shareInstanceTestNamespace,
+						"serviceInstanceName in body should be at least 1 chars long")
 				})
 			})
 		})
 
-		FContext("Valid params", func() {
+		Context("Valid params", func() {
 			It("Should eventually create shared service instance", func() {
 				fakeInstanceName = "ic-test-" + uuid.New().String()
 				defaultLookupKey = types.NamespacedName{Name: fakeInstanceName, Namespace: shareInstanceTestNamespace}
@@ -163,7 +184,7 @@ var _ = Describe("SharedServiceInstance controller", func() {
 
 				fakeClient.GetInstanceByIDReturns(&smclientTypes.ServiceInstance{ID: fakeInstanceID, Ready: true, LastOperation: &smClientTypes.Operation{State: smClientTypes.SUCCEEDED, Type: smClientTypes.CREATE}}, nil)
 				fakeClient.ShareInstanceReturns(nil)
-				createdSharedServiceInstance = createSharedInstance(ctx, serviceInstance.Name, shareInstanceTestNamespace, sharedInstanceName)
+				createdSharedServiceInstance = createSharedInstance(ctx, serviceInstance.Name, shareInstanceTestNamespace)
 				Expect(createdSharedServiceInstance.Status.Conditions[0].Status).To(Equal(metav1.ConditionTrue))
 				Expect(createdSharedServiceInstance.Status.Conditions[0].Type).To(Equal(api.ConditionReady))
 			})
@@ -180,12 +201,71 @@ var _ = Describe("SharedServiceInstance controller", func() {
 			serviceInstance := createInstance(ctx, instanceSpec)
 			fakeClient.GetInstanceByIDReturns(&smclientTypes.ServiceInstance{ID: fakeInstanceID, Ready: true, LastOperation: &smClientTypes.Operation{State: smClientTypes.SUCCEEDED, Type: smClientTypes.CREATE}}, nil)
 			fakeClient.ShareInstanceReturns(nil)
-			createdSharedServiceInstance = createSharedInstance(ctx, serviceInstance.Name, shareInstanceTestNamespace, sharedInstanceName)
+			createdSharedServiceInstance = createSharedInstance(ctx, serviceInstance.Name, shareInstanceTestNamespace)
 			createdSharedServiceInstance.Spec.ServiceInstanceName = "new-name"
 			fmt.Println("Now updating")
 			err := k8sClient.Update(context.Background(), createdSharedServiceInstance)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("updating shared service instance is not supported"))
+		})
+	})
+
+	Context("Delete", func() {
+		When("Un-sharing the instance succeed", func() {
+			It("should succeed deleting the sharingServiceInstance resource", func() {
+				ctx := context.Background()
+
+				defaultLookupKey = types.NamespacedName{Name: fakeInstanceName, Namespace: shareInstanceTestNamespace}
+				fakeClient.GetInstanceByIDReturns(&smclientTypes.ServiceInstance{ID: fakeInstanceID, Ready: true, LastOperation: &smClientTypes.Operation{State: smClientTypes.SUCCEEDED, Type: smClientTypes.CREATE}}, nil)
+				fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
+				serviceInstance := createInstance(ctx, instanceSpec)
+
+				fakeClient.ShareInstanceReturns(nil)
+				createdSharedServiceInstance = createSharedInstance(ctx, serviceInstance.Name, shareInstanceTestNamespace)
+				Eventually(func() bool {
+					err := k8sClient.Get(ctx, types.NamespacedName{Name: serviceInstance.Name, Namespace: shareInstanceTestNamespace}, createdSharedServiceInstance)
+					if err == nil {
+						return createdSharedServiceInstance.Status.Shared == metav1.ConditionTrue
+					}
+					return false
+				}, timeout, interval).Should(BeTrue())
+
+				fakeClient.ShareInstanceReturns(nil)
+				deleteInstance(ctx, createdSharedServiceInstance, true)
+			})
+		})
+
+		When("Un-sharing the instance fails", func() {
+			It("should fail deleting the sharingServiceInstance resource and update the status", func() {
+				ctx := context.Background()
+
+				defaultLookupKey = types.NamespacedName{Name: fakeInstanceName, Namespace: shareInstanceTestNamespace}
+				fakeClient.GetInstanceByIDReturns(&smclientTypes.ServiceInstance{ID: fakeInstanceID, Ready: true, LastOperation: &smClientTypes.Operation{State: smClientTypes.SUCCEEDED, Type: smClientTypes.CREATE}}, nil)
+				fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
+				serviceInstance := createInstance(ctx, instanceSpec)
+				fakeClient.ShareInstanceReturns(nil)
+
+				createdSharedServiceInstance = createSharedInstance(ctx, serviceInstance.Name, shareInstanceTestNamespace)
+				Eventually(func() bool {
+					err := k8sClient.Get(ctx, types.NamespacedName{Name: serviceInstance.Name, Namespace: shareInstanceTestNamespace}, createdSharedServiceInstance)
+					if err == nil {
+						return createdSharedServiceInstance.Status.Shared == metav1.ConditionTrue
+					}
+					return false
+				}, timeout, interval).Should(BeTrue())
+
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: serviceInstance.Name, Namespace: shareInstanceTestNamespace}, createdSharedServiceInstance)
+				Expect(err).To(BeNil())
+
+				fakeClient.ShareInstanceReturns(fmt.Errorf("failed to unshre instance"))
+				k8sClient.Delete(ctx, createdSharedServiceInstance)
+				Eventually(func() bool {
+					k8sClient.Get(ctx, types.NamespacedName{Name: serviceInstance.Name, Namespace: shareInstanceTestNamespace}, createdSharedServiceInstance)
+					return len(createdSharedServiceInstance.Status.Conditions) > 2
+				}, timeout, interval).Should(BeTrue())
+				Expect(createdSharedServiceInstance.Status.Conditions[2].Type == api.ConditionFailed)
+				Expect(createdSharedServiceInstance.Status.Conditions[2].Message == "failed un-share")
+			})
 		})
 	})
 })

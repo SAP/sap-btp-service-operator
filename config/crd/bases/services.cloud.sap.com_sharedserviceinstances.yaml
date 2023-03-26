@@ -141,7 +141,10 @@ spec:
                 format: int64
                 type: integer
               ready:
-                description: Indicates whether binding is ready for usage
+                description: Indicates whether shared service instace is ready for usage
+                type: string
+              shared:
+                description: Indicates if currently the state of the instance is shared or not
                 type: string
             required:
             - conditions
@@ -160,6 +163,9 @@ spec:
       type: string
     - jsonPath: .status.ready
       name: Ready
+      type: string
+    - jsonPath: .status.shared
+      name: Shared
       type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
@@ -275,7 +281,10 @@ spec:
                 format: int64
                 type: integer
               ready:
-                description: Indicates whether binding is ready for usage
+                description: Indicates whether shared service instance is ready for usage
+                type: string
+              shared:
+                description: Indicates if currently the state of the instance is shared or not
                 type: string
             required:
             - conditions
