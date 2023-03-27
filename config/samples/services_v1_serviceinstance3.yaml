@@ -1,0 +1,8 @@
+apiVersion: services.cloud.sap.com/v1
+kind: ServiceInstance
+metadata:
+  name: multi-data-center-instance
+spec:
+  serviceOfferingName: multi-data-centers
+  servicePlanName: small
+  dataCenter: cf-tel-aviv

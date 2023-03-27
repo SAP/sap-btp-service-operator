@@ -42,7 +42,7 @@ type ServiceInstanceSpec struct {
 
 	// The dataCenter in case service offering and plan name exist in other data center and not on main
 	// +optional
-	DataCenter string `json:"dataCenter"`
+	DataCenter string `json:"dataCenter,omitempty"`
 
 	// The plan ID in case service offering and plan name are ambiguous
 	// +optional

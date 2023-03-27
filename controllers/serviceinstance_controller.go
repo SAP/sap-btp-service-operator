@@ -195,7 +195,7 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 		return r.markAsNonTransientError(ctx, smClientTypes.CREATE, err, serviceInstance)
 	}
 
-	provision, provisionErr := smClient.ProvisionWithDataCenter(&smClientTypes.ServiceInstance{
+	provision, provisionErr := smClient.Provision(&smClientTypes.ServiceInstance{
 		Name:          serviceInstance.Spec.ExternalName,
 		ServicePlanID: serviceInstance.Spec.ServicePlanID,
 		Parameters:    instanceParameters,
@@ -271,7 +271,7 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 		return r.markAsNonTransientError(ctx, smClientTypes.UPDATE, fmt.Errorf("failed to parse parameters: %v", err.Error()), serviceInstance)
 	}
 
-	_, operationURL, err := smClient.UpdateInstanceWithDataCenter(serviceInstance.Status.InstanceID, &smClientTypes.ServiceInstance{
+	_, operationURL, err := smClient.UpdateInstance(serviceInstance.Status.InstanceID, &smClientTypes.ServiceInstance{
 		Name:          serviceInstance.Spec.ExternalName,
 		ServicePlanID: serviceInstance.Spec.ServicePlanID,
 		Parameters:    instanceParameters,

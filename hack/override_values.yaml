@@ -1,10 +1,9 @@
 # Default values for sapbtp-operator-charts.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
-
 manager:
   secret:
-    clientid: <REPLACE_ME>
-    clientsecret: <REPLACE_ME>
-    sm_url: <REPLACE_ME>
-    tokenurl: <REPLACE_ME>
+    clientid: 'sb-6342dfc5-6db7-443e-aba0-c0d4c1e9e987!b66700|service-manager!b3'
+    clientsecret: '89923ff0-1929-4d2d-b564-2851e138b591$VgWknrYR9iVU1nv_nBsWVes2tuc_frcPOczSzp_Y7Jw='
+    sm_url: 'https://service-manager.cfapps.stagingaws.hanavlab.ondemand.com'
+    tokenurl: 'https://i065450-jpzcnasz.authentication.stagingaws.hanavlab.ondemand.com'

@@ -45,10 +45,8 @@ const (
 type Client interface {
 	ListInstances(*Parameters) (*types.ServiceInstances, error)
 	GetInstanceByID(string, *Parameters) (*types.ServiceInstance, error)
-	UpdateInstance(id string, updatedInstance *types.ServiceInstance, serviceName string, planName string, q *Parameters, user string) (*types.ServiceInstance, string, error)
-	UpdateInstanceWithDataCenter(id string, updatedInstance *types.ServiceInstance, serviceName string, planName string, q *Parameters, user string, dataCenter string) (*types.ServiceInstance, string, error)
-	Provision(instance *types.ServiceInstance, serviceName string, planName string, q *Parameters, user string) (*ProvisionResponse, error)
-	ProvisionWithDataCenter(instance *types.ServiceInstance, serviceName string, planName string, q *Parameters, user string, dataCenter string) (*ProvisionResponse, error)
+	UpdateInstance(id string, updatedInstance *types.ServiceInstance, serviceName string, planName string, q *Parameters, user string, dataCenter string) (*types.ServiceInstance, string, error)
+	Provision(instance *types.ServiceInstance, serviceName string, planName string, q *Parameters, user string, dataCenter string) (*ProvisionResponse, error)
 	Deprovision(id string, q *Parameters, user string) (string, error)
 
 	ListBindings(*Parameters) (*types.ServiceBindings, error)
@@ -119,12 +117,7 @@ func NewClient(ctx context.Context, config *ClientConfig, httpClient auth.HTTPCl
 }
 
 // Provision provisions a new service instance in service manager
-func (client *serviceManagerClient) Provision(instance *types.ServiceInstance, serviceName string, planName string, q *Parameters, user string) (*ProvisionResponse, error) {
-	return client.ProvisionWithDataCenter(instance, serviceName, planName, q, user, "")
-}
-
-// ProvisionWithDataCenter provisions a new service instance in service manager
-func (client *serviceManagerClient) ProvisionWithDataCenter(instance *types.ServiceInstance, serviceName string, planName string, q *Parameters, user string, dataCenter string) (*ProvisionResponse, error) {
+func (client *serviceManagerClient) Provision(instance *types.ServiceInstance, serviceName string, planName string, q *Parameters, user string, dataCenter string) (*ProvisionResponse, error) {
 	var newInstance *types.ServiceInstance
 	var instanceID string
 	if len(serviceName) == 0 || len(planName) == 0 {
@@ -220,11 +213,7 @@ func (client *serviceManagerClient) Unbind(id string, q *Parameters, user string
 	return client.delete(types.ServiceBindingsURL+"/"+id, q, user)
 }
 
-func (client *serviceManagerClient) UpdateInstance(id string, updatedInstance *types.ServiceInstance, serviceName string, planName string, q *Parameters, user string) (*types.ServiceInstance, string, error) {
-	return client.UpdateInstanceWithDataCenter(id, updatedInstance, serviceName, planName, q, user, "")
-}
-
-func (client *serviceManagerClient) UpdateInstanceWithDataCenter(id string, updatedInstance *types.ServiceInstance, serviceName string, planName string, q *Parameters, user string, dataCenter string) (*types.ServiceInstance, string, error) {
+func (client *serviceManagerClient) UpdateInstance(id string, updatedInstance *types.ServiceInstance, serviceName string, planName string, q *Parameters, user string, dataCenter string) (*types.ServiceInstance, string, error) {
 	var result *types.ServiceInstance
 
 	planInfo, err := client.getPlanInfo(updatedInstance.ServicePlanID, serviceName, planName, dataCenter)
