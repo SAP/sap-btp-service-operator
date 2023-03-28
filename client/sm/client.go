@@ -45,8 +45,8 @@ const (
 type Client interface {
 	ListInstances(*Parameters) (*types.ServiceInstances, error)
 	GetInstanceByID(string, *Parameters) (*types.ServiceInstance, error)
-	UpdateInstance(id string, updatedInstance *types.ServiceInstance, serviceName string, planName string, q *Parameters, user string) (*types.ServiceInstance, string, error)
-	Provision(instance *types.ServiceInstance, serviceName string, planName string, q *Parameters, user string) (*ProvisionResponse, error)
+	UpdateInstance(id string, updatedInstance *types.ServiceInstance, serviceName string, planName string, q *Parameters, user string, dataCenter string) (*types.ServiceInstance, string, error)
+	Provision(instance *types.ServiceInstance, serviceName string, planName string, q *Parameters, user string, dataCenter string) (*ProvisionResponse, error)
 	Deprovision(id string, q *Parameters, user string) (string, error)
 
 	ListBindings(*Parameters) (*types.ServiceBindings, error)
@@ -91,7 +91,7 @@ type ProvisionResponse struct {
 	Tags       json.RawMessage
 }
 
-// NewClientWithAuth returns new SM Client configured with the provided configuration
+// NewClient NewClientWithAuth returns new SM Client configured with the provided configuration
 func NewClient(ctx context.Context, config *ClientConfig, httpClient auth.HTTPClient) (Client, error) {
 	if httpClient != nil {
 		return &serviceManagerClient{Context: ctx, Config: config, HTTPClient: httpClient}, nil
@@ -117,14 +117,14 @@ func NewClient(ctx context.Context, config *ClientConfig, httpClient auth.HTTPCl
 }
 
 // Provision provisions a new service instance in service manager
-func (client *serviceManagerClient) Provision(instance *types.ServiceInstance, serviceName string, planName string, q *Parameters, user string) (*ProvisionResponse, error) {
+func (client *serviceManagerClient) Provision(instance *types.ServiceInstance, serviceName string, planName string, q *Parameters, user string, dataCenter string) (*ProvisionResponse, error) {
 	var newInstance *types.ServiceInstance
 	var instanceID string
 	if len(serviceName) == 0 || len(planName) == 0 {
 		return nil, fmt.Errorf("missing field values. Specify service name and plan name for the instance '%s'", instance.Name)
 	}
 
-	planInfo, err := client.getPlanInfo(instance.ServicePlanID, serviceName, planName)
+	planInfo, err := client.getPlanInfo(instance.ServicePlanID, serviceName, planName, dataCenter)
 	if err != nil {
 		return nil, err
 	}
@@ -213,10 +213,10 @@ func (client *serviceManagerClient) Unbind(id string, q *Parameters, user string
 	return client.delete(types.ServiceBindingsURL+"/"+id, q, user)
 }
 
-func (client *serviceManagerClient) UpdateInstance(id string, updatedInstance *types.ServiceInstance, serviceName string, planName string, q *Parameters, user string) (*types.ServiceInstance, string, error) {
+func (client *serviceManagerClient) UpdateInstance(id string, updatedInstance *types.ServiceInstance, serviceName string, planName string, q *Parameters, user string, dataCenter string) (*types.ServiceInstance, string, error) {
 	var result *types.ServiceInstance
 
-	planInfo, err := client.getPlanInfo(updatedInstance.ServicePlanID, serviceName, planName)
+	planInfo, err := client.getPlanInfo(updatedInstance.ServicePlanID, serviceName, planName, dataCenter)
 	if err != nil {
 		return nil, "", err
 	}
@@ -396,21 +396,23 @@ func (client *serviceManagerClient) callWithUser(method string, smpath string, b
 	return resp, nil
 }
 
-func (client *serviceManagerClient) getPlanInfo(planID string, serviceName string, planName string) (*planInfo, error) {
-	offerings, err := client.getServiceOfferingsByName(serviceName)
+func (client *serviceManagerClient) getPlanInfo(planID string, serviceName string, planName string, dataCenter string) (*planInfo, error) {
+
+	offerings, err := client.getServiceOfferingsByNameAndDataCenter(serviceName, dataCenter)
 	if err != nil {
 		return nil, err
 	}
 
 	var commaSepOfferingIds string
 	if len(offerings.ServiceOfferings) == 0 {
-		return nil, fmt.Errorf("couldn't find the service offering '%s'", serviceName)
+		return nil, fmt.Errorf("couldn't find the service offering '%s' on dataCenter '%s'", serviceName, dataCenter)
 	}
 
 	serviceOfferingIds := make([]string, 0, len(offerings.ServiceOfferings))
 	for _, svc := range offerings.ServiceOfferings {
 		serviceOfferingIds = append(serviceOfferingIds, svc.ID)
 	}
+
 	commaSepOfferingIds = "'" + strings.Join(serviceOfferingIds, "', '") + "'"
 
 	query := &Parameters{
@@ -447,9 +449,9 @@ func (client *serviceManagerClient) getPlanInfo(planID string, serviceName strin
 	return nil, err
 }
 
-func (client *serviceManagerClient) getServiceOfferingsByName(serviceName string) (*types.ServiceOfferings, error) {
+func (client *serviceManagerClient) getServiceOfferingsByNameAndDataCenter(serviceName string, dataCenter string) (*types.ServiceOfferings, error) {
 	query := &Parameters{
-		FieldQuery: []string{fmt.Sprintf("catalog_name eq '%s'", serviceName)},
+		FieldQuery: []string{fmt.Sprintf("catalog_name eq '%s' and data_center eq '%s'", serviceName, dataCenter)},
 	}
 	offerings, err := client.ListOfferings(query)
 	if err != nil {

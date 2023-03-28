@@ -1,0 +1,6 @@
+apiVersion: services.cloud.sap.com/v1
+kind: ServiceBinding
+metadata:
+  name: multi-data-center-binding
+spec:
+  serviceInstanceName: multi-data-center-instance
