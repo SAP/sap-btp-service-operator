@@ -54,7 +54,7 @@ type Client interface {
 	Bind(binding *types.ServiceBinding, q *Parameters, user string) (*types.ServiceBinding, string, error)
 	Unbind(id string, q *Parameters, user string) (string, error)
 	RenameBinding(id, newName, newK8SName string) (*types.ServiceBinding, error)
-	ShareInstance(id string, user string) (*http.Response, error)
+	ShareInstance(shouldShare bool, id string, user string) (*http.Response, error)
 
 	ListOfferings(*Parameters) (*types.ServiceOfferings, error)
 	ListPlans(*Parameters) (*types.ServicePlans, error)
@@ -365,21 +365,16 @@ func (client *serviceManagerClient) update(resource interface{}, url string, id 
 	}
 }
 
-func (client *serviceManagerClient) ShareInstance(id string, user string) (*http.Response, error) {
+func (client *serviceManagerClient) ShareInstance(shouldShare bool, id string, user string) (*http.Response, error) {
 	var bodyRequest map[string]interface{}
-	bodyRequest["shared"] = true
+	bodyRequest["shared"] = shouldShare
 	shareBody, err := json.Marshal(bodyRequest)
 	if err != nil {
 		return nil, err
 	}
 
 	buffer := bytes.NewBuffer(shareBody)
-	response, err := client.callWithUser(http.MethodPatch, types.ServiceInstancesURL+"/"+id, buffer, nil, user)
-
-	if err != nil {
-		return nil, err
-	}
-	return response, nil
+	return client.callWithUser(http.MethodPatch, types.ServiceInstancesURL+"/"+id, buffer, nil, user)
 }
 
 func handleFailedResponse(response *http.Response) error {

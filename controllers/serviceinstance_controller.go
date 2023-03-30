@@ -587,7 +587,12 @@ func (r *ServiceInstanceReconciler) shareInstance(ctx context.Context, serviceIn
 		return err
 	}
 
-	_, err = smClient.ShareInstance(serviceInstance.Status.InstanceID, buildUserInfo(ctx, serviceInstance.Spec.UserInfo))
+	share := false
+	if serviceInstance.Status.Shared == metav1.ConditionTrue {
+		share = true
+	}
+
+	_, err = smClient.ShareInstance(share, serviceInstance.Status.InstanceID, buildUserInfo(ctx, serviceInstance.Spec.UserInfo))
 	if err != nil {
 		return err
 	}

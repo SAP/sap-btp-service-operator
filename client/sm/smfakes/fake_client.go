@@ -171,11 +171,12 @@ type FakeClient struct {
 		result1 *types.ServiceBinding
 		result2 error
 	}
-	ShareInstanceStub        func(string, string) (*http.Response, error)
+	ShareInstanceStub        func(bool, string, string) (*http.Response, error)
 	shareInstanceMutex       sync.RWMutex
 	shareInstanceArgsForCall []struct {
-		arg1 string
+		arg1 bool
 		arg2 string
+		arg3 string
 	}
 	shareInstanceReturns struct {
 		result1 *http.Response
@@ -960,19 +961,20 @@ func (fake *FakeClient) RenameBindingReturnsOnCall(i int, result1 *types.Service
 	}{result1, result2}
 }
 
-func (fake *FakeClient) ShareInstance(arg1 string, arg2 string) (*http.Response, error) {
+func (fake *FakeClient) ShareInstance(arg1 bool, arg2 string, arg3 string) (*http.Response, error) {
 	fake.shareInstanceMutex.Lock()
 	ret, specificReturn := fake.shareInstanceReturnsOnCall[len(fake.shareInstanceArgsForCall)]
 	fake.shareInstanceArgsForCall = append(fake.shareInstanceArgsForCall, struct {
-		arg1 string
+		arg1 bool
 		arg2 string
-	}{arg1, arg2})
+		arg3 string
+	}{arg1, arg2, arg3})
 	stub := fake.ShareInstanceStub
 	fakeReturns := fake.shareInstanceReturns
-	fake.recordInvocation("ShareInstance", []interface{}{arg1, arg2})
+	fake.recordInvocation("ShareInstance", []interface{}{arg1, arg2, arg3})
 	fake.shareInstanceMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2)
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -986,17 +988,17 @@ func (fake *FakeClient) ShareInstanceCallCount() int {
 	return len(fake.shareInstanceArgsForCall)
 }
 
-func (fake *FakeClient) ShareInstanceCalls(stub func(string, string) (*http.Response, error)) {
+func (fake *FakeClient) ShareInstanceCalls(stub func(bool, string, string) (*http.Response, error)) {
 	fake.shareInstanceMutex.Lock()
 	defer fake.shareInstanceMutex.Unlock()
 	fake.ShareInstanceStub = stub
 }
 
-func (fake *FakeClient) ShareInstanceArgsForCall(i int) (string, string) {
+func (fake *FakeClient) ShareInstanceArgsForCall(i int) (bool, string, string) {
 	fake.shareInstanceMutex.RLock()
 	defer fake.shareInstanceMutex.RUnlock()
 	argsForCall := fake.shareInstanceArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *FakeClient) ShareInstanceReturns(result1 *http.Response, result2 error) {
