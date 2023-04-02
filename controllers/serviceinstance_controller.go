@@ -20,10 +20,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
+
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"strings"
 
 	servicesv1 "github.com/SAP/sap-btp-service-operator/api/v1"
 
