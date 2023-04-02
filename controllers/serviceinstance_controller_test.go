@@ -1007,8 +1007,8 @@ var _ = Describe("ServiceInstance controller", func() {
 					Expect(serviceInstance.Status.Conditions[2].ObservedGeneration).To(Equal(int64(2)))
 
 					for i := 0; i < 2; i++ {
-						_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
 						time.Sleep(1500)
+						_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
 						serviceInstance.Spec.ExternalName = fmt.Sprint("newName", i)
 
 						fakeClient.UpdateInstanceReturns(nil, "", nil)
