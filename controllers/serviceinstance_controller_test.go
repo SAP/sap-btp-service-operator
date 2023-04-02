@@ -39,7 +39,6 @@ const (
 var _ = Describe("ServiceInstance controller", func() {
 
 	var serviceInstance *v1.ServiceInstance
-	var newServiceInstance *v1.ServiceInstance
 	var fakeInstanceName string
 	var ctx context.Context
 	var defaultLookupKey types.NamespacedName
