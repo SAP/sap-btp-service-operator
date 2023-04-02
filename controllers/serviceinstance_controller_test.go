@@ -986,7 +986,7 @@ var _ = Describe("ServiceInstance controller", func() {
 				})
 			})
 
-			When("Updating instance shared, and then other more different spec update", func() {
+			When("Updating instance shared, and then one more other different spec update", func() {
 				It("should update the observed generation of the shared to 2, and the succeed generation to 3", func() {
 					serviceInstance = createInstance(ctx, nonSharedInstanceSpec)
 					Eventually(func() bool {
