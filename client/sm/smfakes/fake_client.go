@@ -139,7 +139,7 @@ type FakeClient struct {
 		result1 *types.ServicePlans
 		result2 error
 	}
-	ProvisionStub        func(*types.ServiceInstance, string, string, *sm.Parameters, string) (*sm.ProvisionResponse, error)
+	ProvisionStub        func(*types.ServiceInstance, string, string, *sm.Parameters, string, string) (*sm.ProvisionResponse, error)
 	provisionMutex       sync.RWMutex
 	provisionArgsForCall []struct {
 		arg1 *types.ServiceInstance
@@ -147,6 +147,7 @@ type FakeClient struct {
 		arg3 string
 		arg4 *sm.Parameters
 		arg5 string
+		arg6 string
 	}
 	provisionReturns struct {
 		result1 *sm.ProvisionResponse
@@ -215,7 +216,7 @@ type FakeClient struct {
 		result1 string
 		result2 error
 	}
-	UpdateInstanceStub        func(string, *types.ServiceInstance, string, string, *sm.Parameters, string) (*types.ServiceInstance, string, error)
+	UpdateInstanceStub        func(string, *types.ServiceInstance, string, string, *sm.Parameters, string, string) (*types.ServiceInstance, string, error)
 	updateInstanceMutex       sync.RWMutex
 	updateInstanceArgsForCall []struct {
 		arg1 string
@@ -224,6 +225,7 @@ type FakeClient struct {
 		arg4 string
 		arg5 *sm.Parameters
 		arg6 string
+		arg7 string
 	}
 	updateInstanceReturns struct {
 		result1 *types.ServiceInstance
@@ -827,7 +829,7 @@ func (fake *FakeClient) ListPlansReturnsOnCall(i int, result1 *types.ServicePlan
 	}{result1, result2}
 }
 
-func (fake *FakeClient) Provision(arg1 *types.ServiceInstance, arg2 string, arg3 string, arg4 *sm.Parameters, arg5 string) (*sm.ProvisionResponse, error) {
+func (fake *FakeClient) Provision(arg1 *types.ServiceInstance, arg2 string, arg3 string, arg4 *sm.Parameters, arg5 string, arg6 string) (*sm.ProvisionResponse, error) {
 	fake.provisionMutex.Lock()
 	ret, specificReturn := fake.provisionReturnsOnCall[len(fake.provisionArgsForCall)]
 	fake.provisionArgsForCall = append(fake.provisionArgsForCall, struct {
@@ -836,13 +838,14 @@ func (fake *FakeClient) Provision(arg1 *types.ServiceInstance, arg2 string, arg3
 		arg3 string
 		arg4 *sm.Parameters
 		arg5 string
-	}{arg1, arg2, arg3, arg4, arg5})
+		arg6 string
+	}{arg1, arg2, arg3, arg4, arg5, arg6})
 	stub := fake.ProvisionStub
 	fakeReturns := fake.provisionReturns
-	fake.recordInvocation("Provision", []interface{}{arg1, arg2, arg3, arg4, arg5})
+	fake.recordInvocation("Provision", []interface{}{arg1, arg2, arg3, arg4, arg5, arg6})
 	fake.provisionMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2, arg3, arg4, arg5)
+		return stub(arg1, arg2, arg3, arg4, arg5, arg6)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -856,7 +859,7 @@ func (fake *FakeClient) ProvisionCallCount() int {
 	return len(fake.provisionArgsForCall)
 }
 
-func (fake *FakeClient) ProvisionCalls(stub func(*types.ServiceInstance, string, string, *sm.Parameters, string) (*sm.ProvisionResponse, error)) {
+func (fake *FakeClient) ProvisionCalls(stub func(*types.ServiceInstance, string, string, *sm.Parameters, string, string) (*sm.ProvisionResponse, error)) {
 	fake.provisionMutex.Lock()
 	defer fake.provisionMutex.Unlock()
 	fake.ProvisionStub = stub
@@ -1158,7 +1161,7 @@ func (fake *FakeClient) UnbindReturnsOnCall(i int, result1 string, result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeClient) UpdateInstance(arg1 string, arg2 *types.ServiceInstance, arg3 string, arg4 string, arg5 *sm.Parameters, arg6 string) (*types.ServiceInstance, string, error) {
+func (fake *FakeClient) UpdateInstance(arg1 string, arg2 *types.ServiceInstance, arg3 string, arg4 string, arg5 *sm.Parameters, arg6 string, arg7 string) (*types.ServiceInstance, string, error) {
 	fake.updateInstanceMutex.Lock()
 	ret, specificReturn := fake.updateInstanceReturnsOnCall[len(fake.updateInstanceArgsForCall)]
 	fake.updateInstanceArgsForCall = append(fake.updateInstanceArgsForCall, struct {
@@ -1168,13 +1171,14 @@ func (fake *FakeClient) UpdateInstance(arg1 string, arg2 *types.ServiceInstance,
 		arg4 string
 		arg5 *sm.Parameters
 		arg6 string
-	}{arg1, arg2, arg3, arg4, arg5, arg6})
+		arg7 string
+	}{arg1, arg2, arg3, arg4, arg5, arg6, arg7})
 	stub := fake.UpdateInstanceStub
 	fakeReturns := fake.updateInstanceReturns
-	fake.recordInvocation("UpdateInstance", []interface{}{arg1, arg2, arg3, arg4, arg5, arg6})
+	fake.recordInvocation("UpdateInstance", []interface{}{arg1, arg2, arg3, arg4, arg5, arg6, arg7})
 	fake.updateInstanceMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2, arg3, arg4, arg5, arg6)
+		return stub(arg1, arg2, arg3, arg4, arg5, arg6, arg7)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2, ret.result3
@@ -1188,7 +1192,7 @@ func (fake *FakeClient) UpdateInstanceCallCount() int {
 	return len(fake.updateInstanceArgsForCall)
 }
 
-func (fake *FakeClient) UpdateInstanceCalls(stub func(string, *types.ServiceInstance, string, string, *sm.Parameters, string) (*types.ServiceInstance, string, error)) {
+func (fake *FakeClient) UpdateInstanceCalls(stub func(string, *types.ServiceInstance, string, string, *sm.Parameters, string, string) (*types.ServiceInstance, string, error)) {
 	fake.updateInstanceMutex.Lock()
 	defer fake.updateInstanceMutex.Unlock()
 	fake.UpdateInstanceStub = stub

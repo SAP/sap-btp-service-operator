@@ -49,7 +49,7 @@ spec:
           {{- end }}
           {{- if .Values.manager.securityContext }}
           securityContext:
-          {{ toYaml .Values.manager.securityContext | indent 2 }}
+          {{- toYaml .Values.manager.securityContext | nindent 12 }}
           {{- end }}
           name: kube-rbac-proxy
           resources:
@@ -90,7 +90,7 @@ spec:
           imagePullPolicy: IfNotPresent
           {{- if .Values.manager.securityContext }}
           securityContext:
-          {{ toYaml .Values.manager.securityContext | indent 2 }}
+          {{- toYaml .Values.manager.securityContext | nindent 12 }}
           {{- end }}
           name: manager
           ports:

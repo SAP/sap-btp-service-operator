@@ -47,6 +47,7 @@ type ServiceOffering struct {
 	Plans      []ServicePlan `json:"plans,omitempty" yaml:"plans,omitempty"`
 	Labels     Labels        `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Ready      bool          `json:"ready,omitempty" yaml:"ready,omitempty"`
+	DataCenter string        `json:"data_center,omitempty" yaml:"data_center,omitempty"`
 }
 
 // ServiceOfferings wraps an array of service offerings

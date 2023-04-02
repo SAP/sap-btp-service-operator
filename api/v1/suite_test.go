@@ -82,6 +82,7 @@ func getInstance() *ServiceInstance {
 				Groups:   []string{"test-group"},
 				Extra:    map[string]v1.ExtraValue{"key": {"val"}},
 			},
+			DataCenter: "tel-aviv",
 		},
 
 		Status: ServiceInstanceStatus{},
