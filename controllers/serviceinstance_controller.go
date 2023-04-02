@@ -66,6 +66,13 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 	serviceInstance = serviceInstance.DeepCopy()
 
+	fmt.Println(serviceInstance.Spec.ExternalName)
+	if serviceInstance.Spec.Shared != nil && *serviceInstance.Spec.Shared {
+		fmt.Println("true")
+	} else {
+		fmt.Println("false")
+	}
+
 	if len(serviceInstance.GetConditions()) == 0 {
 		err := r.init(ctx, serviceInstance)
 		if err != nil {

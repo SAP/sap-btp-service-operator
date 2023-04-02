@@ -984,6 +984,46 @@ var _ = Describe("ServiceInstance controller", func() {
 					Expect(serviceInstance.Status.Conditions[2].Message).To(ContainSubstring("Sharing of instance failed"))
 				})
 			})
+
+			When("Updating instance shared, and then other 2 more different spec updates", func() {
+				It("should update the observed generation of the shared to 2, and the succeed generation to 4", func() {
+					serviceInstance = createInstance(ctx, nonSharedInstanceSpec)
+					Eventually(func() bool {
+						_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+						return len(serviceInstance.Status.Conditions) == 2 && serviceInstance.Status.Conditions[1].Type == api.ConditionReady
+					}, timeout, interval).Should(BeTrue())
+
+					serviceInstance.Spec.Shared = pointer.BoolPtr(true)
+					fakeClient.ShareInstanceReturns(nil, nil)
+					_ = k8sClient.Update(ctx, serviceInstance)
+					Eventually(func() bool {
+						_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+						return len(serviceInstance.Status.Conditions) == 3
+					}, timeout, interval).Should(BeTrue())
+
+					Expect(validateInstanceIsReadyAndSucceeded(serviceInstance)).To(Equal(true))
+					Expect(serviceInstance.Status.Conditions[2].Message).To(ContainSubstring("Sharing of instance succeeded"))
+					Expect(serviceInstance.Status.Conditions[2].ObservedGeneration).To(Equal(int64(2)))
+
+					for i := 0; i < 2; i++ {
+						_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+						serviceInstance.Spec.ExternalName = fmt.Sprint("newName", i)
+
+						fakeClient.UpdateInstanceReturns(nil, "", nil)
+						err := k8sClient.Update(ctx, serviceInstance)
+						Expect(err).ToNot(HaveOccurred())
+
+						Eventually(func() bool {
+							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+							return strings.EqualFold(serviceInstance.Spec.ExternalName, fmt.Sprint("newName", i))
+						}, timeout, interval).Should(BeTrue())
+					}
+
+					_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+					Expect(serviceInstance.Status.Conditions[0].ObservedGeneration, int64(4))
+					Expect(serviceInstance.Status.Conditions[2].ObservedGeneration, int64(2))
+				})
+			})
 		})
 
 		Context("Create & Update", func() {
