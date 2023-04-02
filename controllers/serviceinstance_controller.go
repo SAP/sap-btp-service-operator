@@ -128,6 +128,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return r.createInstance(ctx, smClient, serviceInstance)
 	}
 
+	// When creating instance with shared=true we mark at the end of the create function that sharing needs to be handled
 	if serviceInstance.Status.Ready == metav1.ConditionTrue && isSharingNeedsToBeDone(serviceInstance.GetConditions()) {
 		log.Info("Handling change in instance share")
 		if err := r.handleInstanceSharingChange(ctx, serviceInstance); err != nil {
@@ -135,6 +136,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 	}
 
+	// Handle instance share change
 	if serviceInstance.SharedStateChanged(serviceInstance.Spec.Shared, serviceInstance.Status.Shared) && !isShareFailed(serviceInstance.GetConditions()) {
 		log.Info("Handling change in instance share")
 		if err := r.handleInstanceSharingChange(ctx, serviceInstance); err != nil {
