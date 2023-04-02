@@ -7,6 +7,7 @@ import (
 	"k8s.io/utils/pointer"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/SAP/sap-btp-service-operator/api/v1"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
@@ -985,7 +986,7 @@ var _ = Describe("ServiceInstance controller", func() {
 				})
 			})
 
-			When("Updating instance shared, and then other 2 more different spec updates", func() {
+			FWhen("Updating instance shared, and then other 2 more different spec updates", func() {
 				It("should update the observed generation of the shared to 2, and the succeed generation to 4", func() {
 					serviceInstance = createInstance(ctx, nonSharedInstanceSpec)
 					Eventually(func() bool {
@@ -1007,6 +1008,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 					for i := 0; i < 2; i++ {
 						_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+						time.Sleep(1000)
 						serviceInstance.Spec.ExternalName = fmt.Sprint("newName", i)
 
 						fakeClient.UpdateInstanceReturns(nil, "", nil)
