@@ -129,7 +129,11 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	if serviceInstance.SharedStateChanged(serviceInstance.Spec.Shared, serviceInstance.Status.Shared) && !isShareFailed(serviceInstance.GetConditions()) {
-		setConditionSharingNeedsToBeDone(serviceInstance)
+		log.Info("Handling change in instance share")
+		if err := r.handleInstanceSharingChange(ctx, serviceInstance); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, nil
 	}
 
 	// Update
@@ -250,6 +254,10 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 		return r.markAsNonTransientError(ctx, smClientTypes.CREATE, provisionErr, serviceInstance)
 	}
 
+	if serviceInstance.Spec.Shared != nil && *serviceInstance.Spec.Shared {
+		setConditionSharingNeedsToBeDone(serviceInstance)
+	}
+
 	if provision.Location != "" {
 		serviceInstance.Status.InstanceID = provision.InstanceID
 		if len(provision.Tags) > 0 {
@@ -290,10 +298,6 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	}
 
 	setSuccessConditions(smClientTypes.CREATE, serviceInstance)
-
-	if serviceInstance.SharedStateChanged(serviceInstance.Spec.Shared, serviceInstance.Status.Shared) {
-		setConditionSharingNeedsToBeDone(serviceInstance)
-	}
 
 	return ctrl.Result{}, r.updateStatus(ctx, serviceInstance)
 }
@@ -404,6 +408,9 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 	log.Info("Instance updated successfully")
 	setSuccessConditions(smClientTypes.UPDATE, serviceInstance)
 
+	if serviceInstance.SharedStateChanged(serviceInstance.Spec.Shared, serviceInstance.Status.Shared) {
+		return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, r.updateStatus(ctx, serviceInstance)
+	}
 	return ctrl.Result{}, r.updateStatus(ctx, serviceInstance)
 }
 

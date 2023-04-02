@@ -858,11 +858,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						return serviceInstance.Status.Shared == metav1.ConditionTrue
 					}, timeout, interval).Should(BeTrue())
 
-					Expect(serviceInstance.Status.Conditions[0].Type).To(Equal(api.ConditionSucceeded))
-					Expect(serviceInstance.Status.Conditions[0].Status).To(Equal(metav1.ConditionTrue))
-
-					Expect(serviceInstance.Status.Conditions[1].Type).To(Equal(api.ConditionReady))
-					Expect(serviceInstance.Status.Conditions[1].Status).To(Equal(metav1.ConditionTrue))
+					Expect(validateInstanceIsReadyandSucceeded(serviceInstance)).To(Equal(true))
 
 					Expect(serviceInstance.Status.Conditions[2].Type).To(Equal(api.ConditionSharing))
 					Expect(serviceInstance.Status.Conditions[2].Status).To(Equal(metav1.ConditionTrue))
@@ -885,11 +881,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						return len(serviceInstance.Status.Conditions) > 2 && !strings.EqualFold(serviceInstance.Status.Conditions[2].Reason, "InProgress")
 					}, timeout, interval).Should(BeTrue())
 
-					Expect(serviceInstance.Status.Conditions[0].Type).To(Equal(api.ConditionSucceeded))
-					Expect(serviceInstance.Status.Conditions[0].Status).To(Equal(metav1.ConditionTrue))
-
-					Expect(serviceInstance.Status.Conditions[1].Type).To(Equal(api.ConditionReady))
-					Expect(serviceInstance.Status.Conditions[1].Status).To(Equal(metav1.ConditionTrue))
+					Expect(validateInstanceIsReadyandSucceeded(serviceInstance)).To(Equal(true))
 
 					Expect(serviceInstance.Status.Conditions[2].Type).To(Equal(api.ConditionSharing))
 					Expect(serviceInstance.Status.Conditions[2].Status).To(Equal(metav1.ConditionFalse))
@@ -913,23 +905,24 @@ var _ = Describe("ServiceInstance controller", func() {
 
 			When("Un sharing shared instance succeeds", func() {
 				It("should update instance to unshared", func() {
-					newServiceInstance = createInstance(ctx, sharedInstanceSpec)
+					serviceInstance = createInstance(ctx, sharedInstanceSpec)
 					Eventually(func() bool {
-						_ = k8sClient.Get(ctx, defaultLookupKey, newServiceInstance)
-						return newServiceInstance.Status.Shared == metav1.ConditionTrue
+						_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+						return serviceInstance.Status.Shared == metav1.ConditionTrue
 					}, timeout, interval).Should(BeTrue())
 
 					fakeClient.UpdateInstanceReturns(nil, "", nil)
-					newServiceInstance.Spec.Shared = pointer.BoolPtr(false)
-					_ = k8sClient.Update(ctx, newServiceInstance)
+					serviceInstance.Spec.Shared = pointer.BoolPtr(false)
+					_ = k8sClient.Update(ctx, serviceInstance)
 
 					Eventually(func() bool {
-						_ = k8sClient.Get(ctx, defaultLookupKey, newServiceInstance)
-						return newServiceInstance.Status.Shared == metav1.ConditionFalse
+						_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+						return serviceInstance.Status.Shared == metav1.ConditionFalse
 					}, timeout, interval).Should(BeTrue())
 
-					Expect(newServiceInstance.Status.Conditions[2].Type).To(Equal(api.ConditionSharing))
-					Expect(newServiceInstance.Status.Conditions[2].Status).To(Equal(metav1.ConditionTrue))
+					Expect(validateInstanceIsReadyandSucceeded(serviceInstance)).To(Equal(true))
+					Expect(serviceInstance.Status.Conditions[2].Type).To(Equal(api.ConditionSharing))
+					Expect(serviceInstance.Status.Conditions[2].Status).To(Equal(metav1.ConditionTrue))
 				})
 			})
 
@@ -947,30 +940,32 @@ var _ = Describe("ServiceInstance controller", func() {
 						return serviceInstance.Status.Conditions[2].Reason == Failed
 					}, timeout, interval).Should(BeTrue())
 
+					Expect(validateInstanceIsReadyandSucceeded(serviceInstance)).To(Equal(true))
 					Expect(serviceInstance.Status.Conditions[2].Message).To(ContainSubstring("Un sharing of instance failed"))
 				})
 			})
 
 			When("Sharing un-shared instance succeeds", func() {
 				It("should update instance to shared", func() {
-					newServiceInstance = createInstance(ctx, nonSharedInstanceSpec)
+					serviceInstance = createInstance(ctx, nonSharedInstanceSpec)
 					Eventually(func() bool {
-						_ = k8sClient.Get(ctx, defaultLookupKey, newServiceInstance)
-						return newServiceInstance.Status.Shared == metav1.ConditionFalse
+						_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+						return serviceInstance.Status.Shared == metav1.ConditionFalse
 					}, timeout, interval).Should(BeTrue())
 
 					fakeClient.UpdateInstanceReturns(nil, "", nil)
-					newServiceInstance.Spec.Shared = pointer.BoolPtr(true)
-					_ = k8sClient.Update(ctx, newServiceInstance)
+					serviceInstance.Spec.Shared = pointer.BoolPtr(true)
+					_ = k8sClient.Update(ctx, serviceInstance)
 
 					Eventually(func() bool {
-						_ = k8sClient.Get(ctx, defaultLookupKey, newServiceInstance)
-						return newServiceInstance.Status.Shared == metav1.ConditionTrue
+						_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+						return serviceInstance.Status.Shared == metav1.ConditionTrue
 					}, timeout, interval).Should(BeTrue())
 
-					Expect(newServiceInstance.Status.Conditions[2].Type).To(Equal(api.ConditionSharing))
-					Expect(newServiceInstance.Status.Conditions[2].Status).To(Equal(metav1.ConditionTrue))
-					Expect(newServiceInstance.Status.Conditions[2].Message).To(ContainSubstring("Sharing of instance succeeded"))
+					Expect(validateInstanceIsReadyandSucceeded(serviceInstance)).To(Equal(true))
+					Expect(serviceInstance.Status.Conditions[2].Type).To(Equal(api.ConditionSharing))
+					Expect(serviceInstance.Status.Conditions[2].Status).To(Equal(metav1.ConditionTrue))
+					Expect(serviceInstance.Status.Conditions[2].Message).To(ContainSubstring("Sharing of instance succeeded"))
 				})
 			})
 
@@ -986,6 +981,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						return len(serviceInstance.Status.Conditions) > 2 && serviceInstance.Status.Conditions[2].Reason == Failed
 					}, timeout, interval).Should(BeTrue())
 
+					Expect(validateInstanceIsReadyandSucceeded(serviceInstance)).To(Equal(true))
 					Expect(serviceInstance.Status.Conditions[2].Message).To(ContainSubstring("Sharing of instance failed"))
 				})
 			})
@@ -1016,6 +1012,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						return len(serviceInstance.Status.Conditions) > 2 && strings.Contains(serviceInstance.Status.Conditions[2].Message, "Un sharing of instance succeeded")
 					}, timeout, interval).Should(BeTrue())
 
+					Expect(validateInstanceIsReadyandSucceeded(serviceInstance)).To(Equal(true))
 					Expect(serviceInstance.Status.Shared).To(Equal(metav1.ConditionFalse))
 				})
 			})
@@ -1049,10 +1046,12 @@ var _ = Describe("ServiceInstance controller", func() {
 						return len(serviceInstance.Status.Conditions) > 2 && strings.Contains(serviceInstance.Status.Conditions[2].Message, "Sharing of instance succeeded")
 					}, timeout, interval).Should(BeTrue())
 
+					Expect(validateInstanceIsReadyandSucceeded(serviceInstance)).To(Equal(true))
 					Expect(serviceInstance.Status.Shared).To(Equal(metav1.ConditionTrue))
 				})
 			})
 		})
+
 	})
 })
 
@@ -1068,4 +1067,14 @@ func createParamsSecret(namespace string) {
 	}
 	err := k8sClient.Create(context.Background(), secret)
 	Expect(err).ToNot(HaveOccurred())
+}
+
+func validateInstanceIsReadyandSucceeded(serviceInstance *v1.ServiceInstance) bool {
+	succeeded := strings.EqualFold(serviceInstance.Status.Conditions[0].Type, api.ConditionSucceeded) &&
+		serviceInstance.Status.Conditions[0].Status == metav1.ConditionTrue
+
+	ready := strings.EqualFold(serviceInstance.Status.Conditions[1].Type, api.ConditionReady) &&
+		serviceInstance.Status.Conditions[1].Status == metav1.ConditionTrue
+
+	return succeeded && ready
 }
