@@ -366,7 +366,7 @@ func (client *serviceManagerClient) update(resource interface{}, url string, id 
 }
 
 func (client *serviceManagerClient) ShareInstance(shouldShare bool, id string, user string) (*http.Response, error) {
-	var bodyRequest map[string]interface{}
+	bodyRequest := make(map[string]interface{})
 	bodyRequest["shared"] = shouldShare
 	shareBody, err := json.Marshal(bodyRequest)
 	if err != nil {
