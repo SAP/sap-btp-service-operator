@@ -6,6 +6,6 @@ run:
 linters:
   enable:
     # Default linters plus these:
-    - golint
+    - revive
     - gofmt
     - goimports
