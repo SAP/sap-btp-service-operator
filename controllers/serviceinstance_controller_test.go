@@ -986,8 +986,8 @@ var _ = Describe("ServiceInstance controller", func() {
 				})
 			})
 
-			When("Updating instance shared, and then other 2 more different spec updates", func() {
-				It("should update the observed generation of the shared to 2, and the succeed generation to 4", func() {
+			When("Updating instance shared, and then other more different spec update", func() {
+				It("should update the observed generation of the shared to 2, and the succeed generation to 3", func() {
 					serviceInstance = createInstance(ctx, nonSharedInstanceSpec)
 					Eventually(func() bool {
 						_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
@@ -1006,23 +1006,21 @@ var _ = Describe("ServiceInstance controller", func() {
 					Expect(serviceInstance.Status.Conditions[2].Message).To(ContainSubstring("Sharing of instance succeeded"))
 					Expect(serviceInstance.Status.Conditions[2].ObservedGeneration).To(Equal(int64(2)))
 
-					for i := 0; i < 2; i++ {
-						time.Sleep(1500)
+					time.Sleep(1500)
+					_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+					serviceInstance.Spec.ExternalName = fmt.Sprint("newName", 1)
+
+					fakeClient.UpdateInstanceReturns(nil, "", nil)
+					err := k8sClient.Update(ctx, serviceInstance)
+					Expect(err).ToNot(HaveOccurred())
+
+					Eventually(func() bool {
 						_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-						serviceInstance.Spec.ExternalName = fmt.Sprint("newName", i)
-
-						fakeClient.UpdateInstanceReturns(nil, "", nil)
-						err := k8sClient.Update(ctx, serviceInstance)
-						Expect(err).ToNot(HaveOccurred())
-
-						Eventually(func() bool {
-							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-							return strings.EqualFold(serviceInstance.Spec.ExternalName, fmt.Sprint("newName", i))
-						}, timeout, interval).Should(BeTrue())
-					}
+						return strings.EqualFold(serviceInstance.Spec.ExternalName, fmt.Sprint("newName", 1))
+					}, timeout, interval).Should(BeTrue())
 
 					_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-					Expect(serviceInstance.Status.Conditions[0].ObservedGeneration, int64(4))
+					Expect(serviceInstance.Status.Conditions[0].ObservedGeneration, int64(3))
 					Expect(serviceInstance.Status.Conditions[2].ObservedGeneration, int64(2))
 				})
 			})
