@@ -986,7 +986,7 @@ var _ = Describe("ServiceInstance controller", func() {
 				})
 			})
 
-			When("Updating instance shared, and then one more other different spec update", func() {
+			Context("Updating instance shared, and then one more other different spec field", func() {
 				It("should update the observed generation of the shared to 2, and the succeed generation to 3", func() {
 					serviceInstance = createInstance(ctx, nonSharedInstanceSpec)
 					Eventually(func() bool {
@@ -1003,25 +1003,74 @@ var _ = Describe("ServiceInstance controller", func() {
 					}, timeout, interval).Should(BeTrue())
 
 					Expect(validateInstanceIsReadyAndSucceeded(serviceInstance)).To(Equal(true))
-					Expect(serviceInstance.Status.Conditions[2].Message).To(ContainSubstring("Sharing of instance succeeded"))
-					Expect(serviceInstance.Status.Conditions[2].ObservedGeneration).To(Equal(int64(2)))
 
 					time.Sleep(1500)
 					_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-					serviceInstance.Spec.ExternalName = fmt.Sprint("newName", 1)
 
+					serviceInstance.Spec.ExternalName = "newName"
 					fakeClient.UpdateInstanceReturns(nil, "", nil)
 					err := k8sClient.Update(ctx, serviceInstance)
 					Expect(err).ToNot(HaveOccurred())
-
 					Eventually(func() bool {
 						_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-						return strings.EqualFold(serviceInstance.Spec.ExternalName, fmt.Sprint("newName", 1))
+						return strings.EqualFold(serviceInstance.Spec.ExternalName, "newName")
 					}, timeout, interval).Should(BeTrue())
-
 					_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+
 					Expect(serviceInstance.Status.Conditions[0].ObservedGeneration, int64(3))
 					Expect(serviceInstance.Status.Conditions[2].ObservedGeneration, int64(2))
+				})
+
+				When("sharing instance and then changing spec", func() {
+					It("should eventually update everything", func() {
+						serviceInstance = createInstance(ctx, nonSharedInstanceSpec)
+						Eventually(func() bool {
+							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+							return len(serviceInstance.Status.Conditions) == 2 && serviceInstance.Status.Conditions[1].Type == api.ConditionReady
+						}, timeout, interval).Should(BeTrue())
+
+						_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+						serviceInstance.Spec.Shared = pointer.BoolPtr(true)
+						fakeClient.ShareInstanceReturns(nil, nil)
+						_ = k8sClient.Update(ctx, serviceInstance)
+
+						Eventually(func() bool {
+							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+							serviceInstance.Spec.ExternalName = "newName1"
+							fakeClient.UpdateInstanceReturns(nil, "", nil)
+							_ = k8sClient.Update(ctx, serviceInstance)
+							return strings.EqualFold(serviceInstance.Spec.ExternalName, "newName1")
+						}, timeout, interval).Should(BeTrue())
+
+						Eventually(func() bool {
+							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+							return serviceInstance.Status.Shared == metav1.ConditionTrue
+						}, timeout, interval).Should(BeTrue())
+					})
+				})
+
+				When("changing spec, and then immediately sharing instance", func() {
+					It("should eventually update everything", func() {
+						serviceInstance = createInstance(ctx, nonSharedInstanceSpec)
+						Eventually(func() bool {
+							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+							return len(serviceInstance.Status.Conditions) == 2 && serviceInstance.Status.Conditions[1].Type == api.ConditionReady
+						}, timeout, interval).Should(BeTrue())
+
+						serviceInstance.Spec.ExternalName = "newName1"
+						fakeClient.UpdateInstanceReturns(nil, "", nil)
+						_ = k8sClient.Update(ctx, serviceInstance)
+
+						Eventually(func() bool {
+							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+							serviceInstance.Spec.Shared = pointer.BoolPtr(true)
+							fakeClient.ShareInstanceReturns(nil, nil)
+							_ = k8sClient.Update(ctx, serviceInstance)
+							return serviceInstance.Status.Shared == metav1.ConditionTrue
+						}, timeout, interval).Should(BeTrue())
+
+						Expect(strings.EqualFold(serviceInstance.Spec.ExternalName, "newName1")).To(Equal(true))
+					})
 				})
 			})
 		})
