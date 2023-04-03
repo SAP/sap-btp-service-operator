@@ -338,7 +338,7 @@ func (r *BaseReconciler) markAsTransientError(ctx context.Context, operationType
 
 func isInProgress(object api.SAPBTPResource) bool {
 	conditions := object.GetConditions()
-	if meta.IsStatusConditionPresentAndEqual(conditions, api.ConditionSharing, metav1.ConditionFalse) {
+	if IsSharingNeedsToBeDone(conditions) {
 		return true
 	}
 	return meta.IsStatusConditionPresentAndEqual(conditions, api.ConditionSucceeded, metav1.ConditionFalse) &&
