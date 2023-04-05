@@ -126,7 +126,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	if serviceInstance.SharedStateChanged(serviceInstance.Spec.Shared, serviceInstance.Status.Shared) && serviceInstance.Status.Ready == metav1.ConditionTrue &&
 		!isShareFailed(serviceInstance.GetConditions()) {
 		log.Info("Handling change in instance share")
-		if err := r.handleInstanceSharingChange(ctx, serviceInstance); err != nil {
+		if err := r.handleInstanceSharingChange(ctx, serviceInstance, smClient); err != nil {
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, nil
@@ -153,13 +153,13 @@ func isFinalState(serviceInstance *servicesv1.ServiceInstance) bool {
 	return true
 }
 
-func (r *ServiceInstanceReconciler) handleInstanceSharingChange(ctx context.Context, serviceInstance *servicesv1.ServiceInstance) error {
+func (r *ServiceInstanceReconciler) handleInstanceSharingChange(ctx context.Context, serviceInstance *servicesv1.ServiceInstance, smClient sm.Client) error {
 	log := GetLogger(ctx)
 	log.Info("Handling change in instance sharing")
 
-	if err := r.shareInstance(ctx, serviceInstance); err != nil {
+	if err := r.shareInstance(ctx, serviceInstance, smClient); err != nil {
 		log.Error(err, "Got error during instance share change")
-		setConditionForFailedSharing(serviceInstance, serviceInstance.Status.Shared)
+		setConditionForFailedSharing(serviceInstance, serviceInstance.Status.Shared, err)
 		if updateErr := r.updateStatus(ctx, serviceInstance); updateErr != nil {
 			return updateErr
 		}
@@ -169,6 +169,7 @@ func (r *ServiceInstanceReconciler) handleInstanceSharingChange(ctx context.Cont
 	setConditionForSuccessShareChange(serviceInstance, serviceInstance.Status.Shared)
 	switchServiceInstanceShareStatus(serviceInstance)
 	if err := r.updateStatus(ctx, serviceInstance); err != nil {
+		log.Info("succeeded handling share change, but got error while trying to update status")
 		return err
 	}
 
@@ -327,7 +328,7 @@ func setConditionSharingNeedsToBeDone(object api.SAPBTPResource) {
 	object.SetConditions(conditions)
 }
 
-func setConditionForFailedSharing(object api.SAPBTPResource, currentSharedStatus metav1.ConditionStatus) {
+func setConditionForFailedSharing(object api.SAPBTPResource, currentSharedStatus metav1.ConditionStatus, err error) {
 	conditions := object.GetConditions()
 
 	msg := "Sharing of instance failed"
@@ -338,7 +339,7 @@ func setConditionForFailedSharing(object api.SAPBTPResource, currentSharedStatus
 	shouldShareCondition := metav1.Condition{
 		Type:               api.ConditionSharing,
 		Status:             metav1.ConditionFalse,
-		Reason:             getConditionReason(Updated, smClientTypes.FAILED),
+		Reason:             err.Error(),
 		Message:            msg,
 		ObservedGeneration: object.GetGeneration(),
 	}
@@ -417,9 +418,6 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 	log.Info("Instance updated successfully")
 	setSuccessConditions(smClientTypes.UPDATE, serviceInstance)
 
-	if serviceInstance.SharedStateChanged(serviceInstance.Spec.Shared, serviceInstance.Status.Shared) {
-		return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, r.updateStatus(ctx, serviceInstance)
-	}
 	return ctrl.Result{}, r.updateStatus(ctx, serviceInstance)
 }
 
@@ -597,26 +595,22 @@ func (r *ServiceInstanceReconciler) getInstanceForRecovery(ctx context.Context, 
 	return nil, nil
 }
 
-func (r *ServiceInstanceReconciler) shareInstance(ctx context.Context, serviceInstance *servicesv1.ServiceInstance) error {
+func (r *ServiceInstanceReconciler) shareInstance(ctx context.Context, serviceInstance *servicesv1.ServiceInstance, smClient sm.Client) error {
 	log := GetLogger(ctx)
-	log.Info(fmt.Sprintf("resource is in progress, found operation url %s", serviceInstance.Status.OperationURL))
+	share := true
 
-	smClient, err := r.getSMClient(ctx, serviceInstance)
-	if err != nil {
-		return err
-	}
-
-	share := false
 	if serviceInstance.Status.Shared == metav1.ConditionTrue {
-		share = true
+		log.Info("Service instance is shared, handling un-sharing the instance")
+		share = false
+	} else {
+		log.Info("Service instance is un-shared, handling sharing the instance")
 	}
 
-	_, err = smClient.ShareInstance(share, serviceInstance.Status.InstanceID, buildUserInfo(ctx, serviceInstance.Spec.UserInfo))
+	_, err := smClient.ShareInstance(share, serviceInstance.Status.InstanceID, buildUserInfo(ctx, serviceInstance.Spec.UserInfo))
 	if err != nil {
 		return err
 	}
 
-	//todo handle response
 	return nil
 }
 
