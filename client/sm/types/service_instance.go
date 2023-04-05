@@ -42,6 +42,7 @@ type ServiceInstance struct {
 
 	Ready  bool `json:"ready" yaml:"ready"`
 	Usable bool `json:"usable" yaml:"usable"`
+	Shared bool `json:"shared" yaml:"shared"`
 
 	LastOperation *Operation `json:"last_operation,omitempty" yaml:"last_operation,omitempty"`
 }
