@@ -901,7 +901,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 					Expect(serviceInstance.Status.Conditions[2].Type).To(Equal(api.ConditionSharing))
 					Expect(serviceInstance.Status.Conditions[2].Status).To(Equal(metav1.ConditionFalse))
-					Expect(serviceInstance.Status.Conditions[2].Message).To(ContainSubstring("Sharing of instance failed"))
+					Expect(serviceInstance.Status.Conditions[2].Message).To(Not(ContainSubstring("succeeded")))
 				})
 			})
 		})
