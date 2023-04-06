@@ -331,16 +331,16 @@ func setConditionSharingNeedsToBeDone(object api.SAPBTPResource) {
 func setConditionForFailedSharing(object api.SAPBTPResource, currentSharedStatus metav1.ConditionStatus, err error) {
 	conditions := object.GetConditions()
 
-	msg := "Sharing of instance failed"
+	msg := "Sharing of instance failed "
 	if currentSharedStatus == metav1.ConditionTrue {
-		msg = "Un sharing of instance failed"
+		msg = "Un sharing of instance failed "
 	}
 
 	shouldShareCondition := metav1.Condition{
 		Type:               api.ConditionSharing,
 		Status:             metav1.ConditionFalse,
-		Reason:             err.Error(),
-		Message:            msg,
+		Reason:             getConditionReason(Updated, smClientTypes.FAILED),
+		Message:            msg + err.Error(),
 		ObservedGeneration: object.GetGeneration(),
 	}
 	meta.RemoveStatusCondition(&conditions, api.ConditionSharing)

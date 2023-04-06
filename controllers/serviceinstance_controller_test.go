@@ -946,13 +946,19 @@ var _ = Describe("ServiceInstance controller", func() {
 				It("should update instance to unshared failed", func() {
 					serviceInstance = createInstance(ctx, sharedInstanceSpec)
 
+					Eventually(func() bool {
+						_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+						return serviceInstance.Status.Shared == metav1.ConditionTrue
+					}, timeout, interval).Should(BeTrue())
+
+					err := k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+					Expect(err).To(BeNil())
 					serviceInstance.Spec.Shared = pointer.BoolPtr(false)
 					fakeClient.ShareInstanceReturns(nil, fmt.Errorf("failed sharing change"))
 					_ = k8sClient.Update(ctx, serviceInstance)
 
 					Eventually(func() bool {
 						_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-
 						return serviceInstance.Status.Conditions[2].Reason == Failed
 					}, timeout, interval).Should(BeTrue())
 
