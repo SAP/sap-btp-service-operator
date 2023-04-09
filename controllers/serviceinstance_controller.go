@@ -173,6 +173,7 @@ func (r *ServiceInstanceReconciler) handleInstanceSharingChange(ctx context.Cont
 		return err
 	}
 
+	log.Info("Done handling change in instance share")
 	return nil
 }
 
