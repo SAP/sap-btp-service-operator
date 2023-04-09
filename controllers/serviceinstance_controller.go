@@ -610,6 +610,7 @@ func (r *ServiceInstanceReconciler) shareInstance(ctx context.Context, serviceIn
 
 	_, err := smClient.ShareInstance(share, serviceInstance.Status.InstanceID, buildUserInfo(ctx, serviceInstance.Spec.UserInfo))
 	if err != nil {
+		log.Info(fmt.Sprintf("Got error when trying to handle instance share change: %s", err.Error()))
 		return err
 	}
 
