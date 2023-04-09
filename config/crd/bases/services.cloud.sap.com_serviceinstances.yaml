@@ -34,6 +34,9 @@ spec:
     - jsonPath: .status.ready
       name: Ready
       type: string
+    - jsonPath: .status.shared
+      name: Shared
+      type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
@@ -253,7 +256,7 @@ spec:
                 type: string
               shared:
                 description: Indicates whether instance is shared
-                type: boolean
+                type: string
               tags:
                 description: Tags describing the ServiceInstance as provided in service
                   catalog, will be copied to `ServiceBinding` secret in the key called
@@ -271,8 +274,8 @@ spec:
       status: {}
   - additionalPrinterColumns:
     - jsonPath: .spec.shared
-      name: Offering
-      type: string
+      name: Shared
+      type: boolean
     - jsonPath: .spec.serviceOfferingName
       name: Offering
       type: string
@@ -284,6 +287,9 @@ spec:
       type: string
     - jsonPath: .status.ready
       name: Ready
+      type: string
+    - jsonPath: .status.shared
+      name: Shared
       type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
@@ -500,7 +506,7 @@ spec:
                 type: string
               shared:
                 description: Indicates whether instance is shared
-                type: boolean
+                type: string
               tags:
                 description: Tags describing the ServiceInstance as provided in service
                   catalog, will be copied to `ServiceBinding` secret in the key called

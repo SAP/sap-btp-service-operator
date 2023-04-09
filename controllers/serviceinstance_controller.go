@@ -167,7 +167,12 @@ func (r *ServiceInstanceReconciler) handleInstanceSharingChange(ctx context.Cont
 	}
 
 	setConditionForSuccessShareChange(serviceInstance, serviceInstance.Status.Shared)
-	switchServiceInstanceShareStatus(serviceInstance)
+	if serviceInstance.Spec.Shared == nil || !*serviceInstance.Spec.Shared {
+		serviceInstance.Status.Shared = metav1.ConditionFalse
+	} else {
+		serviceInstance.Status.Shared = metav1.ConditionTrue
+	}
+
 	if err := r.updateStatus(ctx, serviceInstance); err != nil {
 		log.Info("succeeded handling share change, but got error while trying to update status")
 		return err
@@ -616,14 +621,6 @@ func (r *ServiceInstanceReconciler) shareInstance(ctx context.Context, serviceIn
 	}
 
 	return nil
-}
-
-func switchServiceInstanceShareStatus(instance *servicesv1.ServiceInstance) {
-	if instance.Status.Shared == metav1.ConditionTrue {
-		instance.Status.Shared = metav1.ConditionFalse
-	} else {
-		instance.Status.Shared = metav1.ConditionTrue
-	}
 }
 
 func IsSharingNeedsToBeDone(conditions []metav1.Condition) bool {

@@ -125,6 +125,7 @@ type ServiceInstanceStatus struct {
 // +kubebuilder:printcolumn:JSONPath=".spec.dataCenter",name="dataCenter",type=string
 // +kubebuilder:printcolumn:JSONPath=".status.conditions[0].reason",name="Status",type=string
 // +kubebuilder:printcolumn:JSONPath=".status.ready",name="Ready",type=string
+// +kubebuilder:printcolumn:JSONPath=".status.shared",name="Shared",type=string
 // +kubebuilder:printcolumn:JSONPath=".metadata.creationTimestamp",name="Age",type=date
 // +kubebuilder:printcolumn:JSONPath=".status.instanceID",name="ID",type=string,priority=1
 // +kubebuilder:printcolumn:JSONPath=".status.conditions[0].message",name="Message",type=string,priority=1
