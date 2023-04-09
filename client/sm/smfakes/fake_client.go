@@ -865,11 +865,11 @@ func (fake *FakeClient) ProvisionCalls(stub func(*types.ServiceInstance, string,
 	fake.ProvisionStub = stub
 }
 
-func (fake *FakeClient) ProvisionArgsForCall(i int) (*types.ServiceInstance, string, string, *sm.Parameters, string) {
+func (fake *FakeClient) ProvisionArgsForCall(i int) (*types.ServiceInstance, string, string, *sm.Parameters, string, string) {
 	fake.provisionMutex.RLock()
 	defer fake.provisionMutex.RUnlock()
 	argsForCall := fake.provisionArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5, argsForCall.arg6
 }
 
 func (fake *FakeClient) ProvisionReturns(result1 *sm.ProvisionResponse, result2 error) {
@@ -1198,11 +1198,11 @@ func (fake *FakeClient) UpdateInstanceCalls(stub func(string, *types.ServiceInst
 	fake.UpdateInstanceStub = stub
 }
 
-func (fake *FakeClient) UpdateInstanceArgsForCall(i int) (string, *types.ServiceInstance, string, string, *sm.Parameters, string) {
+func (fake *FakeClient) UpdateInstanceArgsForCall(i int) (string, *types.ServiceInstance, string, string, *sm.Parameters, string, string) {
 	fake.updateInstanceMutex.RLock()
 	defer fake.updateInstanceMutex.RUnlock()
 	argsForCall := fake.updateInstanceArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5, argsForCall.arg6
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5, argsForCall.arg6, argsForCall.arg7
 }
 
 func (fake *FakeClient) UpdateInstanceReturns(result1 *types.ServiceInstance, result2 string, result3 error) {

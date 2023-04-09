@@ -30,6 +30,9 @@ func buildParameters(kubeClient client.Client, namespace string, parametersFrom 
 				return nil, nil, err
 			}
 			for k, v := range fps {
+				if k == "shared" {
+					continue
+				}
 				if _, ok := params[k]; ok {
 					return nil, nil, fmt.Errorf("conflict: duplicate entry for parameter %q", k)
 				}
