@@ -20,6 +20,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -125,7 +127,6 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	// Handle instance share change
 	if serviceInstance.SharedStateChanged(serviceInstance.Spec.Shared, serviceInstance.Status.Shared) && serviceInstance.Status.Ready == metav1.ConditionTrue &&
 		!isShareFailed(serviceInstance.GetConditions()) {
-		log.Info("Handling change in instance share")
 		if err := r.handleInstanceSharingChange(ctx, serviceInstance, smClient); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -605,6 +606,7 @@ func (r *ServiceInstanceReconciler) getInstanceForRecovery(ctx context.Context, 
 
 func (r *ServiceInstanceReconciler) shareInstance(ctx context.Context, serviceInstance *servicesv1.ServiceInstance, smClient sm.Client) error {
 	log := GetLogger(ctx)
+	var body []byte
 	share := true
 
 	if serviceInstance.Status.Shared == metav1.ConditionTrue {
@@ -614,13 +616,36 @@ func (r *ServiceInstanceReconciler) shareInstance(ctx context.Context, serviceIn
 		log.Info("Service instance is un-shared, handling sharing the instance")
 	}
 
-	_, err := smClient.ShareInstance(share, serviceInstance.Status.InstanceID, buildUserInfo(ctx, serviceInstance.Spec.UserInfo))
+	response, err := smClient.ShareInstance(share, serviceInstance.Status.InstanceID, buildUserInfo(ctx, serviceInstance.Spec.UserInfo))
 	if err != nil {
 		log.Info(fmt.Sprintf("Got error when trying to handle instance share change: %s", err.Error()))
 		return err
 	}
 
-	return nil
+	if response.StatusCode == 200 {
+		return nil
+	}
+
+	body, err = bodyToBytes(response)
+	if err != nil {
+		return fmt.Errorf(fmt.Sprintf("Got error when trying to parse response body, %s", err.Error()))
+	}
+
+	return fmt.Errorf(fmt.Sprintf("Got status: %s, and response response body: %s", response.Status, body))
+}
+
+func bodyToBytes(response *http.Response) ([]byte, error) {
+	if response.Body == nil {
+		return nil, fmt.Errorf("no body in response")
+	}
+
+	defer response.Body.Close()
+
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
+	return body, nil
 }
 
 func IsSharingNeedsToBeDone(conditions []metav1.Condition) bool {

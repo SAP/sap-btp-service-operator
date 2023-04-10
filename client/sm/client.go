@@ -366,14 +366,16 @@ func (client *serviceManagerClient) update(resource interface{}, url string, id 
 }
 
 func (client *serviceManagerClient) ShareInstance(shouldShare bool, id string, user string) (*http.Response, error) {
-	bodyRequest := make(map[string]interface{})
-	bodyRequest["shared"] = shouldShare
+	bodyRequest := map[string]interface{}{
+		"shared": shouldShare,
+	}
 	shareBody, err := json.Marshal(bodyRequest)
 	if err != nil {
 		return nil, err
 	}
 
 	buffer := bytes.NewBuffer(shareBody)
+
 	return client.callWithUser(http.MethodPatch, types.ServiceInstancesURL+"/"+id, buffer, nil, user)
 }
 
