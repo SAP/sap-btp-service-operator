@@ -47,7 +47,7 @@ type ServiceInstanceSpec struct {
 	// The name of the instance in Service Manager
 	ExternalName string `json:"externalName,omitempty"`
 
-	// Indicates if the instances is shareable
+	// Indicates if the instances is shared
 	// +optional
 	// +kubebuilder:default={}
 	Shared bool `json:"shared,omitempty"`
