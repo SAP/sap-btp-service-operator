@@ -53,8 +53,8 @@ import (
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
 const (
-	timeout      = time.Second * 35
-	interval     = time.Second
+	timeout      = time.Second * 20
+	interval     = time.Millisecond * 50
 	syncPeriod   = time.Millisecond * 250
 	pollInterval = time.Millisecond * 250
 )
