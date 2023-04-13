@@ -159,7 +159,6 @@ func (r *ServiceInstanceReconciler) handleInstanceSharingChange(ctx context.Cont
 	log.Info("Handling change in instance sharing")
 
 	if err := r.shareInstance(ctx, serviceInstance, smClient); err != nil {
-		log.Error(err, "Got error during instance share change")
 		setConditionForFailedSharing(serviceInstance, serviceInstance.Status.Shared, err)
 		if updateErr := r.updateStatus(ctx, serviceInstance); updateErr != nil {
 			return updateErr
