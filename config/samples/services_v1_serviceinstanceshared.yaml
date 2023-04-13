@@ -1,0 +1,7 @@
+apiVersion: services.cloud.sap.com/v1
+kind: ServiceInstance
+metadata:
+  name: testxsuaainstance
+spec:
+  serviceOfferingName: xsuaa
+  servicePlanName: application
