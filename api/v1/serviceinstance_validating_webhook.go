@@ -51,7 +51,7 @@ func (si *ServiceInstance) ValidateUpdate(old runtime.Object) error {
 	}
 
 	if si.specChanged(old) {
-		return fmt.Errorf("updating share property is unabled with other spec changes")
+		return fmt.Errorf("updating shared property with other spec property is not supported")
 	}
 	return nil
 }
