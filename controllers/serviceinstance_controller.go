@@ -653,14 +653,7 @@ func IsSharingNeedsToBeDone(conditions []metav1.Condition) bool {
 	status := metav1.ConditionFalse
 	reason := getConditionReason(smClientTypes.UPDATE, smClientTypes.PENDING)
 
-	for _, condition := range conditions {
-		if condition.Type == conditionType {
-			if strings.EqualFold(condition.Reason, reason) && condition.Status == status {
-				return true
-			}
-		}
-	}
-	return false
+	return checkForConditionStatusAndReason(conditions, conditionType, status, reason)
 }
 
 func isShareFailed(conditions []metav1.Condition) bool {
@@ -668,6 +661,10 @@ func isShareFailed(conditions []metav1.Condition) bool {
 	status := metav1.ConditionFalse
 	reason := getConditionReason(smClientTypes.UPDATE, smClientTypes.FAILED)
 
+	return checkForConditionStatusAndReason(conditions, conditionType, status, reason)
+}
+
+func checkForConditionStatusAndReason(conditions []metav1.Condition, conditionType string, status metav1.ConditionStatus, reason string) bool {
 	for _, condition := range conditions {
 		if condition.Type == conditionType {
 			if strings.EqualFold(condition.Reason, reason) && condition.Status == status {
