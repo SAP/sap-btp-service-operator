@@ -124,7 +124,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return r.createInstance(ctx, smClient, serviceInstance)
 	}
 
-	// Handle instance share change
+	// Handle instance share change if needed
 	if serviceInstance.SharedStateChanged(serviceInstance.Spec.Shared, serviceInstance.Status.Shared) && serviceInstance.Status.Ready == metav1.ConditionTrue &&
 		!isShareFailed(serviceInstance.GetConditions()) {
 		if err := r.handleInstanceSharingChange(ctx, serviceInstance, smClient); err != nil {
