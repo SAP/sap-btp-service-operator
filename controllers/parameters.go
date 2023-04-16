@@ -30,6 +30,7 @@ func buildParameters(kubeClient client.Client, namespace string, parametersFrom 
 				return nil, nil, err
 			}
 			for k, v := range fps {
+				// we don't want to add shared param because sm api does not support it.
 				if k == "shared" {
 					continue
 				}

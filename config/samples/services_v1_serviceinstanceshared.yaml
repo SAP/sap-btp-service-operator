@@ -3,5 +3,6 @@ kind: ServiceInstance
 metadata:
   name: testxsuaainstance
 spec:
+  shared: true
   serviceOfferingName: xsuaa
   servicePlanName: application

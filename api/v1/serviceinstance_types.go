@@ -209,10 +209,10 @@ func (si *ServiceInstance) SharedStateChanged(newShareState *bool, oldShareState
 	if newShareState == nil {
 		return oldShareState == metav1.ConditionTrue
 	}
-	if *newShareState && (oldShareState == metav1.ConditionUnknown || oldShareState == metav1.ConditionFalse || oldShareState == "") {
+	if *newShareState && oldShareState != metav1.ConditionTrue {
 		return true
 	}
-	if !(*newShareState) && oldShareState == metav1.ConditionTrue {
+	if !(*newShareState) && oldShareState != metav1.ConditionFalse {
 		return true
 	}
 	return false

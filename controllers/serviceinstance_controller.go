@@ -329,7 +329,7 @@ func setConditionSharingNeedsToBeDone(object api.SAPBTPResource) {
 	shouldShareCondition := metav1.Condition{
 		Type:               api.ConditionSharing,
 		Status:             metav1.ConditionFalse,
-		Reason:             getConditionReason(Updated, smClientTypes.PENDING),
+		Reason:             getConditionReason(smClientTypes.UPDATE, smClientTypes.PENDING),
 		Message:            "Sharing of instance needs to be performed",
 		ObservedGeneration: object.GetGeneration(),
 	}
@@ -350,7 +350,7 @@ func setConditionForFailedSharing(object api.SAPBTPResource, currentSharedStatus
 	shouldShareCondition := metav1.Condition{
 		Type:               api.ConditionSharing,
 		Status:             metav1.ConditionFalse,
-		Reason:             getConditionReason(Updated, smClientTypes.FAILED),
+		Reason:             getConditionReason(smClientTypes.UPDATE, smClientTypes.FAILED),
 		Message:            msg + err.Error(),
 		ObservedGeneration: object.GetGeneration(),
 	}
@@ -371,7 +371,7 @@ func setConditionForSuccessShareChange(object api.SAPBTPResource, currentSharedS
 	shareCondition := metav1.Condition{
 		Type:               api.ConditionSharing,
 		Status:             metav1.ConditionTrue,
-		Reason:             getConditionReason(Updated, smClientTypes.SUCCEEDED),
+		Reason:             getConditionReason(smClientTypes.UPDATE, smClientTypes.SUCCEEDED),
 		Message:            msg,
 		ObservedGeneration: object.GetGeneration(),
 	}
@@ -653,7 +653,7 @@ func bodyToBytes(response *http.Response) ([]byte, error) {
 func IsSharingNeedsToBeDone(conditions []metav1.Condition) bool {
 	conditionType := api.ConditionSharing
 	status := metav1.ConditionFalse
-	reason := getConditionReason(Updated, smClientTypes.PENDING)
+	reason := getConditionReason(smClientTypes.UPDATE, smClientTypes.PENDING)
 
 	for _, condition := range conditions {
 		if condition.Type == conditionType {
@@ -668,7 +668,7 @@ func IsSharingNeedsToBeDone(conditions []metav1.Condition) bool {
 func isShareFailed(conditions []metav1.Condition) bool {
 	conditionType := api.ConditionSharing
 	status := metav1.ConditionFalse
-	reason := getConditionReason(Updated, smClientTypes.FAILED)
+	reason := getConditionReason(smClientTypes.UPDATE, smClientTypes.FAILED)
 
 	for _, condition := range conditions {
 		if condition.Type == conditionType {

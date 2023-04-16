@@ -960,10 +960,9 @@ var _ = Describe("ServiceInstance controller", func() {
 
 						Eventually(func() bool {
 							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-							return serviceInstance.Status.Conditions[2].Reason == Failed
+							return strings.Contains(serviceInstance.Status.Conditions[2].Message, "Un sharing of instance failed")
 						}, timeout, interval).Should(BeTrue())
 						Expect(validateInstanceIsReadyAndSucceeded(serviceInstance)).To(Equal(true))
-						Expect(serviceInstance.Status.Conditions[2].Message).To(ContainSubstring("Un sharing of instance failed"))
 					})
 				})
 			})
@@ -1002,7 +1001,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 						Eventually(func() bool {
 							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-							return len(serviceInstance.Status.Conditions) > 2 && serviceInstance.Status.Conditions[2].Reason == Failed
+							return len(serviceInstance.Status.Conditions) > 2 && strings.Contains(serviceInstance.Status.Conditions[2].Message, "failed")
 						}, timeout, interval).Should(BeTrue())
 						Expect(validateInstanceIsReadyAndSucceeded(serviceInstance)).To(Equal(true))
 						Expect(serviceInstance.Status.Conditions[2].Message).To(ContainSubstring("Sharing of instance failed"))
