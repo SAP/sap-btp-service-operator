@@ -44,9 +44,9 @@ func (si *ServiceInstance) ValidateUpdate(old runtime.Object) error {
 	serviceinstanceglog.Info("validate update", "name", si.Name)
 
 	newSharedState := si.Spec.Shared
-	oldShareState := si.getOldSharedState()
+	currentShareState := si.getCurrentSharedState()
 
-	if !si.SharedStateChanged(newSharedState, oldShareState) {
+	if !si.SharedStateChanged(newSharedState, currentShareState) {
 		return nil
 	}
 

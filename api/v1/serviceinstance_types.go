@@ -51,7 +51,7 @@ type ServiceInstanceSpec struct {
 	// The name of the instance in Service Manager
 	ExternalName string `json:"externalName,omitempty"`
 
-	// Indicates if the instances is shared
+	// Indicates the desired shared state
 	// +optional
 	// +kubebuilder:default={}
 	Shared *bool `json:"shared,omitempty"`
@@ -201,7 +201,7 @@ func init() {
 
 func (si *ServiceInstance) Hub() {}
 
-func (si *ServiceInstance) getOldSharedState() metav1.ConditionStatus {
+func (si *ServiceInstance) getCurrentSharedState() metav1.ConditionStatus {
 	return si.Status.Shared
 }
 

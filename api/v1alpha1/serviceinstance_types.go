@@ -19,7 +19,6 @@ package v1alpha1
 import (
 	"github.com/SAP/sap-btp-service-operator/api"
 	smClientTypes "github.com/SAP/sap-btp-service-operator/client/sm/types"
-	v1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -47,7 +46,7 @@ type ServiceInstanceSpec struct {
 	// The name of the instance in Service Manager
 	ExternalName string `json:"externalName,omitempty"`
 
-	// Indicates if the instances is shared
+	// Indicates the desired shared state
 	// +optional
 	// +kubebuilder:default={}
 	Shared bool `json:"shared,omitempty"`
