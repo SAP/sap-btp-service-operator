@@ -141,7 +141,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 }
 
 func instanceShareChangeNeedsToBeHandled(serviceInstance *servicesv1.ServiceInstance) bool {
-	return serviceInstance.SharedStateChanged(serviceInstance.Spec.Shared, serviceInstance.Status.Shared) &&
+	return serviceInstance.IsSharedDesiredStateChanged(serviceInstance.Spec.Shared, serviceInstance.Status.Shared) &&
 		serviceInstance.Status.Ready == metav1.ConditionTrue &&
 		!isShareFailed(serviceInstance.GetConditions())
 }
@@ -153,7 +153,7 @@ func isFinalState(serviceInstance *servicesv1.ServiceInstance) bool {
 	if isInProgress(serviceInstance) {
 		return false
 	}
-	if serviceInstance.SharedStateChanged(serviceInstance.Spec.Shared, serviceInstance.Status.Shared) && !isShareFailed(serviceInstance.GetConditions()) {
+	if serviceInstance.IsSharedDesiredStateChanged(serviceInstance.Spec.Shared, serviceInstance.Status.Shared) && !isShareFailed(serviceInstance.GetConditions()) {
 		return false
 	}
 	return true
@@ -341,28 +341,23 @@ func setConditionSharingNeedsToBeDone(object api.SAPBTPResource) {
 
 func setConditionForFailedSharing(object api.SAPBTPResource, currentSharedStatus metav1.ConditionStatus, err error) {
 	conditions := object.GetConditions()
-
 	msg := "Sharing of instance failed "
 	if currentSharedStatus == metav1.ConditionTrue {
 		msg = "Un sharing of instance failed "
 	}
 
-	shouldShareCondition := metav1.Condition{
+	shareCondition := metav1.Condition{
 		Type:               api.ConditionSharing,
 		Status:             metav1.ConditionFalse,
 		Reason:             getConditionReason(smClientTypes.UPDATE, smClientTypes.FAILED),
 		Message:            msg + err.Error(),
 		ObservedGeneration: object.GetGeneration(),
 	}
-	meta.RemoveStatusCondition(&conditions, api.ConditionSharing)
-	meta.SetStatusCondition(&conditions, shouldShareCondition)
-
-	object.SetConditions(conditions)
+	updateNewConditionAndRemovePrevious(conditions, object, shareCondition)
 }
 
 func setConditionForSuccessShareChange(object api.SAPBTPResource, currentSharedStatus metav1.ConditionStatus) {
 	conditions := object.GetConditions()
-
 	msg := "Sharing of instance succeeded"
 	if currentSharedStatus == metav1.ConditionTrue {
 		msg = "Un sharing of instance succeeded"
@@ -375,9 +370,12 @@ func setConditionForSuccessShareChange(object api.SAPBTPResource, currentSharedS
 		Message:            msg,
 		ObservedGeneration: object.GetGeneration(),
 	}
+	updateNewConditionAndRemovePrevious(conditions, object, shareCondition)
+}
+
+func updateNewConditionAndRemovePrevious(conditions []metav1.Condition, object api.SAPBTPResource, shareCondition metav1.Condition) {
 	meta.RemoveStatusCondition(&conditions, api.ConditionSharing)
 	meta.SetStatusCondition(&conditions, shareCondition)
-
 	object.SetConditions(conditions)
 }
 
