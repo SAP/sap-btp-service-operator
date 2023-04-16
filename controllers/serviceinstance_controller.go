@@ -649,19 +649,13 @@ func bodyToBytes(response *http.Response) ([]byte, error) {
 }
 
 func IsSharingNeedsToBeDone(conditions []metav1.Condition) bool {
-	conditionType := api.ConditionSharing
-	status := metav1.ConditionFalse
 	reason := getConditionReason(smClientTypes.UPDATE, smClientTypes.PENDING)
-
-	return checkForConditionStatusAndReason(conditions, conditionType, status, reason)
+	return checkForConditionStatusAndReason(conditions, api.ConditionSharing, metav1.ConditionFalse, reason)
 }
 
 func isShareFailed(conditions []metav1.Condition) bool {
-	conditionType := api.ConditionSharing
-	status := metav1.ConditionFalse
 	reason := getConditionReason(smClientTypes.UPDATE, smClientTypes.FAILED)
-
-	return checkForConditionStatusAndReason(conditions, conditionType, status, reason)
+	return checkForConditionStatusAndReason(conditions, api.ConditionSharing, metav1.ConditionFalse, reason)
 }
 
 func checkForConditionStatusAndReason(conditions []metav1.Condition, conditionType string, status metav1.ConditionStatus, reason string) bool {
