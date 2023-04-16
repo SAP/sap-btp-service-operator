@@ -652,8 +652,8 @@ func IsSharingNeedsToBeDone(conditions []metav1.Condition) bool {
 
 	for _, condition := range conditions {
 		if condition.Type == conditionType {
-			if strings.EqualFold(condition.Reason, reason) {
-				return condition.Status == status
+			if strings.EqualFold(condition.Reason, reason) && condition.Status == status {
+				return true
 			}
 		}
 	}
@@ -667,8 +667,8 @@ func isShareFailed(conditions []metav1.Condition) bool {
 
 	for _, condition := range conditions {
 		if condition.Type == conditionType {
-			if strings.EqualFold(condition.Reason, reason) {
-				return condition.Status == status
+			if strings.EqualFold(condition.Reason, reason) && condition.Status == status {
+				return true
 			}
 		}
 	}
