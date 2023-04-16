@@ -125,8 +125,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	// Handle instance share change if needed
-	if serviceInstance.SharedStateChanged(serviceInstance.Spec.Shared, serviceInstance.Status.Shared) && serviceInstance.Status.Ready == metav1.ConditionTrue &&
-		!isShareFailed(serviceInstance.GetConditions()) {
+	if instanceShareChangeNeedsToBeHandled(serviceInstance) {
 		if err := r.handleInstanceSharingChange(ctx, serviceInstance, smClient); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -139,6 +138,12 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func instanceShareChangeNeedsToBeHandled(serviceInstance *servicesv1.ServiceInstance) bool {
+	return serviceInstance.SharedStateChanged(serviceInstance.Spec.Shared, serviceInstance.Status.Shared) &&
+		serviceInstance.Status.Ready == metav1.ConditionTrue &&
+		!isShareFailed(serviceInstance.GetConditions())
 }
 
 func isFinalState(serviceInstance *servicesv1.ServiceInstance) bool {

@@ -33,7 +33,7 @@ const (
 	// ConditionPendingTermination resource is waiting for termination pre-conditions
 	ConditionPendingTermination = "PendingTermination"
 
-	// ConditionSharing represents the sharing of instance situation
+	// ConditionSharing represents information about the instance share situation
 	ConditionSharing = "Sharing"
 )
 
