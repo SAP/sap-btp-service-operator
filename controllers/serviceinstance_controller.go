@@ -99,7 +99,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	if isFinalState(serviceInstance) {
-		log.Info(fmt.Sprintf("Final state - ignoring... Generation is - %v", serviceInstance.Generation))
+		log.Info(fmt.Sprintf("Final state, spec did not change, and we are not in progress - ignoring... Generation is - %v", serviceInstance.Generation))
 		return ctrl.Result{}, nil
 	}
 
