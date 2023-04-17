@@ -46,7 +46,7 @@ func (si *ServiceInstance) ValidateUpdate(old runtime.Object) error {
 	newSharedState := si.Spec.Shared
 	currentShareState := si.getCurrentSharedState()
 
-	if !si.IsSharedDesiredStateChanged(newSharedState, currentShareState) {
+	if !IsSharedDesiredStateChanged(newSharedState, currentShareState) {
 		return nil
 	}
 

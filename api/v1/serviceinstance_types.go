@@ -204,16 +204,3 @@ func (si *ServiceInstance) Hub() {}
 func (si *ServiceInstance) getCurrentSharedState() metav1.ConditionStatus {
 	return si.Status.Shared
 }
-
-func (si *ServiceInstance) IsSharedDesiredStateChanged(newShareState *bool, oldShareState metav1.ConditionStatus) bool {
-	if newShareState == nil {
-		return oldShareState == metav1.ConditionTrue
-	}
-	if *newShareState && oldShareState != metav1.ConditionTrue {
-		return true
-	}
-	if !(*newShareState) && oldShareState != metav1.ConditionFalse {
-		return true
-	}
-	return false
-}
