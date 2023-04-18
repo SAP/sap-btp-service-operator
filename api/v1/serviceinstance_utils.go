@@ -1,16 +1,31 @@
 package v1
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import (
+	"github.com/SAP/sap-btp-service-operator/api"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
-func ShouldHandleSharing(newShareState *bool, oldShareState metav1.ConditionStatus) bool {
+func ShouldHandleSharing(ServiceInstance *ServiceInstance) bool {
+	newShareState := ServiceInstance.Spec.Shared
+	currentShareState := IsInstanceShared(ServiceInstance)
 	if newShareState == nil {
-		return oldShareState == metav1.ConditionTrue
+		return currentShareState == true
 	}
-	if *newShareState && oldShareState != metav1.ConditionTrue {
+	if *newShareState && !currentShareState {
 		return true
 	}
-	if !(*newShareState) && oldShareState != metav1.ConditionFalse {
+	if !(*newShareState) && currentShareState {
 		return true
+	}
+	return false
+}
+
+func IsInstanceShared(serviceInstance *ServiceInstance) bool {
+	conditions := serviceInstance.GetConditions()
+	for _, condition := range conditions {
+		if condition.Type == api.ConditionSharing {
+			return condition.Status == metav1.ConditionTrue
+		}
 	}
 	return false
 }

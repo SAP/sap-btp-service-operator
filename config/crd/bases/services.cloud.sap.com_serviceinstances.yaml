@@ -34,9 +34,6 @@ spec:
     - jsonPath: .status.ready
       name: Ready
       type: string
-    - jsonPath: .status.shared
-      name: Shared
-      type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
@@ -287,9 +284,6 @@ spec:
       type: string
     - jsonPath: .status.ready
       name: Ready
-      type: string
-    - jsonPath: .status.shared
-      name: Shared
       type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age

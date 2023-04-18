@@ -50,7 +50,7 @@ type ServiceInstanceSpec struct {
 	// Indicates the desired shared state
 	// +optional
 	// +kubebuilder:default={}
-	Shared bool `json:"shared,omitempty"`
+	Shared *bool `json:"shared,omitempty"`
 
 	// Provisioning parameters for the instance.
 	//
@@ -106,9 +106,6 @@ type ServiceInstanceStatus struct {
 
 	// Indicates whether instance is ready for usage
 	Ready metav1.ConditionStatus `json:"ready,omitempty"`
-
-	// Indicates whether instance is shared
-	Shared metav1.ConditionStatus `json:"shared,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -118,7 +115,6 @@ type ServiceInstanceStatus struct {
 // +kubebuilder:printcolumn:JSONPath=".spec.servicePlanName",name="Plan",type=string
 // +kubebuilder:printcolumn:JSONPath=".status.conditions[0].reason",name="Status",type=string
 // +kubebuilder:printcolumn:JSONPath=".status.ready",name="Ready",type=string
-// +kubebuilder:printcolumn:JSONPath=".status.shared",name="Shared",type=string
 // +kubebuilder:printcolumn:JSONPath=".metadata.creationTimestamp",name="Age",type=date
 // +kubebuilder:printcolumn:JSONPath=".status.instanceID",name="ID",type=string,priority=1
 // +kubebuilder:printcolumn:JSONPath=".status.conditions[0].message",name="Message",type=string,priority=1

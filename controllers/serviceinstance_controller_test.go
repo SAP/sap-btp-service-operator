@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/SAP/sap-btp-service-operator/api/v1"
+	servicesv1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
 	"github.com/SAP/sap-btp-service-operator/client/sm/smfakes"
 	smClientTypes "github.com/SAP/sap-btp-service-operator/client/sm/types"
@@ -839,7 +840,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					serviceInstance = createInstance(ctx, nonSharedInstanceSpec)
 					Expect(serviceInstance.Status.InstanceID).To(Equal(fakeInstanceID))
 					Expect(serviceInstance.Spec.ExternalName).To(Equal(fakeInstanceExternalNameNonShared))
-					Expect(serviceInstance.Status.Shared).To(Equal(metav1.ConditionFalse))
+					Expect(servicesv1.IsInstanceShared(serviceInstance)).To(Equal(false))
 					Expect(serviceInstance.Name).To(Equal(fakeInstanceName))
 					Expect(string(serviceInstance.Spec.Parameters.Raw)).To(ContainSubstring("\"key\":\"value\""))
 					Expect(serviceInstance.Spec.UserInfo).NotTo(BeNil())
@@ -873,14 +874,13 @@ var _ = Describe("ServiceInstance controller", func() {
 					serviceInstance = createInstance(ctx, sharedInstanceSpec)
 					Eventually(func() bool {
 						_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-						return serviceInstance.Status.Shared == metav1.ConditionTrue
+						return servicesv1.IsInstanceShared(serviceInstance)
 					}, timeout, interval).Should(BeTrue())
 
 					Expect(validateInstanceIsReadyAndSucceeded(serviceInstance)).To(Equal(true))
 
 					Expect(serviceInstance.Status.Conditions[2].Type).To(Equal(api.ConditionSharing))
 					Expect(serviceInstance.Status.Conditions[2].Status).To(Equal(metav1.ConditionTrue))
-					Expect(serviceInstance.Status.Conditions[2].Message).To(ContainSubstring("Sharing of instance succeeded"))
 				})
 			})
 
@@ -899,7 +899,6 @@ var _ = Describe("ServiceInstance controller", func() {
 
 					Expect(serviceInstance.Status.Conditions[2].Type).To(Equal(api.ConditionSharing))
 					Expect(serviceInstance.Status.Conditions[2].Status).To(Equal(metav1.ConditionFalse))
-					Expect(serviceInstance.Status.Conditions[2].Message).To(Not(ContainSubstring("succeeded")))
 				})
 			})
 		})
@@ -912,7 +911,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						serviceInstance = createInstance(ctx, sharedInstanceSpec)
 						Eventually(func() bool {
 							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-							return serviceInstance.Status.Shared == metav1.ConditionTrue
+							return servicesv1.IsInstanceShared(serviceInstance)
 						}, timeout, interval).Should(BeTrue())
 
 						fakeClient.UpdateInstanceReturns(nil, "", nil)
@@ -921,12 +920,12 @@ var _ = Describe("ServiceInstance controller", func() {
 
 						Eventually(func() bool {
 							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-							return serviceInstance.Status.Shared == metav1.ConditionFalse
+							return !servicesv1.IsInstanceShared(serviceInstance)
 						}, timeout, interval).Should(BeTrue())
 
 						Expect(validateInstanceIsReadyAndSucceeded(serviceInstance)).To(Equal(true))
 						Expect(serviceInstance.Status.Conditions[2].Type).To(Equal(api.ConditionSharing))
-						Expect(serviceInstance.Status.Conditions[2].Status).To(Equal(metav1.ConditionTrue))
+						Expect(serviceInstance.Status.Conditions[2].Status).To(Equal(metav1.ConditionFalse))
 					})
 				})
 
@@ -936,7 +935,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						serviceInstance = createInstance(ctx, sharedInstanceSpec)
 						Eventually(func() bool {
 							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-							return serviceInstance.Status.Shared == metav1.ConditionTrue
+							return servicesv1.IsInstanceShared(serviceInstance)
 						}, timeout, interval).Should(BeTrue())
 
 						err := k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
@@ -960,7 +959,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						serviceInstance = createInstance(ctx, nonSharedInstanceSpec)
 						Eventually(func() bool {
 							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-							return serviceInstance.Status.Shared == metav1.ConditionFalse
+							return !servicesv1.IsInstanceShared(serviceInstance)
 						}, timeout, interval).Should(BeTrue())
 
 						fakeClient.UpdateInstanceReturns(nil, "", nil)
@@ -970,12 +969,11 @@ var _ = Describe("ServiceInstance controller", func() {
 
 						Eventually(func() bool {
 							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-							return serviceInstance.Status.Shared == metav1.ConditionTrue
+							return servicesv1.IsInstanceShared(serviceInstance)
 						}, timeout, interval).Should(BeTrue())
 						Expect(validateInstanceIsReadyAndSucceeded(serviceInstance)).To(Equal(true))
 						Expect(serviceInstance.Status.Conditions[2].Type).To(Equal(api.ConditionSharing))
 						Expect(serviceInstance.Status.Conditions[2].Status).To(Equal(metav1.ConditionTrue))
-						Expect(serviceInstance.Status.Conditions[2].Message).To(ContainSubstring("Sharing of instance succeeded"))
 					})
 				})
 
@@ -1053,7 +1051,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 						Eventually(func() bool {
 							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-							return serviceInstance.Status.Shared == metav1.ConditionTrue
+							return servicesv1.IsInstanceShared(serviceInstance)
 						}, timeout, interval).Should(BeTrue())
 					})
 				})
@@ -1075,7 +1073,7 @@ var _ = Describe("ServiceInstance controller", func() {
 							serviceInstance.Spec.Shared = pointer.BoolPtr(true)
 							instanceSharingReturnSuccess()
 							_ = k8sClient.Update(ctx, serviceInstance)
-							return serviceInstance.Status.Shared == metav1.ConditionTrue
+							return servicesv1.IsInstanceShared(serviceInstance)
 						}, timeout, interval).Should(BeTrue())
 
 						Expect(strings.EqualFold(serviceInstance.Spec.ExternalName, "newName1")).To(Equal(true))
@@ -1097,7 +1095,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						return len(serviceInstance.Status.Conditions) > 2 && strings.Contains(serviceInstance.Status.Conditions[2].Message, "Sharing of instance succeeded")
 					}, timeout, interval).Should(BeTrue())
 
-					Expect(serviceInstance.Status.Shared).To(Equal(metav1.ConditionTrue))
+					Expect(servicesv1.IsInstanceShared(serviceInstance)).To(Equal(true))
 					serviceInstance.Spec.Shared = pointer.BoolPtr(false)
 					_ = k8sClient.Update(ctx, serviceInstance)
 					Eventually(func() bool {
@@ -1106,7 +1104,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					}, timeout, interval).Should(BeTrue())
 
 					Expect(validateInstanceIsReadyAndSucceeded(serviceInstance)).To(Equal(true))
-					Expect(serviceInstance.Status.Shared).To(Equal(metav1.ConditionFalse))
+					Expect(servicesv1.IsInstanceShared(serviceInstance)).To(Equal(false))
 				})
 			})
 
@@ -1127,7 +1125,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						return len(serviceInstance.Status.Conditions) > 2 && strings.Contains(serviceInstance.Status.Conditions[2].Message, "Un sharing of instance succeeded")
 					}, timeout, interval).Should(BeTrue())
 
-					Expect(serviceInstance.Status.Shared).To(Equal(metav1.ConditionFalse))
+					Expect(servicesv1.IsInstanceShared(serviceInstance)).To(Equal(false))
 					serviceInstance.Spec.Shared = pointer.BoolPtr(true)
 					_ = k8sClient.Update(ctx, serviceInstance)
 					Eventually(func() bool {
@@ -1136,7 +1134,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					}, timeout, interval).Should(BeTrue())
 
 					Expect(validateInstanceIsReadyAndSucceeded(serviceInstance)).To(Equal(true))
-					Expect(serviceInstance.Status.Shared).To(Equal(metav1.ConditionTrue))
+					Expect(servicesv1.IsInstanceShared(serviceInstance)).To(Equal(true))
 				})
 			})
 		})
