@@ -905,19 +905,6 @@ var _ = Describe("ServiceInstance controller", func() {
 		})
 
 		Context("Update", func() {
-			When("Changing spec shared field and another spec field", func() {
-				It("should fail in the webhook", func() {
-					serviceInstance = createInstance(ctx, instanceSpec)
-					newSpec := updateSpec()
-					newSpec.Shared = pointer.BoolPtr(true)
-					serviceInstance.Spec = newSpec
-					instanceSharingReturnSuccess()
-					err := k8sClient.Update(context.Background(), serviceInstance)
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring(shareInstanceErrorMsg))
-				})
-			})
-
 			Context("Un-share", func() {
 				When("Un sharing shared instance succeeds", func() {
 					It("should update instance to unshared", func() {

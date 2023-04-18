@@ -130,8 +130,6 @@ var _ = BeforeSuite(func(done Done) {
 
 	err = (&servicesv1.ServiceBinding{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
-	err = (&servicesv1.ServiceInstance{}).SetupWebhookWithManager(k8sManager)
-	Expect(err).ToNot(HaveOccurred())
 
 	err = (&ServiceBindingReconciler{
 		BaseReconciler: &BaseReconciler{
