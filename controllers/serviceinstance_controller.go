@@ -131,9 +131,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	// Handle instance share change if needed
 	if instanceShareChangeNeedsToBeHandled(serviceInstance) {
-		if err := r.handleInstanceSharingChange(ctx, serviceInstance, smClient); err != nil {
-			return ctrl.Result{}, err
-		}
+		return r.handleInstanceSharingChange(ctx, serviceInstance, smClient)
 	}
 
 	return ctrl.Result{}, nil
@@ -141,8 +139,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 func instanceShareChangeNeedsToBeHandled(serviceInstance *servicesv1.ServiceInstance) bool {
 	return servicesv1.ShouldHandleSharing(serviceInstance) &&
-		serviceInstance.Status.Ready == metav1.ConditionTrue &&
-		!isShareFailed(serviceInstance.GetConditions())
+		serviceInstance.Status.Ready == metav1.ConditionTrue
 }
 
 func isFinalState(serviceInstance *servicesv1.ServiceInstance) bool {
@@ -152,34 +149,39 @@ func isFinalState(serviceInstance *servicesv1.ServiceInstance) bool {
 	if isInProgress(serviceInstance) {
 		return false
 	}
-	if servicesv1.ShouldHandleSharing(serviceInstance) && !isShareFailed(serviceInstance.GetConditions()) {
+	if servicesv1.ShouldHandleSharing(serviceInstance) {
 		return false
 	}
 	return true
 }
 
-func (r *ServiceInstanceReconciler) handleInstanceSharingChange(ctx context.Context, serviceInstance *servicesv1.ServiceInstance, smClient sm.Client) error {
+func (r *ServiceInstanceReconciler) handleInstanceSharingChange(ctx context.Context, serviceInstance *servicesv1.ServiceInstance, smClient sm.Client) (ctrl.Result, error) {
 	log := GetLogger(ctx)
 	log.Info("Handling change in instance sharing")
 	isInstanceCurrentlyShared := servicesv1.IsInstanceShared(serviceInstance)
 
 	if err := r.shareInstance(ctx, serviceInstance, smClient); err != nil {
 		setConditionForFailedSharing(serviceInstance, err, isInstanceCurrentlyShared)
-		if updateErr := r.updateStatus(ctx, serviceInstance); updateErr != nil {
-			return updateErr
+		if err := r.updateStatus(ctx, serviceInstance); err != nil {
+			log.Info("got error while trying to update status")
+			return ctrl.Result{}, err
 		}
-		return err
+		if isTransientError(ctx, err) {
+			return r.markAsNonTransientError(ctx, smClientTypes.UPDATE, err, serviceInstance)
+		} else {
+			return r.markAsTransientError(ctx, smClientTypes.UPDATE, err, serviceInstance)
+		}
 	}
 
 	setConditionForSuccessShareChange(serviceInstance)
 
 	if err := r.updateStatus(ctx, serviceInstance); err != nil {
 		log.Info("succeeded handling share change, but got error while trying to update status")
-		return err
+		return ctrl.Result{}, err
 	}
 
 	log.Info("Done handling change in instance share")
-	return nil
+	return ctrl.Result{}, nil
 }
 
 func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client, serviceInstance *servicesv1.ServiceInstance) (ctrl.Result, error) {
