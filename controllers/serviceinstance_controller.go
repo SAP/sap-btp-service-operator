@@ -124,17 +124,16 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return r.createInstance(ctx, smClient, serviceInstance)
 	}
 
+	// Update
+	if serviceInstance.Status.Ready == metav1.ConditionTrue {
+		r.updateInstance(ctx, smClient, serviceInstance)
+	}
+
 	// Handle instance share change if needed
 	if instanceShareChangeNeedsToBeHandled(serviceInstance) {
 		if err := r.handleInstanceSharingChange(ctx, serviceInstance, smClient); err != nil {
 			return ctrl.Result{}, err
 		}
-		return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, nil
-	}
-
-	// Update
-	if serviceInstance.Status.Ready == metav1.ConditionTrue {
-		return r.updateInstance(ctx, smClient, serviceInstance)
 	}
 
 	return ctrl.Result{}, nil
