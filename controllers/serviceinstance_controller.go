@@ -323,47 +323,40 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 func setConditionForSharedFalse(instance *servicesv1.ServiceInstance) {
 	conditions := instance.GetConditions()
 
-	shouldShareCondition := metav1.Condition{
+	shareCondition := metav1.Condition{
 		Type:               api.ConditionSharing,
 		Status:             metav1.ConditionFalse,
 		Reason:             getConditionReason(smClientTypes.UPDATE, smClientTypes.SUCCEEDED),
 		Message:            "Instance is unshared",
 		ObservedGeneration: instance.GetGeneration(),
 	}
-	meta.SetStatusCondition(&conditions, shouldShareCondition)
-	meta.RemoveStatusCondition(&conditions, api.ConditionSharing)
-	instance.SetConditions(conditions)
+	updateNewConditionAndRemovePrevious(conditions, instance, shareCondition)
 }
 
 func setConditionForSharedTrue(instance *servicesv1.ServiceInstance) {
 	conditions := instance.GetConditions()
 
-	shouldShareCondition := metav1.Condition{
+	shareCondition := metav1.Condition{
 		Type:               api.ConditionSharing,
 		Status:             metav1.ConditionTrue,
 		Reason:             getConditionReason(smClientTypes.UPDATE, smClientTypes.SUCCEEDED),
 		Message:            "Instance is shared",
 		ObservedGeneration: instance.GetGeneration(),
 	}
-	meta.SetStatusCondition(&conditions, shouldShareCondition)
-	meta.RemoveStatusCondition(&conditions, api.ConditionSharing)
-	instance.SetConditions(conditions)
+	updateNewConditionAndRemovePrevious(conditions, instance, shareCondition)
 }
 
 func setConditionSharingNeedsToBeDone(object api.SAPBTPResource) {
 	conditions := object.GetConditions()
 
-	shouldShareCondition := metav1.Condition{
+	shareCondition := metav1.Condition{
 		Type:               api.ConditionSharing,
 		Status:             metav1.ConditionFalse,
 		Reason:             getConditionReason(smClientTypes.UPDATE, smClientTypes.PENDING),
 		Message:            "Sharing of instance needs to be performed",
 		ObservedGeneration: object.GetGeneration(),
 	}
-	meta.RemoveStatusCondition(&conditions, api.ConditionSharing)
-	meta.SetStatusCondition(&conditions, shouldShareCondition)
-
-	object.SetConditions(conditions)
+	updateNewConditionAndRemovePrevious(conditions, object, shareCondition)
 }
 
 func setConditionForFailedSharing(object api.SAPBTPResource, err error, currentlyShared bool) {
@@ -373,7 +366,7 @@ func setConditionForFailedSharing(object api.SAPBTPResource, err error, currentl
 	status := metav1.ConditionFalse
 	if currentlyShared {
 		msg = "Un sharing of instance failed "
-		reason = ShareFail
+		reason = UnShareFail
 		status = metav1.ConditionFalse
 	}
 
