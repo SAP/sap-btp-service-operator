@@ -34,7 +34,7 @@ const (
 	ConditionPendingTermination = "PendingTermination"
 
 	// ConditionSharing represents information about the instance share situation
-	ConditionSharing = "Sharing"
+	ConditionSharing = "Shared"
 )
 
 // +kubebuilder:object:generate=false
