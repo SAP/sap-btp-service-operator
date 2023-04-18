@@ -349,7 +349,7 @@ func setConditionForFailedSharing(object api.SAPBTPResource, currentSharedStatus
 	shareCondition := metav1.Condition{
 		Type:               api.ConditionSharing,
 		Status:             metav1.ConditionFalse,
-		Reason:             getConditionReason(smClientTypes.UPDATE, smClientTypes.FAILED),
+		Reason:             ShareFail,
 		Message:            msg + err.Error(),
 		ObservedGeneration: object.GetGeneration(),
 	}
@@ -366,7 +366,7 @@ func setConditionForSuccessShareChange(object api.SAPBTPResource, currentSharedS
 	shareCondition := metav1.Condition{
 		Type:               api.ConditionSharing,
 		Status:             metav1.ConditionTrue,
-		Reason:             getConditionReason(smClientTypes.UPDATE, smClientTypes.SUCCEEDED),
+		Reason:             ShareSucceeded,
 		Message:            msg,
 		ObservedGeneration: object.GetGeneration(),
 	}

@@ -37,11 +37,12 @@ const (
 	DeleteInProgress = "DeleteInProgress"
 	InProgress       = "InProgress"
 
-	CreateFailed = "CreateFailed"
-	UpdateFailed = "UpdateFailed"
-	DeleteFailed = "DeleteFailed"
-	Failed       = "Failed"
-	SharedFailed = "SharedFailed"
+	CreateFailed   = "CreateFailed"
+	UpdateFailed   = "UpdateFailed"
+	DeleteFailed   = "DeleteFailed"
+	Failed         = "Failed"
+	ShareFail      = "ShareSucceeded"
+	ShareSucceeded = "ShareSucceeded"
 
 	Blocked = "Blocked"
 	Unknown = "Unknown"
