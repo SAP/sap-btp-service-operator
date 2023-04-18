@@ -2,7 +2,7 @@ package v1
 
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-func IsSharedDesiredStateChanged(newShareState *bool, oldShareState metav1.ConditionStatus) bool {
+func ShouldHandleSharing(newShareState *bool, oldShareState metav1.ConditionStatus) bool {
 	if newShareState == nil {
 		return oldShareState == metav1.ConditionTrue
 	}
