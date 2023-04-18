@@ -41,7 +41,7 @@ const (
 	UpdateFailed   = "UpdateFailed"
 	DeleteFailed   = "DeleteFailed"
 	Failed         = "Failed"
-	ShareFail      = "ShareSucceeded"
+	ShareFail      = "ShareFailed"
 	ShareSucceeded = "ShareSucceeded"
 
 	Blocked = "Blocked"
