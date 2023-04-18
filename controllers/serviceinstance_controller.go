@@ -683,11 +683,6 @@ func IsSharingNeedsToBeDone(conditions []metav1.Condition) bool {
 	return checkForConditionStatusAndReason(conditions, api.ConditionSharing, metav1.ConditionFalse, reason)
 }
 
-func isShareFailed(conditions []metav1.Condition) bool {
-	reason := getConditionReason(smClientTypes.UPDATE, smClientTypes.FAILED)
-	return checkForConditionStatusAndReason(conditions, api.ConditionSharing, metav1.ConditionFalse, reason)
-}
-
 func checkForConditionStatusAndReason(conditions []metav1.Condition, conditionType string, status metav1.ConditionStatus, reason string) bool {
 	for _, condition := range conditions {
 		if condition.Type == conditionType {
