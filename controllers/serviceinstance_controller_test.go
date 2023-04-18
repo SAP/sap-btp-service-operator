@@ -36,7 +36,6 @@ const (
 	testNamespace                     = "ic-test-namespace"
 	fakeOfferingName                  = "offering-a"
 	fakePlanName                      = "plan-a"
-	shareInstanceErrorMsg             = "updating shared property with other spec property is not supported"
 )
 
 var _ = Describe("ServiceInstance controller", func() {
