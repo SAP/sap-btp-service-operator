@@ -768,9 +768,6 @@ spec:
               ready:
                 description: Indicates whether instance is ready for usage
                 type: string
-              shared:
-                description: Indicates whether instance is shared
-                type: string
               tags:
                 description: Tags describing the ServiceInstance as provided in service
                   catalog, will be copied to `ServiceBinding` secret in the key called
@@ -1014,9 +1011,6 @@ spec:
                 type: string
               ready:
                 description: Indicates whether instance is ready for usage
-                type: string
-              shared:
-                description: Indicates whether instance is shared
                 type: string
               tags:
                 description: Tags describing the ServiceInstance as provided in service
