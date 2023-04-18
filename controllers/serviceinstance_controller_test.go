@@ -958,7 +958,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						serviceInstance = createInstance(ctx, nonSharedInstanceSpec)
 						Eventually(func() bool {
 							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-							return !servicesv1.IsInstanceShared(serviceInstance)
+							return len(serviceInstance.Status.Conditions) == 2 && serviceInstance.Status.Conditions[1].Type == api.ConditionReady
 						}, timeout, interval).Should(BeTrue())
 
 						fakeClient.UpdateInstanceReturns(nil, "", nil)
@@ -1000,6 +1000,7 @@ var _ = Describe("ServiceInstance controller", func() {
 							return len(serviceInstance.Status.Conditions) == 2 && serviceInstance.Status.Conditions[1].Type == api.ConditionReady
 						}, timeout, interval).Should(BeTrue())
 
+						_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
 						serviceInstance.Spec.Shared = pointer.BoolPtr(true)
 						instanceSharingReturnSuccess()
 						_ = k8sClient.Update(ctx, serviceInstance)
