@@ -1,7 +1,6 @@
 package v1
 
 import (
-	"encoding/json"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/authentication/v1"
@@ -87,38 +86,4 @@ func getInstance() *ServiceInstance {
 
 		Status: ServiceInstanceStatus{},
 	}
-}
-
-func getNonSharedInstance() *ServiceInstance {
-	instance := getInstance()
-	var nonSharedInstance ServiceInstance
-	instanceJson, err := json.Marshal(instance)
-	if err != nil {
-		return nil
-	}
-
-	err = json.Unmarshal(instanceJson, &nonSharedInstance)
-	if err != nil {
-		return nil
-	}
-
-	nonSharedInstance.Status.Shared = metav1.ConditionFalse
-	return &nonSharedInstance
-}
-
-func getSharedInstance() *ServiceInstance {
-	instance := getInstance()
-	var nonSharedInstance ServiceInstance
-	instanceJson, err := json.Marshal(instance)
-	if err != nil {
-		return nil
-	}
-
-	err = json.Unmarshal(instanceJson, &nonSharedInstance)
-	if err != nil {
-		return nil
-	}
-
-	nonSharedInstance.Status.Shared = metav1.ConditionTrue
-	return &nonSharedInstance
 }
