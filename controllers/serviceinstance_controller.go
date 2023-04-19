@@ -126,7 +126,11 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	// Update
 	if needsToUpdate(serviceInstance) {
-		r.updateInstance(ctx, smClient, serviceInstance)
+		res, err := r.updateInstance(ctx, smClient, serviceInstance)
+		if err != nil {
+			log.Info("got error while trying to update instance")
+			return res, err
+		}
 	}
 
 	// Handle instance share change if needed
@@ -188,9 +192,8 @@ func (r *ServiceInstanceReconciler) handleInstanceSharingChange(ctx context.Cont
 		}
 		if isTransientError(ctx, err) {
 			return r.markAsNonTransientError(ctx, smClientTypes.UPDATE, err, serviceInstance)
-		} else {
-			return r.markAsTransientError(ctx, smClientTypes.UPDATE, err, serviceInstance)
 		}
+		return r.markAsTransientError(ctx, smClientTypes.UPDATE, err, serviceInstance)
 	}
 
 	setConditionForSuccessShareChange(serviceInstance)
@@ -330,7 +333,6 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	}
 
 	serviceInstance.Status.Ready = metav1.ConditionTrue
-
 	setSuccessConditions(smClientTypes.CREATE, serviceInstance)
 
 	return ctrl.Result{}, r.updateStatus(ctx, serviceInstance)

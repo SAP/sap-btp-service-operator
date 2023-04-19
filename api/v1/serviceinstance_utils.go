@@ -9,7 +9,7 @@ func ShouldHandleSharing(ServiceInstance *ServiceInstance) bool {
 	newShareState := ServiceInstance.Spec.Shared
 	currentShareState := IsInstanceShared(ServiceInstance)
 	if newShareState == nil {
-		return currentShareState == true
+		return currentShareState
 	}
 	if *newShareState && !currentShareState {
 		return true
