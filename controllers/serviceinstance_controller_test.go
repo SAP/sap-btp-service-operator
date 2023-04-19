@@ -1079,6 +1079,27 @@ var _ = Describe("ServiceInstance controller", func() {
 						Expect(strings.EqualFold(serviceInstance.Spec.ExternalName, "newName1")).To(Equal(true))
 					})
 				})
+
+				When("service manager return 429 2 times and then 200", func() {
+					It("should eventually share the instance", func() {
+						serviceInstance = createInstance(ctx, nonSharedInstanceSpec)
+						Eventually(func() bool {
+							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+							return len(serviceInstance.Status.Conditions) == 2 && serviceInstance.Status.Conditions[1].Type == api.ConditionReady
+						}, timeout, interval).Should(BeTrue())
+
+						_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+						serviceInstance.Spec.Shared = pointer.BoolPtr(true)
+						instanceSharingReturnRateLimitTwiceAndThenSuccess()
+						fakeClient.UpdateInstanceReturns(nil, "", nil)
+						_ = k8sClient.Update(ctx, serviceInstance)
+
+						Eventually(func() bool {
+							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+							return servicesv1.IsInstanceShared(serviceInstance)
+						}, timeout, interval).Should(BeTrue())
+					})
+				})
 			})
 		})
 
@@ -1140,6 +1161,21 @@ var _ = Describe("ServiceInstance controller", func() {
 		})
 	})
 })
+
+func instanceSharingReturnRateLimitTwiceAndThenSuccess() {
+	for i := 0; i < 2; i++ {
+		fakeClient.ShareInstanceReturnsOnCall(i, &http.Response{
+			StatusCode: 429,
+			Body:       io.NopCloser(strings.NewReader("Rate-Limit")),
+			Header:     make(http.Header),
+		}, nil)
+	}
+	fakeClient.ShareInstanceReturnsOnCall(2, &http.Response{
+		StatusCode: 200,
+		Body:       io.NopCloser(strings.NewReader("Done")),
+		Header:     make(http.Header),
+	}, nil)
+}
 
 func instanceSharingReturnSuccess() {
 	fakeClient.ShareInstanceReturns(&http.Response{

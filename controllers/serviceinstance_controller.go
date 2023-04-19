@@ -125,7 +125,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	// Update
-	if serviceInstance.Status.Ready == metav1.ConditionTrue {
+	if needsToUpdate(serviceInstance) {
 		r.updateInstance(ctx, smClient, serviceInstance)
 	}
 
@@ -135,6 +135,26 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func needsToUpdate(serviceInstance *servicesv1.ServiceInstance) bool {
+	if serviceInstance.Status.Ready != metav1.ConditionTrue {
+		return false
+	}
+	if serviceInstance.Generation == serviceInstance.Status.ObservedGeneration && instanceShareFailed(serviceInstance) {
+		return false
+	}
+	return true
+}
+
+func instanceShareFailed(serviceInstance *servicesv1.ServiceInstance) bool {
+	conditions := serviceInstance.GetConditions()
+	for _, condition := range conditions {
+		if condition.Type == api.ConditionSharing {
+			return condition.Reason == ShareFail || condition.Reason == UnShareFail
+		}
+	}
+	return false
 }
 
 func instanceShareChangeNeedsToBeHandled(serviceInstance *servicesv1.ServiceInstance) bool {
@@ -314,19 +334,6 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	setSuccessConditions(smClientTypes.CREATE, serviceInstance)
 
 	return ctrl.Result{}, r.updateStatus(ctx, serviceInstance)
-}
-
-func setConditionForSharedFalse(instance *servicesv1.ServiceInstance) {
-	conditions := instance.GetConditions()
-
-	shareCondition := metav1.Condition{
-		Type:               api.ConditionSharing,
-		Status:             metav1.ConditionFalse,
-		Reason:             getConditionReason(smClientTypes.UPDATE, smClientTypes.SUCCEEDED),
-		Message:            "Instance is unshared",
-		ObservedGeneration: instance.GetGeneration(),
-	}
-	updateNewConditionAndRemovePrevious(conditions, instance, shareCondition)
 }
 
 func setConditionForSharedTrue(instance *servicesv1.ServiceInstance) {
