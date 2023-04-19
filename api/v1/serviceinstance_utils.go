@@ -2,7 +2,7 @@ package v1
 
 import (
 	"github.com/SAP/sap-btp-service-operator/api"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 )
 
 func ShouldHandleSharing(ServiceInstance *ServiceInstance) bool {
@@ -21,11 +21,5 @@ func ShouldHandleSharing(ServiceInstance *ServiceInstance) bool {
 }
 
 func IsInstanceShared(serviceInstance *ServiceInstance) bool {
-	conditions := serviceInstance.GetConditions()
-	for _, condition := range conditions {
-		if condition.Type == api.ConditionSharing {
-			return condition.Status == metav1.ConditionTrue
-		}
-	}
-	return false
+	return meta.IsStatusConditionTrue(serviceInstance.GetConditions(), api.ConditionShared)
 }

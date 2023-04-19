@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/SAP/sap-btp-service-operator/api"
+	"github.com/SAP/sap-btp-service-operator/internal/httputil"
 	"io"
 	"k8s.io/utils/pointer"
 	"net/http"
@@ -878,7 +879,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 					Expect(validateInstanceIsReadyAndSucceeded(serviceInstance)).To(Equal(true))
 
-					Expect(serviceInstance.Status.Conditions[2].Type).To(Equal(api.ConditionSharing))
+					Expect(serviceInstance.Status.Conditions[2].Type).To(Equal(api.ConditionShared))
 					Expect(serviceInstance.Status.Conditions[2].Status).To(Equal(metav1.ConditionTrue))
 				})
 			})
@@ -896,7 +897,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 					Expect(validateInstanceIsReadyAndSucceeded(serviceInstance)).To(Equal(true))
 
-					Expect(serviceInstance.Status.Conditions[2].Type).To(Equal(api.ConditionSharing))
+					Expect(serviceInstance.Status.Conditions[2].Type).To(Equal(api.ConditionShared))
 					Expect(serviceInstance.Status.Conditions[2].Status).To(Equal(metav1.ConditionFalse))
 				})
 			})
@@ -923,7 +924,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						}, timeout, interval).Should(BeTrue())
 
 						Expect(validateInstanceIsReadyAndSucceeded(serviceInstance)).To(Equal(true))
-						Expect(serviceInstance.Status.Conditions[2].Type).To(Equal(api.ConditionSharing))
+						Expect(serviceInstance.Status.Conditions[2].Type).To(Equal(api.ConditionShared))
 						Expect(serviceInstance.Status.Conditions[2].Status).To(Equal(metav1.ConditionFalse))
 					})
 				})
@@ -971,7 +972,7 @@ var _ = Describe("ServiceInstance controller", func() {
 							return servicesv1.IsInstanceShared(serviceInstance)
 						}, timeout, interval).Should(BeTrue())
 						Expect(validateInstanceIsReadyAndSucceeded(serviceInstance)).To(Equal(true))
-						Expect(serviceInstance.Status.Conditions[2].Type).To(Equal(api.ConditionSharing))
+						Expect(serviceInstance.Status.Conditions[2].Type).To(Equal(api.ConditionShared))
 						Expect(serviceInstance.Status.Conditions[2].Status).To(Equal(metav1.ConditionTrue))
 					})
 				})
@@ -1164,33 +1165,29 @@ var _ = Describe("ServiceInstance controller", func() {
 
 func instanceSharingReturnRateLimitTwiceAndThenSuccess() {
 	for i := 0; i < 2; i++ {
-		fakeClient.ShareInstanceReturnsOnCall(i, &http.Response{
+		fakeClient.ShareInstanceReturnsOnCall(i, httputil.UnmarshalResponse(&http.Response{
 			StatusCode: 429,
 			Body:       io.NopCloser(strings.NewReader("Rate-Limit")),
 			Header:     make(http.Header),
-		}, nil)
+		}, nil))
 	}
-	fakeClient.ShareInstanceReturnsOnCall(2, &http.Response{
+	fakeClient.ShareInstanceReturnsOnCall(2, httputil.UnmarshalResponse(&http.Response{
 		StatusCode: 200,
 		Body:       io.NopCloser(strings.NewReader("Done")),
 		Header:     make(http.Header),
-	}, nil)
+	}, nil))
 }
 
 func instanceSharingReturnSuccess() {
-	fakeClient.ShareInstanceReturns(&http.Response{
-		StatusCode: 200,
-		Body:       io.NopCloser(strings.NewReader("Done")),
-		Header:     make(http.Header),
-	}, nil)
+	fakeClient.ShareInstanceReturns(nil)
 }
 
 func instanceSharingReturnFailure() {
-	fakeClient.ShareInstanceReturns(&http.Response{
+	fakeClient.ShareInstanceReturns(httputil.UnmarshalResponse(&http.Response{
 		StatusCode: 400,
 		Body:       io.NopCloser(strings.NewReader("Failed")),
 		Header:     make(http.Header),
-	}, fmt.Errorf("failed sharing change"))
+	}, fmt.Errorf("failed sharing change")))
 }
 
 func createParamsSecret(namespace string) {

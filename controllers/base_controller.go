@@ -310,6 +310,13 @@ func isTransientError(ctx context.Context, err error) bool {
 	return false
 }
 
+func (r *BaseReconciler) handleError(ctx context.Context, operationType smClientTypes.OperationCategory, err error, object api.SAPBTPResource) (ctrl.Result, error) {
+	if isTransientError(ctx, err) {
+		return r.markAsNonTransientError(ctx, operationType, err, object)
+	}
+	return r.markAsTransientError(ctx, operationType, err, object)
+}
+
 func (r *BaseReconciler) markAsNonTransientError(ctx context.Context, operationType smClientTypes.OperationCategory, nonTransientErr error, object api.SAPBTPResource) (ctrl.Result, error) {
 	log := GetLogger(ctx)
 	setFailureConditions(operationType, nonTransientErr.Error(), object)
@@ -341,9 +348,6 @@ func (r *BaseReconciler) markAsTransientError(ctx context.Context, operationType
 
 func isInProgress(object api.SAPBTPResource) bool {
 	conditions := object.GetConditions()
-	if IsSharingNeedsToBeDone(conditions) {
-		return true
-	}
 	return meta.IsStatusConditionPresentAndEqual(conditions, api.ConditionSucceeded, metav1.ConditionFalse) &&
 		!meta.IsStatusConditionPresentAndEqual(conditions, api.ConditionFailed, metav1.ConditionTrue)
 }
@@ -366,5 +370,5 @@ func getReadyCondition(object api.SAPBTPResource) metav1.Condition {
 		reason = "Provisioned"
 	}
 
-	return metav1.Condition{Type: api.ConditionReady, Status: status, Reason: reason}
+	return metav1.Condition{Type: api.ConditionReady, Status: status, Reason: reason, ObservedGeneration: object.GetGeneration()}
 }

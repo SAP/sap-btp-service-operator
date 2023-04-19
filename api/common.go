@@ -33,8 +33,8 @@ const (
 	// ConditionPendingTermination resource is waiting for termination pre-conditions
 	ConditionPendingTermination = "PendingTermination"
 
-	// ConditionSharing represents information about the instance share situation
-	ConditionSharing = "Shared"
+	// ConditionShared represents information about the instance share situation
+	ConditionShared = "Shared"
 )
 
 // +kubebuilder:object:generate=false
