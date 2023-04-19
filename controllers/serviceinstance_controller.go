@@ -650,9 +650,10 @@ func (r *ServiceInstanceReconciler) shareInstance(ctx context.Context, serviceIn
 	log := GetLogger(ctx)
 	var body []byte
 	share := true
-	isInstanceCurrentlyShared := servicesv1.IsInstanceShared(serviceInstance)
 
-	if isInstanceCurrentlyShared {
+	siAimToBecomeShared := serviceInstance.Spec.Shared != nil && *serviceInstance.Spec.Shared
+
+	if !siAimToBecomeShared {
 		log.Info("Service instance is shared, handling un-sharing the instance")
 		share = false
 	} else {
