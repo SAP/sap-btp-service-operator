@@ -145,7 +145,15 @@ func needsToUpdate(serviceInstance *servicesv1.ServiceInstance) bool {
 	if serviceInstance.Status.Ready != metav1.ConditionTrue {
 		return false
 	}
-	if serviceInstance.Generation == serviceInstance.Status.ObservedGeneration && instanceShareFailed(serviceInstance) {
+
+	var updateGeneration int64 = -1
+	conditions := serviceInstance.GetConditions()
+	for _, condition := range conditions {
+		if condition.Type == api.ConditionSucceeded {
+			updateGeneration = condition.ObservedGeneration
+		}
+	}
+	if serviceInstance.Generation == updateGeneration && instanceShareFailed(serviceInstance) {
 		return false
 	}
 	return true
