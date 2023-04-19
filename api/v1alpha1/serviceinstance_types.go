@@ -106,6 +106,9 @@ type ServiceInstanceStatus struct {
 
 	// Indicates whether instance is ready for usage
 	Ready metav1.ConditionStatus `json:"ready,omitempty"`
+
+	// signature is the hashed spec without the shared property
+	Signature uint64 `json:"signature,omitempty"`
 }
 
 // +kubebuilder:object:root=true

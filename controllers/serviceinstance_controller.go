@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"k8s.io/utils/pointer"
 	"net/http"
 	"strings"
 
@@ -29,6 +30,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 
 	servicesv1 "github.com/SAP/sap-btp-service-operator/api/v1"
+
+	hash "github.com/mitchellh/hashstructure"
 
 	"github.com/SAP/sap-btp-service-operator/api"
 
@@ -141,32 +144,22 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	return ctrl.Result{}, nil
 }
 
+func getSpecHash(serviceInstance *servicesv1.ServiceInstance) uint64 {
+	spec := serviceInstance.Spec
+	spec.Shared = pointer.BoolPtr(false)
+	hash, _ := hash.Hash(spec, nil)
+	return hash
+}
+
 func needsToUpdate(serviceInstance *servicesv1.ServiceInstance) bool {
 	if serviceInstance.Status.Ready != metav1.ConditionTrue {
 		return false
 	}
 
-	var updateGeneration int64 = -1
-	conditions := serviceInstance.GetConditions()
-	for _, condition := range conditions {
-		if condition.Type == api.ConditionSucceeded {
-			updateGeneration = condition.ObservedGeneration
-		}
-	}
-	if serviceInstance.Generation == updateGeneration && instanceShareFailed(serviceInstance) {
+	if getSpecHash(serviceInstance) == serviceInstance.Status.Signature {
 		return false
 	}
 	return true
-}
-
-func instanceShareFailed(serviceInstance *servicesv1.ServiceInstance) bool {
-	conditions := serviceInstance.GetConditions()
-	for _, condition := range conditions {
-		if condition.Type == api.ConditionSharing {
-			return condition.Reason == ShareFail || condition.Reason == UnShareFail
-		}
-	}
-	return false
 }
 
 func instanceShareChangeNeedsToBeHandled(serviceInstance *servicesv1.ServiceInstance) bool {
@@ -255,6 +248,7 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client
 			return ctrl.Result{}, fmt.Errorf(errMsg)
 		}
 	case smClientTypes.SUCCEEDED:
+		updateSignatureHash(serviceInstance)
 		setSuccessConditions(status.Type, serviceInstance)
 		if serviceInstance.Status.OperationType == smClientTypes.DELETE {
 			// delete was successful - remove our finalizer from the list and update it.
@@ -263,6 +257,7 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client
 			}
 		} else if serviceInstance.Status.OperationType == smClientTypes.CREATE {
 			serviceInstance.Status.Ready = metav1.ConditionTrue
+			updateSignatureHash(serviceInstance)
 			setSuccessConditions(status.Type, serviceInstance)
 		}
 	}
@@ -342,7 +337,7 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 
 	serviceInstance.Status.Ready = metav1.ConditionTrue
 	setSuccessConditions(smClientTypes.CREATE, serviceInstance)
-
+	updateSignatureHash(serviceInstance)
 	return ctrl.Result{}, r.updateStatus(ctx, serviceInstance)
 }
 
@@ -468,8 +463,12 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 	}
 	log.Info("Instance updated successfully")
 	setSuccessConditions(smClientTypes.UPDATE, serviceInstance)
-
+	updateSignatureHash(serviceInstance)
 	return ctrl.Result{}, r.updateStatus(ctx, serviceInstance)
+}
+
+func updateSignatureHash(serviceInstance *servicesv1.ServiceInstance) {
+	serviceInstance.Status.Signature = getSpecHash(serviceInstance)
 }
 
 func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient sm.Client, serviceInstance *servicesv1.ServiceInstance) (ctrl.Result, error) {
@@ -577,6 +576,7 @@ func (r *ServiceInstanceReconciler) resyncInstanceStatus(ctx context.Context, sm
 		setInProgressConditions(smInstance.LastOperation.Type, smInstance.LastOperation.Description, k8sInstance)
 	case smClientTypes.SUCCEEDED:
 		setSuccessConditions(operationType, k8sInstance)
+		updateSignatureHash(k8sInstance)
 	case smClientTypes.FAILED:
 		setFailureConditions(operationType, description, k8sInstance)
 	}
