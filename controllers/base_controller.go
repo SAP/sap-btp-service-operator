@@ -2,8 +2,9 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 	"net/http"
+
+	"fmt"
 
 	"github.com/SAP/sap-btp-service-operator/api"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
