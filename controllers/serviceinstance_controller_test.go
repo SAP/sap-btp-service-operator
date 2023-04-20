@@ -992,6 +992,7 @@ var _ = Describe("ServiceInstance controller", func() {
 							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
 							return len(serviceInstance.Status.Conditions) > 2 && strings.Contains(serviceInstance.Status.Conditions[2].Reason, ShareFail)
 						}, timeout, interval).Should(BeTrue())
+
 						Expect(validateInstanceIsReadyAndSucceeded(serviceInstance)).To(Equal(true))
 					})
 				})
