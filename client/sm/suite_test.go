@@ -2,12 +2,14 @@ package sm
 
 import (
 	"context"
-	"fmt"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
+	"fmt"
 )
 
 type FakeAuthClient struct {
