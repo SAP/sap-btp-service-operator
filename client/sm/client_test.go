@@ -3,10 +3,11 @@ package sm
 import (
 	"context"
 	"encoding/json"
+	"net/http"
+
 	"github.com/SAP/sap-btp-service-operator/client/sm/types"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"net/http"
 )
 
 var _ = Describe("Client test", func() {

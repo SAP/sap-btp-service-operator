@@ -18,12 +18,13 @@ package secrets_test
 
 import (
 	"context"
+	"testing"
+	"time"
+
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"testing"
-	"time"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 

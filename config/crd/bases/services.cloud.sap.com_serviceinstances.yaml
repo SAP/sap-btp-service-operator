@@ -126,7 +126,7 @@ spec:
                 minLength: 1
                 type: string
               shared:
-                description: Indicates if the instance aim to be shared, default is false
+                description: Indicates the desired shared state
                 type: boolean
               userInfo:
                 description: UserInfo contains information about the user that last
@@ -170,8 +170,8 @@ spec:
                   description: "Condition contains details for one aspect of the current
                     state of this API Resource. --- This struct is intended for direct
                     use as an array at the field path .status.conditions.  For example,
-                    type FooStatus struct{ // Represents the observations of a foo's
-                    current state. // Known .status.conditions.type are: \"Available\",
+                    \n type FooStatus struct{ // Represents the observations of a
+                    foo's current state. // Known .status.conditions.type are: \"Available\",
                     \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge
                     // +listType=map // +listMapKey=type Conditions []metav1.Condition
                     `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
@@ -252,7 +252,7 @@ spec:
                 description: Indicates whether instance is ready for usage
                 type: string
               signature:
-                description: hashed spec
+                description: signature is the hashed spec without the shared property
                 type: string
               tags:
                 description: Tags describing the ServiceInstance as provided in service
@@ -271,8 +271,8 @@ spec:
       status: {}
   - additionalPrinterColumns:
     - jsonPath: .spec.shared
-      name: Shared
-      type: boolean
+      name: Offering
+      type: string
     - jsonPath: .spec.serviceOfferingName
       name: Offering
       type: string
@@ -373,7 +373,7 @@ spec:
                 minLength: 1
                 type: string
               shared:
-                description: Indicates if the instance aim to be shared, default is false
+                description: Indicates the desired shared state
                 type: boolean
               userInfo:
                 description: UserInfo contains information about the user that last
@@ -417,8 +417,8 @@ spec:
                   description: "Condition contains details for one aspect of the current
                     state of this API Resource. --- This struct is intended for direct
                     use as an array at the field path .status.conditions.  For example,
-                    type FooStatus struct{ // Represents the observations of a foo's
-                    current state. // Known .status.conditions.type are: \"Available\",
+                    \n type FooStatus struct{ // Represents the observations of a
+                    foo's current state. // Known .status.conditions.type are: \"Available\",
                     \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge
                     // +listType=map // +listMapKey=type Conditions []metav1.Condition
                     `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
@@ -499,7 +499,7 @@ spec:
                 description: Indicates whether instance is ready for usage
                 type: string
               signature:
-                description: hashed spec
+                description: signature is the hashed spec without the shared property
                 type: string
               tags:
                 description: Tags describing the ServiceInstance as provided in service

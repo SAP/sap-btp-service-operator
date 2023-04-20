@@ -19,7 +19,11 @@ package controllers
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
+	"net"
+	"path/filepath"
+	"testing"
+	"time"
+
 	"github.com/SAP/sap-btp-service-operator/api"
 	"github.com/SAP/sap-btp-service-operator/api/v1/webhooks"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
@@ -27,13 +31,11 @@ import (
 	"github.com/SAP/sap-btp-service-operator/internal/config"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"net"
-	"path/filepath"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
-	"testing"
-	"time"
+
+	"fmt"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 
