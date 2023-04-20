@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/pointer"
+	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 
 	servicesv1 "github.com/SAP/sap-btp-service-operator/api/v1"
@@ -134,7 +135,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	// Handle instance share change if needed
 	if instanceShareChangeNeedsToBeHandled(serviceInstance) {
-		return r.handleInstanceSharingChange(ctx, serviceInstance, smClient)
+		return r.handleInstanceSharing(ctx, serviceInstance, smClient)
 	}
 
 	return ctrl.Result{}, nil
@@ -186,7 +187,7 @@ func isFinalState(serviceInstance *servicesv1.ServiceInstance) bool {
 	return true
 }
 
-func (r *ServiceInstanceReconciler) handleInstanceSharingChange(ctx context.Context, serviceInstance *servicesv1.ServiceInstance, smClient sm.Client) (ctrl.Result, error) {
+func (r *ServiceInstanceReconciler) handleInstanceSharing(ctx context.Context, serviceInstance *servicesv1.ServiceInstance, smClient sm.Client) (ctrl.Result, error) {
 	log := GetLogger(ctx)
 	log.Info("Handling change in instance sharing")
 
@@ -197,12 +198,7 @@ func (r *ServiceInstanceReconciler) handleInstanceSharingChange(ctx context.Cont
 		err := smClient.ShareInstance(serviceInstance.Status.InstanceID, buildUserInfo(ctx, serviceInstance.Spec.UserInfo))
 		if err != nil {
 			log.Error(err, "failed to share instance")
-			setSharedCondition(serviceInstance, metav1.ConditionFalse, ShareFail, err.Error())
-			if err := r.updateStatus(ctx, serviceInstance); err != nil {
-				log.Info("got error while trying to update status")
-				return ctrl.Result{}, err
-			}
-			return r.handleError(ctx, smClientTypes.SHARE, err, serviceInstance)
+			return r.HandleInstanceSharingError(ctx, err, serviceInstance, metav1.ConditionFalse, ShareFailed)
 		}
 		log.Info("instance shared successfully")
 		setSharedCondition(serviceInstance, metav1.ConditionTrue, ShareSucceeded, "instance shared successfully")
@@ -211,12 +207,7 @@ func (r *ServiceInstanceReconciler) handleInstanceSharingChange(ctx context.Cont
 		err := smClient.UnShareInstance(serviceInstance.Status.InstanceID, buildUserInfo(ctx, serviceInstance.Spec.UserInfo))
 		if err != nil {
 			log.Error(err, "failed to un-share instance")
-			setSharedCondition(serviceInstance, metav1.ConditionTrue, UnShareFail, err.Error())
-			if err := r.updateStatus(ctx, serviceInstance); err != nil {
-				log.Info("got error while trying to update status")
-				return ctrl.Result{}, err
-			}
-			return r.handleError(ctx, smClientTypes.UNSHARE, err, serviceInstance)
+			return r.HandleInstanceSharingError(ctx, err, serviceInstance, metav1.ConditionTrue, UnShareFailed)
 		}
 		log.Info("instance un-shared successfully")
 		setSharedCondition(serviceInstance, metav1.ConditionFalse, UnShareSucceeded, "instance un-shared successfully")
@@ -631,4 +622,27 @@ func (r *ServiceInstanceReconciler) getInstanceForRecovery(ctx context.Context, 
 	}
 	log.Info("instance not found in SM")
 	return nil, nil
+}
+
+func (r *ServiceInstanceReconciler) HandleInstanceSharingError(ctx context.Context, err error, object api.SAPBTPResource, status metav1.ConditionStatus, reason string) (ctrl.Result, error) {
+	log := GetLogger(ctx)
+
+	if reason == ShareFailed {
+		if smError, ok := err.(*sm.ServiceManagerError); ok {
+			log.Info(fmt.Sprintf("SM returned error status code %d", smError.StatusCode))
+			if smError.StatusCode == http.StatusBadRequest {
+				setSharedCondition(object, status, ShareNotSupported, err.Error())
+				return ctrl.Result{}, r.updateStatus(ctx, object)
+			}
+		} else {
+			log.Error(err, "failed to parse error, will be treated as transient error")
+		}
+	}
+
+	setSharedCondition(object, status, reason, err.Error())
+	if err := r.updateStatus(ctx, object); err != nil {
+		return ctrl.Result{}, err
+	}
+	return ctrl.Result{}, err
+
 }

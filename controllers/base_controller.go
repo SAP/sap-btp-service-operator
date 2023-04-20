@@ -37,14 +37,15 @@ const (
 	DeleteInProgress = "DeleteInProgress"
 	InProgress       = "InProgress"
 
-	CreateFailed     = "CreateFailed"
-	UpdateFailed     = "UpdateFailed"
-	DeleteFailed     = "DeleteFailed"
-	Failed           = "Failed"
-	ShareFail        = "ShareFailed"
-	ShareSucceeded   = "ShareSucceeded"
-	UnShareFail      = "UnShareFailed"
-	UnShareSucceeded = "UnShareSucceeded"
+	CreateFailed      = "CreateFailed"
+	UpdateFailed      = "UpdateFailed"
+	DeleteFailed      = "DeleteFailed"
+	Failed            = "Failed"
+	ShareFailed       = "ShareFailed"
+	ShareSucceeded    = "ShareSucceeded"
+	ShareNotSupported = "ShareNotSupported"
+	UnShareFailed     = "UnShareFailed"
+	UnShareSucceeded  = "UnShareSucceeded"
 
 	Blocked = "Blocked"
 	Unknown = "Unknown"
@@ -308,13 +309,6 @@ func isTransientError(ctx context.Context, err error) bool {
 			smError.StatusCode == http.StatusGatewayTimeout || smError.StatusCode == http.StatusNotFound || smError.StatusCode == http.StatusBadGateway
 	}
 	return false
-}
-
-func (r *BaseReconciler) handleError(ctx context.Context, operationType smClientTypes.OperationCategory, err error, object api.SAPBTPResource) (ctrl.Result, error) {
-	if isTransientError(ctx, err) {
-		return r.markAsNonTransientError(ctx, operationType, err, object)
-	}
-	return r.markAsTransientError(ctx, operationType, err, object)
 }
 
 func (r *BaseReconciler) markAsNonTransientError(ctx context.Context, operationType smClientTypes.OperationCategory, nonTransientErr error, object api.SAPBTPResource) (ctrl.Result, error) {

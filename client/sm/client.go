@@ -56,7 +56,6 @@ type Client interface {
 	RenameBinding(id, newName, newK8SName string) (*types.ServiceBinding, error)
 	ShareInstance(id string, user string) error
 	UnShareInstance(id string, user string) error
-	InstanceSharingApi(shouldShare bool, id string, user string) error
 
 	ListOfferings(*Parameters) (*types.ServiceOfferings, error)
 	ListPlans(*Parameters) (*types.ServicePlans, error)
@@ -368,14 +367,14 @@ func (client *serviceManagerClient) update(resource interface{}, url string, id 
 }
 
 func (client *serviceManagerClient) ShareInstance(id string, user string) error {
-	return client.InstanceSharingApi(true, id, user)
+	return client.executeShareInstanceRequest(true, id, user)
 }
 
 func (client *serviceManagerClient) UnShareInstance(id string, user string) error {
-	return client.InstanceSharingApi(false, id, user)
+	return client.executeShareInstanceRequest(false, id, user)
 }
 
-func (client *serviceManagerClient) InstanceSharingApi(shouldShare bool, id string, user string) error {
+func (client *serviceManagerClient) executeShareInstanceRequest(shouldShare bool, id string, user string) error {
 	bodyRequest := map[string]interface{}{
 		"shared": shouldShare,
 	}

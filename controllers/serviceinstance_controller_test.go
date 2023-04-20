@@ -947,7 +947,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 						Eventually(func() bool {
 							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-							return strings.Contains(serviceInstance.Status.Conditions[2].Reason, UnShareFail)
+							return strings.Contains(serviceInstance.Status.Conditions[2].Reason, UnShareFailed)
 						}, timeout, interval).Should(BeTrue())
 					})
 				})
@@ -991,7 +991,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 						Eventually(func() bool {
 							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-							return len(serviceInstance.Status.Conditions) > 2 && strings.Contains(serviceInstance.Status.Conditions[2].Reason, ShareFail)
+							return len(serviceInstance.Status.Conditions) > 2 && strings.Contains(serviceInstance.Status.Conditions[2].Reason, ShareFailed)
 						}, timeout, interval).Should(BeTrue())
 
 						Expect(validateInstanceIsReadyAndSucceeded(serviceInstance)).To(Equal(true))
