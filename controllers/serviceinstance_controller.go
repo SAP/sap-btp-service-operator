@@ -510,6 +510,7 @@ func (r *ServiceInstanceReconciler) getInstanceForRecovery(ctx context.Context, 
 func (r *ServiceInstanceReconciler) HandleInstanceSharingError(ctx context.Context, err error, object api.SAPBTPResource, status metav1.ConditionStatus, reason string) error {
 	log := GetLogger(ctx)
 
+	errMsg := err.Error()
 	if reason == ShareFailed {
 		if smError, ok := err.(*sm.ServiceManagerError); ok {
 			log.Info(fmt.Sprintf("SM returned error status code %d", smError.StatusCode))
@@ -517,14 +518,15 @@ func (r *ServiceInstanceReconciler) HandleInstanceSharingError(ctx context.Conte
 				setSharedCondition(object, status, ShareNotSupported, err.Error())
 				return r.updateStatus(ctx, object)
 			}
-		} else {
-			log.Error(err, "failed to parse error, will be treated as transient error")
 		}
+
+		errMsg = "in progress"
+		reason = InProgress
 	}
 
-	setSharedCondition(object, status, reason, err.Error())
-	if err := r.updateStatus(ctx, object); err != nil {
-		return err
+	setSharedCondition(object, status, reason, errMsg)
+	if updateErr := r.updateStatus(ctx, object); updateErr != nil {
+		return updateErr
 	}
 	return err
 
@@ -571,7 +573,7 @@ func sharingUpdateRequired(serviceInstance *servicesv1.ServiceInstance) bool {
 		return false
 	}
 
-	if sharedCondition.Reason == ShareFailed || sharedCondition.Reason == UnShareFailed {
+	if sharedCondition.Reason == InProgress || sharedCondition.Reason == ShareFailed || sharedCondition.Reason == UnShareFailed {
 		return true
 	}
 
