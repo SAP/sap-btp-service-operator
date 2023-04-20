@@ -14,7 +14,6 @@ import (
 
 	"fmt"
 
-	"github.com/SAP/sap-btp-service-operator/api/v1"
 	servicesv1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
