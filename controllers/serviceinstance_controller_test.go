@@ -1180,6 +1180,36 @@ var _ = Describe("ServiceInstance controller", func() {
 				Expect(reflect.TypeOf(serviceInstance.Status.Signature).Kind()).To(Equal(reflect.String))
 			})
 		})
+
+		When("sharing an service instance", func() {
+			It("signature should be the same before and after", func() {
+				serviceInstance = createInstance(ctx, nonSharedInstanceSpec)
+				Eventually(func() bool {
+					_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+					return len(serviceInstance.Status.Conditions) == 2 && serviceInstance.Status.Conditions[1].Type == api.ConditionReady
+				}, timeout, interval).Should(BeTrue())
+
+				before := serviceInstance.Status.Signature
+
+				fakeClient.UpdateInstanceReturns(nil, "", nil)
+				serviceInstance.Spec.Shared = pointer.BoolPtr(true)
+				instanceUnSharingReturnSuccess()
+				_ = k8sClient.Update(ctx, serviceInstance)
+
+				Eventually(func() bool {
+					_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+					return servicesv1.IsInstanceShared(serviceInstance)
+				}, timeout, interval).Should(BeTrue())
+				Expect(validateInstanceIsReadyAndSucceeded(serviceInstance)).To(Equal(true))
+				Expect(serviceInstance.Status.Conditions[2].Type).To(Equal(api.ConditionShared))
+				Expect(serviceInstance.Status.Conditions[2].Status).To(Equal(metav1.ConditionTrue))
+
+				after := serviceInstance.Status.Signature
+
+				Expect(before).To(Equal(after))
+
+			})
+		})
 	})
 })
 
