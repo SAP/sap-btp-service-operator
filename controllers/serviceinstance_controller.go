@@ -541,12 +541,7 @@ func isFinalState(serviceInstance *servicesv1.ServiceInstance) bool {
 		return false
 	}
 
-	sharedCondition := meta.FindStatusCondition(serviceInstance.GetConditions(), api.ConditionShared)
-	if sharedCondition != nil {
-		return sharedCondition.Reason != ShareNotSupported
-	}
-
-	return true
+	return !sharingUpdateRequired(serviceInstance)
 }
 
 func updateRequired(serviceInstance *servicesv1.ServiceInstance) bool {

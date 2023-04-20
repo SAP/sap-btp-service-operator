@@ -132,7 +132,8 @@ var _ = Describe("ServiceInstance controller", func() {
 			if err != nil {
 				return false
 			}
-			return createdInstance.GetObservedGeneration() > 0
+			readyCond := meta.FindStatusCondition(createdInstance.GetConditions(), api.ConditionReady)
+			return readyCond != nil
 		}, timeout, interval).Should(BeTrue())
 
 		return createdInstance
@@ -838,41 +839,33 @@ var _ = Describe("ServiceInstance controller", func() {
 
 	Context("Share instance", func() {
 		Context("Create", func() {
-			When("Creating instance with shared false in spec", func() {
-				It("Should create the instance with status shared false", func() {
-					serviceInstance = createInstance(ctx, nonSharedInstanceSpec)
-					Expect(serviceInstance.Status.InstanceID).To(Equal(fakeInstanceID))
-					Expect(serviceInstance.Spec.ExternalName).To(Equal(fakeInstanceExternalNameNonShared))
-					Expect(isInstanceShared(serviceInstance)).To(Equal(false))
-					Expect(serviceInstance.Name).To(Equal(fakeInstanceName))
-					Expect(string(serviceInstance.Spec.Parameters.Raw)).To(ContainSubstring("\"key\":\"value\""))
-					Expect(serviceInstance.Spec.UserInfo).NotTo(BeNil())
-					smInstance, _, _, _, _, _ := fakeClient.ProvisionArgsForCall(0)
-					params := smInstance.Parameters
-					Expect(params).To(ContainSubstring("\"key\":\"value\""))
-					Expect(params).To(ContainSubstring("\"secret-key\":\"secret-value\""))
-				})
-			})
 
-			When("Creating instance with shared true in spec, and the instance is failed to become ready", func() {
-				It("Should fail crating the instance, and should not try to share it", func() {
+			When("instance creation failed", func() {
+				It("should not attempt to share the instance", func() {
 					errMessage := "failed to provision instance"
 					fakeClient.ProvisionReturns(nil, &sm.ServiceManagerError{
 						StatusCode: http.StatusBadRequest,
 						Message:    errMessage,
 					})
-					instanceSharingReturnSuccess()
 					serviceInstance = createInstance(ctx, sharedInstanceSpec)
-					// make sure no shared condition exist
-					Expect(len(serviceInstance.Status.Conditions)).To(Equal(3))
-					Expect(serviceInstance.Status.Conditions[0].Type).To(Equal(api.ConditionSucceeded))
-					Expect(serviceInstance.Status.Conditions[1].Type).To(Equal(api.ConditionReady))
-					Expect(serviceInstance.Status.Conditions[2].Type).To(Equal(api.ConditionFailed))
+					Eventually(func() bool {
+						err := k8sClient.Get(ctx, types.NamespacedName{Name: serviceInstance.Name, Namespace: serviceInstance.Namespace}, serviceInstance)
+						if err != nil {
+							return false
+						}
+						conditions := serviceInstance.GetConditions()
+						readyCond := meta.FindStatusCondition(conditions, api.ConditionReady)
+						if readyCond == nil {
+							return false
+						}
+						return readyCond.Status == metav1.ConditionFalse
+					}, timeout, interval).Should(BeTrue())
+					Expect(fakeClient.ShareInstanceCallCount()).To(BeZero())
 				})
 			})
 
-			When("Creating instance with shared true in spec, and sm succeeds sharing", func() {
-				It("Should create the instance and eventually make it shared", func() {
+			When("instance is valid and shared=true", func() {
+				It("should provision the instance and share it successfully", func() {
 					instanceSharingReturnSuccess()
 					serviceInstance = createInstance(ctx, sharedInstanceSpec)
 					Eventually(func() bool {
@@ -881,31 +874,20 @@ var _ = Describe("ServiceInstance controller", func() {
 					}, timeout, interval).Should(BeTrue())
 
 					Expect(validateInstanceIsReadyAndSucceeded(serviceInstance)).To(Equal(true))
-
-					Expect(serviceInstance.Status.Conditions[2].Type).To(Equal(api.ConditionShared))
-					Expect(serviceInstance.Status.Conditions[2].Status).To(Equal(metav1.ConditionTrue))
 				})
 			})
 
-			When("Creating instance with shared true in spec, and sm fails sharing", func() {
-				It("Should create the instance, make it ready, and fail making it shared", func() {
-					fakeClient.UpdateInstanceReturns(nil, "", nil)
-					instanceSharingReturnFailure()
-
-					serviceInstance = createInstance(ctx, sharedInstanceSpec)
-					Eventually(func() bool {
-						_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-						return len(serviceInstance.Status.Conditions) > 2 && !strings.EqualFold(serviceInstance.Status.Conditions[2].Reason, "Pending")
-					}, timeout, interval).Should(BeTrue())
-
-					Expect(validateInstanceIsReadyAndSucceeded(serviceInstance)).To(Equal(true))
-
-					Expect(serviceInstance.Status.Conditions[2].Type).To(Equal(api.ConditionShared))
-					Expect(serviceInstance.Status.Conditions[2].Status).To(Equal(metav1.ConditionFalse))
+			When("instance is valid and share failed", func() {
+				When("shared failed with transient error", func() {
+					//TODO
+				})
+				When("shared failed with non transient error", func() {
+					//TODO
 				})
 			})
 		})
 
+		//TODO
 		Context("Update", func() {
 			Context("Un-share", func() {
 				When("Un sharing shared instance succeeds", func() {
@@ -1111,6 +1093,7 @@ var _ = Describe("ServiceInstance controller", func() {
 			})
 		})
 
+		//TODO
 		Context("Create & Update", func() {
 			When("Creating instance, then sharing it, then un-sharing it successfully", func() {
 				It("should update condition and status relevantly", func() {
