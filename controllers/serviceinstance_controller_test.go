@@ -1177,7 +1177,7 @@ var _ = Describe("ServiceInstance controller", func() {
 			It("should update the signature field in status", func() {
 				serviceInstance = createInstance(ctx, instanceSpec)
 				Expect(serviceInstance.Status.Signature).To(Not(BeNil()))
-				Expect(reflect.TypeOf(serviceInstance.Status.Signature).Kind()).To(Equal(reflect.Uint64))
+				Expect(reflect.TypeOf(serviceInstance.Status.Signature).Kind()).To(Equal(reflect.String))
 			})
 		})
 	})

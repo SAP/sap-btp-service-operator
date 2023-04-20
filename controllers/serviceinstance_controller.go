@@ -18,6 +18,8 @@ package controllers
 
 import (
 	"context"
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -26,8 +28,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 
 	servicesv1 "github.com/SAP/sap-btp-service-operator/api/v1"
-
-	hash "github.com/mitchellh/hashstructure"
 
 	"github.com/SAP/sap-btp-service-operator/api"
 
@@ -140,11 +140,17 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	return ctrl.Result{}, nil
 }
 
-func getSpecHash(serviceInstance *servicesv1.ServiceInstance) uint64 {
+func getSpecHash(serviceInstance *servicesv1.ServiceInstance) string {
 	spec := serviceInstance.Spec
 	spec.Shared = pointer.BoolPtr(false)
-	hash, _ := hash.Hash(spec, nil)
-	return hash
+	specBytes, _ := json.Marshal(spec)
+	s := string(specBytes)
+	return generateEncodedMD5Hash(s)
+}
+
+func generateEncodedMD5Hash(str string) string {
+	hash := md5.Sum([]byte(str))
+	return hex.EncodeToString(hash[:])
 }
 
 func needsToUpdate(serviceInstance *servicesv1.ServiceInstance) bool {
