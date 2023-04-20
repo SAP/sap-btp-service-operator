@@ -274,6 +274,7 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client
 			}
 		} else if serviceInstance.Status.OperationType == smClientTypes.CREATE {
 			serviceInstance.Status.Ready = metav1.ConditionTrue
+			updateSignatureHash(serviceInstance)
 			setSuccessConditions(status.Type, serviceInstance)
 		}
 	}
