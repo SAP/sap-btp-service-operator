@@ -17,9 +17,10 @@ limitations under the License.
 package v1
 
 import (
-	"fmt"
 	"reflect"
 	"time"
+
+	"fmt"
 
 	"github.com/SAP/sap-btp-service-operator/api"
 

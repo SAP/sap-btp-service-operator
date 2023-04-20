@@ -2,18 +2,21 @@ package controllers
 
 import (
 	"context"
-	"fmt"
-	"github.com/SAP/sap-btp-service-operator/api"
-	"github.com/SAP/sap-btp-service-operator/internal/httputil"
 	"io"
-	"k8s.io/utils/pointer"
 	"net/http"
 	"reflect"
 	"strings"
 	"time"
 
+	"github.com/SAP/sap-btp-service-operator/api"
+	"github.com/SAP/sap-btp-service-operator/internal/httputil"
+	"k8s.io/utils/pointer"
+
+	"fmt"
+
 	"github.com/SAP/sap-btp-service-operator/api/v1"
 	servicesv1 "github.com/SAP/sap-btp-service-operator/api/v1"
+	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
 	"github.com/SAP/sap-btp-service-operator/client/sm/smfakes"
 	smClientTypes "github.com/SAP/sap-btp-service-operator/client/sm/types"
