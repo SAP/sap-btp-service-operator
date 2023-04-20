@@ -253,7 +253,7 @@ spec:
                 type: string
               signature:
                 description: hashed spec
-                format: int64
+                format: uint64
                 type: integer
               tags:
                 description: Tags describing the ServiceInstance as provided in service
@@ -501,7 +501,7 @@ spec:
                 type: string
               signature:
                 description: hashed spec
-                format: int64
+                format: uint64
                 type: integer
               tags:
                 description: Tags describing the ServiceInstance as provided in service

@@ -8,6 +8,7 @@ import (
 	"io"
 	"k8s.io/utils/pointer"
 	"net/http"
+	"reflect"
 	"strings"
 	"time"
 
@@ -1167,6 +1168,16 @@ var _ = Describe("ServiceInstance controller", func() {
 					Expect(validateInstanceIsReadyAndSucceeded(serviceInstance)).To(Equal(true))
 					Expect(servicesv1.IsInstanceShared(serviceInstance)).To(Equal(true))
 				})
+			})
+		})
+	})
+
+	Context("Signature", func() {
+		When("creating a service instance", func() {
+			It("should update the signature field in status", func() {
+				serviceInstance = createInstance(ctx, instanceSpec)
+				Expect(serviceInstance.Status.Signature).To(Not(BeNil()))
+				Expect(reflect.TypeOf(serviceInstance.Status.Signature).Kind()).To(Equal(reflect.Uint64))
 			})
 		})
 	})
