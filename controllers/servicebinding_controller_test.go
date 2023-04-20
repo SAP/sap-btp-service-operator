@@ -12,7 +12,6 @@ import (
 	"github.com/SAP/sap-btp-service-operator/client/sm"
 	"github.com/SAP/sap-btp-service-operator/client/sm/smfakes"
 	smClientTypes "github.com/SAP/sap-btp-service-operator/client/sm/types"
-	smclientTypes "github.com/SAP/sap-btp-service-operator/client/sm/types"
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -171,9 +170,9 @@ var _ = Describe("ServiceBinding controller", func() {
 		bindingName = "test-binding-" + guid
 		fakeClient = &smfakes.FakeClient{}
 		fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: "12345678", Tags: []byte("[\"test\"]")}, nil)
-		fakeClient.BindReturns(&smclientTypes.ServiceBinding{ID: fakeBindingID, Credentials: json.RawMessage(`{"secret_key": "secret_value", "escaped": "{\"escaped_key\":\"escaped_val\"}"}`)}, "", nil)
+		fakeClient.BindReturns(&smClientTypes.ServiceBinding{ID: fakeBindingID, Credentials: json.RawMessage(`{"secret_key": "secret_value", "escaped": "{\"escaped_key\":\"escaped_val\"}"}`)}, "", nil)
 
-		smInstance := &smclientTypes.ServiceInstance{ID: fakeInstanceID, Ready: true, LastOperation: &smClientTypes.Operation{State: smClientTypes.SUCCEEDED, Type: smClientTypes.UPDATE}}
+		smInstance := &smClientTypes.ServiceInstance{ID: fakeInstanceID, Ready: true, LastOperation: &smClientTypes.Operation{State: smClientTypes.SUCCEEDED, Type: smClientTypes.UPDATE}}
 		fakeClient.GetInstanceByIDReturns(smInstance, nil)
 		secret := &corev1.Secret{}
 		err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: bindingTestNamespace, Name: "param-secret"}, secret)
@@ -461,8 +460,8 @@ var _ = Describe("ServiceBinding controller", func() {
 
 				When("secret deleted by user", func() {
 					fakeSmResponse := func(bindingID string) {
-						fakeClient.ListBindingsReturns(&smclientTypes.ServiceBindings{
-							ServiceBindings: []smclientTypes.ServiceBinding{
+						fakeClient.ListBindingsReturns(&smClientTypes.ServiceBindings{
+							ServiceBindings: []smClientTypes.ServiceBinding{
 								{
 									ID:          bindingID,
 									Credentials: json.RawMessage("{\"secret_key\": \"secret_value\"}"),
@@ -515,7 +514,7 @@ var _ = Describe("ServiceBinding controller", func() {
 								StatusCode: http.StatusTooManyRequests,
 								Message:    errorMessage,
 							})
-							fakeClient.BindReturnsOnCall(1, &smclientTypes.ServiceBinding{ID: fakeBindingID, Credentials: json.RawMessage("{\"secret_key\": \"secret_value\"}")}, "", nil)
+							fakeClient.BindReturnsOnCall(1, &smClientTypes.ServiceBinding{ID: fakeBindingID, Credentials: json.RawMessage("{\"secret_key\": \"secret_value\"}")}, "", nil)
 						})
 
 						It("should eventually succeed", func() {
@@ -543,7 +542,7 @@ var _ = Describe("ServiceBinding controller", func() {
 
 				When("SM returned invalid credentials json", func() {
 					BeforeEach(func() {
-						fakeClient.BindReturns(&smclientTypes.ServiceBinding{ID: fakeBindingID, Credentials: json.RawMessage("\"invalidjson\": \"secret_value\"")}, "", nil)
+						fakeClient.BindReturns(&smClientTypes.ServiceBinding{ID: fakeBindingID, Credentials: json.RawMessage("\"invalidjson\": \"secret_value\"")}, "", nil)
 
 					})
 
@@ -573,8 +572,8 @@ var _ = Describe("ServiceBinding controller", func() {
 
 				When("bind polling returns success", func() {
 					JustBeforeEach(func() {
-						fakeClient.StatusReturns(&smclientTypes.Operation{ResourceID: fakeBindingID, State: smClientTypes.SUCCEEDED}, nil)
-						fakeClient.GetBindingByIDReturns(&smclientTypes.ServiceBinding{ID: fakeBindingID, Credentials: json.RawMessage("{\"secret_key\": \"secret_value\"}")}, nil)
+						fakeClient.StatusReturns(&smClientTypes.Operation{ResourceID: fakeBindingID, State: smClientTypes.SUCCEEDED}, nil)
+						fakeClient.GetBindingByIDReturns(&smClientTypes.ServiceBinding{ID: fakeBindingID, Credentials: json.RawMessage("{\"secret_key\": \"secret_value\"}")}, nil)
 					})
 
 					It("Should create binding and store the binding credentials in a secret", func() {
@@ -587,7 +586,7 @@ var _ = Describe("ServiceBinding controller", func() {
 					errorMessage := "no binding for you"
 
 					JustBeforeEach(func() {
-						fakeClient.StatusReturns(&smclientTypes.Operation{
+						fakeClient.StatusReturns(&smClientTypes.Operation{
 							Type:        smClientTypes.CREATE,
 							State:       smClientTypes.FAILED,
 							Description: errorMessage,
@@ -604,8 +603,8 @@ var _ = Describe("ServiceBinding controller", func() {
 					JustBeforeEach(func() {
 						fakeClient.BindReturns(nil, "/v1/service_bindings/id/operations/1234", nil)
 						fakeClient.StatusReturnsOnCall(0, nil, fmt.Errorf("no polling for you"))
-						fakeClient.StatusReturnsOnCall(1, &smclientTypes.Operation{ResourceID: fakeBindingID, State: smClientTypes.SUCCEEDED, Type: smClientTypes.CREATE}, nil)
-						fakeClient.GetBindingByIDReturns(&smclientTypes.ServiceBinding{ID: fakeBindingID, LastOperation: &smClientTypes.Operation{State: smClientTypes.SUCCEEDED, Type: smClientTypes.CREATE}}, nil)
+						fakeClient.StatusReturnsOnCall(1, &smClientTypes.Operation{ResourceID: fakeBindingID, State: smClientTypes.SUCCEEDED, Type: smClientTypes.CREATE}, nil)
+						fakeClient.GetBindingByIDReturns(&smClientTypes.ServiceBinding{ID: fakeBindingID, LastOperation: &smClientTypes.Operation{State: smClientTypes.SUCCEEDED, Type: smClientTypes.CREATE}}, nil)
 					})
 					It("should eventually succeed", func() {
 						createdBinding, err := createBindingWithoutAssertions(context.Background(), bindingName, bindingTestNamespace, instanceName, "")
@@ -668,7 +667,7 @@ var _ = Describe("ServiceBinding controller", func() {
 
 			When("referenced service instance is not ready", func() {
 				JustBeforeEach(func() {
-					fakeClient.StatusReturns(&smclientTypes.Operation{ResourceID: fakeInstanceID, State: smClientTypes.INPROGRESS}, nil)
+					fakeClient.StatusReturns(&smClientTypes.Operation{ResourceID: fakeInstanceID, State: smClientTypes.INPROGRESS}, nil)
 					setInProgressConditions(smClientTypes.CREATE, "", createdInstance)
 					createdInstance.Status.OperationURL = "/1234"
 					createdInstance.Status.OperationType = smClientTypes.CREATE
@@ -809,8 +808,8 @@ var _ = Describe("ServiceBinding controller", func() {
 				JustBeforeEach(func() {
 					fakeClient.UnbindReturns("", nil)
 
-					fakeClient.ListBindingsReturns(&smclientTypes.ServiceBindings{
-						ServiceBindings: []smclientTypes.ServiceBinding{
+					fakeClient.ListBindingsReturns(&smClientTypes.ServiceBindings{
+						ServiceBindings: []smClientTypes.ServiceBinding{
 							{
 								ID: createdBinding.Status.BindingID,
 							},
@@ -851,12 +850,12 @@ var _ = Describe("ServiceBinding controller", func() {
 
 		Context("Async", func() {
 			JustBeforeEach(func() {
-				fakeClient.UnbindReturns(sm.BuildOperationURL("an-operation-id", fakeBindingID, smclientTypes.ServiceBindingsURL), nil)
+				fakeClient.UnbindReturns(sm.BuildOperationURL("an-operation-id", fakeBindingID, smClientTypes.ServiceBindingsURL), nil)
 			})
 
 			When("polling ends with success", func() {
 				JustBeforeEach(func() {
-					fakeClient.StatusReturns(&smclientTypes.Operation{ResourceID: fakeBindingID, State: smClientTypes.SUCCEEDED}, nil)
+					fakeClient.StatusReturns(&smClientTypes.Operation{ResourceID: fakeBindingID, State: smClientTypes.SUCCEEDED}, nil)
 				})
 
 				It("should delete the k8s binding and secret", func() {
@@ -867,7 +866,7 @@ var _ = Describe("ServiceBinding controller", func() {
 			When("polling ends with FAILED state", func() {
 				errorMessage := "delete-binding-async-error"
 				JustBeforeEach(func() {
-					fakeClient.StatusReturns(&smclientTypes.Operation{
+					fakeClient.StatusReturns(&smClientTypes.Operation{
 						Type:        smClientTypes.DELETE,
 						State:       smClientTypes.FAILED,
 						Description: errorMessage,
@@ -882,9 +881,9 @@ var _ = Describe("ServiceBinding controller", func() {
 			When("polling returns error", func() {
 
 				JustBeforeEach(func() {
-					fakeClient.UnbindReturnsOnCall(0, sm.BuildOperationURL("an-operation-id", fakeBindingID, smclientTypes.ServiceBindingsURL), nil)
+					fakeClient.UnbindReturnsOnCall(0, sm.BuildOperationURL("an-operation-id", fakeBindingID, smClientTypes.ServiceBindingsURL), nil)
 					fakeClient.StatusReturns(nil, fmt.Errorf("no polling for you"))
-					fakeClient.GetBindingByIDReturns(&smclientTypes.ServiceBinding{ID: fakeBindingID, LastOperation: &smClientTypes.Operation{State: smClientTypes.SUCCEEDED, Type: smClientTypes.CREATE}}, nil)
+					fakeClient.GetBindingByIDReturns(&smClientTypes.ServiceBinding{ID: fakeBindingID, LastOperation: &smClientTypes.Operation{State: smClientTypes.SUCCEEDED, Type: smClientTypes.CREATE}}, nil)
 					fakeClient.UnbindReturnsOnCall(1, "", nil)
 				})
 
@@ -901,8 +900,8 @@ var _ = Describe("ServiceBinding controller", func() {
 			lastOpState smClientTypes.OperationState
 		}
 		executeTestCase := func(testCase recoveryTestCase) {
-			fakeBinding := func(state smClientTypes.OperationState) *smclientTypes.ServiceBinding {
-				return &smclientTypes.ServiceBinding{
+			fakeBinding := func(state smClientTypes.OperationState) *smClientTypes.ServiceBinding {
+				return &smClientTypes.ServiceBinding{
 					ID:          fakeBindingID,
 					Name:        "fake-binding-external-name",
 					Credentials: json.RawMessage("{\"secret_key\": \"secret_value\"}"),
@@ -917,13 +916,13 @@ var _ = Describe("ServiceBinding controller", func() {
 			When("binding exists in SM", func() {
 				JustBeforeEach(func() {
 					fakeClient.ListBindingsReturns(
-						&smclientTypes.ServiceBindings{
-							ServiceBindings: []smclientTypes.ServiceBinding{*fakeBinding(testCase.lastOpState)},
+						&smClientTypes.ServiceBindings{
+							ServiceBindings: []smClientTypes.ServiceBinding{*fakeBinding(testCase.lastOpState)},
 						}, nil)
-					fakeClient.StatusReturns(&smclientTypes.Operation{ResourceID: fakeBindingID, State: smClientTypes.INPROGRESS}, nil)
+					fakeClient.StatusReturns(&smClientTypes.Operation{ResourceID: fakeBindingID, State: smClientTypes.INPROGRESS}, nil)
 				})
 				JustAfterEach(func() {
-					fakeClient.StatusReturns(&smclientTypes.Operation{ResourceID: fakeBindingID, State: smClientTypes.SUCCEEDED}, nil)
+					fakeClient.StatusReturns(&smClientTypes.Operation{ResourceID: fakeBindingID, State: smClientTypes.SUCCEEDED}, nil)
 					fakeClient.GetBindingByIDReturns(fakeBinding(smClientTypes.SUCCEEDED), nil)
 				})
 				When(fmt.Sprintf("last operation is %s %s", testCase.lastOpType, testCase.lastOpState), func() {
@@ -968,14 +967,14 @@ var _ = Describe("ServiceBinding controller", func() {
 
 		When("binding exists in SM without last operation", func() {
 			JustBeforeEach(func() {
-				smBinding := &smclientTypes.ServiceBinding{
+				smBinding := &smClientTypes.ServiceBinding{
 					ID:          fakeBindingID,
 					Name:        "fake-binding-external-name",
 					Credentials: json.RawMessage("{\"secret_key\": \"secret_value\"}"),
 				}
 				fakeClient.ListBindingsReturns(
-					&smclientTypes.ServiceBindings{
-						ServiceBindings: []smclientTypes.ServiceBinding{*smBinding},
+					&smClientTypes.ServiceBindings{
+						ServiceBindings: []smClientTypes.ServiceBinding{*smBinding},
 					}, nil)
 			})
 			It("should resync successfully", func() {
@@ -994,14 +993,14 @@ var _ = Describe("ServiceBinding controller", func() {
 			ctx = context.Background()
 			createdBinding = createBinding(ctx, bindingName, bindingTestNamespace, instanceName, "binding-external-name")
 
-			fakeClient.ListBindingsStub = func(params *sm.Parameters) (*smclientTypes.ServiceBindings, error) {
+			fakeClient.ListBindingsStub = func(params *sm.Parameters) (*smClientTypes.ServiceBindings, error) {
 				if params == nil || params.FieldQuery == nil || len(params.FieldQuery) == 0 {
 					return nil, nil
 				}
 
 				if strings.Contains(params.FieldQuery[0], "binding-external-name-") {
-					return &smclientTypes.ServiceBindings{
-						ServiceBindings: []smclientTypes.ServiceBinding{
+					return &smClientTypes.ServiceBindings{
+						ServiceBindings: []smClientTypes.ServiceBinding{
 							{
 								ID:          fakeBindingID,
 								Ready:       true,

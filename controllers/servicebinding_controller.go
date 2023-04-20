@@ -19,8 +19,9 @@ package controllers
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"time"
+
+	"fmt"
 
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
