@@ -768,7 +768,7 @@ spec:
               ready:
                 description: Indicates whether instance is ready for usage
                 type: string
-              signature:
+              hashedSpec:
                 description: hashed spec
                 type: string
               tags:
@@ -1015,7 +1015,7 @@ spec:
               ready:
                 description: Indicates whether instance is ready for usage
                 type: string
-              signature:
+              hashedSpec:
                 description: hashed spec
                 type: string
               tags:

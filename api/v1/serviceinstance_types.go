@@ -111,8 +111,8 @@ type ServiceInstanceStatus struct {
 	// Indicates whether instance is ready for usage
 	Ready metav1.ConditionStatus `json:"ready,omitempty"`
 
-	// signature is the hashed spec without the shared property
-	Signature string `json:"signature,omitempty"`
+	// HashedSpec is the hashed spec without the shared property
+	HashedSpec string `json:"hashedSpec,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -194,3 +194,7 @@ func init() {
 }
 
 func (si *ServiceInstance) Hub() {}
+
+func (si *ServiceInstance) IsSharedDesired() bool {
+	return si.Spec.Shared != nil && *si.Spec.Shared
+}

@@ -251,7 +251,7 @@ spec:
               ready:
                 description: Indicates whether instance is ready for usage
                 type: string
-              signature:
+              hashedSpec:
                 description: signature is the hashed spec without the shared property
                 type: string
               tags:
@@ -270,9 +270,6 @@ spec:
     subresources:
       status: {}
   - additionalPrinterColumns:
-    - jsonPath: .spec.shared
-      name: Offering
-      type: string
     - jsonPath: .spec.serviceOfferingName
       name: Offering
       type: string
