@@ -328,6 +328,7 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 		serviceInstance.Status.OperationURL = provision.Location
 		serviceInstance.Status.OperationType = smClientTypes.CREATE
 		setInProgressConditions(smClientTypes.CREATE, "", serviceInstance)
+		serviceInstance.Status.Signature = uint64(0)
 		if err := r.updateStatus(ctx, serviceInstance); err != nil {
 			return ctrl.Result{}, err
 		}
