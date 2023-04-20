@@ -87,19 +87,6 @@ type FakeClient struct {
 		result1 *types.ServiceInstance
 		result2 error
 	}
-	InstanceSharingAPIStub        func(bool, string, string) error
-	instanceSharingAPIMutex       sync.RWMutex
-	instanceSharingAPIArgsForCall []struct {
-		arg1 bool
-		arg2 string
-		arg3 string
-	}
-	instanceSharingAPIReturns struct {
-		result1 error
-	}
-	instanceSharingAPIReturnsOnCall map[int]struct {
-		result1 error
-	}
 	ListBindingsStub        func(*sm.Parameters) (*types.ServiceBindings, error)
 	listBindingsMutex       sync.RWMutex
 	listBindingsArgsForCall []struct {
@@ -593,69 +580,6 @@ func (fake *FakeClient) GetInstanceByIDReturnsOnCall(i int, result1 *types.Servi
 		result1 *types.ServiceInstance
 		result2 error
 	}{result1, result2}
-}
-
-func (fake *FakeClient) InstanceSharingAPI(arg1 bool, arg2 string, arg3 string) error {
-	fake.instanceSharingAPIMutex.Lock()
-	ret, specificReturn := fake.instanceSharingAPIReturnsOnCall[len(fake.instanceSharingAPIArgsForCall)]
-	fake.instanceSharingAPIArgsForCall = append(fake.instanceSharingAPIArgsForCall, struct {
-		arg1 bool
-		arg2 string
-		arg3 string
-	}{arg1, arg2, arg3})
-	stub := fake.InstanceSharingAPIStub
-	fakeReturns := fake.instanceSharingAPIReturns
-	fake.recordInvocation("InstanceSharingAPI", []interface{}{arg1, arg2, arg3})
-	fake.instanceSharingAPIMutex.Unlock()
-	if stub != nil {
-		return stub(arg1, arg2, arg3)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fakeReturns.result1
-}
-
-func (fake *FakeClient) InstanceSharingAPICallCount() int {
-	fake.instanceSharingAPIMutex.RLock()
-	defer fake.instanceSharingAPIMutex.RUnlock()
-	return len(fake.instanceSharingAPIArgsForCall)
-}
-
-func (fake *FakeClient) InstanceSharingAPICalls(stub func(bool, string, string) error) {
-	fake.instanceSharingAPIMutex.Lock()
-	defer fake.instanceSharingAPIMutex.Unlock()
-	fake.InstanceSharingAPIStub = stub
-}
-
-func (fake *FakeClient) InstanceSharingAPIArgsForCall(i int) (bool, string, string) {
-	fake.instanceSharingAPIMutex.RLock()
-	defer fake.instanceSharingAPIMutex.RUnlock()
-	argsForCall := fake.instanceSharingAPIArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
-}
-
-func (fake *FakeClient) InstanceSharingAPIReturns(result1 error) {
-	fake.instanceSharingAPIMutex.Lock()
-	defer fake.instanceSharingAPIMutex.Unlock()
-	fake.InstanceSharingAPIStub = nil
-	fake.instanceSharingAPIReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeClient) InstanceSharingAPIReturnsOnCall(i int, result1 error) {
-	fake.instanceSharingAPIMutex.Lock()
-	defer fake.instanceSharingAPIMutex.Unlock()
-	fake.InstanceSharingAPIStub = nil
-	if fake.instanceSharingAPIReturnsOnCall == nil {
-		fake.instanceSharingAPIReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.instanceSharingAPIReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
 }
 
 func (fake *FakeClient) ListBindings(arg1 *sm.Parameters) (*types.ServiceBindings, error) {
@@ -1390,8 +1314,6 @@ func (fake *FakeClient) Invocations() map[string][][]interface{} {
 	defer fake.getBindingByIDMutex.RUnlock()
 	fake.getInstanceByIDMutex.RLock()
 	defer fake.getInstanceByIDMutex.RUnlock()
-	fake.instanceSharingAPIMutex.RLock()
-	defer fake.instanceSharingAPIMutex.RUnlock()
 	fake.listBindingsMutex.RLock()
 	defer fake.listBindingsMutex.RUnlock()
 	fake.listInstancesMutex.RLock()
