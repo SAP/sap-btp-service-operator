@@ -26,7 +26,6 @@ The SAP BTP service operator is based on the [Kubernetes Operator pattern](https
 * [SAP BTP kubectl Extension](#sap-btp-kubectl-plugin-experimental) 
 * [Credentials Rotation](#credentials-rotation)
 * [Multitenancy](#multitenancy)
-* [Instance Sharing](#instance-sharing)
 * [Troubleshooting and Support](#troubleshooting-and-support)
 * [Uninstalling the Operator](#uninstalling-the-operator)
 
@@ -231,16 +230,17 @@ Review the supported Kubernetes API versions for the following SAP BTP Service O
 
 ### Service Instance
 #### Spec
-| Parameter         | Type     | Description                                                                                                   |
-|:-----------------|:---------|:-----------------------------------------------------------------------------------------------------------|
-| serviceOfferingName`*` | `string` | The name of the SAP BTP service offering. |
-| servicePlanName`*` | `string` |  The plan to use for the service instance.   |
-| servicePlanID   |  `string`  | The plan ID in case service offering and plan name are ambiguous. |
-| externalName       | `string` | The name for the service instance in SAP BTP, defaults to the instance `metadata.name` if not specified. |
-| parameters       | `[]object` | Some services support the provisioning of additional configuration parameters during the instance creation.<br/>For the list of supported parameters, check the documentation of the particular service offering. |
-| parametersFrom | `[]object` | List of sources to populate parameters. |
-| customTags | `[]string` | List of custom tags describing the ServiceInstance, will be copied to `ServiceBinding` secret in the key called `tags`. |
-| userInfo | `object` | Contains information about the user that last modified this service instance. | 
+| Parameter              | Type       | Description                                                                                                                                                                                                       |
+|:-----------------------|:-----------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| serviceOfferingName`*` | `string`   | The name of the SAP BTP service offering.                                                                                                                                                                         |
+| servicePlanName`*`     | `string`   | The plan to use for the service instance.                                                                                                                                                                         |
+| servicePlanID          | `string`   | The plan ID in case service offering and plan name are ambiguous.                                                                                                                                                 |
+| externalName           | `string`   | The name for the service instance in SAP BTP, defaults to the instance `metadata.name` if not specified.                                                                                                          |
+| parameters             | `[]object` | Some services support the provisioning of additional configuration parameters during the instance creation.<br/>For the list of supported parameters, check the documentation of the particular service offering. |
+| parametersFrom         | `[]object` | List of sources to populate parameters.                                                                                                                                                                           |
+| customTags             | `[]string` | List of custom tags describing the ServiceInstance, will be copied to `ServiceBinding` secret in the key called `tags`.                                                                                           |
+| userInfo               | `object`   | Contains information about the user that last modified this service instance.                                                                                                                                     |
+ | shared                 | `*bool`    | The desired shared state - true/false.                                                                                                                                                                            |
 
 #### Status
 | Parameter         | Type     | Description                                                                                                   |
@@ -248,7 +248,7 @@ Review the supported Kubernetes API versions for the following SAP BTP Service O
 | instanceID   | `string` | The service instance ID in SAP Service Manager service.  |
 | operationURL | `string` | The URL of the current operation performed on the service instance.  |
 | operationType   |  `string`| The type of the current operation. Possible values are CREATE, UPDATE, or DELETE. |
-| conditions       |  `[]condition`   | An array of conditions describing the status of the service instance.<br/>The possible condition types are:<br>- `Ready`: set to `true`  if the instance is ready and usable<br/>- `Failed`: set to `true` when an operation on the service instance fails.<br/> In the case of failure, the details about the error are available in the condition message.<br>- `Succeeded`: set to `true` when an operation on the service instance succeeded. In case of `false` operation considered as in progress unless `Failed` condition exists.
+| conditions       |  `[]condition`   | An array of conditions describing the status of the service instance.<br/>The possible condition types are:<br>- `Ready`: set to `true`  if the instance is ready and usable<br/>- `Failed`: set to `true` when an operation on the service instance fails.<br/> In the case of failure, the details about the error are available in the condition message.<br>- `Succeeded`: set to `true` when an operation on the service instance succeeded. In case of `false` operation considered as in progress unless `Failed` condition exists.<br>- `Shared`: set to `true` when an share/un-share operation on the service instance succeeded. In case of `false` operation considered as in progress unless `Failed` condition exists.
 | tags       |  `[]string`   | Tags describing the ServiceInstance as provided in service catalog, will be copied to `ServiceBinding` secret in the key called `tags`.
 
 
@@ -448,18 +448,6 @@ data:
   tokenurl: "<auth_url>"
   tokenurlsuffix: "/oauth/token"
 ```
-
-## Instance-Sharing
-Supported functionallity:
-- create shared service instance.
-- update un-shared service instance to shared and vice versa.
-
-**Create:**
-Add in the spec section - shared: true
-Note that you can only share instance which created from a sharable plan.
-**Update:**
-Update the spec with shared: true to share instance or shared: false to un-share the instance.
-Note that you can only un-share service instance if no reference instances exist.
 
 ### TLS-Based Access Credentials
 - Define a secret pair named `sap-btp-service-operator` and `sap-btp-service-operator-tls`  in the namespace. `ServiceInstance` and `ServiceBinding` that are applied in the namespace will belong to the subaccount from which the credentials were issued.  
