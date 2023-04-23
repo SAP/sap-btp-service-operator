@@ -387,7 +387,7 @@ func (client *serviceManagerClient) executeShareInstanceRequest(shouldShare bool
 
 	response, err := client.callWithUser(http.MethodPatch, types.ServiceInstancesURL+"/"+id, buffer, nil, user)
 	if response.StatusCode != http.StatusOK {
-		if err != nil {
+		if err == nil {
 			return fmt.Errorf(fmt.Sprintf("failed to update instance share state with status %s", response.Status))
 		}
 		return httputil.UnmarshalResponse(response, err)
