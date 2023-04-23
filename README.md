@@ -450,7 +450,10 @@ data:
 ```
 
 ## Instance-Sharing
-You can create shared service instance or update un-shared service instance to shared and vice versa.
+Supported functionallity:
+- create shared service instance.
+- update un-shared service instance to shared and vice versa.
+
 **Create:**
 Add in the spec section - shared: true
 Note that you can only share instance which created from a sharable plan.
