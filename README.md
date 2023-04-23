@@ -26,6 +26,7 @@ The SAP BTP service operator is based on the [Kubernetes Operator pattern](https
 * [SAP BTP kubectl Extension](#sap-btp-kubectl-plugin-experimental) 
 * [Credentials Rotation](#credentials-rotation)
 * [Multitenancy](#multitenancy)
+* [Instance Sharing](#instance-sharing)
 * [Troubleshooting and Support](#troubleshooting-and-support)
 * [Uninstalling the Operator](#uninstalling-the-operator)
 
@@ -447,6 +448,15 @@ data:
   tokenurl: "<auth_url>"
   tokenurlsuffix: "/oauth/token"
 ```
+
+## Instance-Sharing
+You can create shared service instance or update un-shared service instance to shared and vice versa.
+**Create:**
+Add in the spec section - shared: true
+Note that you can only share instance which created from a sharable plan.
+**Update:**
+Update the spec with shared: true to share instance or shared: false to un-share the instance.
+Note that you can only un-share service instance if no reference instances exist.
 
 ### TLS-Based Access Credentials
 - Define a secret pair named `sap-btp-service-operator` and `sap-btp-service-operator-tls`  in the namespace. `ServiceInstance` and `ServiceBinding` that are applied in the namespace will belong to the subaccount from which the credentials were issued.  
