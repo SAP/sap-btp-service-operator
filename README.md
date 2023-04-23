@@ -240,7 +240,7 @@ Review the supported Kubernetes API versions for the following SAP BTP Service O
 | parametersFrom | `[]object` | List of sources to populate parameters. |
 | customTags | `[]string` | List of custom tags describing the ServiceInstance, will be copied to `ServiceBinding` secret in the key called `tags`. |
 | userInfo | `object` | Contains information about the user that last modified this service instance. |
-| shared                 | `*bool`    | The desired shared state - true/false.  |
+| shared | `*bool`    | The desired shared state - true/false.  |
 
 #### Status
 | Parameter         | Type     | Description                                                                                                   |
