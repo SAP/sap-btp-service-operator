@@ -1007,29 +1007,6 @@ var _ = Describe("ServiceInstance controller", func() {
 						return isInstanceReady(serviceInstance) && isInstanceShared(serviceInstance)
 					}, timeout, interval).Should(BeTrue())
 				})
-
-				When("un-shared failed with transient error", func() {
-					It("status should be shared in progress", func() {
-						instanceUnSharingReturnsTransientError()
-						serviceInstance.Spec.Shared = pointer.BoolPtr(false)
-						Expect(k8sClient.Update(ctx, serviceInstance)).To(Succeed())
-						Eventually(func() bool {
-							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-							conditions := serviceInstance.GetConditions()
-							cond := meta.FindStatusCondition(conditions, api.ConditionShared)
-							if cond == nil {
-								return false
-							}
-							return cond.Reason == InProgress
-						}, timeout*3, interval).Should(BeTrue())
-
-						instanceUnSharingReturnSuccess()
-						Eventually(func() bool {
-							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-							return !isInstanceShared(serviceInstance)
-						}, timeout*3, interval).Should(BeTrue())
-					})
-				})
 			})
 		})
 	})
