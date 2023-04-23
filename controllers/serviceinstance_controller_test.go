@@ -972,7 +972,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					}, timeout, interval).Should(BeTrue())
 				})
 
-				When("updating instance to un-shared", func() {
+				When("updating instance to un-shared and sm return success", func() {
 					It("should succeed", func() {
 						serviceInstance.Spec.Shared = pointer.BoolPtr(false)
 						instanceUnSharingReturnSuccess()
