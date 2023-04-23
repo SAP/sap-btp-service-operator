@@ -511,7 +511,7 @@ func (r *ServiceInstanceReconciler) HandleInstanceSharingError(ctx context.Conte
 	log := GetLogger(ctx)
 
 	errMsg := err.Error()
-	if reason == ShareFailed {
+	if reason == ShareFailed || reason == UnShareFailed {
 		if smError, ok := err.(*sm.ServiceManagerError); ok {
 			log.Info(fmt.Sprintf("SM returned error status code %d", smError.StatusCode))
 			if smError.StatusCode == http.StatusBadRequest {
@@ -579,9 +579,9 @@ func sharingUpdateRequired(serviceInstance *servicesv1.ServiceInstance) bool {
 
 	if sharedCondition.ObservedGeneration != serviceInstance.Generation {
 		if serviceInstance.IsSharedDesired() {
-			return sharedCondition.Status == metav1.ConditionTrue
+			return sharedCondition.Status != metav1.ConditionTrue
 		}
-		return sharedCondition.Status == metav1.ConditionFalse
+		return sharedCondition.Status == metav1.ConditionTrue
 	}
 
 	return false
