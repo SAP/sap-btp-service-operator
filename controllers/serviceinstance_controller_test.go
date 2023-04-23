@@ -974,10 +974,22 @@ var _ = Describe("ServiceInstance controller", func() {
 					It("should succeed", func() {
 						serviceInstance.Spec.Shared = pointer.BoolPtr(false)
 						instanceUnSharingReturnSuccess()
-						k8sClient.Update(ctx, serviceInstance)
+						Expect(k8sClient.Update(ctx, serviceInstance)).To(Succeed())
 						Eventually(func() bool {
 							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
 							return !isInstanceShared(serviceInstance)
+						}, timeout, interval).Should(BeTrue())
+					})
+				})
+
+				When("deleting shared property from spec", func() {
+					It("should succeed un-sharing and remove condition", func() {
+						serviceInstance.Spec.Shared = nil
+						instanceUnSharingReturnSuccess()
+						Expect(k8sClient.Update(ctx, serviceInstance)).To(Succeed())
+						Eventually(func() bool {
+							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+							return meta.FindStatusCondition(serviceInstance.GetConditions(), api.ConditionShared) == nil
 						}, timeout, interval).Should(BeTrue())
 					})
 				})
