@@ -230,17 +230,17 @@ Review the supported Kubernetes API versions for the following SAP BTP Service O
 
 ### Service Instance
 #### Spec
-| Parameter              | Type       | Description                                                                                                                                                                                                       |
-|:-----------------------|:-----------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| serviceOfferingName`*` | `string`   | The name of the SAP BTP service offering.                                                                                                                                                                         |
-| servicePlanName`*`     | `string`   | The plan to use for the service instance.                                                                                                                                                                         |
-| servicePlanID          | `string`   | The plan ID in case service offering and plan name are ambiguous.                                                                                                                                                 |
-| externalName           | `string`   | The name for the service instance in SAP BTP, defaults to the instance `metadata.name` if not specified.                                                                                                          |
-| parameters             | `[]object` | Some services support the provisioning of additional configuration parameters during the instance creation.<br/>For the list of supported parameters, check the documentation of the particular service offering. |
-| parametersFrom         | `[]object` | List of sources to populate parameters.                                                                                                                                                                           |
-| customTags             | `[]string` | List of custom tags describing the ServiceInstance, will be copied to `ServiceBinding` secret in the key called `tags`.                                                                                           |
-| userInfo               | `object`   | Contains information about the user that last modified this service instance.                                                                                                                                     |
- | shared                 | `*bool`    | The desired shared state - true/false.                                                                                                                                                                            |
+| Parameter         | Type     | Description                                                                                                   |
+|:-----------------|:---------|:-----------------------------------------------------------------------------------------------------------|
+| serviceOfferingName`*` | `string` | The name of the SAP BTP service offering. |
+| servicePlanName`*` | `string` |  The plan to use for the service instance.   |
+| servicePlanID   |  `string`  | The plan ID in case service offering and plan name are ambiguous. |
+| externalName       | `string` | The name for the service instance in SAP BTP, defaults to the instance `metadata.name` if not specified. |
+| parameters       | `[]object` | Some services support the provisioning of additional configuration parameters during the instance creation.<br/>For the list of supported parameters, check the documentation of the particular service offering. |
+| parametersFrom | `[]object` | List of sources to populate parameters. |
+| customTags | `[]string` | List of custom tags describing the ServiceInstance, will be copied to `ServiceBinding` secret in the key called `tags`. |
+| userInfo | `object` | Contains information about the user that last modified this service instance. |
+| shared                 | `*bool`    | The desired shared state - true/false.  |
 
 #### Status
 | Parameter         | Type     | Description                                                                                                   |
