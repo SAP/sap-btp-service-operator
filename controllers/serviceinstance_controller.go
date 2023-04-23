@@ -511,7 +511,8 @@ func (r *ServiceInstanceReconciler) HandleInstanceSharingError(ctx context.Conte
 	log := GetLogger(ctx)
 
 	errMsg := err.Error()
-	if reason == ShareFailed || reason == UnShareFailed {
+	// non-transient error may occur only when sharing
+	if reason == ShareFailed {
 		if smError, ok := err.(*sm.ServiceManagerError); ok {
 			log.Info(fmt.Sprintf("SM returned error status code %d", smError.StatusCode))
 			if smError.StatusCode == http.StatusBadRequest {
