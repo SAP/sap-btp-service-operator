@@ -3,8 +3,6 @@ package controllers
 import (
 	"context"
 	"github.com/SAP/sap-btp-service-operator/api"
-	"github.com/SAP/sap-btp-service-operator/internal/httputil"
-	"io"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/utils/pointer"
 	"net/http"
@@ -1007,6 +1005,21 @@ var _ = Describe("ServiceInstance controller", func() {
 						return isInstanceReady(serviceInstance) && isInstanceShared(serviceInstance)
 					}, timeout, interval).Should(BeTrue())
 				})
+
+				It("should have a reason un-shared failed", func() {
+					instanceUnSharingReturnsNonTransientError()
+					serviceInstance.Spec.Shared = pointer.BoolPtr(false)
+					Expect(k8sClient.Update(ctx, serviceInstance)).To(Succeed())
+					Eventually(func() bool {
+						_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+						conditions := serviceInstance.GetConditions()
+						cond := meta.FindStatusCondition(conditions, api.ConditionShared)
+						if cond == nil {
+							return false
+						}
+						return cond.Reason == UnShareFailed
+					}, timeout, interval).Should(BeTrue())
+				})
 			})
 		})
 	})
@@ -1051,22 +1064,6 @@ var _ = Describe("ServiceInstance controller", func() {
 	})
 })
 
-func instanceSharingReturnsTransientErrorOnceAndThenSucceed() {
-	fakeClient.ShareInstanceReturnsOnCall(0, &sm.ServiceManagerError{
-		StatusCode: http.StatusTooManyRequests,
-		Message:    "transient",
-	})
-	fakeClient.ShareInstanceReturnsOnCall(1, nil)
-}
-
-func instanceUnSharingReturnsTransientErrorOnceAndThenSucceed() {
-	fakeClient.UnShareInstanceReturnsOnCall(0, &sm.ServiceManagerError{
-		StatusCode: http.StatusTooManyRequests,
-		Message:    "transient",
-	})
-	fakeClient.UnShareInstanceReturnsOnCall(1, nil)
-}
-
 func instanceSharingReturnSuccess() {
 	fakeClient.ShareInstanceReturns(nil)
 }
@@ -1085,26 +1082,11 @@ func instanceSharingReturnsNonTransientError() {
 	})
 }
 
-func instanceUnSharingReturnsTransientError() {
-	fakeClient.UnShareInstanceReturns(&sm.ServiceManagerError{
-		StatusCode: http.StatusTooManyRequests,
-		Message:    "transient",
-	})
-}
-
 func instanceSharingReturnsTransientError() {
 	fakeClient.ShareInstanceReturns(&sm.ServiceManagerError{
 		StatusCode: http.StatusTooManyRequests,
 		Message:    "transient",
 	})
-}
-
-func instanceUnSharingReturnFailure() {
-	fakeClient.UnShareInstanceReturns(httputil.UnmarshalResponse(&http.Response{
-		StatusCode: http.StatusBadRequest,
-		Body:       io.NopCloser(strings.NewReader("failed")),
-		Header:     make(http.Header),
-	}, fmt.Errorf("failed unsharing change")))
 }
 
 func instanceUnSharingReturnSuccess() {
