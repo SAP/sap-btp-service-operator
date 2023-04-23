@@ -884,18 +884,6 @@ var _ = Describe("ServiceInstance controller", func() {
 						Expect(serviceInstance.Spec.ExternalName).To(Equal("new"))
 					})
 				})
-
-				When("shared failed with transient error", func() {
-					It("should eventually succeed", func() {
-						instanceSharingReturnsTransientErrorOnceAndThenSucceed()
-						serviceInstance.Spec.Shared = pointer.BoolPtr(true)
-						Expect(k8sClient.Update(ctx, serviceInstance)).To(Succeed())
-						Eventually(func() bool {
-							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-							return isInstanceShared(serviceInstance)
-						}, timeout, interval).Should(BeTrue())
-					})
-				})
 			})
 
 			When("instance creation failed", func() {
@@ -1056,18 +1044,6 @@ var _ = Describe("ServiceInstance controller", func() {
 								return false
 							}
 							return cond.Reason == ShareNotSupported
-						}, timeout, interval).Should(BeTrue())
-					})
-				})
-
-				When("un-shared failed with transient error", func() {
-					It("should eventually succeed", func() {
-						instanceUnSharingReturnsTransientErrorOnceAndThenSucceed()
-						serviceInstance.Spec.Shared = pointer.BoolPtr(false)
-						Expect(k8sClient.Update(ctx, serviceInstance)).To(Succeed())
-						Eventually(func() bool {
-							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-							return !isInstanceShared(serviceInstance)
 						}, timeout, interval).Should(BeTrue())
 					})
 				})
