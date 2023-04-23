@@ -852,7 +852,7 @@ var _ = Describe("ServiceInstance controller", func() {
 				})
 			})
 
-			When("sharing an existing instance", func() {
+			Context("sharing an existing instance", func() {
 				BeforeEach(func() {
 					serviceInstance = createInstance(ctx, instanceSpec)
 					Eventually(func() bool {
@@ -861,13 +861,28 @@ var _ = Describe("ServiceInstance controller", func() {
 					}, timeout, interval).Should(BeTrue())
 				})
 
-				It("should succeed", func() {
-					serviceInstance.Spec.Shared = pointer.BoolPtr(true)
-					Expect(k8sClient.Update(ctx, serviceInstance)).To(Succeed())
-					Eventually(func() bool {
-						_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-						return isInstanceShared(serviceInstance)
-					}, timeout, interval).Should(BeTrue())
+				When("updating existing instance to shared", func() {
+					It("should succeed", func() {
+						serviceInstance.Spec.Shared = pointer.BoolPtr(true)
+						Expect(k8sClient.Update(ctx, serviceInstance)).To(Succeed())
+						Eventually(func() bool {
+							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+							return isInstanceShared(serviceInstance)
+						}, timeout, interval).Should(BeTrue())
+					})
+				})
+
+				When("updating instance to shared and updating the name", func() {
+					It("eventually should succeed updating both", func() {
+						serviceInstance.Spec.Shared = pointer.BoolPtr(true)
+						serviceInstance.Spec.ExternalName = "new"
+						Expect(k8sClient.Update(ctx, serviceInstance)).To(Succeed())
+						Eventually(func() bool {
+							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+							return isInstanceShared(serviceInstance)
+						}, timeout, interval).Should(BeTrue())
+						Expect(serviceInstance.Spec.ExternalName).To(Equal("new"))
+					})
 				})
 			})
 
@@ -947,7 +962,7 @@ var _ = Describe("ServiceInstance controller", func() {
 		})
 
 		Context("Un-Share", func() {
-			When("un-sharing an existing instance", func() {
+			Context("un-sharing an existing shared instance", func() {
 				BeforeEach(func() {
 					instanceSharingReturnSuccess()
 					serviceInstance = createInstance(ctx, sharedInstanceSpec)
@@ -957,14 +972,29 @@ var _ = Describe("ServiceInstance controller", func() {
 					}, timeout, interval).Should(BeTrue())
 				})
 
-				It("should succeed", func() {
-					serviceInstance.Spec.Shared = pointer.BoolPtr(false)
-					instanceUnSharingReturnSuccess()
-					k8sClient.Update(ctx, serviceInstance)
-					Eventually(func() bool {
-						_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-						return !isInstanceShared(serviceInstance)
-					}, timeout, interval).Should(BeTrue())
+				When("updating instance to un-shared", func() {
+					It("should succeed", func() {
+						serviceInstance.Spec.Shared = pointer.BoolPtr(false)
+						instanceUnSharingReturnSuccess()
+						k8sClient.Update(ctx, serviceInstance)
+						Eventually(func() bool {
+							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+							return !isInstanceShared(serviceInstance)
+						}, timeout, interval).Should(BeTrue())
+					})
+				})
+
+				When("updating instance to un-shared and updating the name", func() {
+					It("eventually should succeed updating both", func() {
+						serviceInstance.Spec.Shared = pointer.BoolPtr(false)
+						serviceInstance.Spec.ExternalName = "new"
+						Expect(k8sClient.Update(ctx, serviceInstance)).To(Succeed())
+						Eventually(func() bool {
+							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+							return !isInstanceShared(serviceInstance)
+						}, timeout, interval).Should(BeTrue())
+						Expect(serviceInstance.Spec.ExternalName).To(Equal("new"))
+					})
 				})
 			})
 
