@@ -955,9 +955,23 @@ var _ = Describe("ServiceInstance controller", func() {
 					})
 				})
 
-				When("shared failed with non transient error", func() {
+				When("shared failed with non transient error 400", func() {
 					It("should have a final shared status", func() {
-						instanceSharingReturnsNonTransientError()
+						instanceSharingReturnsNonTransientError400()
+						serviceInstance.Spec.Shared = pointer.BoolPtr(true)
+						Expect(k8sClient.Update(ctx, serviceInstance)).To(Succeed())
+						Eventually(func() bool {
+							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+							conditions := serviceInstance.GetConditions()
+							cond := meta.FindStatusCondition(conditions, api.ConditionShared)
+							return cond != nil && cond.Reason == ShareNotSupported
+						}, timeout, interval).Should(BeTrue())
+					})
+				})
+
+				When("shared failed with non transient error 500", func() {
+					It("should have a final shared status", func() {
+						instanceSharingReturnsNonTransientError500()
 						serviceInstance.Spec.Shared = pointer.BoolPtr(true)
 						Expect(k8sClient.Update(ctx, serviceInstance)).To(Succeed())
 						Eventually(func() bool {
@@ -1057,16 +1071,23 @@ func instanceUnSharingReturnsNonTransientError() {
 	})
 }
 
-func instanceSharingReturnsNonTransientError() {
+func instanceSharingReturnsNonTransientError400() {
 	fakeClient.ShareInstanceReturns(&sm.ServiceManagerError{
 		StatusCode: http.StatusBadRequest,
 		Message:    "nonTransient",
 	})
 }
 
-func instanceSharingReturnsTransientError() {
+func instanceSharingReturnsNonTransientError500() {
 	fakeClient.ShareInstanceReturns(&sm.ServiceManagerError{
 		StatusCode: http.StatusInternalServerError,
+		Message:    "nonTransient",
+	})
+}
+
+func instanceSharingReturnsTransientError() {
+	fakeClient.ShareInstanceReturns(&sm.ServiceManagerError{
+		StatusCode: http.StatusTooEarly,
 		Message:    "transient",
 	})
 }
