@@ -170,8 +170,8 @@ spec:
                   description: "Condition contains details for one aspect of the current
                     state of this API Resource. --- This struct is intended for direct
                     use as an array at the field path .status.conditions.  For example,
-                    \n type FooStatus struct{ // Represents the observations of a
-                    foo's current state. // Known .status.conditions.type are: \"Available\",
+                    type FooStatus struct{ // Represents the observations of a foo's
+                    current state. // Known .status.conditions.type are: \"Available\",
                     \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge
                     // +listType=map // +listMapKey=type Conditions []metav1.Condition
                     `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
@@ -233,6 +233,9 @@ spec:
                   - type
                   type: object
                 type: array
+              hashedSpec:
+                description: HashedSpec is the hashed spec without the shared property
+                type: string
               instanceID:
                 description: The generated ID of the instance, will be automatically
                   filled once the instance is created
@@ -250,9 +253,6 @@ spec:
                 type: string
               ready:
                 description: Indicates whether instance is ready for usage
-                type: string
-              hashedSpec:
-                description: signature is the hashed spec without the shared property
                 type: string
               tags:
                 description: Tags describing the ServiceInstance as provided in service
@@ -414,8 +414,8 @@ spec:
                   description: "Condition contains details for one aspect of the current
                     state of this API Resource. --- This struct is intended for direct
                     use as an array at the field path .status.conditions.  For example,
-                    \n type FooStatus struct{ // Represents the observations of a
-                    foo's current state. // Known .status.conditions.type are: \"Available\",
+                    type FooStatus struct{ // Represents the observations of a foo's
+                    current state. // Known .status.conditions.type are: \"Available\",
                     \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge
                     // +listType=map // +listMapKey=type Conditions []metav1.Condition
                     `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
@@ -494,9 +494,6 @@ spec:
                 type: string
               ready:
                 description: Indicates whether instance is ready for usage
-                type: string
-              signature:
-                description: signature is the hashed spec without the shared property
                 type: string
               tags:
                 description: Tags describing the ServiceInstance as provided in service
