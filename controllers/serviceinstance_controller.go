@@ -514,13 +514,12 @@ func (r *ServiceInstanceReconciler) HandleInstanceSharingError(ctx context.Conte
 	if smError, ok := err.(*sm.ServiceManagerError); ok {
 		log.Info(fmt.Sprintf("SM returned error status code %d", smError.StatusCode))
 		if smError.StatusCode == http.StatusTooManyRequests {
+			errMsg = "in progress"
 			reason = InProgress
-		} else if reason == ShareFailed {
+		} else if reason == ShareFailed && smError.StatusCode == http.StatusBadRequest {
 			// non-transient error may occur only when sharing
-			if smError.StatusCode == http.StatusBadRequest {
-				setSharedCondition(object, status, ShareNotSupported, err.Error())
-				return r.updateStatus(ctx, object)
-			}
+			setSharedCondition(object, status, ShareNotSupported, err.Error())
+			return r.updateStatus(ctx, object)
 		}
 	}
 
