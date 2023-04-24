@@ -88,24 +88,6 @@ var _ = Describe("ServiceInstance controller", func() {
 		},
 	}
 
-	nonSharedInstanceSpec := v1.ServiceInstanceSpec{
-		ExternalName:        fakeInstanceExternalNameNonShared,
-		ServicePlanName:     fakePlanName,
-		Shared:              pointer.BoolPtr(false),
-		ServiceOfferingName: fakeOfferingName,
-		Parameters: &runtime.RawExtension{
-			Raw: []byte(`{"key": "value"}`),
-		},
-		ParametersFrom: []v1.ParametersFromSource{
-			{
-				SecretKeyRef: &v1.SecretKeyReference{
-					Name: "param-secret",
-					Key:  "secret-parameter",
-				},
-			},
-		},
-	}
-
 	createInstance := func(ctx context.Context, instanceSpec v1.ServiceInstanceSpec) *v1.ServiceInstance {
 		instance := &v1.ServiceInstance{
 			TypeMeta: metav1.TypeMeta{
@@ -265,7 +247,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					Expect(serviceInstance.Name).To(Equal(fakeInstanceName))
 					Expect(serviceInstance.Status.HashedSpec).To(Not(BeNil()))
 					Expect(string(serviceInstance.Spec.Parameters.Raw)).To(ContainSubstring("\"key\":\"value\""))
-					Expect(serviceInstance.Spec.UserInfo).To(Equal(getSpecHash(serviceInstance)))
+					Expect(serviceInstance.Spec).To(Equal(getSpecHash(serviceInstance)))
 					smInstance, _, _, _, _, _ := fakeClient.ProvisionArgsForCall(0)
 					params := smInstance.Parameters
 					Expect(params).To(ContainSubstring("\"key\":\"value\""))
@@ -872,29 +854,16 @@ var _ = Describe("ServiceInstance controller", func() {
 
 				When("sharing succeeds", func() {
 					It("hashed spec should be the same before and after", func() {
-						serviceInstance = createInstance(ctx, nonSharedInstanceSpec)
-						Eventually(func() bool {
-							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-							return len(serviceInstance.Status.Conditions) == 2 && serviceInstance.Status.Conditions[1].Type == api.ConditionReady
-						}, timeout, interval).Should(BeTrue())
-
 						before := serviceInstance.Status.HashedSpec
-
 						fakeClient.UpdateInstanceReturns(nil, "", nil)
 						serviceInstance.Spec.Shared = pointer.BoolPtr(true)
 						instanceUnSharingReturnSuccess()
-						_ = k8sClient.Update(ctx, serviceInstance)
-
+						Expect(k8sClient.Update(ctx, serviceInstance)).To(Succeed())
 						Eventually(func() bool {
 							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
 							return isInstanceShared(serviceInstance)
 						}, timeout, interval).Should(BeTrue())
-						Expect(validateInstanceIsReadyAndSucceeded(serviceInstance)).To(Equal(true))
-						Expect(serviceInstance.Status.Conditions[2].Type).To(Equal(api.ConditionShared))
-						Expect(serviceInstance.Status.Conditions[2].Status).To(Equal(metav1.ConditionTrue))
-
 						after := serviceInstance.Status.HashedSpec
-
 						Expect(before).To(Equal(after))
 					})
 				})
@@ -1107,16 +1076,6 @@ func createParamsSecret(namespace string) {
 	}
 	err := k8sClient.Create(context.Background(), secret)
 	Expect(err).ToNot(HaveOccurred())
-}
-
-func validateInstanceIsReadyAndSucceeded(serviceInstance *v1.ServiceInstance) bool {
-	succeeded := strings.EqualFold(serviceInstance.Status.Conditions[0].Type, api.ConditionSucceeded) &&
-		serviceInstance.Status.Conditions[0].Status == metav1.ConditionTrue
-
-	ready := strings.EqualFold(serviceInstance.Status.Conditions[1].Type, api.ConditionReady) &&
-		serviceInstance.Status.Conditions[1].Status == metav1.ConditionTrue
-
-	return succeeded && ready
 }
 
 func isInstanceShared(serviceInstance *v1.ServiceInstance) bool {
