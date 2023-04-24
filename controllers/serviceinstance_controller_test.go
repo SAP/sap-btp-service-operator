@@ -915,9 +915,9 @@ var _ = Describe("ServiceInstance controller", func() {
 					}, timeout, interval).Should(BeTrue())
 				})
 
-				When("shared failed with transient error", func() {
+				When("shared failed with rate limit error", func() {
 					It("status should be shared in progress", func() {
-						instanceSharingReturnsTransientError()
+						instanceSharingReturnsRateLimitError()
 						serviceInstance.Spec.Shared = pointer.BoolPtr(true)
 						Expect(k8sClient.Update(ctx, serviceInstance)).To(Succeed())
 						Eventually(func() bool {
@@ -928,6 +928,26 @@ var _ = Describe("ServiceInstance controller", func() {
 								return false
 							}
 							return cond.Reason == InProgress
+						}, timeout*3, interval).Should(BeTrue())
+
+						instanceSharingReturnSuccess()
+						Eventually(func() bool {
+							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+							return isInstanceShared(serviceInstance)
+						}, timeout*3, interval).Should(BeTrue())
+					})
+				})
+
+				When("shared failed with transient error which is not rate limit", func() {
+					It("status should be shared failed and eventually succeed sharing", func() {
+						instanceSharingReturnsTransientError()
+						serviceInstance.Spec.Shared = pointer.BoolPtr(true)
+						Expect(k8sClient.Update(ctx, serviceInstance)).To(Succeed())
+						Eventually(func() bool {
+							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+							conditions := serviceInstance.GetConditions()
+							cond := meta.FindStatusCondition(conditions, api.ConditionShared)
+							return cond != nil && cond.Reason == ShareFailed
 						}, timeout*3, interval).Should(BeTrue())
 
 						instanceSharingReturnSuccess()
@@ -1054,6 +1074,13 @@ func instanceSharingReturnsNonTransientError() {
 }
 
 func instanceSharingReturnsTransientError() {
+	fakeClient.ShareInstanceReturns(&sm.ServiceManagerError{
+		StatusCode: http.StatusInternalServerError,
+		Message:    "transient",
+	})
+}
+
+func instanceSharingReturnsRateLimitError() {
 	fakeClient.ShareInstanceReturns(&sm.ServiceManagerError{
 		StatusCode: http.StatusTooManyRequests,
 		Message:    "transient",
