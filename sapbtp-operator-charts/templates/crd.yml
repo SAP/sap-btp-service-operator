@@ -642,6 +642,9 @@ spec:
                 description: The name of the service plan
                 minLength: 1
                 type: string
+              shared:
+                description: Indicates if the instance aim to be shared, default is false
+                type: boolean
               userInfo:
                 description: UserInfo contains information about the user that last
                   modified this instance. This field is set by the API server and
@@ -765,6 +768,9 @@ spec:
               ready:
                 description: Indicates whether instance is ready for usage
                 type: string
+              hashedSpec:
+                description: hashed spec
+                type: string
               tags:
                 description: Tags describing the ServiceInstance as provided in service
                   catalog, will be copied to `ServiceBinding` secret in the key called
@@ -792,6 +798,9 @@ spec:
       type: string
     - jsonPath: .status.ready
       name: Ready
+      type: string
+    - jsonPath: .status.shared
+      name: Shared
       type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
@@ -880,6 +889,9 @@ spec:
                 description: The name of the service plan
                 minLength: 1
                 type: string
+              shared:
+                description: Indicates if the instance aim to be shared, default is false
+                type: boolean
               userInfo:
                 description: UserInfo contains information about the user that last
                   modified this instance. This field is set by the API server and
@@ -1002,6 +1014,9 @@ spec:
                 type: string
               ready:
                 description: Indicates whether instance is ready for usage
+                type: string
+              hashedSpec:
+                description: hashed spec
                 type: string
               tags:
                 description: Tags describing the ServiceInstance as provided in service

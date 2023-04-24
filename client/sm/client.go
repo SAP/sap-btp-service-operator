@@ -54,6 +54,8 @@ type Client interface {
 	Bind(binding *types.ServiceBinding, q *Parameters, user string) (*types.ServiceBinding, string, error)
 	Unbind(id string, q *Parameters, user string) (string, error)
 	RenameBinding(id, newName, newK8SName string) (*types.ServiceBinding, error)
+	ShareInstance(id string, user string) error
+	UnShareInstance(id string, user string) error
 
 	ListOfferings(*Parameters) (*types.ServiceOfferings, error)
 	ListPlans(*Parameters) (*types.ServicePlans, error)
@@ -362,6 +364,36 @@ func (client *serviceManagerClient) update(resource interface{}, url string, id 
 	default:
 		return "", handleFailedResponse(response)
 	}
+}
+
+func (client *serviceManagerClient) ShareInstance(id string, user string) error {
+	return client.executeShareInstanceRequest(true, id, user)
+}
+
+func (client *serviceManagerClient) UnShareInstance(id string, user string) error {
+	return client.executeShareInstanceRequest(false, id, user)
+}
+
+func (client *serviceManagerClient) executeShareInstanceRequest(shouldShare bool, id string, user string) error {
+	bodyRequest := map[string]interface{}{
+		"shared": shouldShare,
+	}
+	shareBody, err := json.Marshal(bodyRequest)
+	if err != nil {
+		return err
+	}
+
+	buffer := bytes.NewBuffer(shareBody)
+
+	response, err := client.callWithUser(http.MethodPatch, types.ServiceInstancesURL+"/"+id, buffer, nil, user)
+	if response.StatusCode != http.StatusOK {
+		if err == nil {
+			return handleFailedResponse(response)
+		}
+		return httputil.UnmarshalResponse(response, err)
+	}
+
+	return nil
 }
 
 func handleFailedResponse(response *http.Response) error {

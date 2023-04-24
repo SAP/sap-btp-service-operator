@@ -22,6 +22,9 @@ spec:
     - jsonPath: .spec.servicePlanName
       name: Plan
       type: string
+    - jsonPath: .spec.shared
+      name: shared
+      type: boolean
     - jsonPath: .spec.dataCenter
       name: dataCenter
       type: string
@@ -122,6 +125,9 @@ spec:
                 description: The name of the service plan
                 minLength: 1
                 type: string
+              shared:
+                description: Indicates the desired shared state
+                type: boolean
               userInfo:
                 description: UserInfo contains information about the user that last
                   modified this instance. This field is set by the API server and
@@ -227,6 +233,9 @@ spec:
                   - type
                   type: object
                 type: array
+              hashedSpec:
+                description: HashedSpec is the hashed spec without the shared property
+                type: string
               instanceID:
                 description: The generated ID of the instance, will be automatically
                   filled once the instance is created
@@ -360,6 +369,9 @@ spec:
                 description: The name of the service plan
                 minLength: 1
                 type: string
+              shared:
+                description: Indicates the desired shared state
+                type: boolean
               userInfo:
                 description: UserInfo contains information about the user that last
                   modified this instance. This field is set by the API server and

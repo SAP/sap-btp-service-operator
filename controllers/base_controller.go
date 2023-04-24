@@ -2,8 +2,9 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 	"net/http"
+
+	"fmt"
 
 	"github.com/SAP/sap-btp-service-operator/api"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
@@ -37,10 +38,15 @@ const (
 	DeleteInProgress = "DeleteInProgress"
 	InProgress       = "InProgress"
 
-	CreateFailed = "CreateFailed"
-	UpdateFailed = "UpdateFailed"
-	DeleteFailed = "DeleteFailed"
-	Failed       = "Failed"
+	CreateFailed      = "CreateFailed"
+	UpdateFailed      = "UpdateFailed"
+	DeleteFailed      = "DeleteFailed"
+	Failed            = "Failed"
+	ShareFailed       = "ShareFailed"
+	ShareSucceeded    = "ShareSucceeded"
+	ShareNotSupported = "ShareNotSupported"
+	UnShareFailed     = "UnShareFailed"
+	UnShareSucceeded  = "UnShareSucceeded"
 
 	Blocked = "Blocked"
 	Unknown = "Unknown"
@@ -359,5 +365,5 @@ func getReadyCondition(object api.SAPBTPResource) metav1.Condition {
 		reason = "Provisioned"
 	}
 
-	return metav1.Condition{Type: api.ConditionReady, Status: status, Reason: reason}
+	return metav1.Condition{Type: api.ConditionReady, Status: status, Reason: reason, ObservedGeneration: object.GetGeneration()}
 }

@@ -172,6 +172,18 @@ type FakeClient struct {
 		result1 *types.ServiceBinding
 		result2 error
 	}
+	ShareInstanceStub        func(string, string) error
+	shareInstanceMutex       sync.RWMutex
+	shareInstanceArgsForCall []struct {
+		arg1 string
+		arg2 string
+	}
+	shareInstanceReturns struct {
+		result1 error
+	}
+	shareInstanceReturnsOnCall map[int]struct {
+		result1 error
+	}
 	StatusStub        func(string, *sm.Parameters) (*types.Operation, error)
 	statusMutex       sync.RWMutex
 	statusArgsForCall []struct {
@@ -185,6 +197,18 @@ type FakeClient struct {
 	statusReturnsOnCall map[int]struct {
 		result1 *types.Operation
 		result2 error
+	}
+	UnShareInstanceStub        func(string, string) error
+	unShareInstanceMutex       sync.RWMutex
+	unShareInstanceArgsForCall []struct {
+		arg1 string
+		arg2 string
+	}
+	unShareInstanceReturns struct {
+		result1 error
+	}
+	unShareInstanceReturnsOnCall map[int]struct {
+		result1 error
 	}
 	UnbindStub        func(string, *sm.Parameters, string) (string, error)
 	unbindMutex       sync.RWMutex
@@ -850,11 +874,11 @@ func (fake *FakeClient) ProvisionCalls(stub func(*types.ServiceInstance, string,
 	fake.ProvisionStub = stub
 }
 
-func (fake *FakeClient) ProvisionArgsForCall(i int) (*types.ServiceInstance, string, string, *sm.Parameters, string) {
+func (fake *FakeClient) ProvisionArgsForCall(i int) (*types.ServiceInstance, string, string, *sm.Parameters, string, string) {
 	fake.provisionMutex.RLock()
 	defer fake.provisionMutex.RUnlock()
 	argsForCall := fake.provisionArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5, argsForCall.arg6
 }
 
 func (fake *FakeClient) ProvisionReturns(result1 *sm.ProvisionResponse, result2 error) {
@@ -949,6 +973,68 @@ func (fake *FakeClient) RenameBindingReturnsOnCall(i int, result1 *types.Service
 	}{result1, result2}
 }
 
+func (fake *FakeClient) ShareInstance(arg1 string, arg2 string) error {
+	fake.shareInstanceMutex.Lock()
+	ret, specificReturn := fake.shareInstanceReturnsOnCall[len(fake.shareInstanceArgsForCall)]
+	fake.shareInstanceArgsForCall = append(fake.shareInstanceArgsForCall, struct {
+		arg1 string
+		arg2 string
+	}{arg1, arg2})
+	stub := fake.ShareInstanceStub
+	fakeReturns := fake.shareInstanceReturns
+	fake.recordInvocation("ShareInstance", []interface{}{arg1, arg2})
+	fake.shareInstanceMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeClient) ShareInstanceCallCount() int {
+	fake.shareInstanceMutex.RLock()
+	defer fake.shareInstanceMutex.RUnlock()
+	return len(fake.shareInstanceArgsForCall)
+}
+
+func (fake *FakeClient) ShareInstanceCalls(stub func(string, string) error) {
+	fake.shareInstanceMutex.Lock()
+	defer fake.shareInstanceMutex.Unlock()
+	fake.ShareInstanceStub = stub
+}
+
+func (fake *FakeClient) ShareInstanceArgsForCall(i int) (string, string) {
+	fake.shareInstanceMutex.RLock()
+	defer fake.shareInstanceMutex.RUnlock()
+	argsForCall := fake.shareInstanceArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeClient) ShareInstanceReturns(result1 error) {
+	fake.shareInstanceMutex.Lock()
+	defer fake.shareInstanceMutex.Unlock()
+	fake.ShareInstanceStub = nil
+	fake.shareInstanceReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeClient) ShareInstanceReturnsOnCall(i int, result1 error) {
+	fake.shareInstanceMutex.Lock()
+	defer fake.shareInstanceMutex.Unlock()
+	fake.ShareInstanceStub = nil
+	if fake.shareInstanceReturnsOnCall == nil {
+		fake.shareInstanceReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.shareInstanceReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeClient) Status(arg1 string, arg2 *sm.Parameters) (*types.Operation, error) {
 	fake.statusMutex.Lock()
 	ret, specificReturn := fake.statusReturnsOnCall[len(fake.statusArgsForCall)]
@@ -1012,6 +1098,68 @@ func (fake *FakeClient) StatusReturnsOnCall(i int, result1 *types.Operation, res
 		result1 *types.Operation
 		result2 error
 	}{result1, result2}
+}
+
+func (fake *FakeClient) UnShareInstance(arg1 string, arg2 string) error {
+	fake.unShareInstanceMutex.Lock()
+	ret, specificReturn := fake.unShareInstanceReturnsOnCall[len(fake.unShareInstanceArgsForCall)]
+	fake.unShareInstanceArgsForCall = append(fake.unShareInstanceArgsForCall, struct {
+		arg1 string
+		arg2 string
+	}{arg1, arg2})
+	stub := fake.UnShareInstanceStub
+	fakeReturns := fake.unShareInstanceReturns
+	fake.recordInvocation("UnShareInstance", []interface{}{arg1, arg2})
+	fake.unShareInstanceMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeClient) UnShareInstanceCallCount() int {
+	fake.unShareInstanceMutex.RLock()
+	defer fake.unShareInstanceMutex.RUnlock()
+	return len(fake.unShareInstanceArgsForCall)
+}
+
+func (fake *FakeClient) UnShareInstanceCalls(stub func(string, string) error) {
+	fake.unShareInstanceMutex.Lock()
+	defer fake.unShareInstanceMutex.Unlock()
+	fake.UnShareInstanceStub = stub
+}
+
+func (fake *FakeClient) UnShareInstanceArgsForCall(i int) (string, string) {
+	fake.unShareInstanceMutex.RLock()
+	defer fake.unShareInstanceMutex.RUnlock()
+	argsForCall := fake.unShareInstanceArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeClient) UnShareInstanceReturns(result1 error) {
+	fake.unShareInstanceMutex.Lock()
+	defer fake.unShareInstanceMutex.Unlock()
+	fake.UnShareInstanceStub = nil
+	fake.unShareInstanceReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeClient) UnShareInstanceReturnsOnCall(i int, result1 error) {
+	fake.unShareInstanceMutex.Lock()
+	defer fake.unShareInstanceMutex.Unlock()
+	fake.UnShareInstanceStub = nil
+	if fake.unShareInstanceReturnsOnCall == nil {
+		fake.unShareInstanceReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.unShareInstanceReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
 }
 
 func (fake *FakeClient) Unbind(arg1 string, arg2 *sm.Parameters, arg3 string) (string, error) {
@@ -1117,11 +1265,11 @@ func (fake *FakeClient) UpdateInstanceCalls(stub func(string, *types.ServiceInst
 	fake.UpdateInstanceStub = stub
 }
 
-func (fake *FakeClient) UpdateInstanceArgsForCall(i int) (string, *types.ServiceInstance, string, string, *sm.Parameters, string) {
+func (fake *FakeClient) UpdateInstanceArgsForCall(i int) (string, *types.ServiceInstance, string, string, *sm.Parameters, string, string) {
 	fake.updateInstanceMutex.RLock()
 	defer fake.updateInstanceMutex.RUnlock()
 	argsForCall := fake.updateInstanceArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5, argsForCall.arg6
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5, argsForCall.arg6, argsForCall.arg7
 }
 
 func (fake *FakeClient) UpdateInstanceReturns(result1 *types.ServiceInstance, result2 string, result3 error) {
@@ -1178,8 +1326,12 @@ func (fake *FakeClient) Invocations() map[string][][]interface{} {
 	defer fake.provisionMutex.RUnlock()
 	fake.renameBindingMutex.RLock()
 	defer fake.renameBindingMutex.RUnlock()
+	fake.shareInstanceMutex.RLock()
+	defer fake.shareInstanceMutex.RUnlock()
 	fake.statusMutex.RLock()
 	defer fake.statusMutex.RUnlock()
+	fake.unShareInstanceMutex.RLock()
+	defer fake.unShareInstanceMutex.RUnlock()
 	fake.unbindMutex.RLock()
 	defer fake.unbindMutex.RUnlock()
 	fake.updateInstanceMutex.RLock()

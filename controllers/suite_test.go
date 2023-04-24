@@ -19,7 +19,11 @@ package controllers
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
+	"net"
+	"path/filepath"
+	"testing"
+	"time"
+
 	"github.com/SAP/sap-btp-service-operator/api"
 	"github.com/SAP/sap-btp-service-operator/api/v1/webhooks"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
@@ -27,13 +31,11 @@ import (
 	"github.com/SAP/sap-btp-service-operator/internal/config"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"net"
-	"path/filepath"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
-	"testing"
-	"time"
+
+	"fmt"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 
@@ -54,7 +56,7 @@ import (
 
 const (
 	timeout      = time.Second * 20
-	interval     = time.Millisecond * 10
+	interval     = time.Millisecond * 50
 	syncPeriod   = time.Millisecond * 250
 	pollInterval = time.Millisecond * 250
 )
@@ -127,6 +129,7 @@ var _ = BeforeSuite(func(done Done) {
 
 	k8sManager.GetWebhookServer().Register("/mutate-services-cloud-sap-com-v1-serviceinstance", &webhook.Admission{Handler: &webhooks.ServiceInstanceDefaulter{}})
 	k8sManager.GetWebhookServer().Register("/mutate-services-cloud-sap-com-v1-servicebinding", &webhook.Admission{Handler: &webhooks.ServiceBindingDefaulter{}})
+
 	err = (&servicesv1.ServiceBinding{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 

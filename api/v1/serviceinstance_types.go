@@ -51,6 +51,11 @@ type ServiceInstanceSpec struct {
 	// The name of the instance in Service Manager
 	ExternalName string `json:"externalName,omitempty"`
 
+	// Indicates the desired shared state
+	// +optional
+	// +kubebuilder:default={}
+	Shared *bool `json:"shared,omitempty"`
+
 	// Provisioning parameters for the instance.
 	//
 	// The Parameters field is NOT secret or secured in any way and should
@@ -105,6 +110,9 @@ type ServiceInstanceStatus struct {
 
 	// Indicates whether instance is ready for usage
 	Ready metav1.ConditionStatus `json:"ready,omitempty"`
+
+	// HashedSpec is the hashed spec without the shared property
+	HashedSpec string `json:"hashedSpec,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -112,6 +120,7 @@ type ServiceInstanceStatus struct {
 // +kubebuilder:storageversion
 // +kubebuilder:printcolumn:JSONPath=".spec.serviceOfferingName",name="Offering",type=string
 // +kubebuilder:printcolumn:JSONPath=".spec.servicePlanName",name="Plan",type=string
+// +kubebuilder:printcolumn:JSONPath=".spec.shared",name="shared",type=boolean
 // +kubebuilder:printcolumn:JSONPath=".spec.dataCenter",name="dataCenter",type=string
 // +kubebuilder:printcolumn:JSONPath=".status.conditions[0].reason",name="Status",type=string
 // +kubebuilder:printcolumn:JSONPath=".status.ready",name="Ready",type=string
@@ -127,48 +136,48 @@ type ServiceInstance struct {
 	Status            ServiceInstanceStatus `json:"status,omitempty"`
 }
 
-func (in *ServiceInstance) GetConditions() []metav1.Condition {
-	return in.Status.Conditions
+func (si *ServiceInstance) GetConditions() []metav1.Condition {
+	return si.Status.Conditions
 }
 
-func (in *ServiceInstance) SetConditions(conditions []metav1.Condition) {
-	in.Status.Conditions = conditions
+func (si *ServiceInstance) SetConditions(conditions []metav1.Condition) {
+	si.Status.Conditions = conditions
 }
 
-func (in *ServiceInstance) GetControllerName() api.ControllerName {
+func (si *ServiceInstance) GetControllerName() api.ControllerName {
 	return api.ServiceInstanceController
 }
 
-func (in *ServiceInstance) GetParameters() *runtime.RawExtension {
-	return in.Spec.Parameters
+func (si *ServiceInstance) GetParameters() *runtime.RawExtension {
+	return si.Spec.Parameters
 }
 
-func (in *ServiceInstance) GetStatus() interface{} {
-	return in.Status
+func (si *ServiceInstance) GetStatus() interface{} {
+	return si.Status
 }
 
-func (in *ServiceInstance) SetStatus(status interface{}) {
-	in.Status = status.(ServiceInstanceStatus)
+func (si *ServiceInstance) SetStatus(status interface{}) {
+	si.Status = status.(ServiceInstanceStatus)
 }
 
-func (in *ServiceInstance) GetObservedGeneration() int64 {
-	return in.Status.ObservedGeneration
+func (si *ServiceInstance) GetObservedGeneration() int64 {
+	return si.Status.ObservedGeneration
 }
 
-func (in *ServiceInstance) SetObservedGeneration(newObserved int64) {
-	in.Status.ObservedGeneration = newObserved
+func (si *ServiceInstance) SetObservedGeneration(newObserved int64) {
+	si.Status.ObservedGeneration = newObserved
 }
 
-func (in *ServiceInstance) DeepClone() api.SAPBTPResource {
-	return in.DeepCopy()
+func (si *ServiceInstance) DeepClone() api.SAPBTPResource {
+	return si.DeepCopy()
 }
 
-func (in *ServiceInstance) GetReady() metav1.ConditionStatus {
-	return in.Status.Ready
+func (si *ServiceInstance) GetReady() metav1.ConditionStatus {
+	return si.Status.Ready
 }
 
-func (in *ServiceInstance) SetReady(ready metav1.ConditionStatus) {
-	in.Status.Ready = ready
+func (si *ServiceInstance) SetReady(ready metav1.ConditionStatus) {
+	si.Status.Ready = ready
 }
 
 // +kubebuilder:object:root=true
@@ -184,4 +193,8 @@ func init() {
 	SchemeBuilder.Register(&ServiceInstance{}, &ServiceInstanceList{})
 }
 
-func (in *ServiceInstance) Hub() {}
+func (si *ServiceInstance) Hub() {}
+
+func (si *ServiceInstance) IsSharedDesired() bool {
+	return si.Spec.Shared != nil && *si.Spec.Shared
+}
