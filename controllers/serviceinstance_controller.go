@@ -516,8 +516,11 @@ func (r *ServiceInstanceReconciler) HandleInstanceSharingError(ctx context.Conte
 		if smError.StatusCode == http.StatusTooManyRequests {
 			errMsg = "in progress"
 			reason = InProgress
-		} else if reason == ShareFailed && smError.StatusCode == http.StatusBadRequest {
+		} else if reason == ShareFailed &&
+			(smError.StatusCode == http.StatusBadRequest || smError.StatusCode == http.StatusInternalServerError) {
 			// non-transient error may occur only when sharing
+			// SM return 400 when plan is not sharable
+			// SM returns 500 when TOGGLES_ENABLE_INSTANCE_SHARE_FROM_OPERATOR feature toggle is off
 			setSharedCondition(object, status, ShareNotSupported, err.Error())
 			return r.updateStatus(ctx, object)
 		}
