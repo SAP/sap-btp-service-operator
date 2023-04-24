@@ -6,7 +6,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/utils/pointer"
 	"net/http"
-	"reflect"
 	"strings"
 
 	"fmt"
@@ -264,6 +263,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					Expect(serviceInstance.Status.InstanceID).To(Equal(fakeInstanceID))
 					Expect(serviceInstance.Spec.ExternalName).To(Equal(fakeInstanceExternalName))
 					Expect(serviceInstance.Name).To(Equal(fakeInstanceName))
+					Expect(serviceInstance.Status.HashedSpec).To(Not(BeNil()))
 					Expect(string(serviceInstance.Spec.Parameters.Raw)).To(ContainSubstring("\"key\":\"value\""))
 					Expect(serviceInstance.Spec.UserInfo).NotTo(BeNil())
 					smInstance, _, _, _, _, _ := fakeClient.ProvisionArgsForCall(0)
@@ -870,6 +870,35 @@ var _ = Describe("ServiceInstance controller", func() {
 					})
 				})
 
+				When("sharing succeeds", func() {
+					It("hashed spec should be the same before and after", func() {
+						serviceInstance = createInstance(ctx, nonSharedInstanceSpec)
+						Eventually(func() bool {
+							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+							return len(serviceInstance.Status.Conditions) == 2 && serviceInstance.Status.Conditions[1].Type == api.ConditionReady
+						}, timeout, interval).Should(BeTrue())
+
+						before := serviceInstance.Status.HashedSpec
+
+						fakeClient.UpdateInstanceReturns(nil, "", nil)
+						serviceInstance.Spec.Shared = pointer.BoolPtr(true)
+						instanceUnSharingReturnSuccess()
+						_ = k8sClient.Update(ctx, serviceInstance)
+
+						Eventually(func() bool {
+							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+							return isInstanceShared(serviceInstance)
+						}, timeout, interval).Should(BeTrue())
+						Expect(validateInstanceIsReadyAndSucceeded(serviceInstance)).To(Equal(true))
+						Expect(serviceInstance.Status.Conditions[2].Type).To(Equal(api.ConditionShared))
+						Expect(serviceInstance.Status.Conditions[2].Status).To(Equal(metav1.ConditionTrue))
+
+						after := serviceInstance.Status.HashedSpec
+
+						Expect(before).To(Equal(after))
+					})
+				})
+
 				When("updating instance to shared and updating the name", func() {
 					It("eventually should succeed updating both", func() {
 						serviceInstance.Spec.Shared = pointer.BoolPtr(true)
@@ -1032,45 +1061,6 @@ var _ = Describe("ServiceInstance controller", func() {
 						return cond.Reason == UnShareFailed
 					}, timeout, interval).Should(BeTrue())
 				})
-			})
-		})
-	})
-
-	Context("HashedSpec", func() {
-		When("creating a service instance", func() {
-			It("should update the signature field in status", func() {
-				serviceInstance = createInstance(ctx, instanceSpec)
-				Expect(serviceInstance.Status.HashedSpec).To(Not(BeNil()))
-				Expect(reflect.TypeOf(serviceInstance.Status.HashedSpec).Kind()).To(Equal(reflect.String))
-			})
-		})
-
-		When("sharing an service instance", func() {
-			It("signature should be the same before and after", func() {
-				serviceInstance = createInstance(ctx, nonSharedInstanceSpec)
-				Eventually(func() bool {
-					_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-					return len(serviceInstance.Status.Conditions) == 2 && serviceInstance.Status.Conditions[1].Type == api.ConditionReady
-				}, timeout, interval).Should(BeTrue())
-
-				before := serviceInstance.Status.HashedSpec
-
-				fakeClient.UpdateInstanceReturns(nil, "", nil)
-				serviceInstance.Spec.Shared = pointer.BoolPtr(true)
-				instanceUnSharingReturnSuccess()
-				_ = k8sClient.Update(ctx, serviceInstance)
-
-				Eventually(func() bool {
-					_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-					return isInstanceShared(serviceInstance)
-				}, timeout, interval).Should(BeTrue())
-				Expect(validateInstanceIsReadyAndSucceeded(serviceInstance)).To(Equal(true))
-				Expect(serviceInstance.Status.Conditions[2].Type).To(Equal(api.ConditionShared))
-				Expect(serviceInstance.Status.Conditions[2].Status).To(Equal(metav1.ConditionTrue))
-
-				after := serviceInstance.Status.HashedSpec
-
-				Expect(before).To(Equal(after))
 			})
 		})
 	})
