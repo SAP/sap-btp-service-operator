@@ -247,7 +247,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					Expect(serviceInstance.Name).To(Equal(fakeInstanceName))
 					Expect(serviceInstance.Status.HashedSpec).To(Not(BeNil()))
 					Expect(string(serviceInstance.Spec.Parameters.Raw)).To(ContainSubstring("\"key\":\"value\""))
-					Expect(serviceInstance.Spec).To(Equal(getSpecHash(serviceInstance)))
+					Expect(serviceInstance.Status.HashedSpec).To(Equal(getSpecHash(serviceInstance)))
 					smInstance, _, _, _, _, _ := fakeClient.ProvisionArgsForCall(0)
 					params := smInstance.Parameters
 					Expect(params).To(ContainSubstring("\"key\":\"value\""))
