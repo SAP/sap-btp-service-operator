@@ -924,10 +924,7 @@ var _ = Describe("ServiceInstance controller", func() {
 							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
 							conditions := serviceInstance.GetConditions()
 							cond := meta.FindStatusCondition(conditions, api.ConditionShared)
-							if cond == nil {
-								return false
-							}
-							return cond.Reason == InProgress
+							return cond != nil && cond.Reason == InProgress
 						}, timeout*3, interval).Should(BeTrue())
 
 						instanceSharingReturnSuccess()
@@ -967,10 +964,7 @@ var _ = Describe("ServiceInstance controller", func() {
 							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
 							conditions := serviceInstance.GetConditions()
 							cond := meta.FindStatusCondition(conditions, api.ConditionShared)
-							if cond == nil {
-								return false
-							}
-							return cond.Reason == ShareNotSupported
+							return cond != nil && cond.Reason == ShareNotSupported
 						}, timeout, interval).Should(BeTrue())
 					})
 				})
@@ -1044,10 +1038,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
 						conditions := serviceInstance.GetConditions()
 						cond := meta.FindStatusCondition(conditions, api.ConditionShared)
-						if cond == nil {
-							return false
-						}
-						return cond.Reason == UnShareFailed
+						return cond != nil && cond.Reason == UnShareFailed
 					}, timeout, interval).Should(BeTrue())
 				})
 			})
