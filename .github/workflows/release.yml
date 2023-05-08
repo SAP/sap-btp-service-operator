@@ -15,7 +15,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Build + Push Image to GitHub Packages
-        uses: docker/build-push-action@v1
+        uses: docker/setup-buildx-action@v2
         with:
           username: ${{ secrets.OPERATOR_USER }}
           password: ${{ secrets.OPERATOR_PAT }}
