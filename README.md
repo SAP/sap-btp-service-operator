@@ -193,7 +193,7 @@ Review the supported Kubernetes API versions for the following SAP BTP Service O
     spec:
         serviceInstanceName: my-service-instance
         externalName: my-binding-external
-        secretName: mySecret
+        secretName: my-secret
         parameters:
           key1: val1
           key2: val2      
