@@ -546,7 +546,7 @@ Example:
    - `job failed: BackoffLimitExceeded`
       
      -  What happened?
-      
+       
         One of the service instances or bindings could not be deleted.
      
       - What to do:
