@@ -87,3 +87,5 @@ manager:
     enabled: false
 cluster:
   id:
+pre-delete-job:
+  image: bitnami/kubectl
