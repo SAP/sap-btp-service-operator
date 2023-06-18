@@ -18,7 +18,7 @@ spec:
       serviceAccountName: sap-btp-operator
       containers:
         - name: pre-delete-operator
-          image: "bitnami/kubectl"
+          image: "{{.Values.pre-delete-job.image}}"
           command: ["/bin/sh"]
           args:
             - "-c"
