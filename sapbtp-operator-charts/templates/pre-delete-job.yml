@@ -16,6 +16,9 @@ spec:
   template:
     spec:
       serviceAccountName: sap-btp-operator
+      {{- if .Values.manager.imagePullSecrets }}
+      imagePullSecrets: {{ toYaml .Values.manager.imagePullSecrets | nindent 8 }}
+      {{- end }}      
       containers:
         - name: pre-delete-operator
           image: "{{.Values.pre-delete-job.image}}"
