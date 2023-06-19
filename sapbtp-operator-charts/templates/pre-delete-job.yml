@@ -21,7 +21,7 @@ spec:
       {{- end }}      
       containers:
         - name: pre-delete-operator
-          image: "{{.Values.pre-delete-job.image}}"
+          image: "{{.Values.preDeleteJob.image}}"
           command: ["/bin/sh"]
           args:
             - "-c"
