@@ -88,4 +88,7 @@ manager:
 cluster:
   id:
 preDeleteJob:
-  image: bitnami/kubectl
+  image:
+    repository: bitnami/kubectl
+    sha: ""
+    tag: latest
