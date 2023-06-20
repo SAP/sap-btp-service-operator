@@ -21,7 +21,13 @@ spec:
       {{- end }}      
       containers:
         - name: pre-delete-operator
-          image: "{{.Values.preDeleteJob.image}}"
+          {{- if and ( .Values.preDeleteJob.image.sha ) ( .Values.preDeleteJob.image.tag ) }}
+          image: "{{.Values.preDeleteJob.image.repository}}:{{.Values.preDeleteJob.image.tag}}@sha256:{{.Values.preDeleteJob.image.sha}}"
+          {{- else if .Values.preDeleteJob.image.sha}}
+          image: "{{.Values.preDeleteJob.image.repository}}@sha256:{{.Values.preDeleteJob.image.sha}}"
+          {{- else }}
+          image: "{{.Values.preDeleteJob.image.repository}}:{{.Values.preDeleteJob.image.tag}}"
+          {{- end }}
           command: ["/bin/sh"]
           args:
             - "-c"
