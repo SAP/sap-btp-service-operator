@@ -21,12 +21,12 @@ spec:
       {{- end }}      
       containers:
         - name: pre-delete-operator
-          {{- if and ( .Values.preDeleteJob.image.sha ) ( .Values.preDeleteJob.image.tag ) }}
-          image: "{{.Values.preDeleteJob.image.repository}}:{{.Values.preDeleteJob.image.tag}}@sha256:{{.Values.preDeleteJob.image.sha}}"
-          {{- else if .Values.preDeleteJob.image.sha}}
-          image: "{{.Values.preDeleteJob.image.repository}}@sha256:{{.Values.preDeleteJob.image.sha}}"
+          {{- if and ( .Values.externalImages.kubectl.image.sha ) ( .Values.externalImages.kubectl.image.tag ) }}
+          image: "{{.Values.externalImages.kubectl.image.repository}}:{{.Values.externalImages.kubectl.image.tag}}@sha256:{{.Values.externalImages.kubectl.image.sha}}"
+          {{- else if .Values.externalImages.kubectl.image.sha}}
+          image: "{{.Values.externalImages.kubectl.image.repository}}@sha256:{{.Values.externalImages.kubectl.image.sha}}"
           {{- else }}
-          image: "{{.Values.preDeleteJob.image.repository}}:{{.Values.preDeleteJob.image.tag}}"
+          image: "{{.Values.externalImages.kubectl.image.repository}}:{{.Values.externalImages.kubectl.image.tag}}"
           {{- end }}
           command: ["/bin/sh"]
           args:
