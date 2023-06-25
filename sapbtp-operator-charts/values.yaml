@@ -87,3 +87,9 @@ manager:
     enabled: false
 cluster:
   id:
+externalImages:
+  kubectl:
+    image:
+      repository: bitnami/kubectl
+      sha: ""
+      tag: latest
