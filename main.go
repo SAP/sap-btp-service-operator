@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	"k8s.io/client-go/rest"
 	"os"
 
 	"fmt"
@@ -82,7 +83,10 @@ func main() {
 		allowedNamespaces := config.Get().AllowedNamespaces
 		allowedNamespaces = append(allowedNamespaces, config.Get().ReleaseNamespace)
 		setupLog.Info(fmt.Sprintf("Allowed namespaces are %v", allowedNamespaces))
-		mgrOptions.NewCache = cache.MultiNamespacedCacheBuilder(allowedNamespaces)
+		mgrOptions.NewCache = func(config *rest.Config, opts cache.Options) (cache.Cache, error) {
+			opts.Namespaces = allowedNamespaces
+			return cache.New(config, opts)
+		}
 	}
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), mgrOptions)
 	if err != nil {
