@@ -19,13 +19,13 @@ import (
 var bindinglog = logf.Log.WithName("servicebinding-webhook")
 
 type ServiceBindingDefaulter struct {
-	decoder *admission.Decoder
+	Decoder *admission.Decoder
 }
 
 func (s *ServiceBindingDefaulter) Handle(_ context.Context, req admission.Request) admission.Response {
 	bindinglog.Info("Defaulter webhook for servicebinding")
 	binding := &servicesv1.ServiceBinding{}
-	err := s.decoder.Decode(req, binding)
+	err := s.Decoder.Decode(req, binding)
 	if err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
@@ -72,9 +72,4 @@ func (s *ServiceBindingDefaulter) Handle(_ context.Context, req admission.Reques
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledInstance)
-}
-
-func (s *ServiceBindingDefaulter) InjectDecoder(d *admission.Decoder) error {
-	s.decoder = d
-	return nil
 }
