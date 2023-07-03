@@ -18,8 +18,9 @@ package main
 
 import (
 	"flag"
-	"k8s.io/client-go/rest"
 	"os"
+
+	"k8s.io/client-go/rest"
 
 	"fmt"
 
