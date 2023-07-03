@@ -33,7 +33,6 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
-	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -50,10 +49,7 @@ var testEnv *envtest.Environment
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
-
-	RunSpecsWithDefaultAndCustomReporters(t,
-		"Secret Resolver Suite",
-		[]Reporter{printer.NewlineReporter{}})
+	RunSpecs(t, "Secret Resolver Suite")
 }
 
 var _ = BeforeSuite(func(done Done) {

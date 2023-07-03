@@ -232,7 +232,14 @@ var _ = Describe("ServiceInstance controller", func() {
 
 					It("provisioning should fail", func() {
 						serviceInstance = createInstance(ctx, instanceSpec)
-						Expect(serviceInstance.Status.Conditions[0].Message).To(ContainSubstring("provided plan id does not match"))
+						Eventually(func() bool {
+							err := k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+							if err != nil {
+								return false
+							}
+							cond := meta.FindStatusCondition(serviceInstance.Status.Conditions, api.ConditionSucceeded)
+							return cond != nil && strings.Contains(cond.Message, "provided plan id does not match")
+						}, timeout, interval).Should(BeTrue())
 					})
 				})
 			})

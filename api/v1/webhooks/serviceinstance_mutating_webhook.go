@@ -19,13 +19,13 @@ import (
 var instancelog = logf.Log.WithName("serviceinstance-webhook")
 
 type ServiceInstanceDefaulter struct {
-	decoder *admission.Decoder
+	Decoder *admission.Decoder
 }
 
 func (s *ServiceInstanceDefaulter) Handle(_ context.Context, req admission.Request) admission.Response {
 	instancelog.Info("Defaulter webhook for serviceinstance")
 	instance := &servicesv1.ServiceInstance{}
-	err := s.decoder.Decode(req, instance)
+	err := s.Decoder.Decode(req, instance)
 	if err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
@@ -59,7 +59,7 @@ func (s *ServiceInstanceDefaulter) setServiceInstanceUserInfo(req admission.Requ
 		instance.Spec.UserInfo = userInfo
 	} else if req.Operation == v1admission.Update {
 		oldInstance := &servicesv1.ServiceInstance{}
-		err := s.decoder.DecodeRaw(req.OldObject, oldInstance)
+		err := s.Decoder.DecodeRaw(req.OldObject, oldInstance)
 		if err != nil {
 			return err
 		}
@@ -67,10 +67,5 @@ func (s *ServiceInstanceDefaulter) setServiceInstanceUserInfo(req admission.Requ
 			instance.Spec.UserInfo = userInfo
 		}
 	}
-	return nil
-}
-
-func (s *ServiceInstanceDefaulter) InjectDecoder(d *admission.Decoder) error {
-	s.decoder = d
 	return nil
 }
