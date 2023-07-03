@@ -631,7 +631,7 @@ func getTags(tags []byte) ([]string, error) {
 
 func getSpecHash(serviceInstance *servicesv1.ServiceInstance) string {
 	spec := serviceInstance.Spec
-	spec.Shared = pointer.BoolPtr(false)
+	spec.Shared = pointer.Bool(false)
 	specBytes, _ := json.Marshal(spec)
 	s := string(specBytes)
 	return generateEncodedMD5Hash(s)

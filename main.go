@@ -20,6 +20,10 @@ import (
 	"flag"
 	"os"
 
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	"k8s.io/client-go/rest"
+
 	"fmt"
 
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -82,7 +86,10 @@ func main() {
 		allowedNamespaces := config.Get().AllowedNamespaces
 		allowedNamespaces = append(allowedNamespaces, config.Get().ReleaseNamespace)
 		setupLog.Info(fmt.Sprintf("Allowed namespaces are %v", allowedNamespaces))
-		mgrOptions.NewCache = cache.MultiNamespacedCacheBuilder(allowedNamespaces)
+		mgrOptions.NewCache = func(config *rest.Config, opts cache.Options) (cache.Cache, error) {
+			opts.Namespaces = allowedNamespaces
+			return cache.New(config, opts)
+		}
 	}
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), mgrOptions)
 	if err != nil {
@@ -125,8 +132,8 @@ func main() {
 		os.Exit(1)
 	}
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-		mgr.GetWebhookServer().Register("/mutate-services-cloud-sap-com-v1-serviceinstance", &webhook.Admission{Handler: &webhooks.ServiceInstanceDefaulter{}})
-		mgr.GetWebhookServer().Register("/mutate-services-cloud-sap-com-v1-servicebinding", &webhook.Admission{Handler: &webhooks.ServiceBindingDefaulter{}})
+		mgr.GetWebhookServer().Register("/mutate-services-cloud-sap-com-v1-serviceinstance", &webhook.Admission{Handler: &webhooks.ServiceInstanceDefaulter{Decoder: admission.NewDecoder(mgr.GetScheme())}})
+		mgr.GetWebhookServer().Register("/mutate-services-cloud-sap-com-v1-servicebinding", &webhook.Admission{Handler: &webhooks.ServiceBindingDefaulter{Decoder: admission.NewDecoder(mgr.GetScheme())}})
 		if err = (&servicesv1.ServiceBinding{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "ServiceBinding")
 			os.Exit(1)

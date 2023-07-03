@@ -20,6 +20,8 @@ import (
 	"reflect"
 	"time"
 
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
 	"fmt"
 
 	"github.com/SAP/sap-btp-service-operator/api"
@@ -47,22 +49,22 @@ func (sb *ServiceBinding) SetupWebhookWithManager(mgr ctrl.Manager) error {
 var _ webhook.Validator = &ServiceBinding{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (sb *ServiceBinding) ValidateCreate() error {
+func (sb *ServiceBinding) ValidateCreate() (admission.Warnings, error) {
 	servicebindinglog.Info("validate create", "name", sb.Name)
 	if sb.Spec.CredRotationPolicy != nil {
 		if err := sb.validateCredRotatingConfig(); err != nil {
-			return err
+			return nil, err
 		}
 	}
-	return nil
+	return nil, nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (sb *ServiceBinding) ValidateUpdate(old runtime.Object) error {
+func (sb *ServiceBinding) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 	servicebindinglog.Info("validate update", "name", sb.Name)
 	if sb.Spec.CredRotationPolicy != nil {
 		if err := sb.validateCredRotatingConfig(); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
@@ -75,9 +77,9 @@ func (sb *ServiceBinding) ValidateUpdate(old runtime.Object) error {
 	}
 
 	if specChanged && (sb.Status.BindingID != "" || isStale) {
-		return fmt.Errorf("updating service bindings is not supported")
+		return nil, fmt.Errorf("updating service bindings is not supported")
 	}
-	return nil
+	return nil, nil
 }
 
 func (sb *ServiceBinding) specChanged(old runtime.Object) bool {
@@ -92,11 +94,11 @@ func (sb *ServiceBinding) specChanged(old runtime.Object) bool {
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (sb *ServiceBinding) ValidateDelete() error {
+func (sb *ServiceBinding) ValidateDelete() (admission.Warnings, error) {
 	servicebindinglog.Info("validate delete", "name", sb.Name)
 
 	// TODO(user): fill in your validation logic upon object deletion.
-	return nil
+	return nil, nil
 }
 
 func (sb *ServiceBinding) validateCredRotatingConfig() error {
