@@ -309,7 +309,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					})
 				})
 
-				Context("with 502 and broker 429", func() {
+				Context("with sm status code 502 and broker status code 429", func() {
 					JustBeforeEach(func() {
 						fakeClient.ProvisionReturns(nil, &sm.ServiceManagerError{
 							StatusCode: http.StatusBadGateway,
