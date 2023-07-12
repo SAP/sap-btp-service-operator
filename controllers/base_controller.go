@@ -138,7 +138,6 @@ func (r *BaseReconciler) init(ctx context.Context, obj api.SAPBTPResource) error
 	obj.SetReady(metav1.ConditionFalse)
 	setInProgressConditions(smClientTypes.CREATE, "Pending", obj)
 	return r.updateStatus(ctx, obj)
-
 }
 
 func getConditionReason(opType smClientTypes.OperationCategory, state smClientTypes.OperationState) string {
