@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/SAP/sap-btp-service-operator/api"
-	osbc "github.com/kubernetes-sigs/go-open-service-broker-client/v2"
+	"github.com/kubernetes-sigs/go-open-service-broker-client/v2"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/utils/pointer"
 
@@ -1134,7 +1134,7 @@ func getNonTransientBrokerError(errMessage string) error {
 	return &sm.ServiceManagerError{
 		StatusCode: http.StatusBadRequest,
 		Message:    errMessage,
-		BrokerError: &osbc.HTTPStatusCodeError{
+		BrokerError: &v2.HTTPStatusCodeError{
 			StatusCode: 400,
 		}}
 }
@@ -1143,7 +1143,7 @@ func getTransientBrokerError() error {
 	return &sm.ServiceManagerError{
 		StatusCode: http.StatusBadGateway,
 		Message:    "errMessage",
-		BrokerError: &osbc.HTTPStatusCodeError{
+		BrokerError: &v2.HTTPStatusCodeError{
 			StatusCode: http.StatusTooManyRequests,
 		},
 	}
