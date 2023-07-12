@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/SAP/sap-btp-service-operator/api"
-	v2 "github.com/kubernetes-sigs/go-open-service-broker-client/v2"
+	osbc "github.com/kubernetes-sigs/go-open-service-broker-client/v2"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/utils/pointer"
 
@@ -314,7 +314,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						fakeClient.ProvisionReturns(nil, &sm.ServiceManagerError{
 							StatusCode: http.StatusBadGateway,
 							Message:    "errMessage",
-							BrokerError: &v2.HTTPStatusCodeError{
+							BrokerError: &osbc.HTTPStatusCodeError{
 								StatusCode: http.StatusTooManyRequests,
 							},
 						})
@@ -557,7 +557,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					fakeClient.UpdateInstanceReturns(nil, "", &sm.ServiceManagerError{
 						StatusCode: http.StatusBadGateway,
 						Message:    "errMessage",
-						BrokerError: &v2.HTTPStatusCodeError{
+						BrokerError: &osbc.HTTPStatusCodeError{
 							StatusCode: http.StatusTooManyRequests,
 						},
 					})
