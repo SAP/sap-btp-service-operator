@@ -278,7 +278,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 					It("should have failure condition", func() {
 						serviceInstance = createInstance(ctx, instanceSpec, false)
-						expectForInstanceFailure(ctx, defaultLookupKey, serviceInstance, errMessage)
+						expectForInstanceCreationFailure(ctx, defaultLookupKey, serviceInstance, errMessage)
 					})
 				})
 
@@ -321,7 +321,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 					It("should have failure condition - non transient error", func() {
 						serviceInstance = createInstance(ctx, instanceSpec, false)
-						expectForInstanceFailure(ctx, defaultLookupKey, serviceInstance, errMessage)
+						expectForInstanceCreationFailure(ctx, defaultLookupKey, serviceInstance, errMessage)
 					})
 				})
 			})
@@ -1149,7 +1149,7 @@ func getTransientBrokerError() error {
 	}
 }
 
-func expectForInstanceFailure(ctx context.Context, defaultLookupKey types.NamespacedName, serviceInstance *v1.ServiceInstance, errMessage string) {
+func expectForInstanceCreationFailure(ctx context.Context, defaultLookupKey types.NamespacedName, serviceInstance *v1.ServiceInstance, errMessage string) {
 	Eventually(func() bool {
 		err := k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
 		if err != nil {
