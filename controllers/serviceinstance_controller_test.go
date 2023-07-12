@@ -315,13 +315,7 @@ var _ = Describe("ServiceInstance controller", func() {
 				Context("with sm status code 502 and broker status code 400", func() {
 					JustBeforeEach(func() {
 						errMessage = "failed to provision instance"
-						fakeClient.ProvisionReturns(nil, &sm.ServiceManagerError{
-							StatusCode: http.StatusBadRequest,
-							Message:    errMessage,
-							BrokerError: &osbc.HTTPStatusCodeError{
-								StatusCode: 400,
-							},
-						})
+						fakeClient.ProvisionReturns(nil, getNonTransientBrokerError(errMessage))
 						fakeClient.ProvisionReturnsOnCall(1, &sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
 					})
 
@@ -1135,6 +1129,15 @@ var _ = Describe("ServiceInstance controller", func() {
 		})
 	})
 })
+
+func getNonTransientBrokerError(errMessage string) error {
+	return &sm.ServiceManagerError{
+		StatusCode: http.StatusBadRequest,
+		Message:    errMessage,
+		BrokerError: &osbc.HTTPStatusCodeError{
+			StatusCode: 400,
+		}}
+}
 
 func getTransientBrokerError() error {
 	return &sm.ServiceManagerError{
