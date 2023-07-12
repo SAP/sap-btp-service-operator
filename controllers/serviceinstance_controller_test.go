@@ -311,13 +311,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 				Context("with sm status code 502 and broker status code 429", func() {
 					JustBeforeEach(func() {
-						fakeClient.ProvisionReturns(nil, &sm.ServiceManagerError{
-							StatusCode: http.StatusBadGateway,
-							Message:    "errMessage",
-							BrokerError: &osbc.HTTPStatusCodeError{
-								StatusCode: http.StatusTooManyRequests,
-							},
-						})
+						fakeClient.ProvisionReturns(nil, getTransientBrokerError())
 						fakeClient.ProvisionReturnsOnCall(1, &sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
 					})
 
@@ -554,13 +548,7 @@ var _ = Describe("ServiceInstance controller", func() {
 			Context("spec is changed, sm returns 502 and broker returns 429", func() {
 				JustBeforeEach(func() {
 					fakeClient.ProvisionReturnsOnCall(0, &sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
-					fakeClient.UpdateInstanceReturns(nil, "", &sm.ServiceManagerError{
-						StatusCode: http.StatusBadGateway,
-						Message:    "errMessage",
-						BrokerError: &osbc.HTTPStatusCodeError{
-							StatusCode: http.StatusTooManyRequests,
-						},
-					})
+					fakeClient.UpdateInstanceReturns(nil, "", getTransientBrokerError())
 					fakeClient.UpdateInstanceReturns(nil, "", nil)
 				})
 
@@ -1138,6 +1126,16 @@ var _ = Describe("ServiceInstance controller", func() {
 		})
 	})
 })
+
+func getTransientBrokerError() error {
+	return &sm.ServiceManagerError{
+		StatusCode: http.StatusBadGateway,
+		Message:    "errMessage",
+		BrokerError: &osbc.HTTPStatusCodeError{
+			StatusCode: http.StatusTooManyRequests,
+		},
+	}
+}
 
 func instanceSharingReturnSuccess() {
 	fakeClient.ShareInstanceReturns(nil)
