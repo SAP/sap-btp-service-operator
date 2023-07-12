@@ -93,9 +93,3 @@ externalImages:
       repository: bitnami/kubectl
       sha: ""
       tag: latest
-externalImages:
-  kubectl:
-    image:
-      repository: bitnami/kubectl
-      sha: ""
-      tag: latest
