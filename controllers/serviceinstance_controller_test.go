@@ -266,7 +266,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 			When("provision request to SM fails", func() {
 				var errMessage string
-				FContext("with 400 status", func() {
+				Context("with 400 status", func() {
 					JustBeforeEach(func() {
 						errMessage = "failed to provision instance"
 						fakeClient.ProvisionReturns(nil, &sm.ServiceManagerError{
