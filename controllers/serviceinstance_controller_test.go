@@ -2,14 +2,14 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/SAP/sap-btp-service-operator/api"
+	v2 "github.com/kubernetes-sigs/go-open-service-broker-client/v2"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/utils/pointer"
-
-	"fmt"
 
 	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
@@ -30,12 +30,11 @@ import (
 // +kubebuilder:docs-gen:collapse=Imports
 
 const (
-	fakeInstanceID                    = "ic-fake-instance-id"
-	fakeInstanceExternalName          = "ic-test-instance-external-name"
-	fakeInstanceExternalNameNonShared = "ic-test-instance-external-name-non-shared"
-	testNamespace                     = "ic-test-namespace"
-	fakeOfferingName                  = "offering-a"
-	fakePlanName                      = "plan-a"
+	fakeInstanceID           = "ic-fake-instance-id"
+	fakeInstanceExternalName = "ic-test-instance-external-name"
+	testNamespace            = "ic-test-namespace"
+	fakeOfferingName         = "offering-a"
+	fakePlanName             = "plan-a"
 )
 
 var _ = Describe("ServiceInstance controller", func() {
@@ -275,7 +274,6 @@ var _ = Describe("ServiceInstance controller", func() {
 							Message:    errMessage,
 						})
 						fakeClient.ProvisionReturnsOnCall(1, &sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
-
 					})
 
 					It("should have failure condition", func() {
@@ -305,6 +303,25 @@ var _ = Describe("ServiceInstance controller", func() {
 					})
 
 					It("should retry until success", func() {
+						serviceInstance = createInstance(ctx, instanceSpec, true)
+						Expect(len(serviceInstance.Status.Conditions)).To(Equal(2))
+						Expect(meta.IsStatusConditionPresentAndEqual(serviceInstance.Status.Conditions, api.ConditionSucceeded, metav1.ConditionTrue)).To(Equal(true))
+					})
+				})
+
+				Context("with 502 and broker 429", func() {
+					JustBeforeEach(func() {
+						fakeClient.ProvisionReturns(nil, &sm.ServiceManagerError{
+							StatusCode: http.StatusBadGateway,
+							Message:    "errMessage",
+							BrokerError: &v2.HTTPStatusCodeError{
+								StatusCode: http.StatusTooManyRequests,
+							},
+						})
+						fakeClient.ProvisionReturnsOnCall(1, &sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
+					})
+
+					It("should be transient error and eventually succeed", func() {
 						serviceInstance = createInstance(ctx, instanceSpec, true)
 						Expect(len(serviceInstance.Status.Conditions)).To(Equal(2))
 						Expect(meta.IsStatusConditionPresentAndEqual(serviceInstance.Status.Conditions, api.ConditionSucceeded, metav1.ConditionTrue)).To(Equal(true))
@@ -532,6 +549,31 @@ var _ = Describe("ServiceInstance controller", func() {
 						updatedInstance := updateInstance(ctx, serviceInstance)
 						Expect(updatedInstance.Status.Conditions[0].Reason).To(Equal(UpdateFailed))
 					})
+				})
+			})
+			Context("spec is changed, sm returns 502 and broker returns 429", func() {
+				JustBeforeEach(func() {
+					fakeClient.ProvisionReturnsOnCall(0, &sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
+					fakeClient.UpdateInstanceReturns(nil, "", &sm.ServiceManagerError{
+						StatusCode: http.StatusBadGateway,
+						Message:    "errMessage",
+						BrokerError: &v2.HTTPStatusCodeError{
+							StatusCode: http.StatusTooManyRequests,
+						},
+					})
+					fakeClient.UpdateInstanceReturns(nil, "", nil)
+				})
+
+				It("recognize the error as transient and eventually succeed", func() {
+					serviceInstance = createInstance(ctx, instanceSpec, true)
+					Expect(len(serviceInstance.Status.Conditions)).To(Equal(2))
+					Expect(meta.IsStatusConditionPresentAndEqual(serviceInstance.Status.Conditions, api.ConditionSucceeded, metav1.ConditionTrue)).To(Equal(true))
+					newSpec := updateSpec()
+					serviceInstance.Spec = newSpec
+					serviceInstance = updateInstance(ctx, serviceInstance)
+					Expect(serviceInstance.Spec.ExternalName).To(Equal(newSpec.ExternalName))
+					Expect(serviceInstance.Status.Conditions[0].Reason).To(Equal(Updated))
+					Expect(serviceInstance.Spec.UserInfo).NotTo(BeNil())
 				})
 			})
 
