@@ -306,10 +306,26 @@ func isTransientError(ctx context.Context, err error) bool {
 	log := GetLogger(ctx)
 	if smError, ok := err.(*sm.ServiceManagerError); ok {
 		log.Info(fmt.Sprintf("SM returned error status code %d", smError.StatusCode))
-		return smError.StatusCode == http.StatusTooManyRequests || smError.StatusCode == http.StatusServiceUnavailable ||
-			smError.StatusCode == http.StatusGatewayTimeout || smError.StatusCode == http.StatusNotFound || smError.StatusCode == http.StatusBadGateway
+		if isBrokerStatusCodeExist(smError) {
+			log.Info(fmt.Sprintf("Broker returned error status code %d", smError.BrokerError.StatusCode))
+		}
+		if isTransientStatusCode(smError.StatusCode) {
+			return true
+		}
+		if smError.StatusCode == http.StatusBadGateway {
+			return isBrokerStatusCodeExist(smError) && isTransientStatusCode(smError.BrokerError.StatusCode)
+		}
 	}
 	return false
+}
+
+func isTransientStatusCode(StatusCode int) bool {
+	return StatusCode == http.StatusTooManyRequests || StatusCode == http.StatusServiceUnavailable ||
+		StatusCode == http.StatusGatewayTimeout || StatusCode == http.StatusNotFound
+}
+
+func isBrokerStatusCodeExist(smError *sm.ServiceManagerError) bool {
+	return smError.BrokerError != nil && smError.BrokerError.StatusCode != 0
 }
 
 func (r *BaseReconciler) markAsNonTransientError(ctx context.Context, operationType smClientTypes.OperationCategory, nonTransientErr error, object api.SAPBTPResource) (ctrl.Result, error) {

@@ -21,6 +21,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	osbc "github.com/kubernetes-sigs/go-open-service-broker-client/v2"
 	"io"
 	"net/http"
 	"reflect"
@@ -67,8 +68,9 @@ type Client interface {
 	Call(method string, smpath string, body io.Reader, q *Parameters) (*http.Response, error)
 }
 type ServiceManagerError struct {
-	Message    string
-	StatusCode int
+	Message     string
+	StatusCode  int
+	BrokerError *osbc.HTTPStatusCodeError `json:"broker_error,omitempty"`
 }
 
 func (e *ServiceManagerError) Error() string {
