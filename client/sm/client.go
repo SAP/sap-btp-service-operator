@@ -31,6 +31,7 @@ import (
 	"github.com/SAP/sap-btp-service-operator/client/sm/types"
 	"github.com/SAP/sap-btp-service-operator/internal/auth"
 	"github.com/SAP/sap-btp-service-operator/internal/httputil"
+	osbc "github.com/kubernetes-sigs/go-open-service-broker-client/v2"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
 )
@@ -67,8 +68,9 @@ type Client interface {
 	Call(method string, smpath string, body io.Reader, q *Parameters) (*http.Response, error)
 }
 type ServiceManagerError struct {
-	Message    string
-	StatusCode int
+	Message     string
+	StatusCode  int
+	BrokerError *osbc.HTTPStatusCodeError `json:"broker_error,omitempty"`
 }
 
 func (e *ServiceManagerError) Error() string {
