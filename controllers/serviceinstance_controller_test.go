@@ -2,11 +2,12 @@ package controllers
 
 import (
 	"context"
+	"net/http"
+	"strings"
+
 	"github.com/SAP/sap-btp-service-operator/api"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/utils/pointer"
-	"net/http"
-	"strings"
 
 	"fmt"
 

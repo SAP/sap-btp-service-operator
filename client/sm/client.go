@@ -21,13 +21,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	osbc "github.com/kubernetes-sigs/go-open-service-broker-client/v2"
 	"io"
 	"net/http"
 	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
+
+	v2 "github.com/kubernetes-sigs/go-open-service-broker-client/v2"
 
 	"github.com/SAP/sap-btp-service-operator/client/sm/types"
 	"github.com/SAP/sap-btp-service-operator/internal/auth"
@@ -70,7 +71,7 @@ type Client interface {
 type ServiceManagerError struct {
 	Message     string
 	StatusCode  int
-	BrokerError *osbc.HTTPStatusCodeError `json:"broker_error,omitempty"`
+	BrokerError *v2.HTTPStatusCodeError `json:"broker_error,omitempty"`
 }
 
 func (e *ServiceManagerError) Error() string {
