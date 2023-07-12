@@ -303,7 +303,7 @@ func isTransientError(ctx context.Context, err error) bool {
 	log := GetLogger(ctx)
 	if smError, ok := err.(*sm.ServiceManagerError); ok {
 		log.Info(fmt.Sprintf("SM returned error status code %d", smError.StatusCode))
-		if isBrokerStatusCodeExist(smError) {
+		if isBrokerErrorExist(smError) {
 			log.Info(fmt.Sprintf("Broker returned error status code %d", smError.BrokerError.StatusCode))
 			if smError.StatusCode == http.StatusBadGateway && isTransientStatusCode(smError.BrokerError.StatusCode) {
 				return true
@@ -321,7 +321,7 @@ func isTransientStatusCode(StatusCode int) bool {
 		StatusCode == http.StatusGatewayTimeout || StatusCode == http.StatusNotFound
 }
 
-func isBrokerStatusCodeExist(smError *sm.ServiceManagerError) bool {
+func isBrokerErrorExist(smError *sm.ServiceManagerError) bool {
 	return smError.BrokerError != nil && smError.BrokerError.StatusCode != 0
 }
 
