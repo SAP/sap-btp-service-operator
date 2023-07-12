@@ -266,7 +266,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 			When("provision request to SM fails", func() {
 				var errMessage string
-				Context("with 400 status", func() {
+				FContext("with 400 status", func() {
 					JustBeforeEach(func() {
 						errMessage = "failed to provision instance"
 						fakeClient.ProvisionReturns(nil, &sm.ServiceManagerError{
@@ -278,17 +278,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 					It("should have failure condition", func() {
 						serviceInstance = createInstance(ctx, instanceSpec, false)
-						Eventually(func() bool {
-							err := k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-							if err != nil {
-								return false
-							}
-							if len(serviceInstance.Status.Conditions) != 3 {
-								return false
-							}
-							cond := meta.FindStatusCondition(serviceInstance.Status.Conditions, api.ConditionSucceeded)
-							return cond != nil && cond.Status == metav1.ConditionFalse && strings.Contains(cond.Message, errMessage)
-						}, timeout, interval).Should(BeTrue())
+						expectForInstanceFailure(ctx, defaultLookupKey, serviceInstance, errMessage)
 					})
 				})
 
@@ -319,6 +309,25 @@ var _ = Describe("ServiceInstance controller", func() {
 						serviceInstance = createInstance(ctx, instanceSpec, true)
 						Expect(len(serviceInstance.Status.Conditions)).To(Equal(2))
 						Expect(meta.IsStatusConditionPresentAndEqual(serviceInstance.Status.Conditions, api.ConditionSucceeded, metav1.ConditionTrue)).To(Equal(true))
+					})
+				})
+
+				Context("with sm status code 502 and broker status code 400", func() {
+					JustBeforeEach(func() {
+						errMessage = "failed to provision instance"
+						fakeClient.ProvisionReturns(nil, &sm.ServiceManagerError{
+							StatusCode: http.StatusBadRequest,
+							Message:    errMessage,
+							BrokerError: &osbc.HTTPStatusCodeError{
+								StatusCode: 400,
+							},
+						})
+						fakeClient.ProvisionReturnsOnCall(1, &sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
+					})
+
+					It("should have failure condition - non transient error", func() {
+						serviceInstance = createInstance(ctx, instanceSpec, false)
+						expectForInstanceFailure(ctx, defaultLookupKey, serviceInstance, errMessage)
 					})
 				})
 			})
@@ -1135,6 +1144,20 @@ func getTransientBrokerError() error {
 			StatusCode: http.StatusTooManyRequests,
 		},
 	}
+}
+
+func expectForInstanceFailure(ctx context.Context, defaultLookupKey types.NamespacedName, serviceInstance *v1.ServiceInstance, errMessage string) {
+	Eventually(func() bool {
+		err := k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+		if err != nil {
+			return false
+		}
+		if len(serviceInstance.Status.Conditions) != 3 {
+			return false
+		}
+		cond := meta.FindStatusCondition(serviceInstance.Status.Conditions, api.ConditionSucceeded)
+		return cond != nil && cond.Status == metav1.ConditionFalse && strings.Contains(cond.Message, errMessage)
+	}, timeout, interval).Should(BeTrue())
 }
 
 func instanceSharingReturnSuccess() {
