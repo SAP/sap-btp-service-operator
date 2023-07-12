@@ -538,6 +538,31 @@ var _ = Describe("ServiceBinding controller", func() {
 						})
 					})
 
+					When("SM returned error 502 and broker returned 429", func() {
+						BeforeEach(func() {
+							errorMessage = "too many requests"
+							fakeClient.BindReturnsOnCall(0, nil, "", getTransientBrokerError())
+							fakeClient.BindReturnsOnCall(1, &smClientTypes.ServiceBinding{ID: fakeBindingID, Credentials: json.RawMessage("{\"secret_key\": \"secret_value\"}")}, "", nil)
+						})
+
+						It("should eventually succeed", func() {
+							b, err := createBindingWithoutAssertionsAndWait(context.Background(), bindingName, bindingTestNamespace, instanceName, "binding-external-name", true)
+							Expect(err).ToNot(HaveOccurred())
+							Expect(isReady(b)).To(BeTrue())
+						})
+					})
+
+					When("SM returned 502 and broker returned 400", func() {
+						BeforeEach(func() {
+							errorMessage = "very bad request"
+							fakeClient.BindReturnsOnCall(0, nil, "", getNonTransientBrokerError(errorMessage))
+						})
+
+						It("should fail", func() {
+							createBindingWithError(context.Background(), bindingName, bindingTestNamespace, instanceName, "binding-external-name", errorMessage)
+						})
+					})
+
 				})
 
 				When("SM returned invalid credentials json", func() {
