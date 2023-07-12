@@ -305,12 +305,12 @@ func isTransientError(ctx context.Context, err error) bool {
 		log.Info(fmt.Sprintf("SM returned error status code %d", smError.StatusCode))
 		if isBrokerStatusCodeExist(smError) {
 			log.Info(fmt.Sprintf("Broker returned error status code %d", smError.BrokerError.StatusCode))
+			if smError.StatusCode == http.StatusBadGateway && isTransientStatusCode(smError.BrokerError.StatusCode) {
+				return true
+			}
 		}
 		if isTransientStatusCode(smError.StatusCode) {
 			return true
-		}
-		if smError.StatusCode == http.StatusBadGateway {
-			return isBrokerStatusCodeExist(smError) && isTransientStatusCode(smError.BrokerError.StatusCode)
 		}
 	}
 	return false
