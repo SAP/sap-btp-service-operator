@@ -545,7 +545,7 @@ var _ = Describe("ServiceBinding controller", func() {
 							fakeClient.BindReturnsOnCall(1, &smClientTypes.ServiceBinding{ID: fakeBindingID, Credentials: json.RawMessage("{\"secret_key\": \"secret_value\"}")}, "", nil)
 						})
 
-						It("should eventually succeed", func() {
+						It("should detect the error as transient and eventually succeed", func() {
 							b, err := createBindingWithoutAssertionsAndWait(context.Background(), bindingName, bindingTestNamespace, instanceName, "binding-external-name", true)
 							Expect(err).ToNot(HaveOccurred())
 							Expect(isReady(b)).To(BeTrue())
@@ -558,7 +558,7 @@ var _ = Describe("ServiceBinding controller", func() {
 							fakeClient.BindReturnsOnCall(0, nil, "", getNonTransientBrokerError(errorMessage))
 						})
 
-						It("should fail", func() {
+						It("should detect the error as non-transient and fail", func() {
 							createBindingWithError(context.Background(), bindingName, bindingTestNamespace, instanceName, "binding-external-name", errorMessage)
 						})
 					})

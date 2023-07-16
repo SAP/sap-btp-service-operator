@@ -1151,8 +1151,7 @@ func getTransientBrokerError() error {
 
 func expectForInstanceCreationFailure(ctx context.Context, defaultLookupKey types.NamespacedName, serviceInstance *v1.ServiceInstance, errMessage string) {
 	Eventually(func() bool {
-		err := k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-		if err != nil {
+		if err := k8sClient.Get(ctx, defaultLookupKey, serviceInstance); err != nil {
 			return false
 		}
 		if len(serviceInstance.Status.Conditions) != 3 {
