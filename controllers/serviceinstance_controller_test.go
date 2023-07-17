@@ -533,7 +533,7 @@ var _ = Describe("ServiceInstance controller", func() {
 			})
 		})
 
-		FContext("When update call to SM fails", func() {
+		Context("When update call to SM fails", func() {
 			Context("Sync", func() {
 				When("spec is changed", func() {
 					BeforeEach(func() {
