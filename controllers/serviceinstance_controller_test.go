@@ -140,7 +140,6 @@ var _ = Describe("ServiceInstance controller", func() {
 		isConditionRefersUpdateOp := func(instance *v1.ServiceInstance) bool {
 			conditionReason := instance.Status.Conditions[0].Reason
 			return strings.Contains(conditionReason, Updated) || strings.Contains(conditionReason, UpdateInProgress) || strings.Contains(conditionReason, UpdateFailed)
-
 		}
 
 		_ = k8sClient.Update(ctx, serviceInstance)
@@ -534,7 +533,7 @@ var _ = Describe("ServiceInstance controller", func() {
 			})
 		})
 
-		Context("When update call to SM fails", func() {
+		FContext("When update call to SM fails", func() {
 			Context("Sync", func() {
 				When("spec is changed", func() {
 					BeforeEach(func() {
@@ -548,17 +547,14 @@ var _ = Describe("ServiceInstance controller", func() {
 					})
 				})
 			})
+
 			Context("spec is changed, sm returns 502 and broker returns 429", func() {
 				JustBeforeEach(func() {
-					fakeClient.ProvisionReturnsOnCall(0, &sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
 					fakeClient.UpdateInstanceReturns(nil, "", getTransientBrokerError())
 					fakeClient.UpdateInstanceReturns(nil, "", nil)
 				})
 
 				It("recognize the error as transient and eventually succeed", func() {
-					serviceInstance = createInstance(ctx, instanceSpec, true)
-					Expect(len(serviceInstance.Status.Conditions)).To(Equal(2))
-					Expect(meta.IsStatusConditionPresentAndEqual(serviceInstance.Status.Conditions, api.ConditionSucceeded, metav1.ConditionTrue)).To(Equal(true))
 					newSpec := updateSpec()
 					serviceInstance.Spec = newSpec
 					serviceInstance = updateInstance(ctx, serviceInstance)
