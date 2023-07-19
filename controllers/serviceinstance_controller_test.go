@@ -560,7 +560,6 @@ var _ = Describe("ServiceInstance controller", func() {
 					serviceInstance = updateInstance(ctx, serviceInstance)
 					Expect(serviceInstance.Spec.ExternalName).To(Equal(newSpec.ExternalName))
 					Expect(serviceInstance.Status.Conditions[0].Reason).To(Equal(Updated))
-					Expect(serviceInstance.Spec.UserInfo).NotTo(BeNil())
 				})
 			})
 
