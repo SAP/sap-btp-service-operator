@@ -303,16 +303,13 @@ func isTransientError(ctx context.Context, err error) bool {
 	log := GetLogger(ctx)
 	if smError, ok := err.(*sm.ServiceManagerError); ok {
 		log.Info(fmt.Sprintf("SM returned error status code %d", smError.StatusCode))
-		if isSMTransientStatusCode(smError.StatusCode) {
-			return true
-		}
-		if smError.StatusCode == http.StatusBadGateway {
-			if !isBrokerErrorExist(smError) {
-				return true
-			}
+		if isBrokerErrorExist(smError) {
 			log.Info(fmt.Sprintf("Broker returned error status code %d", smError.BrokerError.StatusCode))
-			return isBrokerTransientStatusCode(smError.BrokerError.StatusCode)
+			return isSMTransientStatusCode(smError.StatusCode) || isBrokerTransientStatusCode(smError.BrokerError.StatusCode)
 		}
+		/* In case broker status does not exist we want to classify smError status code
+		   as transient even if it's 502 */
+		return isBrokerTransientStatusCode(smError.StatusCode)
 	}
 	return false
 }
