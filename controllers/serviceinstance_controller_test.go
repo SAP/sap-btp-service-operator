@@ -117,6 +117,41 @@ var _ = Describe("ServiceInstance controller", func() {
 		return createdInstance
 	}
 
+	createInstanceWithErrorAndEvetuallySucceed := func(ctx context.Context, instanceSpec v1.ServiceInstanceSpec, errMessage string) *v1.ServiceInstance {
+		instance := &v1.ServiceInstance{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "services.cloud.sap.com/v1",
+				Kind:       "ServiceInstance",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      fakeInstanceName,
+				Namespace: testNamespace,
+			},
+			Spec: instanceSpec,
+		}
+		Expect(k8sClient.Create(ctx, instance)).Should(Succeed())
+
+		createdInstance := &v1.ServiceInstance{}
+
+		Eventually(func() bool {
+			err := k8sClient.Get(ctx, defaultLookupKey, createdInstance)
+			if err != nil {
+				return false
+			}
+			return len(createdInstance.Status.Conditions) > 0 && strings.EqualFold(createdInstance.Status.Conditions[0].Message, errMessage)
+		}, timeout, interval).Should(BeTrue())
+
+		Eventually(func() bool {
+			err := k8sClient.Get(ctx, defaultLookupKey, createdInstance)
+			if err != nil {
+				return false
+			}
+			return isReady(createdInstance)
+		}, timeout, interval).Should(BeTrue())
+
+		return createdInstance
+	}
+
 	deleteInstance := func(ctx context.Context, instanceToDelete *v1.ServiceInstance, wait bool) {
 		err := k8sClient.Get(ctx, types.NamespacedName{Name: instanceToDelete.Name, Namespace: instanceToDelete.Namespace}, &v1.ServiceInstance{})
 		if err != nil {
@@ -154,6 +189,26 @@ var _ = Describe("ServiceInstance controller", func() {
 
 		return updatedInstance
 	}
+
+	//updateInstanceWaitForErrorAndEvetuallySucceed := func(ctx context.Context, serviceInstance *v1.ServiceInstance, errMessage string) *v1.ServiceInstance {
+	//	isConditionRefersUpdateOp := func(instance *v1.ServiceInstance) bool {
+	//		conditionReason := instance.Status.Conditions[0].Reason
+	//		return strings.Contains(conditionReason, Updated) || strings.Contains(conditionReason, UpdateInProgress) || strings.Contains(conditionReason, UpdateFailed)
+	//	}
+	//
+	//	_ = k8sClient.Update(ctx, serviceInstance)
+	//	updatedInstance := &v1.ServiceInstance{}
+	//
+	//	Eventually(func() bool {
+	//		err := k8sClient.Get(ctx, defaultLookupKey, updatedInstance)
+	//		if err != nil {
+	//			return false
+	//		}
+	//		return len(updatedInstance.Status.Conditions) > 0 && isConditionRefersUpdateOp(updatedInstance)
+	//	}, timeout, interval).Should(BeTrue())
+	//
+	//	return updatedInstance
+	//}
 
 	BeforeEach(func() {
 		ctx = context.Background()
@@ -299,12 +354,14 @@ var _ = Describe("ServiceInstance controller", func() {
 
 				Context("with sm status code 502 and broker status code 429", func() {
 					JustBeforeEach(func() {
-						fakeClient.ProvisionReturns(nil, getTransientBrokerError())
-						fakeClient.ProvisionReturnsOnCall(1, &sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
+						for i := 0; i < 2; i++ {
+							fakeClient.ProvisionReturnsOnCall(i, nil, getTransientBrokerError())
+						}
+						fakeClient.ProvisionReturnsOnCall(3, &sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
 					})
 
 					It("should be transient error and eventually succeed", func() {
-						serviceInstance = createInstance(ctx, instanceSpec, true)
+						serviceInstance = createInstanceWithErrorAndEvetuallySucceed(ctx, instanceSpec, "errMessage")
 						Expect(len(serviceInstance.Status.Conditions)).To(Equal(2))
 						Expect(meta.IsStatusConditionPresentAndEqual(serviceInstance.Status.Conditions, api.ConditionSucceeded, metav1.ConditionTrue)).To(Equal(true))
 					})
