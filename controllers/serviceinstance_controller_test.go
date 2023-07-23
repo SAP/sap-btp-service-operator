@@ -117,7 +117,7 @@ var _ = Describe("ServiceInstance controller", func() {
 		return createdInstance
 	}
 
-	createInstanceWithErrorAndEvetuallySucceed := func(ctx context.Context, instanceSpec v1.ServiceInstanceSpec, errMessage string) *v1.ServiceInstance {
+	createInstanceWithErrorAndEventuallySucceed := func(ctx context.Context, instanceSpec v1.ServiceInstanceSpec, errMessage string) *v1.ServiceInstance {
 		instance := &v1.ServiceInstance{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "services.cloud.sap.com/v1",
@@ -361,7 +361,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					})
 
 					It("should be transient error and eventually succeed", func() {
-						serviceInstance = createInstanceWithErrorAndEvetuallySucceed(ctx, instanceSpec, "errMessage")
+						serviceInstance = createInstanceWithErrorAndEventuallySucceed(ctx, instanceSpec, "errMessage")
 						Expect(len(serviceInstance.Status.Conditions)).To(Equal(2))
 						Expect(meta.IsStatusConditionPresentAndEqual(serviceInstance.Status.Conditions, api.ConditionSucceeded, metav1.ConditionTrue)).To(Equal(true))
 					})

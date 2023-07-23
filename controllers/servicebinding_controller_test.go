@@ -81,7 +81,7 @@ var _ = Describe("ServiceBinding controller", func() {
 		return createdBinding, nil
 	}
 
-	createBindingExpectErrorAndEventuallySucceed := func(ctx context.Context, name string, namespace string, instanceName string, externalName string, errMessage string) (*v1.ServiceBinding, error) {
+	createBindingWithErrorAndEventuallySucceed := func(ctx context.Context, name string, namespace string, instanceName string, externalName string, errMessage string) (*v1.ServiceBinding, error) {
 		binding := newBindingObject(name, namespace)
 		binding.Spec.ServiceInstanceName = instanceName
 		binding.Spec.ExternalName = externalName
@@ -592,7 +592,7 @@ var _ = Describe("ServiceBinding controller", func() {
 						})
 
 						It("should detect the error as transient and eventually succeed", func() {
-							b, err := createBindingExpectErrorAndEventuallySucceed(context.Background(), bindingName, bindingTestNamespace, instanceName, "binding-external-name", "errMessage")
+							b, err := createBindingWithErrorAndEventuallySucceed(context.Background(), bindingName, bindingTestNamespace, instanceName, "binding-external-name", "errMessage")
 							Expect(err).ToNot(HaveOccurred())
 							Expect(isReady(b)).To(BeTrue())
 						})
