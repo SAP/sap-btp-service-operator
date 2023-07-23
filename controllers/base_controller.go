@@ -345,16 +345,20 @@ func (r *BaseReconciler) markAsNonTransientError(ctx context.Context, operationT
 
 func (r *BaseReconciler) markAsTransientError(ctx context.Context, operationType smClientTypes.OperationCategory, transientErr error, object api.SAPBTPResource) (ctrl.Result, error) {
 	log := GetLogger(ctx)
-	setInProgressConditions(operationType, transientErr.Error(), object)
+	errMsg := transientErr.Error()
 	if smError, ok := transientErr.(*sm.ServiceManagerError); ok && smError.StatusCode != http.StatusTooManyRequests {
 		if isBrokerErrorExist(smError) {
 			setInProgressConditions(operationType, smError.BrokerError.Error(), object)
+			errMsg = smError.BrokerError.Error()
 		}
-		log.Info(fmt.Sprintf("operation %s of %s encountered a transient error %s, retrying operation :)", operationType, object.GetControllerName(), transientErr.Error()))
-		if err := r.updateStatus(ctx, object); err != nil {
-			return ctrl.Result{}, err
-		}
+	} else {
+		setInProgressConditions(operationType, transientErr.Error(), object)
 	}
+	log.Info(fmt.Sprintf("operation %s of %s encountered a transient error %s, retrying operation :)", operationType, object.GetControllerName(), errMsg))
+	if err := r.updateStatus(ctx, object); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	return ctrl.Result{}, transientErr
 }
 
