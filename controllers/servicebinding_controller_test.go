@@ -44,20 +44,7 @@ var _ = Describe("ServiceBinding controller", func() {
 	var guid string
 
 	createBindingWithoutAssertionsAndWait := func(ctx context.Context, name string, namespace string, instanceName string, externalName string, wait bool) (*v1.ServiceBinding, error) {
-		binding := newBindingObject(name, namespace)
-		binding.Spec.ServiceInstanceName = instanceName
-		binding.Spec.ExternalName = externalName
-		binding.Spec.Parameters = &runtime.RawExtension{
-			Raw: []byte(`{"key": "value"}`),
-		}
-		binding.Spec.ParametersFrom = []v1.ParametersFromSource{
-			{
-				SecretKeyRef: &v1.SecretKeyReference{
-					Name: "param-secret",
-					Key:  "secret-parameter",
-				},
-			},
-		}
+		binding := generateBasicBindingTemplate(name, namespace, instanceName, externalName)
 
 		if err := k8sClient.Create(ctx, binding); err != nil {
 			return nil, err
@@ -82,20 +69,7 @@ var _ = Describe("ServiceBinding controller", func() {
 	}
 
 	createBindingWithErrorAndEventuallySucceed := func(ctx context.Context, name string, namespace string, instanceName string, externalName string, errMessage string) (*v1.ServiceBinding, error) {
-		binding := newBindingObject(name, namespace)
-		binding.Spec.ServiceInstanceName = instanceName
-		binding.Spec.ExternalName = externalName
-		binding.Spec.Parameters = &runtime.RawExtension{
-			Raw: []byte(`{"key": "value"}`),
-		}
-		binding.Spec.ParametersFrom = []v1.ParametersFromSource{
-			{
-				SecretKeyRef: &v1.SecretKeyReference{
-					Name: "param-secret",
-					Key:  "secret-parameter",
-				},
-			},
-		}
+		binding := generateBasicBindingTemplate(name, namespace, instanceName, externalName)
 
 		if err := k8sClient.Create(ctx, binding); err != nil {
 			return nil, err
@@ -1237,6 +1211,24 @@ var _ = Describe("ServiceBinding controller", func() {
 		})
 	})
 })
+
+func generateBasicBindingTemplate(name, namespace, instanceName, externalName string) *v1.ServiceBinding {
+	binding := newBindingObject(name, namespace)
+	binding.Spec.ServiceInstanceName = instanceName
+	binding.Spec.ExternalName = externalName
+	binding.Spec.Parameters = &runtime.RawExtension{
+		Raw: []byte(`{"key": "value"}`),
+	}
+	binding.Spec.ParametersFrom = []v1.ParametersFromSource{
+		{
+			SecretKeyRef: &v1.SecretKeyReference{
+				Name: "param-secret",
+				Key:  "secret-parameter",
+			},
+		},
+	}
+	return binding
+}
 
 func validateSecretData(secret *corev1.Secret, expectedKey string, expectedValue string) {
 	Expect(secret.Data).ToNot(BeNil())
