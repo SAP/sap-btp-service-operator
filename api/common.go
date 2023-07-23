@@ -20,14 +20,11 @@ const (
 type HTTPStatusCodeError struct {
 	// StatusCode is the HTTP status code returned by the broker.
 	StatusCode int
-	// ErrorMessage is a machine-readable error string that may be returned by
-	// the broker.
+	// ErrorMessage is a machine-readable error string that may be returned by the broker.
 	ErrorMessage *string
-	// Description is a human-readable description of the error that may be
-	// returned by the broker.
+	// Description is a human-readable description of the error that may be returned by the broker.
 	Description *string
-	// ResponseError is set to the error that occurred when unmarshalling a
-	// response body from the broker.
+	// ResponseError is set to the error that occurred when unmarshalling a response body from the broker.
 	ResponseError error
 }
 
