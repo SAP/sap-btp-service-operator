@@ -190,26 +190,6 @@ var _ = Describe("ServiceInstance controller", func() {
 		return updatedInstance
 	}
 
-	//updateInstanceWaitForErrorAndEvetuallySucceed := func(ctx context.Context, serviceInstance *v1.ServiceInstance, errMessage string) *v1.ServiceInstance {
-	//	isConditionRefersUpdateOp := func(instance *v1.ServiceInstance) bool {
-	//		conditionReason := instance.Status.Conditions[0].Reason
-	//		return strings.Contains(conditionReason, Updated) || strings.Contains(conditionReason, UpdateInProgress) || strings.Contains(conditionReason, UpdateFailed)
-	//	}
-	//
-	//	_ = k8sClient.Update(ctx, serviceInstance)
-	//	updatedInstance := &v1.ServiceInstance{}
-	//
-	//	Eventually(func() bool {
-	//		err := k8sClient.Get(ctx, defaultLookupKey, updatedInstance)
-	//		if err != nil {
-	//			return false
-	//		}
-	//		return len(updatedInstance.Status.Conditions) > 0 && isConditionRefersUpdateOp(updatedInstance)
-	//	}, timeout, interval).Should(BeTrue())
-	//
-	//	return updatedInstance
-	//}
-
 	BeforeEach(func() {
 		ctx = context.Background()
 		fakeInstanceName = "ic-test-" + uuid.New().String()
