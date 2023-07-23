@@ -135,34 +135,6 @@ var _ = Describe("ServiceInstance controller", func() {
 		}
 	}
 
-	updateInstanceWithErrorAndEventuallySucceed := func(ctx context.Context, serviceInstance *v1.ServiceInstance, errMessage string) *v1.ServiceInstance {
-		isConditionRefersUpdateOp := func(instance *v1.ServiceInstance) bool {
-			conditionReason := instance.Status.Conditions[0].Reason
-			return strings.Contains(conditionReason, Updated) || strings.Contains(conditionReason, UpdateInProgress) || strings.Contains(conditionReason, UpdateFailed)
-		}
-
-		_ = k8sClient.Update(ctx, serviceInstance)
-		updatedInstance := &v1.ServiceInstance{}
-
-		Eventually(func() bool {
-			err := k8sClient.Get(ctx, defaultLookupKey, updatedInstance)
-			if err != nil {
-				return false
-			}
-			return len(updatedInstance.Status.Conditions) > 0 && strings.ContainsAny(updatedInstance.Status.Conditions[0].Message, errMessage)
-		}, timeout, interval).Should(BeTrue())
-
-		Eventually(func() bool {
-			err := k8sClient.Get(ctx, defaultLookupKey, updatedInstance)
-			if err != nil {
-				return false
-			}
-			return len(updatedInstance.Status.Conditions) > 0 && isConditionRefersUpdateOp(updatedInstance)
-		}, timeout, interval).Should(BeTrue())
-
-		return updatedInstance
-	}
-
 	updateInstance := func(ctx context.Context, serviceInstance *v1.ServiceInstance) *v1.ServiceInstance {
 		isConditionRefersUpdateOp := func(instance *v1.ServiceInstance) bool {
 			conditionReason := instance.Status.Conditions[0].Reason
@@ -291,10 +263,9 @@ var _ = Describe("ServiceInstance controller", func() {
 			})
 
 			When("provision request to SM fails", func() {
-				var errMessage string
 				Context("with 400 status", func() {
+					errMessage := "failed to provision instance"
 					JustBeforeEach(func() {
-						errMessage = "failed to provision instance"
 						fakeClient.ProvisionReturns(nil, &sm.ServiceManagerError{
 							StatusCode: http.StatusBadRequest,
 							Message:    errMessage,
@@ -310,7 +281,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 				Context("with 429 status eventually succeeds", func() {
 					JustBeforeEach(func() {
-						errMessage = "failed to provision instance"
+						errMessage := "failed to provision instance"
 						fakeClient.ProvisionReturnsOnCall(0, nil, &sm.ServiceManagerError{
 							StatusCode: http.StatusTooManyRequests,
 							Message:    errMessage,
@@ -326,9 +297,9 @@ var _ = Describe("ServiceInstance controller", func() {
 				})
 
 				Context("with sm status code 502 and broker status code 429", func() {
-					errMessage := "broker too many requests"
+					errorMessage := "broker too many requests"
 					JustBeforeEach(func() {
-						fakeClient.ProvisionReturns(nil, getTransientBrokerError(errMessage))
+						fakeClient.ProvisionReturns(nil, getTransientBrokerError(errorMessage))
 					})
 
 					It("should be transient error and eventually succeed", func() {
@@ -336,8 +307,9 @@ var _ = Describe("ServiceInstance controller", func() {
 						Eventually(func() bool {
 							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
 							cond := meta.FindStatusCondition(serviceInstance.GetConditions(), api.ConditionSucceeded)
-							return strings.Contains(cond.Message, errMessage) && cond.Status == metav1.ConditionFalse
+							return cond != nil && strings.Contains(cond.Message, errorMessage) && cond.Status == metav1.ConditionFalse
 						}, timeout, interval).Should(BeTrue())
+
 						fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
 						Eventually(func() bool {
 							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
@@ -347,8 +319,8 @@ var _ = Describe("ServiceInstance controller", func() {
 				})
 
 				Context("with sm status code 502 and broker status code 400", func() {
+					errMessage := "failed to provision instance"
 					JustBeforeEach(func() {
-						errMessage = "failed to provision instance"
 						fakeClient.ProvisionReturns(nil, getNonTransientBrokerError(errMessage))
 						fakeClient.ProvisionReturnsOnCall(1, &sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
 					})
@@ -587,15 +559,19 @@ var _ = Describe("ServiceInstance controller", func() {
 				errMessage := "broker too many requests"
 				JustBeforeEach(func() {
 					fakeClient.UpdateInstanceReturns(nil, "", getTransientBrokerError(errMessage))
-					fakeClient.UpdateInstanceReturns(nil, "", nil)
 				})
 
 				It("recognize the error as transient and eventually succeed", func() {
-					newSpec := updateSpec()
-					serviceInstance.Spec = newSpec
-					serviceInstance = updateInstanceWithErrorAndEventuallySucceed(ctx, serviceInstance, errMessage)
-					Expect(serviceInstance.Spec.ExternalName).To(Equal(newSpec.ExternalName))
-					Expect(serviceInstance.Status.Conditions[0].Reason).To(Equal(Updated))
+					serviceInstance.Spec = updateSpec()
+					updatedInstance := updateInstance(ctx, serviceInstance)
+					Expect(updatedInstance.Status.Conditions[0].Reason).To(Equal(UpdateInProgress))
+					Expect(updatedInstance.Status.Conditions[0].Message).To(ContainSubstring(errMessage))
+					fakeClient.UpdateInstanceReturns(nil, "", nil)
+					updatedInstance = updateInstance(ctx, serviceInstance)
+					Eventually(func() bool {
+						_ = k8sClient.Get(ctx, defaultLookupKey, updatedInstance)
+						return isReady(updatedInstance)
+					}, timeout, interval).Should(BeTrue())
 				})
 			})
 

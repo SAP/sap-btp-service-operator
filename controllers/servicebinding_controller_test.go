@@ -533,17 +533,13 @@ var _ = Describe("ServiceBinding controller", func() {
 
 						It("should detect the error as transient and eventually succeed", func() {
 							createdBinding, _ := createBindingWithoutAssertionsAndWait(context.Background(), bindingName, bindingTestNamespace, instanceName, "binding-external-name", false)
+
 							cond := meta.FindStatusCondition(createdBinding.GetConditions(), api.ConditionSucceeded)
 							Expect(cond.Message).To(ContainSubstring(errorMessage))
 							Expect(cond.Status).To(Equal(metav1.ConditionFalse))
+
 							fakeClient.BindReturns(&smClientTypes.ServiceBinding{ID: fakeBindingID, Credentials: json.RawMessage("{\"secret_key\": \"secret_value\"}")}, "", nil)
-							Eventually(func() bool {
-								err := k8sClient.Get(context.Background(), types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}, createdBinding)
-								if err != nil {
-									return false
-								}
-								return isReady(createdBinding)
-							}, timeout, interval).Should(BeTrue())
+							validateBindingIsReady(createdBinding, bindingName)
 						})
 					})
 
@@ -1186,6 +1182,16 @@ var _ = Describe("ServiceBinding controller", func() {
 		})
 	})
 })
+
+func validateBindingIsReady(createdBinding *v1.ServiceBinding, bindingName string) {
+	Eventually(func() bool {
+		err := k8sClient.Get(context.Background(), types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}, createdBinding)
+		if err != nil {
+			return false
+		}
+		return isReady(createdBinding)
+	}, timeout, interval).Should(BeTrue())
+}
 
 func generateBasicBindingTemplate(name, namespace, instanceName, externalName string) *v1.ServiceBinding {
 	binding := newBindingObject(name, namespace)

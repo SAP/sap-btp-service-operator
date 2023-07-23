@@ -554,6 +554,11 @@ func updateRequired(serviceInstance *servicesv1.ServiceInstance) bool {
 		return false
 	}
 
+	cond := meta.FindStatusCondition(serviceInstance.Status.Conditions, api.ConditionSucceeded)
+	if cond != nil && cond.Reason == UpdateInProgress {
+		return true
+	}
+
 	if getSpecHash(serviceInstance) == serviceInstance.Status.HashedSpec {
 		return false
 	}
