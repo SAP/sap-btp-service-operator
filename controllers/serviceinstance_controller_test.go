@@ -117,41 +117,6 @@ var _ = Describe("ServiceInstance controller", func() {
 		return createdInstance
 	}
 
-	createInstanceWithErrorAndEventuallySucceed := func(ctx context.Context, instanceSpec v1.ServiceInstanceSpec, errMessage string) *v1.ServiceInstance {
-		instance := &v1.ServiceInstance{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "services.cloud.sap.com/v1",
-				Kind:       "ServiceInstance",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      fakeInstanceName,
-				Namespace: testNamespace,
-			},
-			Spec: instanceSpec,
-		}
-		Expect(k8sClient.Create(ctx, instance)).Should(Succeed())
-
-		createdInstance := &v1.ServiceInstance{}
-
-		Eventually(func() bool {
-			err := k8sClient.Get(ctx, defaultLookupKey, createdInstance)
-			if err != nil {
-				return false
-			}
-			return len(createdInstance.Status.Conditions) > 0 && strings.EqualFold(createdInstance.Status.Conditions[0].Message, errMessage)
-		}, timeout, interval).Should(BeTrue())
-
-		Eventually(func() bool {
-			err := k8sClient.Get(ctx, defaultLookupKey, createdInstance)
-			if err != nil {
-				return false
-			}
-			return isReady(createdInstance)
-		}, timeout, interval).Should(BeTrue())
-
-		return createdInstance
-	}
-
 	deleteInstance := func(ctx context.Context, instanceToDelete *v1.ServiceInstance, wait bool) {
 		err := k8sClient.Get(ctx, types.NamespacedName{Name: instanceToDelete.Name, Namespace: instanceToDelete.Namespace}, &v1.ServiceInstance{})
 		if err != nil {
@@ -168,6 +133,34 @@ var _ = Describe("ServiceInstance controller", func() {
 				return apierrors.IsNotFound(err)
 			}, timeout, interval).Should(BeTrue())
 		}
+	}
+
+	updateInstanceWithErrorAndEventuallySucceed := func(ctx context.Context, serviceInstance *v1.ServiceInstance, errMessage string) *v1.ServiceInstance {
+		isConditionRefersUpdateOp := func(instance *v1.ServiceInstance) bool {
+			conditionReason := instance.Status.Conditions[0].Reason
+			return strings.Contains(conditionReason, Updated) || strings.Contains(conditionReason, UpdateInProgress) || strings.Contains(conditionReason, UpdateFailed)
+		}
+
+		_ = k8sClient.Update(ctx, serviceInstance)
+		updatedInstance := &v1.ServiceInstance{}
+
+		Eventually(func() bool {
+			err := k8sClient.Get(ctx, defaultLookupKey, updatedInstance)
+			if err != nil {
+				return false
+			}
+			return len(updatedInstance.Status.Conditions) > 0 && strings.ContainsAny(updatedInstance.Status.Conditions[0].Message, errMessage)
+		}, timeout, interval).Should(BeTrue())
+
+		Eventually(func() bool {
+			err := k8sClient.Get(ctx, defaultLookupKey, updatedInstance)
+			if err != nil {
+				return false
+			}
+			return len(updatedInstance.Status.Conditions) > 0 && isConditionRefersUpdateOp(updatedInstance)
+		}, timeout, interval).Should(BeTrue())
+
+		return updatedInstance
 	}
 
 	updateInstance := func(ctx context.Context, serviceInstance *v1.ServiceInstance) *v1.ServiceInstance {
@@ -333,17 +326,23 @@ var _ = Describe("ServiceInstance controller", func() {
 				})
 
 				Context("with sm status code 502 and broker status code 429", func() {
+					errMessage := "broker too many requests"
 					JustBeforeEach(func() {
-						for i := 0; i < 2; i++ {
-							fakeClient.ProvisionReturnsOnCall(i, nil, getTransientBrokerError())
-						}
-						fakeClient.ProvisionReturnsOnCall(3, &sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
+						fakeClient.ProvisionReturns(nil, getTransientBrokerError(errMessage))
 					})
 
 					It("should be transient error and eventually succeed", func() {
-						serviceInstance = createInstanceWithErrorAndEventuallySucceed(ctx, instanceSpec, "errMessage")
-						Expect(len(serviceInstance.Status.Conditions)).To(Equal(2))
-						Expect(meta.IsStatusConditionPresentAndEqual(serviceInstance.Status.Conditions, api.ConditionSucceeded, metav1.ConditionTrue)).To(Equal(true))
+						serviceInstance = createInstance(ctx, instanceSpec, false)
+						Eventually(func() bool {
+							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+							cond := meta.FindStatusCondition(serviceInstance.GetConditions(), api.ConditionSucceeded)
+							return strings.Contains(cond.Message, errMessage) && cond.Status == metav1.ConditionFalse
+						}, timeout, interval).Should(BeTrue())
+						fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
+						Eventually(func() bool {
+							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+							return isReady(serviceInstance)
+						}, timeout, interval).Should(BeTrue())
 					})
 				})
 
@@ -585,15 +584,16 @@ var _ = Describe("ServiceInstance controller", func() {
 			})
 
 			Context("spec is changed, sm returns 502 and broker returns 429", func() {
+				errMessage := "broker too many requests"
 				JustBeforeEach(func() {
-					fakeClient.UpdateInstanceReturns(nil, "", getTransientBrokerError())
+					fakeClient.UpdateInstanceReturns(nil, "", getTransientBrokerError(errMessage))
 					fakeClient.UpdateInstanceReturns(nil, "", nil)
 				})
 
 				It("recognize the error as transient and eventually succeed", func() {
 					newSpec := updateSpec()
 					serviceInstance.Spec = newSpec
-					serviceInstance = updateInstance(ctx, serviceInstance)
+					serviceInstance = updateInstanceWithErrorAndEventuallySucceed(ctx, serviceInstance, errMessage)
 					Expect(serviceInstance.Spec.ExternalName).To(Equal(newSpec.ExternalName))
 					Expect(serviceInstance.Status.Conditions[0].Reason).To(Equal(Updated))
 				})
@@ -1164,18 +1164,20 @@ var _ = Describe("ServiceInstance controller", func() {
 func getNonTransientBrokerError(errMessage string) error {
 	return &sm.ServiceManagerError{
 		StatusCode: http.StatusBadRequest,
-		Message:    errMessage,
+		Message:    "smErrMessage",
 		BrokerError: &api.HTTPStatusCodeError{
-			StatusCode: 400,
+			StatusCode:   400,
+			ErrorMessage: &errMessage,
 		}}
 }
 
-func getTransientBrokerError() error {
+func getTransientBrokerError(errorMessage string) error {
 	return &sm.ServiceManagerError{
 		StatusCode: http.StatusBadGateway,
-		Message:    "errMessage",
+		Message:    "smErrMessage",
 		BrokerError: &api.HTTPStatusCodeError{
-			StatusCode: http.StatusTooManyRequests,
+			StatusCode:   http.StatusTooManyRequests,
+			ErrorMessage: &errorMessage,
 		},
 	}
 }

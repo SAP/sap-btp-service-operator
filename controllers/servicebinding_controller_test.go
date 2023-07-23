@@ -68,38 +68,6 @@ var _ = Describe("ServiceBinding controller", func() {
 		return createdBinding, nil
 	}
 
-	createBindingWithErrorAndEventuallySucceed := func(ctx context.Context, name string, namespace string, instanceName string, externalName string, errMessage string) (*v1.ServiceBinding, error) {
-		binding := generateBasicBindingTemplate(name, namespace, instanceName, externalName)
-
-		if err := k8sClient.Create(ctx, binding); err != nil {
-			return nil, err
-		}
-
-		bindingLookupKey := types.NamespacedName{Name: name, Namespace: namespace}
-		createdBinding = &v1.ServiceBinding{}
-		Eventually(func() bool {
-			err := k8sClient.Get(ctx, bindingLookupKey, createdBinding)
-			if err != nil {
-				return false
-			}
-
-			return len(createdBinding.Status.Conditions) > 0 && strings.EqualFold(createdBinding.Status.Conditions[0].Message, errMessage)
-
-		}, timeout, interval).Should(BeTrue())
-
-		Eventually(func() bool {
-			err := k8sClient.Get(ctx, bindingLookupKey, createdBinding)
-			if err != nil {
-				return false
-			}
-
-			return isReady(createdBinding) || isFailed(createdBinding)
-
-		}, timeout, interval).Should(BeTrue())
-
-		return createdBinding, nil
-	}
-
 	createBindingWithoutAssertions := func(ctx context.Context, name string, namespace string, instanceName string, externalName string) (*v1.ServiceBinding, error) {
 		return createBindingWithoutAssertionsAndWait(ctx, name, namespace, instanceName, externalName, true)
 	}
@@ -559,16 +527,23 @@ var _ = Describe("ServiceBinding controller", func() {
 
 					When("SM returned error 502 and broker returned 429", func() {
 						BeforeEach(func() {
-							errorMessage = "too many requests"
-							fakeClient.BindReturnsOnCall(0, nil, "", getTransientBrokerError())
-							fakeClient.BindReturnsOnCall(1, nil, "", getTransientBrokerError())
-							fakeClient.BindReturnsOnCall(2, &smClientTypes.ServiceBinding{ID: fakeBindingID, Credentials: json.RawMessage("{\"secret_key\": \"secret_value\"}")}, "", nil)
+							errorMessage = "too many requests from broker"
+							fakeClient.BindReturns(nil, "", getTransientBrokerError(errorMessage))
 						})
 
 						It("should detect the error as transient and eventually succeed", func() {
-							b, err := createBindingWithErrorAndEventuallySucceed(context.Background(), bindingName, bindingTestNamespace, instanceName, "binding-external-name", "errMessage")
-							Expect(err).ToNot(HaveOccurred())
-							Expect(isReady(b)).To(BeTrue())
+							createdBinding, _ := createBindingWithoutAssertionsAndWait(context.Background(), bindingName, bindingTestNamespace, instanceName, "binding-external-name", false)
+							cond := meta.FindStatusCondition(createdBinding.GetConditions(), api.ConditionSucceeded)
+							Expect(cond.Message).To(ContainSubstring(errorMessage))
+							Expect(cond.Status).To(Equal(metav1.ConditionFalse))
+							fakeClient.BindReturns(&smClientTypes.ServiceBinding{ID: fakeBindingID, Credentials: json.RawMessage("{\"secret_key\": \"secret_value\"}")}, "", nil)
+							Eventually(func() bool {
+								err := k8sClient.Get(context.Background(), types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}, createdBinding)
+								if err != nil {
+									return false
+								}
+								return isReady(createdBinding)
+							}, timeout, interval).Should(BeTrue())
 						})
 					})
 

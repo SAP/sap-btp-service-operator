@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -26,6 +27,19 @@ type HTTPStatusCodeError struct {
 	Description *string
 	// ResponseError is set to the error that occurred when unmarshalling a response body from the broker.
 	ResponseError error
+}
+
+func (e HTTPStatusCodeError) Error() string {
+	errorMessage := "<nil>"
+	description := "<nil>"
+
+	if e.ErrorMessage != nil {
+		errorMessage = *e.ErrorMessage
+	}
+	if e.Description != nil {
+		description = *e.Description
+	}
+	return fmt.Sprintf("Status: %v; ErrorMessage: %v; Description: %v; ResponseError: %v", e.StatusCode, errorMessage, description, e.ResponseError)
 }
 
 const (
