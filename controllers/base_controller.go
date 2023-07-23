@@ -352,8 +352,8 @@ func (r *BaseReconciler) markAsTransientError(ctx context.Context, operationType
 	errMsg := transientErr.Error()
 	if smError, ok := transientErr.(*sm.ServiceManagerError); ok && smError.StatusCode != http.StatusTooManyRequests {
 		if isBrokerErrorExist(smError) {
-			setInProgressConditions(operationType, smError.BrokerError.Error(), object)
 			errMsg = smError.BrokerError.Error()
+			setInProgressConditions(operationType, errMsg, object)
 		}
 	} else {
 		setInProgressConditions(operationType, transientErr.Error(), object)
