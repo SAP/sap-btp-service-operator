@@ -310,6 +310,8 @@ func isTransientError(ctx context.Context, err error) bool {
 	if isBrokerErrorExist(smError) {
 		log.Info(fmt.Sprintf("Broker returned error status code %d", smError.BrokerError.StatusCode))
 		statusCode = smError.BrokerError.StatusCode
+	} else {
+		log.Info(fmt.Sprintf("SM returned error status code %d", smError.StatusCode))
 	}
 	return isTransientStatusCode(statusCode)
 }
