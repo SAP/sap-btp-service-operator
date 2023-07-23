@@ -532,13 +532,15 @@ var _ = Describe("ServiceBinding controller", func() {
 						})
 
 						It("should detect the error as transient and eventually succeed", func() {
-							createdBinding, _ := createBindingWithoutAssertionsAndWait(context.Background(), bindingName, bindingTestNamespace, instanceName, "binding-external-name", false)
+							createdBinding, _ := createBindingWithoutAssertionsAndWait(context.Background(),
+								bindingName, bindingTestNamespace, instanceName, "binding-external-name", false)
 
 							cond := meta.FindStatusCondition(createdBinding.GetConditions(), api.ConditionSucceeded)
 							Expect(cond.Message).To(ContainSubstring(errorMessage))
 							Expect(cond.Status).To(Equal(metav1.ConditionFalse))
 
-							fakeClient.BindReturns(&smClientTypes.ServiceBinding{ID: fakeBindingID, Credentials: json.RawMessage("{\"secret_key\": \"secret_value\"}")}, "", nil)
+							fakeClient.BindReturns(&smClientTypes.ServiceBinding{ID: fakeBindingID,
+								Credentials: json.RawMessage("{\"secret_key\": \"secret_value\"}")}, "", nil)
 							validateBindingIsReady(createdBinding, bindingName)
 						})
 					})
