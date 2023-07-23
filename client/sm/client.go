@@ -21,7 +21,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/SAP/sap-btp-service-operator/api"
 	"io"
 	"net/http"
 	"reflect"
@@ -29,6 +28,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/SAP/sap-btp-service-operator/api"
 	"github.com/SAP/sap-btp-service-operator/client/sm/types"
 	"github.com/SAP/sap-btp-service-operator/internal/auth"
 	"github.com/SAP/sap-btp-service-operator/internal/httputil"
