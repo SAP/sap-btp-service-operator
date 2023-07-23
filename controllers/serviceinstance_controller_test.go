@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/SAP/sap-btp-service-operator/api"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/utils/pointer"
 
+	"github.com/SAP/sap-btp-service-operator/api"
 	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
 	"github.com/SAP/sap-btp-service-operator/client/sm/smfakes"
