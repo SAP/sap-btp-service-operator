@@ -301,15 +301,17 @@ func isDelete(object metav1.ObjectMeta) bool {
 
 func isTransientError(ctx context.Context, err error) bool {
 	log := GetLogger(ctx)
-	if smError, ok := err.(*sm.ServiceManagerError); ok {
-		log.Info(fmt.Sprintf("SM returned error status code %d", smError.StatusCode))
-		if isBrokerErrorExist(smError) {
-			log.Info(fmt.Sprintf("Broker returned error status code %d", smError.BrokerError.StatusCode))
-			return isTransientStatusCode(smError.BrokerError.StatusCode)
-		}
-		return isTransientStatusCode(smError.StatusCode)
+	smError, ok := err.(*sm.ServiceManagerError)
+	if !ok {
+		return false
 	}
-	return false
+
+	statusCode := smError.StatusCode
+	if isBrokerErrorExist(smError) {
+		log.Info(fmt.Sprintf("Broker returned error status code %d", smError.BrokerError.StatusCode))
+		statusCode = smError.BrokerError.StatusCode
+	}
+	return isTransientStatusCode(statusCode)
 }
 
 func isTransientStatusCode(StatusCode int) bool {
