@@ -44,20 +44,7 @@ var _ = Describe("ServiceBinding controller", func() {
 	var guid string
 
 	createBindingWithoutAssertionsAndWait := func(ctx context.Context, name string, namespace string, instanceName string, externalName string, wait bool) (*v1.ServiceBinding, error) {
-		binding := newBindingObject(name, namespace)
-		binding.Spec.ServiceInstanceName = instanceName
-		binding.Spec.ExternalName = externalName
-		binding.Spec.Parameters = &runtime.RawExtension{
-			Raw: []byte(`{"key": "value"}`),
-		}
-		binding.Spec.ParametersFrom = []v1.ParametersFromSource{
-			{
-				SecretKeyRef: &v1.SecretKeyReference{
-					Name: "param-secret",
-					Key:  "secret-parameter",
-				},
-			},
-		}
+		binding := generateBasicBindingTemplate(name, namespace, instanceName, externalName)
 
 		if err := k8sClient.Create(ctx, binding); err != nil {
 			return nil, err
@@ -534,6 +521,34 @@ var _ = Describe("ServiceBinding controller", func() {
 						})
 
 						It("should fail", func() {
+							createBindingWithError(context.Background(), bindingName, bindingTestNamespace, instanceName, "binding-external-name", errorMessage)
+						})
+					})
+
+					When("SM returned error 502 and broker returned 429", func() {
+						BeforeEach(func() {
+							errorMessage = "too many requests from broker"
+							fakeClient.BindReturns(nil, "", getTransientBrokerError(errorMessage))
+						})
+
+						It("should detect the error as transient and eventually succeed", func() {
+							createdBinding, _ := createBindingWithoutAssertionsAndWait(context.Background(),
+								bindingName, bindingTestNamespace, instanceName, "binding-external-name", false)
+							expectBindingToBeInFailedStateWithMsg(createdBinding, errorMessage)
+
+							fakeClient.BindReturns(&smClientTypes.ServiceBinding{ID: fakeBindingID,
+								Credentials: json.RawMessage("{\"secret_key\": \"secret_value\"}")}, "", nil)
+							validateBindingIsReady(createdBinding, bindingName)
+						})
+					})
+
+					When("SM returned 502 and broker returned 400", func() {
+						BeforeEach(func() {
+							errorMessage = "very bad request"
+							fakeClient.BindReturnsOnCall(0, nil, "", getNonTransientBrokerError(errorMessage))
+						})
+
+						It("should detect the error as non-transient and fail", func() {
 							createBindingWithError(context.Background(), bindingName, bindingTestNamespace, instanceName, "binding-external-name", errorMessage)
 						})
 					})
@@ -1166,6 +1181,41 @@ var _ = Describe("ServiceBinding controller", func() {
 		})
 	})
 })
+
+func expectBindingToBeInFailedStateWithMsg(binding *v1.ServiceBinding, message string) {
+	cond := meta.FindStatusCondition(binding.GetConditions(), api.ConditionSucceeded)
+	Expect(cond).To(Not(BeNil()))
+	Expect(cond.Message).To(ContainSubstring(message))
+	Expect(cond.Status).To(Equal(metav1.ConditionFalse))
+}
+
+func validateBindingIsReady(createdBinding *v1.ServiceBinding, bindingName string) {
+	Eventually(func() bool {
+		err := k8sClient.Get(context.Background(), types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}, createdBinding)
+		if err != nil {
+			return false
+		}
+		return isReady(createdBinding)
+	}, timeout, interval).Should(BeTrue())
+}
+
+func generateBasicBindingTemplate(name, namespace, instanceName, externalName string) *v1.ServiceBinding {
+	binding := newBindingObject(name, namespace)
+	binding.Spec.ServiceInstanceName = instanceName
+	binding.Spec.ExternalName = externalName
+	binding.Spec.Parameters = &runtime.RawExtension{
+		Raw: []byte(`{"key": "value"}`),
+	}
+	binding.Spec.ParametersFrom = []v1.ParametersFromSource{
+		{
+			SecretKeyRef: &v1.SecretKeyReference{
+				Name: "param-secret",
+				Key:  "secret-parameter",
+			},
+		},
+	}
+	return binding
+}
 
 func validateSecretData(secret *corev1.Secret, expectedKey string, expectedValue string) {
 	Expect(secret.Data).ToNot(BeNil())

@@ -81,7 +81,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	smClient, err := r.getSMClient(ctx, serviceInstance)
 	if err != nil {
-		return r.markAsTransientError(ctx, Unknown, err, serviceInstance)
+		return r.markAsTransientError(ctx, Unknown, err.Error(), serviceInstance)
 	}
 
 	if len(serviceInstance.Status.OperationURL) > 0 {
@@ -112,7 +112,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		instance, err := r.getInstanceForRecovery(ctx, smClient, serviceInstance)
 		if err != nil {
 			log.Error(err, "failed to check instance recovery")
-			return r.markAsTransientError(ctx, Unknown, err, serviceInstance)
+			return r.markAsTransientError(ctx, Unknown, err.Error(), serviceInstance)
 		}
 		if instance != nil {
 			log.Info(fmt.Sprintf("found existing instance in SM with id %s, updating status", instance.ID))
@@ -257,7 +257,7 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	if err != nil {
 		// if parameters are invalid there is nothing we can do, the user should fix it according to the error message in the condition
 		log.Error(err, "failed to parse instance parameters")
-		return r.markAsNonTransientError(ctx, smClientTypes.CREATE, err, serviceInstance)
+		return r.markAsNonTransientError(ctx, smClientTypes.CREATE, err.Error(), serviceInstance)
 	}
 
 	provision, provisionErr := smClient.Provision(&smClientTypes.ServiceInstance{
@@ -274,10 +274,7 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	if provisionErr != nil {
 		log.Error(provisionErr, "failed to create service instance", "serviceOfferingName", serviceInstance.Spec.ServiceOfferingName,
 			"servicePlanName", serviceInstance.Spec.ServicePlanName)
-		if isTransientError(ctx, provisionErr) {
-			return r.markAsTransientError(ctx, smClientTypes.CREATE, provisionErr, serviceInstance)
-		}
-		return r.markAsNonTransientError(ctx, smClientTypes.CREATE, provisionErr, serviceInstance)
+		return r.handleError(ctx, smClientTypes.CREATE, provisionErr, serviceInstance)
 	}
 
 	if provision.Location != "" {
@@ -320,7 +317,6 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 }
 
 func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient sm.Client, serviceInstance *servicesv1.ServiceInstance) (ctrl.Result, error) {
-	var err error
 	log := GetLogger(ctx)
 	log.Info(fmt.Sprintf("updating instance %s in SM", serviceInstance.Status.InstanceID))
 
@@ -329,7 +325,7 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 	_, instanceParameters, err := buildParameters(r.Client, serviceInstance.Namespace, serviceInstance.Spec.ParametersFrom, serviceInstance.Spec.Parameters)
 	if err != nil {
 		log.Error(err, "failed to parse instance parameters")
-		return r.markAsNonTransientError(ctx, smClientTypes.UPDATE, fmt.Errorf("failed to parse parameters: %v", err.Error()), serviceInstance)
+		return r.markAsNonTransientError(ctx, smClientTypes.UPDATE, fmt.Sprintf("failed to parse parameters: %v", err.Error()), serviceInstance)
 	}
 
 	_, operationURL, err := smClient.UpdateInstance(serviceInstance.Status.InstanceID, &smClientTypes.ServiceInstance{
@@ -340,10 +336,7 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 
 	if err != nil {
 		log.Error(err, fmt.Sprintf("failed to update service instance with ID %s", serviceInstance.Status.InstanceID))
-		if isTransientError(ctx, err) {
-			return r.markAsTransientError(ctx, smClientTypes.UPDATE, err, serviceInstance)
-		}
-		return r.markAsNonTransientError(ctx, smClientTypes.UPDATE, err, serviceInstance)
+		return r.handleError(ctx, smClientTypes.UPDATE, err, serviceInstance)
 	}
 
 	if operationURL != "" {
@@ -387,7 +380,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 		operationURL, deprovisionErr := smClient.Deprovision(serviceInstance.Status.InstanceID, nil, buildUserInfo(ctx, serviceInstance.Spec.UserInfo))
 		if deprovisionErr != nil {
 			// delete will proceed anyway
-			return r.markAsNonTransientError(ctx, smClientTypes.DELETE, deprovisionErr, serviceInstance)
+			return r.markAsNonTransientError(ctx, smClientTypes.DELETE, deprovisionErr.Error(), serviceInstance)
 		}
 
 		if operationURL != "" {
@@ -518,9 +511,9 @@ func (r *ServiceInstanceReconciler) HandleInstanceSharingError(ctx context.Conte
 			reason = InProgress
 		} else if reason == ShareFailed &&
 			(smError.StatusCode == http.StatusBadRequest || smError.StatusCode == http.StatusInternalServerError) {
-			// non-transient error may occur only when sharing
-			// SM return 400 when plan is not sharable
-			// SM returns 500 when TOGGLES_ENABLE_INSTANCE_SHARE_FROM_OPERATOR feature toggle is off
+			/* non-transient error may occur only when sharing
+			   SM return 400 when plan is not sharable
+			   SM returns 500 when TOGGLES_ENABLE_INSTANCE_SHARE_FROM_OPERATOR feature toggle is off */
 			setSharedCondition(object, status, ShareNotSupported, err.Error())
 			return r.updateStatus(ctx, object)
 		}
@@ -552,6 +545,11 @@ func updateRequired(serviceInstance *servicesv1.ServiceInstance) bool {
 	//update is not supported for failed instances (this can occur when instance creation was asynchronously)
 	if serviceInstance.Status.Ready != metav1.ConditionTrue {
 		return false
+	}
+
+	cond := meta.FindStatusCondition(serviceInstance.Status.Conditions, api.ConditionSucceeded)
+	if cond != nil && cond.Reason == UpdateInProgress {
+		return true
 	}
 
 	if getSpecHash(serviceInstance) == serviceInstance.Status.HashedSpec {
