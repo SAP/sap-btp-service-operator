@@ -203,10 +203,6 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 }
 
 func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient sm.Client, serviceInstance *servicesv1.ServiceInstance, serviceBinding *servicesv1.ServiceBinding) (ctrl.Result, error) {
-	var (
-		isTransient bool
-		errMsg      string
-	)
 	log := GetLogger(ctx)
 	log.Info("Creating smBinding in SM")
 	serviceBinding.Status.InstanceID = serviceInstance.Status.InstanceID
@@ -229,10 +225,7 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 
 	if bindErr != nil {
 		log.Error(err, "failed to create service binding", "serviceInstanceID", serviceInstance.Status.InstanceID)
-		if isTransient, errMsg = isTransientError(ctx, bindErr); isTransient {
-			return r.markAsTransientError(ctx, smClientTypes.CREATE, errMsg, serviceBinding)
-		}
-		return r.markAsNonTransientError(ctx, smClientTypes.CREATE, errMsg, serviceBinding)
+		return r.handleError(ctx, smClientTypes.CREATE, bindErr, serviceBinding)
 	}
 
 	if operationURL != "" {

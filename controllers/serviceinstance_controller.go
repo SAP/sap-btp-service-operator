@@ -250,10 +250,6 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client
 }
 
 func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient sm.Client, serviceInstance *servicesv1.ServiceInstance) (ctrl.Result, error) {
-	var (
-		isTransient bool
-		errMsg      string
-	)
 	log := GetLogger(ctx)
 	log.Info("Creating instance in SM")
 	updateHashedSpecValue(serviceInstance)
@@ -278,11 +274,7 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	if provisionErr != nil {
 		log.Error(provisionErr, "failed to create service instance", "serviceOfferingName", serviceInstance.Spec.ServiceOfferingName,
 			"servicePlanName", serviceInstance.Spec.ServicePlanName)
-		if isTransient, errMsg = isTransientError(ctx, provisionErr); isTransient {
-			return r.markAsTransientError(ctx, smClientTypes.CREATE, errMsg, serviceInstance)
-		}
-		return r.markAsNonTransientError(ctx, smClientTypes.CREATE, errMsg, serviceInstance)
-
+		return r.handleError(ctx, smClientTypes.CREATE, provisionErr, serviceInstance)
 	}
 
 	if provision.Location != "" {
@@ -325,11 +317,6 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 }
 
 func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient sm.Client, serviceInstance *servicesv1.ServiceInstance) (ctrl.Result, error) {
-	var (
-		isTransient bool
-		errMsg      string
-		err         error
-	)
 	log := GetLogger(ctx)
 	log.Info(fmt.Sprintf("updating instance %s in SM", serviceInstance.Status.InstanceID))
 
@@ -349,10 +336,7 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 
 	if err != nil {
 		log.Error(err, fmt.Sprintf("failed to update service instance with ID %s", serviceInstance.Status.InstanceID))
-		if isTransient, errMsg = isTransientError(ctx, err); isTransient {
-			return r.markAsTransientError(ctx, smClientTypes.UPDATE, errMsg, serviceInstance)
-		}
-		return r.markAsNonTransientError(ctx, smClientTypes.UPDATE, errMsg, serviceInstance)
+		return r.handleError(ctx, smClientTypes.UPDATE, err, serviceInstance)
 	}
 
 	if operationURL != "" {

@@ -327,6 +327,18 @@ func isBrokerErrorExist(smError *sm.ServiceManagerError) bool {
 	return smError.BrokerError != nil && smError.BrokerError.StatusCode != 0
 }
 
+func (r *BaseReconciler) handleError(ctx context.Context, operationType smClientTypes.OperationCategory, err error, resource api.SAPBTPResource) (ctrl.Result, error) {
+	var (
+		isTransient bool
+		errMsg      string
+	)
+
+	if isTransient, errMsg = isTransientError(ctx, err); isTransient {
+		return r.markAsTransientError(ctx, operationType, errMsg, resource)
+	}
+	return r.markAsNonTransientError(ctx, operationType, errMsg, resource)
+}
+
 func (r *BaseReconciler) markAsNonTransientError(ctx context.Context, operationType smClientTypes.OperationCategory, errMsg string, object api.SAPBTPResource) (ctrl.Result, error) {
 	log := GetLogger(ctx)
 	setFailureConditions(operationType, errMsg, object)
