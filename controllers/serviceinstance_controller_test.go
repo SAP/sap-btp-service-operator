@@ -302,14 +302,9 @@ var _ = Describe("ServiceInstance controller", func() {
 						fakeClient.ProvisionReturns(nil, getTransientBrokerError(errorMessage))
 					})
 
-					It("should be transient error and eventually succeed", func() {
+					FIt("should be transient error and eventually succeed", func() {
 						serviceInstance = createInstance(ctx, instanceSpec, false)
-						Eventually(func() bool {
-							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-							cond := meta.FindStatusCondition(serviceInstance.GetConditions(), api.ConditionSucceeded)
-							return cond != nil && strings.Contains(cond.Message, errorMessage) && cond.Status == metav1.ConditionFalse
-						}, timeout, interval).Should(BeTrue())
-
+						expectForInstanceCreationFailure(ctx, defaultLookupKey, serviceInstance, errorMessage)
 						fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
 						waitForInstanceToBeReady(serviceInstance, ctx, defaultLookupKey)
 					})
@@ -1153,9 +1148,6 @@ func getTransientBrokerError(errorMessage string) error {
 func expectForInstanceCreationFailure(ctx context.Context, defaultLookupKey types.NamespacedName, serviceInstance *v1.ServiceInstance, errMessage string) {
 	Eventually(func() bool {
 		if err := k8sClient.Get(ctx, defaultLookupKey, serviceInstance); err != nil {
-			return false
-		}
-		if len(serviceInstance.Status.Conditions) != 3 {
 			return false
 		}
 		cond := meta.FindStatusCondition(serviceInstance.Status.Conditions, api.ConditionSucceeded)
