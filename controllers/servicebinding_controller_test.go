@@ -534,10 +534,7 @@ var _ = Describe("ServiceBinding controller", func() {
 						It("should detect the error as transient and eventually succeed", func() {
 							createdBinding, _ := createBindingWithoutAssertionsAndWait(context.Background(),
 								bindingName, bindingTestNamespace, instanceName, "binding-external-name", false)
-
-							cond := meta.FindStatusCondition(createdBinding.GetConditions(), api.ConditionSucceeded)
-							Expect(cond.Message).To(ContainSubstring(errorMessage))
-							Expect(cond.Status).To(Equal(metav1.ConditionFalse))
+							expectBindingToBeInFailedStateWithMsg(createdBinding, errorMessage)
 
 							fakeClient.BindReturns(&smClientTypes.ServiceBinding{ID: fakeBindingID,
 								Credentials: json.RawMessage("{\"secret_key\": \"secret_value\"}")}, "", nil)
@@ -1184,6 +1181,13 @@ var _ = Describe("ServiceBinding controller", func() {
 		})
 	})
 })
+
+func expectBindingToBeInFailedStateWithMsg(binding *v1.ServiceBinding, message string) {
+	cond := meta.FindStatusCondition(binding.GetConditions(), api.ConditionSucceeded)
+	Expect(cond).To(Not(BeNil()))
+	Expect(cond.Message).To(ContainSubstring(message))
+	Expect(cond.Status).To(Equal(metav1.ConditionFalse))
+}
 
 func validateBindingIsReady(createdBinding *v1.ServiceBinding, bindingName string) {
 	Eventually(func() bool {

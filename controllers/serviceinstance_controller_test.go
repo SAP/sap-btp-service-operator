@@ -311,10 +311,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						}, timeout, interval).Should(BeTrue())
 
 						fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
-						Eventually(func() bool {
-							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-							return isReady(serviceInstance)
-						}, timeout, interval).Should(BeTrue())
+						waitForInstanceToBeReady(serviceInstance, ctx, defaultLookupKey)
 					})
 				})
 
@@ -351,10 +348,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						Type:  smClientTypes.CREATE,
 						State: smClientTypes.SUCCEEDED,
 					}, nil)
-					Eventually(func() bool {
-						_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-						return isReady(serviceInstance)
-					}, timeout, interval).Should(BeTrue())
+					waitForInstanceToBeReady(serviceInstance, ctx, defaultLookupKey)
 				})
 			})
 
@@ -485,10 +479,7 @@ var _ = Describe("ServiceInstance controller", func() {
 							Type:  smClientTypes.UPDATE,
 							State: smClientTypes.SUCCEEDED,
 						}, nil)
-						Eventually(func() bool {
-							_ = k8sClient.Get(ctx, defaultLookupKey, updatedInstance)
-							return isReady(serviceInstance)
-						}, timeout, interval).Should(BeTrue())
+						waitForInstanceToBeReady(updatedInstance, ctx, defaultLookupKey)
 						Expect(updatedInstance.Spec.ExternalName).To(Equal(newSpec.ExternalName))
 					})
 
@@ -568,10 +559,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					Expect(updatedInstance.Status.Conditions[0].Message).To(ContainSubstring(errMessage))
 					fakeClient.UpdateInstanceReturns(nil, "", nil)
 					updatedInstance = updateInstance(ctx, serviceInstance)
-					Eventually(func() bool {
-						_ = k8sClient.Get(ctx, defaultLookupKey, updatedInstance)
-						return isReady(updatedInstance)
-					}, timeout, interval).Should(BeTrue())
+					waitForInstanceToBeReady(updatedInstance, ctx, defaultLookupKey)
 				})
 			})
 
@@ -596,10 +584,7 @@ var _ = Describe("ServiceInstance controller", func() {
 							Type:  smClientTypes.UPDATE,
 							State: smClientTypes.FAILED,
 						}, nil)
-						Eventually(func() bool {
-							_ = k8sClient.Get(ctx, defaultLookupKey, updatedInstance)
-							return isReady(serviceInstance)
-						}, timeout, interval).Should(BeTrue())
+						waitForInstanceToBeReady(updatedInstance, ctx, defaultLookupKey)
 					})
 				})
 
@@ -1136,6 +1121,13 @@ var _ = Describe("ServiceInstance controller", func() {
 		})
 	})
 })
+
+func waitForInstanceToBeReady(instance *v1.ServiceInstance, ctx context.Context, key types.NamespacedName) {
+	Eventually(func() bool {
+		_ = k8sClient.Get(ctx, key, instance)
+		return isReady(instance)
+	}, timeout, interval).Should(BeTrue())
+}
 
 func getNonTransientBrokerError(errMessage string) error {
 	return &sm.ServiceManagerError{
