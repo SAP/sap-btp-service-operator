@@ -302,7 +302,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						fakeClient.ProvisionReturns(nil, getTransientBrokerError(errorMessage))
 					})
 
-					FIt("should be transient error and eventually succeed", func() {
+					It("should be transient error and eventually succeed", func() {
 						serviceInstance = createInstance(ctx, instanceSpec, false)
 						expectForInstanceCreationFailure(ctx, defaultLookupKey, serviceInstance, errorMessage)
 						fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
