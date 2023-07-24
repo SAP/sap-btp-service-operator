@@ -474,7 +474,10 @@ var _ = Describe("ServiceInstance controller", func() {
 							Type:  smClientTypes.UPDATE,
 							State: smClientTypes.SUCCEEDED,
 						}, nil)
-						waitForInstanceToBeReady(updatedInstance, ctx, defaultLookupKey)
+						Eventually(func() bool {
+							_ = k8sClient.Get(ctx, defaultLookupKey, updatedInstance)
+							return isReady(serviceInstance)
+						}, timeout, interval).Should(BeTrue())
 						Expect(updatedInstance.Spec.ExternalName).To(Equal(newSpec.ExternalName))
 					})
 
@@ -579,7 +582,10 @@ var _ = Describe("ServiceInstance controller", func() {
 							Type:  smClientTypes.UPDATE,
 							State: smClientTypes.FAILED,
 						}, nil)
-						waitForInstanceToBeReady(updatedInstance, ctx, defaultLookupKey)
+						Eventually(func() bool {
+							_ = k8sClient.Get(ctx, defaultLookupKey, updatedInstance)
+							return isReady(serviceInstance)
+						}, timeout, interval).Should(BeTrue())
 					})
 				})
 
