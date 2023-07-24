@@ -81,7 +81,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	smClient, err := r.getSMClient(ctx, serviceInstance)
 	if err != nil {
-		return r.markAsTransientError(ctx, Unknown, err, serviceInstance)
+		return r.markAsTransientError(ctx, Unknown, err.Error(), serviceInstance)
 	}
 
 	if len(serviceInstance.Status.OperationURL) > 0 {
@@ -112,7 +112,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		instance, err := r.getInstanceForRecovery(ctx, smClient, serviceInstance)
 		if err != nil {
 			log.Error(err, "failed to check instance recovery")
-			return r.markAsTransientError(ctx, Unknown, err, serviceInstance)
+			return r.markAsTransientError(ctx, Unknown, err.Error(), serviceInstance)
 		}
 		if instance != nil {
 			log.Info(fmt.Sprintf("found existing instance in SM with id %s, updating status", instance.ID))
@@ -257,7 +257,7 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	if err != nil {
 		// if parameters are invalid there is nothing we can do, the user should fix it according to the error message in the condition
 		log.Error(err, "failed to parse instance parameters")
-		return r.markAsNonTransientError(ctx, smClientTypes.CREATE, err, serviceInstance)
+		return r.markAsNonTransientError(ctx, smClientTypes.CREATE, err.Error(), serviceInstance)
 	}
 
 	provision, provisionErr := smClient.Provision(&smClientTypes.ServiceInstance{
@@ -274,10 +274,11 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	if provisionErr != nil {
 		log.Error(provisionErr, "failed to create service instance", "serviceOfferingName", serviceInstance.Spec.ServiceOfferingName,
 			"servicePlanName", serviceInstance.Spec.ServicePlanName)
-		if isTransientError(ctx, provisionErr) {
-			return r.markAsTransientError(ctx, smClientTypes.CREATE, provisionErr, serviceInstance)
+		if isTransient, errMsg := isTransientError(ctx, provisionErr); isTransient {
+			return r.markAsTransientError(ctx, smClientTypes.CREATE, errMsg, serviceInstance)
+		} else {
+			return r.markAsNonTransientError(ctx, smClientTypes.CREATE, errMsg, serviceInstance)
 		}
-		return r.markAsNonTransientError(ctx, smClientTypes.CREATE, provisionErr, serviceInstance)
 	}
 
 	if provision.Location != "" {
@@ -329,7 +330,7 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 	_, instanceParameters, err := buildParameters(r.Client, serviceInstance.Namespace, serviceInstance.Spec.ParametersFrom, serviceInstance.Spec.Parameters)
 	if err != nil {
 		log.Error(err, "failed to parse instance parameters")
-		return r.markAsNonTransientError(ctx, smClientTypes.UPDATE, fmt.Errorf("failed to parse parameters: %v", err.Error()), serviceInstance)
+		return r.markAsNonTransientError(ctx, smClientTypes.UPDATE, fmt.Sprintf("failed to parse parameters: %v", err.Error()), serviceInstance)
 	}
 
 	_, operationURL, err := smClient.UpdateInstance(serviceInstance.Status.InstanceID, &smClientTypes.ServiceInstance{
@@ -340,10 +341,11 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 
 	if err != nil {
 		log.Error(err, fmt.Sprintf("failed to update service instance with ID %s", serviceInstance.Status.InstanceID))
-		if isTransientError(ctx, err) {
-			return r.markAsTransientError(ctx, smClientTypes.UPDATE, err, serviceInstance)
+		if isTransient, errMsg := isTransientError(ctx, err); isTransient {
+			return r.markAsTransientError(ctx, smClientTypes.UPDATE, errMsg, serviceInstance)
+		} else {
+			return r.markAsNonTransientError(ctx, smClientTypes.UPDATE, errMsg, serviceInstance)
 		}
-		return r.markAsNonTransientError(ctx, smClientTypes.UPDATE, err, serviceInstance)
 	}
 
 	if operationURL != "" {
@@ -387,7 +389,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 		operationURL, deprovisionErr := smClient.Deprovision(serviceInstance.Status.InstanceID, nil, buildUserInfo(ctx, serviceInstance.Spec.UserInfo))
 		if deprovisionErr != nil {
 			// delete will proceed anyway
-			return r.markAsNonTransientError(ctx, smClientTypes.DELETE, deprovisionErr, serviceInstance)
+			return r.markAsNonTransientError(ctx, smClientTypes.DELETE, deprovisionErr.Error(), serviceInstance)
 		}
 
 		if operationURL != "" {

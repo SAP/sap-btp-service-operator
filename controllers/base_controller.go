@@ -299,21 +299,23 @@ func isDelete(object metav1.ObjectMeta) bool {
 	return !object.DeletionTimestamp.IsZero()
 }
 
-func isTransientError(ctx context.Context, err error) bool {
+func isTransientError(ctx context.Context, err error) (bool, string) {
 	log := GetLogger(ctx)
 	smError, ok := err.(*sm.ServiceManagerError)
 	if !ok {
-		return false
+		return false, err.Error()
 	}
 
 	statusCode := smError.StatusCode
+	errMsg := smError.Error()
 	if isBrokerErrorExist(smError) {
 		log.Info(fmt.Sprintf("Broker returned error status code %d", smError.BrokerError.StatusCode))
 		statusCode = smError.BrokerError.StatusCode
+		errMsg = smError.BrokerError.Error()
 	} else {
 		log.Info(fmt.Sprintf("SM returned error status code %d", smError.StatusCode))
 	}
-	return isTransientStatusCode(statusCode)
+	return isTransientStatusCode(statusCode), errMsg
 }
 
 func isTransientStatusCode(StatusCode int) bool {
@@ -325,16 +327,11 @@ func isBrokerErrorExist(smError *sm.ServiceManagerError) bool {
 	return smError.BrokerError != nil && smError.BrokerError.StatusCode != 0
 }
 
-func (r *BaseReconciler) markAsNonTransientError(ctx context.Context, operationType smClientTypes.OperationCategory, nonTransientErr error, object api.SAPBTPResource) (ctrl.Result, error) {
+func (r *BaseReconciler) markAsNonTransientError(ctx context.Context, operationType smClientTypes.OperationCategory, errMsg string, object api.SAPBTPResource) (ctrl.Result, error) {
 	log := GetLogger(ctx)
-	setFailureConditions(operationType, nonTransientErr.Error(), object)
-	if smError, ok := nonTransientErr.(*sm.ServiceManagerError); ok {
-		if isBrokerErrorExist(smError) {
-			setFailureConditions(operationType, smError.BrokerError.Error(), object)
-		}
-	}
+	setFailureConditions(operationType, errMsg, object)
 	if operationType != smClientTypes.DELETE {
-		log.Info(fmt.Sprintf("operation %s of %s encountered a non transient error %s, giving up operation :(", operationType, object.GetControllerName(), nonTransientErr.Error()))
+		log.Info(fmt.Sprintf("operation %s of %s encountered a non transient error %s, giving up operation :(", operationType, object.GetControllerName(), errMsg))
 	}
 	object.SetObservedGeneration(object.GetGeneration())
 	err := r.updateStatus(ctx, object)
@@ -342,28 +339,20 @@ func (r *BaseReconciler) markAsNonTransientError(ctx context.Context, operationT
 		return ctrl.Result{}, err
 	}
 	if operationType == smClientTypes.DELETE {
-		return ctrl.Result{}, nonTransientErr
+		return ctrl.Result{}, fmt.Errorf(errMsg)
 	}
 	return ctrl.Result{}, nil
 }
 
-func (r *BaseReconciler) markAsTransientError(ctx context.Context, operationType smClientTypes.OperationCategory, transientErr error, object api.SAPBTPResource) (ctrl.Result, error) {
+func (r *BaseReconciler) markAsTransientError(ctx context.Context, operationType smClientTypes.OperationCategory, errMsg string, object api.SAPBTPResource) (ctrl.Result, error) {
 	log := GetLogger(ctx)
-	errMsg := transientErr.Error()
-	if smError, ok := transientErr.(*sm.ServiceManagerError); ok && smError.StatusCode != http.StatusTooManyRequests {
-		if isBrokerErrorExist(smError) {
-			errMsg = smError.BrokerError.Error()
-			setInProgressConditions(operationType, errMsg, object)
-		}
-	} else {
-		setInProgressConditions(operationType, transientErr.Error(), object)
-	}
+	setInProgressConditions(operationType, errMsg, object)
 	log.Info(fmt.Sprintf("operation %s of %s encountered a transient error %s, retrying operation :)", operationType, object.GetControllerName(), errMsg))
 	if err := r.updateStatus(ctx, object); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	return ctrl.Result{}, transientErr
+	return ctrl.Result{}, fmt.Errorf(errMsg)
 }
 
 func isInProgress(object api.SAPBTPResource) bool {
