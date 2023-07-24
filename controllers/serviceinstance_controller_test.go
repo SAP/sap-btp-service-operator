@@ -304,17 +304,9 @@ var _ = Describe("ServiceInstance controller", func() {
 
 					It("should be transient error and eventually succeed", func() {
 						serviceInstance = createInstance(ctx, instanceSpec, false)
-						Eventually(func() bool {
-							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-							cond := meta.FindStatusCondition(serviceInstance.GetConditions(), api.ConditionSucceeded)
-							return cond != nil && strings.Contains(cond.Message, errorMessage) && cond.Status == metav1.ConditionFalse
-						}, timeout, interval).Should(BeTrue())
-
+						expectForInstanceCreationFailure(ctx, defaultLookupKey, serviceInstance, errorMessage)
 						fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
-						Eventually(func() bool {
-							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-							return isReady(serviceInstance)
-						}, timeout, interval).Should(BeTrue())
+						waitForInstanceToBeReady(serviceInstance, ctx, defaultLookupKey)
 					})
 				})
 
@@ -351,10 +343,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						Type:  smClientTypes.CREATE,
 						State: smClientTypes.SUCCEEDED,
 					}, nil)
-					Eventually(func() bool {
-						_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-						return isReady(serviceInstance)
-					}, timeout, interval).Should(BeTrue())
+					waitForInstanceToBeReady(serviceInstance, ctx, defaultLookupKey)
 				})
 			})
 
@@ -568,10 +557,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					Expect(updatedInstance.Status.Conditions[0].Message).To(ContainSubstring(errMessage))
 					fakeClient.UpdateInstanceReturns(nil, "", nil)
 					updatedInstance = updateInstance(ctx, serviceInstance)
-					Eventually(func() bool {
-						_ = k8sClient.Get(ctx, defaultLookupKey, updatedInstance)
-						return isReady(updatedInstance)
-					}, timeout, interval).Should(BeTrue())
+					waitForInstanceToBeReady(updatedInstance, ctx, defaultLookupKey)
 				})
 			})
 
@@ -1137,6 +1123,13 @@ var _ = Describe("ServiceInstance controller", func() {
 	})
 })
 
+func waitForInstanceToBeReady(instance *v1.ServiceInstance, ctx context.Context, key types.NamespacedName) {
+	Eventually(func() bool {
+		_ = k8sClient.Get(ctx, key, instance)
+		return isReady(instance)
+	}, timeout, interval).Should(BeTrue())
+}
+
 func getNonTransientBrokerError(errMessage string) error {
 	return &sm.ServiceManagerError{
 		StatusCode: http.StatusBadRequest,
@@ -1161,9 +1154,6 @@ func getTransientBrokerError(errorMessage string) error {
 func expectForInstanceCreationFailure(ctx context.Context, defaultLookupKey types.NamespacedName, serviceInstance *v1.ServiceInstance, errMessage string) {
 	Eventually(func() bool {
 		if err := k8sClient.Get(ctx, defaultLookupKey, serviceInstance); err != nil {
-			return false
-		}
-		if len(serviceInstance.Status.Conditions) != 3 {
 			return false
 		}
 		cond := meta.FindStatusCondition(serviceInstance.Status.Conditions, api.ConditionSucceeded)
