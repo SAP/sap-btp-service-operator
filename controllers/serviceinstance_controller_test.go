@@ -2,14 +2,14 @@ package controllers
 
 import (
 	"context"
-	"github.com/SAP/sap-btp-service-operator/api"
-	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/utils/pointer"
+	"fmt"
 	"net/http"
 	"strings"
 
-	"fmt"
+	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/utils/pointer"
 
+	"github.com/SAP/sap-btp-service-operator/api"
 	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
 	"github.com/SAP/sap-btp-service-operator/client/sm/smfakes"
@@ -29,12 +29,11 @@ import (
 // +kubebuilder:docs-gen:collapse=Imports
 
 const (
-	fakeInstanceID                    = "ic-fake-instance-id"
-	fakeInstanceExternalName          = "ic-test-instance-external-name"
-	fakeInstanceExternalNameNonShared = "ic-test-instance-external-name-non-shared"
-	testNamespace                     = "ic-test-namespace"
-	fakeOfferingName                  = "offering-a"
-	fakePlanName                      = "plan-a"
+	fakeInstanceID           = "ic-fake-instance-id"
+	fakeInstanceExternalName = "ic-test-instance-external-name"
+	testNamespace            = "ic-test-namespace"
+	fakeOfferingName         = "offering-a"
+	fakePlanName             = "plan-a"
 )
 
 var _ = Describe("ServiceInstance controller", func() {
@@ -140,7 +139,6 @@ var _ = Describe("ServiceInstance controller", func() {
 		isConditionRefersUpdateOp := func(instance *v1.ServiceInstance) bool {
 			conditionReason := instance.Status.Conditions[0].Reason
 			return strings.Contains(conditionReason, Updated) || strings.Contains(conditionReason, UpdateInProgress) || strings.Contains(conditionReason, UpdateFailed)
-
 		}
 
 		_ = k8sClient.Update(ctx, serviceInstance)
@@ -265,37 +263,25 @@ var _ = Describe("ServiceInstance controller", func() {
 			})
 
 			When("provision request to SM fails", func() {
-				var errMessage string
 				Context("with 400 status", func() {
+					errMessage := "failed to provision instance"
 					JustBeforeEach(func() {
-						errMessage = "failed to provision instance"
 						fakeClient.ProvisionReturns(nil, &sm.ServiceManagerError{
 							StatusCode: http.StatusBadRequest,
 							Message:    errMessage,
 						})
 						fakeClient.ProvisionReturnsOnCall(1, &sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
-
 					})
 
 					It("should have failure condition", func() {
 						serviceInstance = createInstance(ctx, instanceSpec, false)
-						Eventually(func() bool {
-							err := k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-							if err != nil {
-								return false
-							}
-							if len(serviceInstance.Status.Conditions) != 3 {
-								return false
-							}
-							cond := meta.FindStatusCondition(serviceInstance.Status.Conditions, api.ConditionSucceeded)
-							return cond != nil && cond.Status == metav1.ConditionFalse && strings.Contains(cond.Message, errMessage)
-						}, timeout, interval).Should(BeTrue())
+						expectForInstanceCreationFailure(ctx, defaultLookupKey, serviceInstance, errMessage)
 					})
 				})
 
 				Context("with 429 status eventually succeeds", func() {
 					JustBeforeEach(func() {
-						errMessage = "failed to provision instance"
+						errMessage := "failed to provision instance"
 						fakeClient.ProvisionReturnsOnCall(0, nil, &sm.ServiceManagerError{
 							StatusCode: http.StatusTooManyRequests,
 							Message:    errMessage,
@@ -307,6 +293,33 @@ var _ = Describe("ServiceInstance controller", func() {
 						serviceInstance = createInstance(ctx, instanceSpec, true)
 						Expect(len(serviceInstance.Status.Conditions)).To(Equal(2))
 						Expect(meta.IsStatusConditionPresentAndEqual(serviceInstance.Status.Conditions, api.ConditionSucceeded, metav1.ConditionTrue)).To(Equal(true))
+					})
+				})
+
+				Context("with sm status code 502 and broker status code 429", func() {
+					errorMessage := "broker too many requests"
+					JustBeforeEach(func() {
+						fakeClient.ProvisionReturns(nil, getTransientBrokerError(errorMessage))
+					})
+
+					It("should be transient error and eventually succeed", func() {
+						serviceInstance = createInstance(ctx, instanceSpec, false)
+						expectForInstanceCreationFailure(ctx, defaultLookupKey, serviceInstance, errorMessage)
+						fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
+						waitForInstanceToBeReady(serviceInstance, ctx, defaultLookupKey)
+					})
+				})
+
+				Context("with sm status code 502 and broker status code 400", func() {
+					errMessage := "failed to provision instance"
+					JustBeforeEach(func() {
+						fakeClient.ProvisionReturns(nil, getNonTransientBrokerError(errMessage))
+						fakeClient.ProvisionReturnsOnCall(1, &sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
+					})
+
+					It("should have failure condition - non transient error", func() {
+						serviceInstance = createInstance(ctx, instanceSpec, false)
+						expectForInstanceCreationFailure(ctx, defaultLookupKey, serviceInstance, errMessage)
 					})
 				})
 			})
@@ -330,10 +343,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						Type:  smClientTypes.CREATE,
 						State: smClientTypes.SUCCEEDED,
 					}, nil)
-					Eventually(func() bool {
-						_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-						return isReady(serviceInstance)
-					}, timeout, interval).Should(BeTrue())
+					waitForInstanceToBeReady(serviceInstance, ctx, defaultLookupKey)
 				})
 			})
 
@@ -531,6 +541,23 @@ var _ = Describe("ServiceInstance controller", func() {
 						updatedInstance := updateInstance(ctx, serviceInstance)
 						Expect(updatedInstance.Status.Conditions[0].Reason).To(Equal(UpdateFailed))
 					})
+				})
+			})
+
+			Context("spec is changed, sm returns 502 and broker returns 429", func() {
+				errMessage := "broker too many requests"
+				JustBeforeEach(func() {
+					fakeClient.UpdateInstanceReturns(nil, "", getTransientBrokerError(errMessage))
+				})
+
+				It("recognize the error as transient and eventually succeed", func() {
+					serviceInstance.Spec = updateSpec()
+					updatedInstance := updateInstance(ctx, serviceInstance)
+					Expect(updatedInstance.Status.Conditions[0].Reason).To(Equal(UpdateInProgress))
+					Expect(updatedInstance.Status.Conditions[0].Message).To(ContainSubstring(errMessage))
+					fakeClient.UpdateInstanceReturns(nil, "", nil)
+					updatedInstance = updateInstance(ctx, serviceInstance)
+					waitForInstanceToBeReady(updatedInstance, ctx, defaultLookupKey)
 				})
 			})
 
@@ -1095,6 +1122,44 @@ var _ = Describe("ServiceInstance controller", func() {
 		})
 	})
 })
+
+func waitForInstanceToBeReady(instance *v1.ServiceInstance, ctx context.Context, key types.NamespacedName) {
+	Eventually(func() bool {
+		_ = k8sClient.Get(ctx, key, instance)
+		return isReady(instance)
+	}, timeout, interval).Should(BeTrue())
+}
+
+func getNonTransientBrokerError(errMessage string) error {
+	return &sm.ServiceManagerError{
+		StatusCode: http.StatusBadRequest,
+		Message:    "smErrMessage",
+		BrokerError: &api.HTTPStatusCodeError{
+			StatusCode:   400,
+			ErrorMessage: &errMessage,
+		}}
+}
+
+func getTransientBrokerError(errorMessage string) error {
+	return &sm.ServiceManagerError{
+		StatusCode: http.StatusBadGateway,
+		Message:    "smErrMessage",
+		BrokerError: &api.HTTPStatusCodeError{
+			StatusCode:   http.StatusTooManyRequests,
+			ErrorMessage: &errorMessage,
+		},
+	}
+}
+
+func expectForInstanceCreationFailure(ctx context.Context, defaultLookupKey types.NamespacedName, serviceInstance *v1.ServiceInstance, errMessage string) {
+	Eventually(func() bool {
+		if err := k8sClient.Get(ctx, defaultLookupKey, serviceInstance); err != nil {
+			return false
+		}
+		cond := meta.FindStatusCondition(serviceInstance.Status.Conditions, api.ConditionSucceeded)
+		return cond != nil && cond.Status == metav1.ConditionFalse && strings.Contains(cond.Message, errMessage)
+	}, timeout, interval).Should(BeTrue())
+}
 
 func instanceSharingReturnSuccess() {
 	fakeClient.ShareInstanceReturns(nil)

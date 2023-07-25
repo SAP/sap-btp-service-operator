@@ -28,6 +28,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/SAP/sap-btp-service-operator/api"
 	"github.com/SAP/sap-btp-service-operator/client/sm/types"
 	"github.com/SAP/sap-btp-service-operator/internal/auth"
 	"github.com/SAP/sap-btp-service-operator/internal/httputil"
@@ -67,8 +68,9 @@ type Client interface {
 	Call(method string, smpath string, body io.Reader, q *Parameters) (*http.Response, error)
 }
 type ServiceManagerError struct {
-	Message    string
-	StatusCode int
+	Message     string
+	StatusCode  int
+	BrokerError *api.HTTPStatusCodeError `json:"broker_error,omitempty"`
 }
 
 func (e *ServiceManagerError) Error() string {

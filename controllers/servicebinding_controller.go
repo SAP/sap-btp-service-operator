@@ -85,7 +85,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	smClient, err := r.getSMClient(ctx, serviceBinding)
 	if err != nil {
-		return r.markAsTransientError(ctx, Unknown, err, serviceBinding)
+		return r.markAsTransientError(ctx, Unknown, err.Error(), serviceBinding)
 	}
 
 	if len(serviceBinding.Status.OperationURL) > 0 {
@@ -173,7 +173,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		binding, err := r.getBindingForRecovery(ctx, smClient, serviceBinding)
 		if err != nil {
 			log.Error(err, "failed to check binding recovery")
-			return r.markAsTransientError(ctx, smClientTypes.CREATE, err, serviceBinding)
+			return r.markAsTransientError(ctx, smClientTypes.CREATE, err.Error(), serviceBinding)
 		}
 		if binding != nil {
 			// Recovery - restore binding from SM
@@ -209,7 +209,7 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 	_, bindingParameters, err := buildParameters(r.Client, serviceBinding.Namespace, serviceBinding.Spec.ParametersFrom, serviceBinding.Spec.Parameters)
 	if err != nil {
 		log.Error(err, "failed to parse smBinding parameters")
-		return r.markAsNonTransientError(ctx, smClientTypes.CREATE, err, serviceBinding)
+		return r.markAsNonTransientError(ctx, smClientTypes.CREATE, err.Error(), serviceBinding)
 	}
 
 	smBinding, operationURL, bindErr := smClient.Bind(&smClientTypes.ServiceBinding{
@@ -225,16 +225,13 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 
 	if bindErr != nil {
 		log.Error(err, "failed to create service binding", "serviceInstanceID", serviceInstance.Status.InstanceID)
-		if isTransientError(ctx, bindErr) {
-			return r.markAsTransientError(ctx, smClientTypes.CREATE, bindErr, serviceBinding)
-		}
-		return r.markAsNonTransientError(ctx, smClientTypes.CREATE, bindErr, serviceBinding)
+		return r.handleError(ctx, smClientTypes.CREATE, bindErr, serviceBinding)
 	}
 
 	if operationURL != "" {
 		var bindingID string
 		if bindingID = sm.ExtractBindingID(operationURL); len(bindingID) == 0 {
-			return r.markAsNonTransientError(ctx, smClientTypes.CREATE, fmt.Errorf("failed to extract smBinding ID from operation URL %s", operationURL), serviceBinding)
+			return r.markAsNonTransientError(ctx, smClientTypes.CREATE, fmt.Sprintf("failed to extract smBinding ID from operation URL %s", operationURL), serviceBinding)
 		}
 		serviceBinding.Status.BindingID = bindingID
 
@@ -295,7 +292,7 @@ func (r *ServiceBindingReconciler) delete(ctx context.Context, smClient sm.Clien
 		operationURL, unbindErr := smClient.Unbind(serviceBinding.Status.BindingID, nil, buildUserInfo(ctx, serviceBinding.Spec.UserInfo))
 		if unbindErr != nil {
 			// delete will proceed anyway
-			return r.markAsNonTransientError(ctx, smClientTypes.DELETE, unbindErr, serviceBinding)
+			return r.markAsNonTransientError(ctx, smClientTypes.DELETE, unbindErr.Error(), serviceBinding)
 		}
 
 		if operationURL != "" {
@@ -336,8 +333,7 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, smClient sm.Client,
 	}
 
 	if status == nil {
-		err := fmt.Errorf("failed to get last operation status of %s", serviceBinding.Name)
-		return r.markAsTransientError(ctx, serviceBinding.Status.OperationType, err, serviceBinding)
+		return r.markAsTransientError(ctx, serviceBinding.Status.OperationType, fmt.Sprintf("failed to get last operation status of %s", serviceBinding.Name), serviceBinding)
 	}
 	switch status.State {
 	case smClientTypes.INPROGRESS:
@@ -689,9 +685,9 @@ func (r *ServiceBindingReconciler) handleSecretError(ctx context.Context, op smC
 	log := GetLogger(ctx)
 	log.Error(err, fmt.Sprintf("failed to store secret %s for binding %s", binding.Spec.SecretName, binding.Name))
 	if apierrors.ReasonForError(err) == metav1.StatusReasonUnknown {
-		return r.markAsNonTransientError(ctx, op, err, binding)
+		return r.markAsNonTransientError(ctx, op, err.Error(), binding)
 	}
-	return r.markAsTransientError(ctx, op, err, binding)
+	return r.markAsTransientError(ctx, op, err.Error(), binding)
 }
 
 func (r *ServiceBindingReconciler) addInstanceInfo(ctx context.Context, binding *servicesv1.ServiceBinding, credentialsMap map[string][]byte) ([]SecretMetadataProperty, error) {
