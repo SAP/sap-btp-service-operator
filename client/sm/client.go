@@ -536,14 +536,16 @@ func handleResponseError(response *http.Response) error {
 
 	err = fmt.Errorf("StatusCode: %d Body: %s", response.StatusCode, body)
 	if response.Request != nil {
-		err = fmt.Errorf("request %s %s failed: %s", response.Request.Method, response.Request.URL, err)
+		err = fmt.Errorf("request %s %s failed ", response.Request.Method, response.Request.URL)
 	}
 
 	smError := &ServiceManagerError{
 		StatusCode:  response.StatusCode,
-		Description: err.Error(),
+		Description: "",
 	}
 	_ = json.Unmarshal(body, &smError)
+
+	smError.Description = err.Error() + smError.Description
 
 	return smError
 }
