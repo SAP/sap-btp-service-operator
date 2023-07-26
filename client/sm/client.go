@@ -69,13 +69,13 @@ type Client interface {
 }
 
 type ServiceManagerError struct {
-	Message     string
+	Description string
 	StatusCode  int
 	BrokerError *api.HTTPStatusCodeError `json:"broker_error,omitempty"`
 }
 
 func (e *ServiceManagerError) Error() string {
-	return e.Message
+	return e.Description
 }
 
 type serviceManagerClient struct {
@@ -539,35 +539,16 @@ func handleResponseError(response *http.Response) error {
 		err = fmt.Errorf("request %s %s failed: %s", response.Request.Method, response.Request.URL, err)
 	}
 
-	brokerError := getBrokerError(body)
+	var smError ServiceManagerError
+	if unmarshalErr := json.Unmarshal(body, &smError); unmarshalErr == nil {
+		return &smError
+	}
 
 	return &ServiceManagerError{
 		StatusCode:  response.StatusCode,
-		Message:     err.Error(),
-		BrokerError: brokerError,
+		Description: err.Error(),
+		BrokerError: nil,
 	}
-}
-
-func getBrokerError(body []byte) *api.HTTPStatusCodeError {
-	var (
-		raw       map[string]json.RawMessage
-		brokerErr api.HTTPStatusCodeError
-	)
-
-	if err := json.Unmarshal(body, &raw); err != nil {
-		return nil
-	}
-
-	brokerErrorJSON, found := raw["broker_error"]
-	if !found {
-		return nil
-	}
-
-	if err := json.Unmarshal(brokerErrorJSON, &brokerErr); err != nil {
-		return nil
-	}
-
-	return &brokerErr
 }
 
 func bodyToBytes(closer io.ReadCloser) ([]byte, error) {
