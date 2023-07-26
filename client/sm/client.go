@@ -539,24 +539,36 @@ func handleResponseError(response *http.Response) error {
 		err = fmt.Errorf("request %s %s failed: %s", response.Request.Method, response.Request.URL, err)
 	}
 
-	var SMAAPErr struct {
-		Description string
-		StatusCode  int
-		BrokerError *api.HTTPStatusCodeError `json:"broker_error,omitempty"`
-	}
-
-	if jsonErr := json.Unmarshal(body, &SMAAPErr); jsonErr == nil {
-		return &ServiceManagerError{
-			StatusCode:  response.StatusCode,
-			Message:     err.Error(),
-			BrokerError: SMAAPErr.BrokerError,
-		}
-	}
+	brokerError := getBrokerError(body)
 
 	return &ServiceManagerError{
-		StatusCode: response.StatusCode,
-		Message:    err.Error(),
+		StatusCode:  response.StatusCode,
+		Message:     err.Error(),
+		BrokerError: brokerError,
 	}
+}
+
+func getBrokerError(body []byte) *api.HTTPStatusCodeError {
+	var raw map[string]json.RawMessage
+
+	err := json.Unmarshal(body, &raw)
+	if err != nil {
+		return nil
+	}
+
+	brokerErrorJSON, found := raw["broker_error"]
+	if !found {
+		return nil
+	}
+
+	var brokerErr api.HTTPStatusCodeError
+
+	err = json.Unmarshal(brokerErrorJSON, &brokerErr)
+	if err != nil {
+		return nil
+	}
+
+	return &brokerErr
 }
 
 func bodyToBytes(closer io.ReadCloser) ([]byte, error) {
