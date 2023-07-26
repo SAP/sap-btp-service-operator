@@ -539,20 +539,13 @@ func handleResponseError(response *http.Response) error {
 		err = fmt.Errorf("request %s %s failed: %s", response.Request.Method, response.Request.URL, err)
 	}
 
-	var smError ServiceManagerError
-	if unmarshalErr := json.Unmarshal(body, &smError); unmarshalErr != nil {
-		return &ServiceManagerError{
-			StatusCode:  response.StatusCode,
-			Description: err.Error(),
-			BrokerError: nil,
-		}
-	}
-
-	return &ServiceManagerError{
+	smError := &ServiceManagerError{
 		StatusCode:  response.StatusCode,
 		Description: err.Error(),
-		BrokerError: smError.BrokerError,
 	}
+	_ = json.Unmarshal(body, &smError)
+
+	return smError
 }
 
 func bodyToBytes(closer io.ReadCloser) ([]byte, error) {
