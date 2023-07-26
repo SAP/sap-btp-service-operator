@@ -67,6 +67,13 @@ type Client interface {
 	// It should be used only in case there is no already implemented method for such an operation
 	Call(method string, smpath string, body io.Reader, q *Parameters) (*http.Response, error)
 }
+
+type SMAAPErr struct {
+	Description string
+	StatusCode  int
+	BrokerError *api.HTTPStatusCodeError `json:"broker_error,omitempty"`
+}
+
 type ServiceManagerError struct {
 	Message     string
 	StatusCode  int
@@ -538,9 +545,13 @@ func handleResponseError(response *http.Response) error {
 		err = fmt.Errorf("request %s %s failed: %s", response.Request.Method, response.Request.URL, err)
 	}
 
-	var smErr ServiceManagerError
-	if jsonErr := json.Unmarshal([]byte(err.Error()), &smErr); jsonErr == nil {
-		return &smErr
+	var smaapErr SMAAPErr
+	if jsonErr := json.Unmarshal(body, &smaapErr); jsonErr == nil {
+		return &ServiceManagerError{
+			StatusCode:  response.StatusCode,
+			Message:     err.Error(),
+			BrokerError: smaapErr.BrokerError,
+		}
 	}
 
 	return &ServiceManagerError{
