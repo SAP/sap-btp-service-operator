@@ -540,14 +540,18 @@ func handleResponseError(response *http.Response) error {
 	}
 
 	var smError ServiceManagerError
-	if unmarshalErr := json.Unmarshal(body, &smError); unmarshalErr == nil {
-		return &smError
+	if unmarshalErr := json.Unmarshal(body, &smError); unmarshalErr != nil {
+		return &ServiceManagerError{
+			StatusCode:  response.StatusCode,
+			Description: err.Error(),
+			BrokerError: nil,
+		}
 	}
 
 	return &ServiceManagerError{
 		StatusCode:  response.StatusCode,
 		Description: err.Error(),
-		BrokerError: nil,
+		BrokerError: smError.BrokerError,
 	}
 }
 
