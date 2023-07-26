@@ -312,7 +312,7 @@ func (client *serviceManagerClient) register(resource interface{}, url string, q
 	case http.StatusAccepted:
 		return response.Header.Get("Location"), nil
 	default:
-		return "", handleFailedResponse(response)
+		return "", handleResponseError(response)
 	}
 }
 
@@ -331,7 +331,7 @@ func (client *serviceManagerClient) delete(url string, q *Parameters, user strin
 	case http.StatusAccepted:
 		return response.Header.Get("Location"), nil
 	default:
-		return "", handleFailedResponse(response)
+		return "", handleResponseError(response)
 	}
 }
 
@@ -342,7 +342,7 @@ func (client *serviceManagerClient) get(result interface{}, url string, q *Param
 	}
 
 	if response.StatusCode != http.StatusOK {
-		return handleFailedResponse(response)
+		return handleResponseError(response)
 	}
 	return httputil.UnmarshalResponse(response, &result)
 }
@@ -364,7 +364,7 @@ func (client *serviceManagerClient) update(resource interface{}, url string, id 
 	case http.StatusAccepted:
 		return response.Header.Get("Location"), nil
 	default:
-		return "", handleFailedResponse(response)
+		return "", handleResponseError(response)
 	}
 }
 
@@ -390,20 +390,12 @@ func (client *serviceManagerClient) executeShareInstanceRequest(shouldShare bool
 	response, err := client.callWithUser(http.MethodPatch, types.ServiceInstancesURL+"/"+id, buffer, nil, user)
 	if response.StatusCode != http.StatusOK {
 		if err == nil {
-			return handleFailedResponse(response)
+			return handleResponseError(response)
 		}
 		return httputil.UnmarshalResponse(response, err)
 	}
 
 	return nil
-}
-
-func handleFailedResponse(response *http.Response) error {
-	err := handleResponseError(response)
-	return &ServiceManagerError{
-		StatusCode: response.StatusCode,
-		Message:    err.Error(),
-	}
 }
 
 func (client *serviceManagerClient) Call(method string, smpath string, body io.Reader, q *Parameters) (*http.Response, error) {
@@ -543,9 +535,18 @@ func handleResponseError(response *http.Response) error {
 
 	err = fmt.Errorf("StatusCode: %d Body: %s", response.StatusCode, body)
 	if response.Request != nil {
-		return fmt.Errorf("request %s %s failed: %s", response.Request.Method, response.Request.URL, err)
+		err = fmt.Errorf("request %s %s failed: %s", response.Request.Method, response.Request.URL, err)
 	}
-	return fmt.Errorf("request failed: %s", err)
+
+	var smErr ServiceManagerError
+	if jsonErr := json.Unmarshal([]byte(err.Error()), &smErr); jsonErr == nil {
+		return &smErr
+	}
+
+	return &ServiceManagerError{
+		StatusCode: response.StatusCode,
+		Message:    err.Error(),
+	}
 }
 
 func bodyToBytes(closer io.ReadCloser) ([]byte, error) {
