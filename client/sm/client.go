@@ -539,17 +539,17 @@ func handleResponseError(response *http.Response) error {
 		err = fmt.Errorf("request %s %s failed: %s", response.Request.Method, response.Request.URL, err)
 	}
 
-	var smaapErr struct {
+	var SMAAPErr struct {
 		Description string
 		StatusCode  int
 		BrokerError *api.HTTPStatusCodeError `json:"broker_error,omitempty"`
 	}
 
-	if jsonErr := json.Unmarshal(body, &smaapErr); jsonErr == nil {
+	if jsonErr := json.Unmarshal(body, &SMAAPErr); jsonErr == nil {
 		return &ServiceManagerError{
 			StatusCode:  response.StatusCode,
 			Message:     err.Error(),
-			BrokerError: smaapErr.BrokerError,
+			BrokerError: SMAAPErr.BrokerError,
 		}
 	}
 
