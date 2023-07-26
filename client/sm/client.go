@@ -549,10 +549,12 @@ func handleResponseError(response *http.Response) error {
 }
 
 func getBrokerError(body []byte) *api.HTTPStatusCodeError {
-	var raw map[string]json.RawMessage
+	var (
+		raw       map[string]json.RawMessage
+		brokerErr api.HTTPStatusCodeError
+	)
 
-	err := json.Unmarshal(body, &raw)
-	if err != nil {
+	if err := json.Unmarshal(body, &raw); err != nil {
 		return nil
 	}
 
@@ -561,10 +563,7 @@ func getBrokerError(body []byte) *api.HTTPStatusCodeError {
 		return nil
 	}
 
-	var brokerErr api.HTTPStatusCodeError
-
-	err = json.Unmarshal(brokerErrorJSON, &brokerErr)
-	if err != nil {
+	if err := json.Unmarshal(brokerErrorJSON, &brokerErr); err != nil {
 		return nil
 	}
 
