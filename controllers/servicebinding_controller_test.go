@@ -498,8 +498,8 @@ var _ = Describe("ServiceBinding controller", func() {
 						BeforeEach(func() {
 							errorMessage = "too many requests"
 							fakeClient.BindReturnsOnCall(0, nil, "", &sm.ServiceManagerError{
-								StatusCode: http.StatusTooManyRequests,
-								Message:    errorMessage,
+								StatusCode:  http.StatusTooManyRequests,
+								Description: errorMessage,
 							})
 							fakeClient.BindReturnsOnCall(1, &smClientTypes.ServiceBinding{ID: fakeBindingID, Credentials: json.RawMessage("{\"secret_key\": \"secret_value\"}")}, "", nil)
 						})
@@ -515,8 +515,8 @@ var _ = Describe("ServiceBinding controller", func() {
 						BeforeEach(func() {
 							errorMessage = "very bad request"
 							fakeClient.BindReturnsOnCall(0, nil, "", &sm.ServiceManagerError{
-								StatusCode: http.StatusBadRequest,
-								Message:    errorMessage,
+								StatusCode:  http.StatusBadRequest,
+								Description: errorMessage,
 							})
 						})
 

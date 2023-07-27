@@ -267,8 +267,8 @@ var _ = Describe("ServiceInstance controller", func() {
 					errMessage := "failed to provision instance"
 					JustBeforeEach(func() {
 						fakeClient.ProvisionReturns(nil, &sm.ServiceManagerError{
-							StatusCode: http.StatusBadRequest,
-							Message:    errMessage,
+							StatusCode:  http.StatusBadRequest,
+							Description: errMessage,
 						})
 						fakeClient.ProvisionReturnsOnCall(1, &sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
 					})
@@ -283,8 +283,8 @@ var _ = Describe("ServiceInstance controller", func() {
 					JustBeforeEach(func() {
 						errMessage := "failed to provision instance"
 						fakeClient.ProvisionReturnsOnCall(0, nil, &sm.ServiceManagerError{
-							StatusCode: http.StatusTooManyRequests,
-							Message:    errMessage,
+							StatusCode:  http.StatusTooManyRequests,
+							Description: errMessage,
 						})
 						fakeClient.ProvisionReturnsOnCall(1, &sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
 					})
@@ -954,8 +954,8 @@ var _ = Describe("ServiceInstance controller", func() {
 				It("should not attempt to share the instance", func() {
 					errMessage := "failed to provision instance"
 					fakeClient.ProvisionReturns(nil, &sm.ServiceManagerError{
-						StatusCode: http.StatusBadRequest,
-						Message:    errMessage,
+						StatusCode:  http.StatusBadRequest,
+						Description: errMessage,
 					})
 					serviceInstance = createInstance(ctx, sharedInstanceSpec, false)
 					Eventually(func() bool {
@@ -1132,8 +1132,8 @@ func waitForInstanceToBeReady(instance *v1.ServiceInstance, ctx context.Context,
 
 func getNonTransientBrokerError(errMessage string) error {
 	return &sm.ServiceManagerError{
-		StatusCode: http.StatusBadRequest,
-		Message:    "smErrMessage",
+		StatusCode:  http.StatusBadRequest,
+		Description: "smErrMessage",
 		BrokerError: &api.HTTPStatusCodeError{
 			StatusCode:   400,
 			ErrorMessage: &errMessage,
@@ -1142,8 +1142,8 @@ func getNonTransientBrokerError(errMessage string) error {
 
 func getTransientBrokerError(errorMessage string) error {
 	return &sm.ServiceManagerError{
-		StatusCode: http.StatusBadGateway,
-		Message:    "smErrMessage",
+		StatusCode:  http.StatusBadGateway,
+		Description: "smErrMessage",
 		BrokerError: &api.HTTPStatusCodeError{
 			StatusCode:   http.StatusTooManyRequests,
 			ErrorMessage: &errorMessage,
@@ -1167,36 +1167,36 @@ func instanceSharingReturnSuccess() {
 
 func instanceUnSharingReturnsNonTransientError() {
 	fakeClient.UnShareInstanceReturns(&sm.ServiceManagerError{
-		StatusCode: http.StatusBadRequest,
-		Message:    "nonTransient",
+		StatusCode:  http.StatusBadRequest,
+		Description: "nonTransient",
 	})
 }
 
 func instanceSharingReturnsNonTransientError400() {
 	fakeClient.ShareInstanceReturns(&sm.ServiceManagerError{
-		StatusCode: http.StatusBadRequest,
-		Message:    "nonTransient",
+		StatusCode:  http.StatusBadRequest,
+		Description: "nonTransient",
 	})
 }
 
 func instanceSharingReturnsNonTransientError500() {
 	fakeClient.ShareInstanceReturns(&sm.ServiceManagerError{
-		StatusCode: http.StatusInternalServerError,
-		Message:    "nonTransient",
+		StatusCode:  http.StatusInternalServerError,
+		Description: "nonTransient",
 	})
 }
 
 func instanceSharingReturnsTransientError() {
 	fakeClient.ShareInstanceReturns(&sm.ServiceManagerError{
-		StatusCode: http.StatusTooEarly,
-		Message:    "transient",
+		StatusCode:  http.StatusTooEarly,
+		Description: "transient",
 	})
 }
 
 func instanceSharingReturnsRateLimitError() {
 	fakeClient.ShareInstanceReturns(&sm.ServiceManagerError{
-		StatusCode: http.StatusTooManyRequests,
-		Message:    "transient",
+		StatusCode:  http.StatusTooManyRequests,
+		Description: "transient",
 	})
 }
 

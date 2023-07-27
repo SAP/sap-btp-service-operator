@@ -67,14 +67,15 @@ type Client interface {
 	// It should be used only in case there is no already implemented method for such an operation
 	Call(method string, smpath string, body io.Reader, q *Parameters) (*http.Response, error)
 }
+
 type ServiceManagerError struct {
-	Message     string
+	Description string
 	StatusCode  int
 	BrokerError *api.HTTPStatusCodeError `json:"broker_error,omitempty"`
 }
 
 func (e *ServiceManagerError) Error() string {
-	return e.Message
+	return e.Description
 }
 
 type serviceManagerClient struct {
@@ -312,7 +313,7 @@ func (client *serviceManagerClient) register(resource interface{}, url string, q
 	case http.StatusAccepted:
 		return response.Header.Get("Location"), nil
 	default:
-		return "", handleFailedResponse(response)
+		return "", handleResponseError(response)
 	}
 }
 
@@ -331,7 +332,7 @@ func (client *serviceManagerClient) delete(url string, q *Parameters, user strin
 	case http.StatusAccepted:
 		return response.Header.Get("Location"), nil
 	default:
-		return "", handleFailedResponse(response)
+		return "", handleResponseError(response)
 	}
 }
 
@@ -342,7 +343,7 @@ func (client *serviceManagerClient) get(result interface{}, url string, q *Param
 	}
 
 	if response.StatusCode != http.StatusOK {
-		return handleFailedResponse(response)
+		return handleResponseError(response)
 	}
 	return httputil.UnmarshalResponse(response, &result)
 }
@@ -364,7 +365,7 @@ func (client *serviceManagerClient) update(resource interface{}, url string, id 
 	case http.StatusAccepted:
 		return response.Header.Get("Location"), nil
 	default:
-		return "", handleFailedResponse(response)
+		return "", handleResponseError(response)
 	}
 }
 
@@ -390,20 +391,12 @@ func (client *serviceManagerClient) executeShareInstanceRequest(shouldShare bool
 	response, err := client.callWithUser(http.MethodPatch, types.ServiceInstancesURL+"/"+id, buffer, nil, user)
 	if response.StatusCode != http.StatusOK {
 		if err == nil {
-			return handleFailedResponse(response)
+			return handleResponseError(response)
 		}
 		return httputil.UnmarshalResponse(response, err)
 	}
 
 	return nil
-}
-
-func handleFailedResponse(response *http.Response) error {
-	err := handleResponseError(response)
-	return &ServiceManagerError{
-		StatusCode: response.StatusCode,
-		Message:    err.Error(),
-	}
 }
 
 func (client *serviceManagerClient) Call(method string, smpath string, body io.Reader, q *Parameters) (*http.Response, error) {
@@ -541,11 +534,13 @@ func handleResponseError(response *http.Response) error {
 		body = []byte(fmt.Sprintf("error reading response body: %s", err))
 	}
 
-	err = fmt.Errorf("StatusCode: %d Body: %s", response.StatusCode, body)
-	if response.Request != nil {
-		return fmt.Errorf("request %s %s failed: %s", response.Request.Method, response.Request.URL, err)
+	smError := &ServiceManagerError{
+		StatusCode:  response.StatusCode,
+		Description: "",
 	}
-	return fmt.Errorf("request failed: %s", err)
+	_ = json.Unmarshal(body, &smError)
+
+	return smError
 }
 
 func bodyToBytes(closer io.ReadCloser) ([]byte, error) {
