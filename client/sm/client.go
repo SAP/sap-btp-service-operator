@@ -534,18 +534,11 @@ func handleResponseError(response *http.Response) error {
 		body = []byte(fmt.Sprintf("error reading response body: %s", err))
 	}
 
-	err = fmt.Errorf("StatusCode: %d Body: %s", response.StatusCode, body)
-	if response.Request != nil {
-		err = fmt.Errorf("request %s %s failed ", response.Request.Method, response.Request.URL)
-	}
-
 	smError := &ServiceManagerError{
 		StatusCode:  response.StatusCode,
 		Description: "",
 	}
 	_ = json.Unmarshal(body, &smError)
-
-	smError.Description = err.Error() + smError.Description
 
 	return smError
 }
