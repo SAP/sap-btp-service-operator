@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	"fmt"
 
@@ -315,12 +316,17 @@ func isTransientError(ctx context.Context, err error) (bool, string) {
 	} else {
 		log.Info(fmt.Sprintf("SM returned error status code %d", smError.StatusCode))
 	}
-	return isTransientStatusCode(statusCode), errMsg
+	return isTransientStatusCode(statusCode, errMsg), errMsg
 }
 
-func isTransientStatusCode(StatusCode int) bool {
-	return StatusCode == http.StatusTooManyRequests || StatusCode == http.StatusServiceUnavailable ||
-		StatusCode == http.StatusGatewayTimeout || StatusCode == http.StatusNotFound || StatusCode == http.StatusBadGateway
+func isTransientStatusCode(StatusCode int, description string) bool {
+	if StatusCode == http.StatusTooManyRequests || StatusCode == http.StatusServiceUnavailable ||
+		StatusCode == http.StatusGatewayTimeout || StatusCode == http.StatusNotFound || StatusCode == http.StatusBadGateway {
+		return true
+	}
+	/* In case of 422 we only want to identify the error as transient if it is a concurrent operation error,
+	   it may be also un-processable entity which is non-transient */
+	return StatusCode == http.StatusUnprocessableEntity && strings.Contains(description, "Another concurrent operation in progress for this resource")
 }
 
 func isBrokerErrorExist(smError *sm.ServiceManagerError) bool {
