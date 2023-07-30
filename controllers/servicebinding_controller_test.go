@@ -1107,7 +1107,9 @@ var _ = Describe("ServiceBinding controller", func() {
 					api.StaleBindingRotationOfLabel: createdBinding.Name,
 				}
 				staleBinding.Spec.CredRotationPolicy = &v1.CredentialsRotationPolicy{
-					Enabled: false,
+					Enabled:           false,
+					RotatedBindingTTL: "0ns",
+					RotationFrequency: "0ns",
 				}
 				Expect(k8sClient.Create(ctx, staleBinding)).To(Succeed())
 				Eventually(func() bool {
