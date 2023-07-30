@@ -1,6 +1,7 @@
 package types
 
-const AddLabelValuesOperation = "add_values"
+const AddLabelOperation = "add"
+const RemoveLabelOperation = "remove"
 
 type Labels map[string][]string
 

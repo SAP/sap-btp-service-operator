@@ -548,7 +548,7 @@ func updateRequired(serviceInstance *servicesv1.ServiceInstance) bool {
 	}
 
 	cond := meta.FindStatusCondition(serviceInstance.Status.Conditions, api.ConditionSucceeded)
-	if cond != nil && cond.Reason == UpdateInProgress {
+	if cond != nil && cond.Reason == UpdateInProgress { //in case of transient error occurred
 		return true
 	}
 
