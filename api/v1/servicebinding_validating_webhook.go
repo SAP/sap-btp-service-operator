@@ -72,7 +72,7 @@ func (sb *ServiceBinding) ValidateUpdate(old runtime.Object) (admission.Warnings
 	isStale := false
 	if oldBinding.Labels != nil {
 		if _, ok := oldBinding.Labels[api.StaleBindingIDLabel]; ok {
-			if sb.Spec.CredRotationPolicy.Enabled == true {
+			if sb.Spec.CredRotationPolicy.Enabled {
 				return nil, fmt.Errorf("enabling cred rotation for rotated binding is not allowed")
 			}
 			if !sb.validateRotationLabels(oldBinding) {
