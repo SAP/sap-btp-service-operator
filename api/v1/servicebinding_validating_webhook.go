@@ -68,22 +68,35 @@ func (sb *ServiceBinding) ValidateUpdate(old runtime.Object) (admission.Warnings
 		}
 	}
 
-	specChanged := sb.specChanged(old)
+	oldBinding := old.(*ServiceBinding)
 	isStale := false
-	if sb.Labels != nil {
-		if _, ok := sb.Labels[api.StaleBindingIDLabel]; ok {
+	if oldBinding.Labels != nil {
+		if _, ok := oldBinding.Labels[api.StaleBindingIDLabel]; ok {
+			if sb.Spec.CredRotationPolicy.Enabled {
+				return nil, fmt.Errorf("enabling cred rotation for rotated binding is not allowed")
+			}
+			if !sb.validateRotationLabels(oldBinding) {
+				return nil, fmt.Errorf("modifying rotation labels is not allowed")
+			}
 			isStale = true
 		}
 	}
 
+	specChanged := sb.specChanged(oldBinding)
 	if specChanged && (sb.Status.BindingID != "" || isStale) {
 		return nil, fmt.Errorf("updating service bindings is not supported")
 	}
 	return nil, nil
 }
 
-func (sb *ServiceBinding) specChanged(old runtime.Object) bool {
-	oldBinding := old.(*ServiceBinding)
+func (sb *ServiceBinding) validateRotationLabels(old *ServiceBinding) bool {
+	if sb.Labels[api.StaleBindingIDLabel] != old.Labels[api.StaleBindingIDLabel] {
+		return false
+	}
+	return sb.Labels[api.StaleBindingRotationOfLabel] == old.Labels[api.StaleBindingRotationOfLabel]
+}
+
+func (sb *ServiceBinding) specChanged(oldBinding *ServiceBinding) bool {
 	oldSpec := oldBinding.Spec.DeepCopy()
 	newSpec := sb.Spec.DeepCopy()
 

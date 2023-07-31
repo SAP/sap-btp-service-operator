@@ -2,10 +2,8 @@ package controllers
 
 import (
 	"context"
-	"net/http"
-	"strings"
-
 	"fmt"
+	"net/http"
 
 	"github.com/SAP/sap-btp-service-operator/api"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
@@ -307,30 +305,27 @@ func isTransientError(ctx context.Context, err error) (bool, string) {
 		return false, err.Error()
 	}
 
+	log.Info(fmt.Sprintf("SM returned error status code %d", smError.StatusCode))
 	statusCode := smError.StatusCode
 	errMsg := smError.Error()
-	if isBrokerErrorExist(smError) {
+	if smError.BrokerError != nil {
 		log.Info(fmt.Sprintf("Broker returned error status code %d", smError.BrokerError.StatusCode))
 		statusCode = smError.BrokerError.StatusCode
 		errMsg = smError.BrokerError.Error()
-	} else {
-		log.Info(fmt.Sprintf("SM returned error status code %d", smError.StatusCode))
 	}
-	return isTransientStatusCode(statusCode, errMsg), errMsg
+
+	return isConcurrentOperationError(smError) || isTransientStatusCode(statusCode), errMsg
 }
 
-func isTransientStatusCode(StatusCode int, description string) bool {
-	if StatusCode == http.StatusTooManyRequests || StatusCode == http.StatusServiceUnavailable ||
-		StatusCode == http.StatusGatewayTimeout || StatusCode == http.StatusNotFound || StatusCode == http.StatusBadGateway {
-		return true
-	}
-	/* In case of 422 we only want to identify the error as transient if it is a concurrent operation error,
-	   it may be also un-processable entity which is non-transient */
-	return StatusCode == http.StatusUnprocessableEntity && strings.Contains(description, "Another concurrent operation in progress for this resource")
+func isConcurrentOperationError(smError *sm.ServiceManagerError) bool {
+	// service manager returns 422 for resources that have another operation in progress
+	// in this case 422 status code is transient
+	return smError.StatusCode == http.StatusUnprocessableEntity && smError.ErrorType == "ConcurrentOperationInProgress"
 }
 
-func isBrokerErrorExist(smError *sm.ServiceManagerError) bool {
-	return smError.BrokerError != nil && smError.BrokerError.StatusCode != 0
+func isTransientStatusCode(StatusCode int) bool {
+	return StatusCode == http.StatusTooManyRequests || StatusCode == http.StatusServiceUnavailable ||
+		StatusCode == http.StatusGatewayTimeout || StatusCode == http.StatusNotFound || StatusCode == http.StatusBadGateway
 }
 
 func (r *BaseReconciler) handleError(ctx context.Context, operationType smClientTypes.OperationCategory, err error, resource api.SAPBTPResource) (ctrl.Result, error) {

@@ -93,6 +93,7 @@ var _ = Describe("Service Binding Webhook Test", func() {
 				})
 
 				It("should fail on update with stale label", func() {
+					binding.Labels = map[string]string{api.StaleBindingIDLabel: "true"}
 					newBinding.Spec.ParametersFrom[0].SecretKeyRef.Name = "newName"
 					newBinding.Labels = map[string]string{api.StaleBindingIDLabel: "true"}
 					_, err := newBinding.ValidateUpdate(binding)

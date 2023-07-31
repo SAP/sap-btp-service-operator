@@ -69,8 +69,9 @@ type Client interface {
 }
 
 type ServiceManagerError struct {
-	Description string
-	StatusCode  int
+	ErrorType   string                   `json:"error,omitempty"`
+	Description string                   `json:"description,omitempty"`
+	StatusCode  int                      `json:"-"`
 	BrokerError *api.HTTPStatusCodeError `json:"broker_error,omitempty"`
 }
 
@@ -240,14 +241,29 @@ func (client *serviceManagerClient) RenameBinding(id, newName, newK8SName string
 		"labels": []*types.LabelChange{
 			{
 				Key:       k8sNameLabel,
-				Operation: types.AddLabelValuesOperation,
-				Values:    []string{newK8SName},
+				Operation: types.RemoveLabelOperation,
 			},
 		},
 	}
 
 	var result *types.ServiceBinding
 	_, err := client.update(renameRequest, types.ServiceBindingsURL, id, nil, "", &result)
+	if err != nil {
+		return nil, err
+	}
+
+	// due to sm issue (no "replace" label and remove+add not supported in the same request)
+	// adding the new _k8sname value in another request
+	addLabelRequest := map[string]interface{}{
+		"labels": []*types.LabelChange{
+			{
+				Key:       k8sNameLabel,
+				Operation: types.AddLabelOperation,
+				Values:    []string{newK8SName},
+			},
+		},
+	}
+	_, err = client.update(addLabelRequest, types.ServiceBindingsURL, id, nil, "", &result)
 	if err != nil {
 		return nil, err
 	}
@@ -535,8 +551,7 @@ func handleResponseError(response *http.Response) error {
 	}
 
 	smError := &ServiceManagerError{
-		StatusCode:  response.StatusCode,
-		Description: "",
+		StatusCode: response.StatusCode,
 	}
 	_ = json.Unmarshal(body, &smError)
 
