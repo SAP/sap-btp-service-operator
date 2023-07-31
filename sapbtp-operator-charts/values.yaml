@@ -31,13 +31,24 @@ manager:
     image:
       repository: quay.io/brancz/kube-rbac-proxy
       sha: ""
-      tag: v0.11.0
+      tag: v0.14.2
     memory_limit: ""
     cpu_limit: ""
     req_memory_limit: ""
     req_cpu_limit: ""
   imagePullSecrets: []
-#   - name: registrySecretName
+  #   - name: registrySecretName
+  pullSecretTemplate:
+  # creates a secret to be used in imagePullSecrets from a template
+  # output of data will be in form {"auths":{"myhost":{"auth":<encoded username:password>},"myhost1":{"auth":<encoded username:password>}}}
+  #    name: registrySecretName
+  #    authentication:
+  #      - password: mypwd
+  #        username: myuser
+  #        host: myhost
+  #      - password: mypwd1
+  #        username: myuser1
+  #        host: myhost1
   certificates:
     # Configure if https://github.com/jetstack/cert-manager is used
     certManager: true
@@ -72,5 +83,13 @@ manager:
   securityContext: {}
   health_service:
     enabled: false
+  kubernetesMatchLabels:
+    enabled: false
 cluster:
   id:
+externalImages:
+  kubectl:
+    image:
+      repository: bitnami/kubectl
+      sha: ""
+      tag: latest

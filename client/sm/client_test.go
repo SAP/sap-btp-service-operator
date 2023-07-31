@@ -3,10 +3,11 @@ package sm
 import (
 	"context"
 	"encoding/json"
+	"net/http"
+
 	"github.com/SAP/sap-btp-service-operator/client/sm/types"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"net/http"
 )
 
 var _ = Describe("Client test", func() {
@@ -72,8 +73,7 @@ var _ = Describe("Client test", func() {
 				})
 				It("should handle status code != 200", func() {
 					_, err := client.ListInstances(params)
-					Expect(err).Should(HaveOccurred())
-					verifyErrorMsg(err.Error(), handlerDetails[0].Path, handlerDetails[0].ResponseBody, handlerDetails[0].ResponseStatusCode)
+					expectErrorToContainSubstringAndStatusCode(err, "", http.StatusCreated)
 				})
 			})
 
@@ -85,8 +85,7 @@ var _ = Describe("Client test", func() {
 				})
 				It("should handle status code > 299", func() {
 					_, err := client.ListInstances(params)
-					Expect(err).Should(HaveOccurred())
-					verifyErrorMsg(err.Error(), handlerDetails[0].Path, handlerDetails[0].ResponseBody, handlerDetails[0].ResponseStatusCode)
+					expectErrorToContainSubstringAndStatusCode(err, "", http.StatusBadRequest)
 				})
 			})
 		})
@@ -114,8 +113,7 @@ var _ = Describe("Client test", func() {
 				})
 				It("should return 404", func() {
 					_, err := client.GetInstanceByID(instance.ID, params)
-					Expect(err).Should(HaveOccurred())
-					verifyErrorMsg(err.Error(), handlerDetails[0].Path+instance.ID, handlerDetails[0].ResponseBody, handlerDetails[0].ResponseStatusCode)
+					expectErrorToContainSubstringAndStatusCode(err, "", http.StatusNotFound)
 				})
 			})
 
@@ -128,7 +126,7 @@ var _ = Describe("Client test", func() {
 				It("should handle status code != 200", func() {
 					_, err := client.GetInstanceByID(instance.ID, params)
 					Expect(err).Should(HaveOccurred())
-					verifyErrorMsg(err.Error(), handlerDetails[0].Path+instance.ID, handlerDetails[0].ResponseBody, handlerDetails[0].ResponseStatusCode)
+					expectErrorToContainSubstringAndStatusCode(err, "", http.StatusCreated)
 				})
 			})
 
@@ -141,9 +139,7 @@ var _ = Describe("Client test", func() {
 
 				It("should handle status code > 299", func() {
 					_, err := client.GetInstanceByID(instance.ID, params)
-					Expect(err).Should(HaveOccurred())
-					verifyErrorMsg(err.Error(), handlerDetails[0].Path+instance.ID, handlerDetails[0].ResponseBody, handlerDetails[0].ResponseStatusCode)
-
+					expectErrorToContainSubstringAndStatusCode(err, "", http.StatusBadRequest)
 				})
 			})
 		})
@@ -179,7 +175,7 @@ var _ = Describe("Client test", func() {
 
 			Context("When valid instance is being provisioned synchronously", func() {
 				It("should provision successfully", func() {
-					res, err := client.Provision(instance, serviceName, planName, params, "test-user")
+					res, err := client.Provision(instance, serviceName, planName, params, "test-user", "")
 
 					Expect(err).ShouldNot(HaveOccurred())
 					Expect(res.Location).Should(HaveLen(0))
@@ -208,7 +204,7 @@ var _ = Describe("Client test", func() {
 					})
 
 					It("should provision successfully", func() {
-						res, err := client.Provision(instance, "mongo", "small", params, "test-user")
+						res, err := client.Provision(instance, "mongo", "small", params, "test-user", "")
 						Expect(err).ShouldNot(HaveOccurred())
 						Expect(res.Location).Should(HaveLen(0))
 						Expect(res.InstanceID).To(Equal(instance.ID))
@@ -218,7 +214,7 @@ var _ = Describe("Client test", func() {
 				Context("When no plan id provided", func() {
 					It("should provision successfully", func() {
 						instance.ServicePlanID = ""
-						res, err := client.Provision(instance, "mongo", "small", params, "test-user")
+						res, err := client.Provision(instance, "mongo", "small", params, "test-user", "")
 						Expect(err).ShouldNot(HaveOccurred())
 						Expect(res.Location).Should(HaveLen(0))
 						Expect(res.InstanceID).To(Equal(instance.ID))
@@ -229,7 +225,7 @@ var _ = Describe("Client test", func() {
 			Context("When invalid instance is being provisioned synchronously", func() {
 				When("No service name", func() {
 					It("should fail to provision", func() {
-						res, err := client.Provision(instance, "", "small", params, "test-user")
+						res, err := client.Provision(instance, "", "small", params, "test-user", "")
 						Expect(err).Should(HaveOccurred())
 						Expect(res).To(BeNil())
 					})
@@ -237,7 +233,7 @@ var _ = Describe("Client test", func() {
 
 				When("No plan name", func() {
 					It("should fail to provision", func() {
-						res, err := client.Provision(instance, "mongo", "", params, "test-user")
+						res, err := client.Provision(instance, "mongo", "", params, "test-user", "")
 						Expect(err).Should(HaveOccurred())
 						Expect(res).To(BeNil())
 					})
@@ -246,7 +242,7 @@ var _ = Describe("Client test", func() {
 				When("Plan id not match plan name", func() {
 					It("should fail", func() {
 						instance.ServicePlanID = "some-id"
-						res, err := client.Provision(instance, "mongo", "small", params, "test-user")
+						res, err := client.Provision(instance, "mongo", "small", params, "test-user", "")
 						Expect(err).Should(HaveOccurred())
 						Expect(res).To(BeNil())
 					})
@@ -260,7 +256,7 @@ var _ = Describe("Client test", func() {
 						handlerDetails[1] = HandlerDetails{Method: http.MethodGet, Path: types.ServiceOfferingsURL, ResponseBody: responseBody, ResponseStatusCode: http.StatusOK}
 					})
 					It("should fail", func() {
-						res, err := client.Provision(instance, "mongo2", "small", params, "test-user")
+						res, err := client.Provision(instance, "mongo2", "small", params, "test-user", "")
 						Expect(err).Should(HaveOccurred())
 						Expect(res).To(BeNil())
 					})
@@ -274,7 +270,7 @@ var _ = Describe("Client test", func() {
 					handlerDetails[0] = HandlerDetails{Method: http.MethodPost, Path: types.ServiceInstancesURL, ResponseStatusCode: http.StatusAccepted, Headers: map[string]string{"Location": locationHeader}}
 				})
 				It("should receive operation location", func() {
-					res, err := client.Provision(instance, serviceName, planName, params, "test-user")
+					res, err := client.Provision(instance, serviceName, planName, params, "test-user", "")
 
 					Expect(err).ShouldNot(HaveOccurred())
 					Expect(res.Location).Should(Equal(locationHeader))
@@ -293,7 +289,7 @@ var _ = Describe("Client test", func() {
 
 				})
 				It("should return error", func() {
-					res, err := client.Provision(instance, serviceName, planName, params, "test-user")
+					res, err := client.Provision(instance, serviceName, planName, params, "test-user", "")
 
 					Expect(err).Should(HaveOccurred())
 					Expect(res).To(BeNil())
@@ -307,40 +303,34 @@ var _ = Describe("Client test", func() {
 						handlerDetails[0] = HandlerDetails{Method: http.MethodPost, Path: types.ServiceInstancesURL, ResponseBody: responseBody, ResponseStatusCode: http.StatusOK}
 					})
 					It("should return error with status code", func() {
-						res, err := client.Provision(instance, serviceName, planName, params, "test-user")
-
-						Expect(err).Should(HaveOccurred())
-						verifyErrorMsg(err.Error(), handlerDetails[0].Path, handlerDetails[0].ResponseBody, handlerDetails[0].ResponseStatusCode)
+						res, err := client.Provision(instance, serviceName, planName, params, "test-user", "")
+						expectErrorToContainSubstringAndStatusCode(err, "", http.StatusOK)
 						Expect(res).To(BeNil())
 					})
 				})
 
 				Context("And status code is unsuccessful", func() {
 					BeforeEach(func() {
-						responseBody := []byte(`{ "description": "description", "error": "error"}`)
+						responseBody := []byte(`{ "description": "description"}`)
 						handlerDetails[0] = HandlerDetails{Method: http.MethodPost, Path: types.ServiceInstancesURL, ResponseBody: responseBody, ResponseStatusCode: http.StatusBadRequest}
 
 					})
 					It("should return error with url and description", func() {
-						res, err := client.Provision(instance, serviceName, planName, params, "test-user")
-
-						Expect(err).Should(HaveOccurred())
-						verifyErrorMsg(err.Error(), handlerDetails[0].Path, handlerDetails[0].ResponseBody, handlerDetails[0].ResponseStatusCode)
+						res, err := client.Provision(instance, serviceName, planName, params, "test-user", "")
+						expectErrorToContainSubstringAndStatusCode(err, "description", http.StatusBadRequest)
 						Expect(res).To(BeNil())
 					})
 				})
 
 				Context("And invalid response body", func() {
 					BeforeEach(func() {
-						responseBody := []byte(`{ "description": description", "error": "error"}`)
+						responseBody := []byte(`{ "description": description" }`)
 						handlerDetails[0] = HandlerDetails{Method: http.MethodPost, Path: types.ServiceInstancesURL, ResponseBody: responseBody, ResponseStatusCode: http.StatusBadRequest}
 
 					})
 					It("should return error without url and description if invalid response body", func() {
-						res, err := client.Provision(instance, serviceName, planName, params, "test-user")
-
-						Expect(err).Should(HaveOccurred())
-						verifyErrorMsg(err.Error(), handlerDetails[0].Path, handlerDetails[0].ResponseBody, handlerDetails[0].ResponseStatusCode)
+						res, err := client.Provision(instance, serviceName, planName, params, "test-user", "")
+						expectErrorToContainSubstringAndStatusCode(err, "", http.StatusBadRequest)
 						Expect(res).To(BeNil())
 					})
 				})
@@ -389,9 +379,8 @@ var _ = Describe("Client test", func() {
 				})
 				It("should handle error", func() {
 					location, err := client.Deprovision(instance.ID, params, "test-user")
-					Expect(err).Should(HaveOccurred())
+					expectErrorToContainSubstringAndStatusCode(err, "", http.StatusCreated)
 					Expect(location).Should(BeEmpty())
-					verifyErrorMsg(err.Error(), handlerDetails[0].Path+instance.ID, handlerDetails[0].ResponseBody, handlerDetails[0].ResponseStatusCode)
 				})
 			})
 
@@ -443,7 +432,7 @@ var _ = Describe("Client test", func() {
 						HandlerDetails{Method: http.MethodPatch, Path: types.ServiceInstancesURL + "/" + instance.ID, ResponseBody: responseBody, ResponseStatusCode: http.StatusOK})
 				})
 				It("should update successfully", func() {
-					responseInstance, location, err := client.UpdateInstance(instance.ID, instance, serviceName, planName, params, "test-user")
+					responseInstance, location, err := client.UpdateInstance(instance.ID, instance, serviceName, planName, params, "test-user", "")
 
 					Expect(err).ShouldNot(HaveOccurred())
 					Expect(location).Should(HaveLen(0))
@@ -459,7 +448,7 @@ var _ = Describe("Client test", func() {
 						HandlerDetails{Method: http.MethodPatch, Path: types.ServiceInstancesURL + "/" + instance.ID, ResponseStatusCode: http.StatusAccepted, Headers: map[string]string{"Location": locationHeader}})
 				})
 				It("should receive operation location", func() {
-					responseInstance, location, err := client.UpdateInstance(instance.ID, instance, serviceName, planName, params, "test-user")
+					responseInstance, location, err := client.UpdateInstance(instance.ID, instance, serviceName, planName, params, "test-user", "")
 
 					Expect(err).ShouldNot(HaveOccurred())
 					Expect(location).Should(Equal(locationHeader))
@@ -478,7 +467,7 @@ var _ = Describe("Client test", func() {
 						HandlerDetails{Method: http.MethodPatch, Path: types.ServiceInstancesURL + "/" + instance.ID, ResponseBody: responseBody, ResponseStatusCode: http.StatusOK})
 				})
 				It("should return error", func() {
-					responseInstance, location, err := client.UpdateInstance(instance.ID, instance, serviceName, planName, params, "test-user")
+					responseInstance, location, err := client.UpdateInstance(instance.ID, instance, serviceName, planName, params, "test-user", "")
 
 					Expect(err).Should(HaveOccurred())
 					Expect(location).Should(BeEmpty())
@@ -494,45 +483,38 @@ var _ = Describe("Client test", func() {
 							HandlerDetails{Method: http.MethodPatch, Path: types.ServiceInstancesURL + "/" + instance.ID, ResponseBody: responseBody, ResponseStatusCode: http.StatusTeapot})
 					})
 					It("should return error with status code", func() {
-						responseInstance, location, err := client.UpdateInstance(instance.ID, instance, serviceName, planName, params, "test-user")
-
-						Expect(err).Should(HaveOccurred())
+						responseInstance, location, err := client.UpdateInstance(instance.ID, instance, serviceName, planName, params, "test-user", "")
+						expectErrorToContainSubstringAndStatusCode(err, "", http.StatusTeapot)
 						Expect(location).Should(BeEmpty())
-						verifyErrorMsg(err.Error(), handlerDetails[2].Path, handlerDetails[2].ResponseBody, handlerDetails[2].ResponseStatusCode)
 						Expect(responseInstance).To(BeNil())
 					})
 				})
 
 				Context("And status code is unsuccessful", func() {
 					BeforeEach(func() {
-						responseBody := []byte(`{ "description": "description", "error": "error"}`)
+						responseBody := []byte(`{ "description": "description"}`)
 						handlerDetails = append(handlerDetails,
 							HandlerDetails{Method: http.MethodPatch, Path: types.ServiceInstancesURL + "/" + instance.ID, ResponseBody: responseBody, ResponseStatusCode: http.StatusBadRequest})
 					})
 					It("should return error with url and description", func() {
-						responseInstance, location, err := client.UpdateInstance(instance.ID, instance, serviceName, planName, params, "test-user")
-
-						Expect(err).Should(HaveOccurred())
+						responseInstance, location, err := client.UpdateInstance(instance.ID, instance, serviceName, planName, params, "test-user", "")
+						expectErrorToContainSubstringAndStatusCode(err, "description", http.StatusBadRequest)
 						Expect(location).Should(BeEmpty())
-						verifyErrorMsg(err.Error(), handlerDetails[2].Path, handlerDetails[2].ResponseBody, handlerDetails[2].ResponseStatusCode)
 						Expect(responseInstance).To(BeNil())
 					})
 				})
 
 				Context("And invalid response body", func() {
 					BeforeEach(func() {
-						responseBody := []byte(`{ "description": description", "error": "error"}`)
+						responseBody := []byte(`{ "description": "description"}`)
 						handlerDetails = append(handlerDetails,
 							HandlerDetails{Method: http.MethodPatch, Path: types.ServiceInstancesURL + "/" + instance.ID, ResponseBody: responseBody, ResponseStatusCode: http.StatusBadRequest})
 					})
 					It("should return error without url and description if invalid response body", func() {
-						responseInstance, location, err := client.UpdateInstance(instance.ID, instance, serviceName, planName, params, "test-user")
-
-						Expect(err).Should(HaveOccurred())
-						Expect(location).Should(BeEmpty())
-
-						verifyErrorMsg(err.Error(), handlerDetails[2].Path, handlerDetails[2].ResponseBody, handlerDetails[2].ResponseStatusCode)
+						responseInstance, location, err := client.UpdateInstance(instance.ID, instance, serviceName, planName, params, "test-user", "")
+						expectErrorToContainSubstringAndStatusCode(err, "description", http.StatusBadRequest)
 						Expect(responseInstance).To(BeNil())
+						Expect(location).Should(BeEmpty())
 					})
 				})
 
@@ -543,7 +525,7 @@ var _ = Describe("Client test", func() {
 					var err error
 					client, err = NewClient(context.TODO(), &ClientConfig{URL: "invalidURL"}, fakeAuthClient)
 					Expect(err).ToNot(HaveOccurred())
-					_, location, err := client.UpdateInstance(instance.ID, instance, serviceName, planName, params, "test-user")
+					_, location, err := client.UpdateInstance(instance.ID, instance, serviceName, planName, params, "test-user", "")
 
 					Expect(err).Should(HaveOccurred())
 					Expect(location).Should(BeEmpty())
@@ -618,8 +600,7 @@ var _ = Describe("Client test", func() {
 				})
 				It("should handle status code != 200", func() {
 					_, err := client.ListBindings(params)
-					Expect(err).Should(HaveOccurred())
-					verifyErrorMsg(err.Error(), handlerDetails[0].Path, handlerDetails[0].ResponseBody, handlerDetails[0].ResponseStatusCode)
+					expectErrorToContainSubstringAndStatusCode(err, "", http.StatusCreated)
 				})
 			})
 
@@ -631,8 +612,7 @@ var _ = Describe("Client test", func() {
 				})
 				It("should handle status code > 299", func() {
 					_, err := client.ListBindings(params)
-					Expect(err).Should(HaveOccurred())
-					verifyErrorMsg(err.Error(), handlerDetails[0].Path, handlerDetails[0].ResponseBody, handlerDetails[0].ResponseStatusCode)
+					expectErrorToContainSubstringAndStatusCode(err, "", http.StatusBadRequest)
 				})
 			})
 		})
@@ -660,8 +640,7 @@ var _ = Describe("Client test", func() {
 				})
 				It("should return 404", func() {
 					_, err := client.GetBindingByID(binding.ID, params)
-					Expect(err).Should(HaveOccurred())
-					verifyErrorMsg(err.Error(), handlerDetails[0].Path+binding.ID, handlerDetails[0].ResponseBody, handlerDetails[0].ResponseStatusCode)
+					expectErrorToContainSubstringAndStatusCode(err, "", http.StatusNotFound)
 				})
 			})
 
@@ -673,8 +652,7 @@ var _ = Describe("Client test", func() {
 				})
 				It("should handle status code != 200", func() {
 					_, err := client.GetBindingByID(binding.ID, params)
-					Expect(err).Should(HaveOccurred())
-					verifyErrorMsg(err.Error(), handlerDetails[0].Path+binding.ID, handlerDetails[0].ResponseBody, handlerDetails[0].ResponseStatusCode)
+					expectErrorToContainSubstringAndStatusCode(err, "", http.StatusCreated)
 				})
 			})
 
@@ -686,8 +664,7 @@ var _ = Describe("Client test", func() {
 				})
 				It("should handle status code > 299", func() {
 					_, err := client.GetBindingByID(binding.ID, params)
-					Expect(err).Should(HaveOccurred())
-					verifyErrorMsg(err.Error(), handlerDetails[0].Path+binding.ID, handlerDetails[0].ResponseBody, handlerDetails[0].ResponseStatusCode)
+					expectErrorToContainSubstringAndStatusCode(err, "", http.StatusBadRequest)
 
 				})
 			})
@@ -757,46 +734,39 @@ var _ = Describe("Client test", func() {
 					})
 					It("should return error with status code", func() {
 						responseBinding, location, err := client.Bind(binding, params, "test-user")
-
-						Expect(err).Should(HaveOccurred())
-						Expect(location).Should(BeEmpty())
-						verifyErrorMsg(err.Error(), handlerDetails[0].Path, handlerDetails[0].ResponseBody, handlerDetails[0].ResponseStatusCode)
+						expectErrorToContainSubstringAndStatusCode(err, "", http.StatusOK)
 						Expect(responseBinding).To(BeNil())
+						Expect(location).Should(BeEmpty())
 					})
 				})
 
 				Context("And status code is unsuccessful", func() {
 					BeforeEach(func() {
-						responseBody := []byte(`{ "description": "description", "error": "error"}`)
+						responseBody := []byte(`{ "description": "description"}`)
 						handlerDetails = []HandlerDetails{
 							{Method: http.MethodPost, Path: types.ServiceBindingsURL, ResponseBody: responseBody, ResponseStatusCode: http.StatusBadRequest},
 						}
 					})
 					It("should return error with url and description", func() {
 						responseBinding, location, err := client.Bind(binding, params, "test-user")
-
-						Expect(err).Should(HaveOccurred())
-						Expect(location).Should(BeEmpty())
-						verifyErrorMsg(err.Error(), handlerDetails[0].Path, handlerDetails[0].ResponseBody, handlerDetails[0].ResponseStatusCode)
+						expectErrorToContainSubstringAndStatusCode(err, "description", http.StatusBadRequest)
 						Expect(responseBinding).To(BeNil())
+						Expect(location).Should(BeEmpty())
 					})
 				})
 
 				Context("And invalid response body", func() {
 					BeforeEach(func() {
-						responseBody := []byte(`{ "description": description", "error": "error"}`)
+						responseBody := []byte(`{ "description": description" }`)
 						handlerDetails = []HandlerDetails{
 							{Method: http.MethodPost, Path: types.ServiceBindingsURL, ResponseBody: responseBody, ResponseStatusCode: http.StatusBadRequest},
 						}
 					})
 					It("should return error without url and description if invalid response body", func() {
 						responseBinding, location, err := client.Bind(binding, params, "test-user")
-
-						Expect(err).Should(HaveOccurred())
-						Expect(location).Should(BeEmpty())
-
-						verifyErrorMsg(err.Error(), handlerDetails[0].Path, handlerDetails[0].ResponseBody, handlerDetails[0].ResponseStatusCode)
+						expectErrorToContainSubstringAndStatusCode(err, "", http.StatusBadRequest)
 						Expect(responseBinding).To(BeNil())
+						Expect(location).Should(BeEmpty())
 					})
 				})
 
@@ -939,9 +909,8 @@ TSTAhYWEQVZqRKYQMYGHpNlU
 				})
 				It("should handle error", func() {
 					location, err := client.Unbind(binding.ID, params, "test-user")
-					Expect(err).Should(HaveOccurred())
+					expectErrorToContainSubstringAndStatusCode(err, "", http.StatusCreated)
 					Expect(location).Should(BeEmpty())
-					verifyErrorMsg(err.Error(), handlerDetails[0].Path+binding.ID, handlerDetails[0].ResponseBody, handlerDetails[0].ResponseStatusCode)
 				})
 			})
 
@@ -1003,5 +972,10 @@ TSTAhYWEQVZqRKYQMYGHpNlU
 			Expect(result).To(Equal(operation))
 		})
 	})
-
 })
+
+func expectErrorToContainSubstringAndStatusCode(err error, substring string, statusCode int) {
+	Expect(err).Should(HaveOccurred())
+	Expect(err.Error()).To(ContainSubstring(substring))
+	Expect(err.(*ServiceManagerError).StatusCode).To(Equal(statusCode))
+}

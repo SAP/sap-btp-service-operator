@@ -22,6 +22,12 @@ spec:
     - jsonPath: .spec.servicePlanName
       name: Plan
       type: string
+    - jsonPath: .spec.shared
+      name: shared
+      type: boolean
+    - jsonPath: .spec.dataCenter
+      name: dataCenter
+      type: string
     - jsonPath: .status.conditions[0].reason
       name: Status
       type: string
@@ -65,6 +71,10 @@ spec:
                 items:
                   type: string
                 type: array
+              dataCenter:
+                description: The dataCenter in case service offering and plan name
+                  exist in other data center and not on main
+                type: string
               externalName:
                 description: The name of the instance in Service Manager
                 type: string
@@ -115,6 +125,9 @@ spec:
                 description: The name of the service plan
                 minLength: 1
                 type: string
+              shared:
+                description: Indicates the desired shared state
+                type: boolean
               userInfo:
                 description: UserInfo contains information about the user that last
                   modified this instance. This field is set by the API server and
@@ -157,8 +170,8 @@ spec:
                   description: "Condition contains details for one aspect of the current
                     state of this API Resource. --- This struct is intended for direct
                     use as an array at the field path .status.conditions.  For example,
-                    type FooStatus struct{ // Represents the observations of a foo's
-                    current state. // Known .status.conditions.type are: \"Available\",
+                    \n type FooStatus struct{ // Represents the observations of a
+                    foo's current state. // Known .status.conditions.type are: \"Available\",
                     \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge
                     // +listType=map // +listMapKey=type Conditions []metav1.Condition
                     `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
@@ -220,6 +233,9 @@ spec:
                   - type
                   type: object
                 type: array
+              hashedSpec:
+                description: HashedSpec is the hashed spec without the shared property
+                type: string
               instanceID:
                 description: The generated ID of the instance, will be automatically
                   filled once the instance is created
@@ -353,6 +369,9 @@ spec:
                 description: The name of the service plan
                 minLength: 1
                 type: string
+              shared:
+                description: Indicates the desired shared state
+                type: boolean
               userInfo:
                 description: UserInfo contains information about the user that last
                   modified this instance. This field is set by the API server and
@@ -395,8 +414,8 @@ spec:
                   description: "Condition contains details for one aspect of the current
                     state of this API Resource. --- This struct is intended for direct
                     use as an array at the field path .status.conditions.  For example,
-                    type FooStatus struct{ // Represents the observations of a foo's
-                    current state. // Known .status.conditions.type are: \"Available\",
+                    \n type FooStatus struct{ // Represents the observations of a
+                    foo's current state. // Known .status.conditions.type are: \"Available\",
                     \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge
                     // +listType=map // +listMapKey=type Conditions []metav1.Condition
                     `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"

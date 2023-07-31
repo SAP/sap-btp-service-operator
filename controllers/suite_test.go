@@ -19,7 +19,13 @@ package controllers
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
+	"net"
+	"path/filepath"
+	"testing"
+	"time"
+
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
 	"github.com/SAP/sap-btp-service-operator/api"
 	"github.com/SAP/sap-btp-service-operator/api/v1/webhooks"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
@@ -27,13 +33,11 @@ import (
 	"github.com/SAP/sap-btp-service-operator/internal/config"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"net"
-	"path/filepath"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
-	"testing"
-	"time"
+
+	"fmt"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 
@@ -45,7 +49,6 @@ import (
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
-	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -54,7 +57,7 @@ import (
 
 const (
 	timeout      = time.Second * 20
-	interval     = time.Millisecond * 10
+	interval     = time.Millisecond * 50
 	syncPeriod   = time.Millisecond * 250
 	pollInterval = time.Millisecond * 250
 )
@@ -66,10 +69,7 @@ var fakeClient *smfakes.FakeClient
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
-
-	RunSpecsWithDefaultAndCustomReporters(t,
-		"Controller Suite",
-		[]Reporter{printer.NewlineReporter{}})
+	RunSpecs(t, "Controllers Suite")
 }
 
 var _ = BeforeSuite(func(done Done) {
@@ -125,8 +125,9 @@ var _ = BeforeSuite(func(done Done) {
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	k8sManager.GetWebhookServer().Register("/mutate-services-cloud-sap-com-v1-serviceinstance", &webhook.Admission{Handler: &webhooks.ServiceInstanceDefaulter{}})
-	k8sManager.GetWebhookServer().Register("/mutate-services-cloud-sap-com-v1-servicebinding", &webhook.Admission{Handler: &webhooks.ServiceBindingDefaulter{}})
+	k8sManager.GetWebhookServer().Register("/mutate-services-cloud-sap-com-v1-serviceinstance", &webhook.Admission{Handler: &webhooks.ServiceInstanceDefaulter{Decoder: admission.NewDecoder(k8sManager.GetScheme())}})
+	k8sManager.GetWebhookServer().Register("/mutate-services-cloud-sap-com-v1-servicebinding", &webhook.Admission{Handler: &webhooks.ServiceBindingDefaulter{Decoder: admission.NewDecoder(k8sManager.GetScheme())}})
+
 	err = (&servicesv1.ServiceBinding{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 

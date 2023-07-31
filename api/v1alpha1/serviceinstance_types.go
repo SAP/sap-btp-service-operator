@@ -47,6 +47,11 @@ type ServiceInstanceSpec struct {
 	// The name of the instance in Service Manager
 	ExternalName string `json:"externalName,omitempty"`
 
+	// Indicates the desired shared state
+	// +optional
+	// +kubebuilder:default={}
+	Shared *bool `json:"shared,omitempty"`
+
 	// Provisioning parameters for the instance.
 	//
 	// The Parameters field is NOT secret or secured in any way and should

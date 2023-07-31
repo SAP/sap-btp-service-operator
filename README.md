@@ -27,6 +27,7 @@ The SAP BTP service operator is based on the [Kubernetes Operator pattern](https
 * [Credentials Rotation](#credentials-rotation)
 * [Multitenancy](#multitenancy)
 * [Troubleshooting and Support](#troubleshooting-and-support)
+* [Uninstalling the Operator](#uninstalling-the-operator)
 
 ## Architecture
 SAP BTP service operator communicates with [Service Manager](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/3a27b85a47fc4dff99184dd5bf181e14.html) that uses the [Open service broker API](https://github.com/openservicebrokerapi/servicebroker) to communicate with service brokers, acting as an intermediary for the Kubernetes API Server to negotiate the initial provisioning and retrieve the credentials necessary for the application to use a managed service.<br><br>
@@ -192,7 +193,7 @@ Review the supported Kubernetes API versions for the following SAP BTP Service O
     spec:
         serviceInstanceName: my-service-instance
         externalName: my-binding-external
-        secretName: mySecret
+        secretName: my-secret
         parameters:
           key1: val1
           key2: val2      
@@ -229,16 +230,17 @@ Review the supported Kubernetes API versions for the following SAP BTP Service O
 
 ### Service Instance
 #### Spec
-| Parameter         | Type     | Description                                                                                                   |
-|:-----------------|:---------|:-----------------------------------------------------------------------------------------------------------|
-| serviceOfferingName`*` | `string` | The name of the SAP BTP service offering. |
-| servicePlanName`*` | `string` |  The plan to use for the service instance.   |
-| servicePlanID   |  `string`  | The plan ID in case service offering and plan name are ambiguous. |
-| externalName       | `string` | The name for the service instance in SAP BTP, defaults to the instance `metadata.name` if not specified. |
+| Parameter         | Type     | Description                                                                                                                                                                                                       |
+|:-----------------|:---------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| serviceOfferingName`*` | `string` | The name of the SAP BTP service offering.                                                                                                                                                                         |
+| servicePlanName`*` | `string` | The plan to use for the service instance.                                                                                                                                                                         |
+| servicePlanID   |  `string`  | The plan ID in case service offering and plan name are ambiguous.                                                                                                                                                 |
+| externalName       | `string` | The name for the service instance in SAP BTP, defaults to the instance `metadata.name` if not specified.                                                                                                          |
 | parameters       | `[]object` | Some services support the provisioning of additional configuration parameters during the instance creation.<br/>For the list of supported parameters, check the documentation of the particular service offering. |
-| parametersFrom | `[]object` | List of sources to populate parameters. |
-| customTags | `[]string` | List of custom tags describing the ServiceInstance, will be copied to `ServiceBinding` secret in the key called `tags`. |
-| userInfo | `object` | Contains information about the user that last modified this service instance. | 
+| parametersFrom | `[]object` | List of sources to populate parameters.                                                                                                                                                                           |
+| customTags | `[]string` | List of custom tags describing the ServiceInstance, will be copied to `ServiceBinding` secret in the key called `tags`.                                                                                           |
+| userInfo | `object` | Contains information about the user that last modified this service instance.                                                                                                                                     |
+| shared |  `*bool`   | The shared state. Possible values: true, false, or nil (value was not specified, counts as "false").                                                                                                                                                                               |
 
 #### Status
 | Parameter         | Type     | Description                                                                                                   |
@@ -246,7 +248,7 @@ Review the supported Kubernetes API versions for the following SAP BTP Service O
 | instanceID   | `string` | The service instance ID in SAP Service Manager service.  |
 | operationURL | `string` | The URL of the current operation performed on the service instance.  |
 | operationType   |  `string`| The type of the current operation. Possible values are CREATE, UPDATE, or DELETE. |
-| conditions       |  `[]condition`   | An array of conditions describing the status of the service instance.<br/>The possible condition types are:<br>- `Ready`: set to `true`  if the instance is ready and usable<br/>- `Failed`: set to `true` when an operation on the service instance fails.<br/> In the case of failure, the details about the error are available in the condition message.<br>- `Succeeded`: set to `true` when an operation on the service instance succeeded. In case of `false` operation considered as in progress unless `Failed` condition exists.
+| conditions       |  `[]condition`   | An array of conditions describing the status of the service instance.<br/>The possible condition types are:<br>- `Ready`: set to `true`  if the instance is ready and usable<br/>- `Failed`: set to `true` when an operation on the service instance fails.<br/> In the case of failure, the details about the error are available in the condition message.<br>- `Succeeded`: set to `true` when an operation on the service instance succeeded. In case of `false` operation considered as in progress unless `Failed` condition exists.<br>- `Shared`: set to `true` when sharing of the service instance succeeded. set to `false` when unsharing of the service instance succeeded or when service instance is not shared. |
 | tags       |  `[]string`   | Tags describing the ServiceInstance as provided in service catalog, will be copied to `ServiceBinding` secret in the key called `tags`.
 
 
@@ -509,6 +511,61 @@ data:
 
 You're welcome to raise issues related to feature requests, bugs, or give us general feedback on this project's GitHub Issues page. 
 The SAP BTP service operator project maintainers will respond to the best of their abilities. 
+
+[Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
+
+## Uninstalling the Operator
+
+Before you uninstall the operator, we recommend you manually delete all associated service instances and bindings. This way, you'll ensure all data stored with service instances and bindings are properly taken care of. Instances and bindings that were not manually deleted will be automatically deleted once you start the uninstallation process.
+
+To uninstall the operator, run the following command:
+`helm uninstall <release name> -n <name space>`
+
+Example: 
+
+ >   ```
+  >   helm uninstall sap-btp-operator -n sap-btp-operator
+
+#### Responses
+
+   - `release <release name> uninstalled` - The operator has been successfully uninstalled
+
+   - `Timed out waiting for condition` 
+   
+      - What happened?
+      
+        The deletion of instances and bindings takes more than 5 minutes, this happens when there is a large number of instances and bindings.
+
+      - What to do:
+     
+        Wait for the job to finish and re-trigger the uninstall process.
+        To check the job status, run `kubectl get jobs --namespace=<name space>` or log on to the cluster and check the job log.
+        Note that you may have to repeat this step several times untill the un-install process has been successfully completed.
+     
+     
+   - `job failed: BackoffLimitExceeded`
+      
+     -  What happened?
+      
+        One of the service instances or bindings could not be deleted.
+     
+      - What to do:
+      
+        First find the service instance or binding in question and fix it, then re-trigger the uninstalation. 
+
+        To find it, log on to the cluster and check the pre-delete job, or check the logs by running the following two commands:
+        
+          - `kubectl get pods --all-namespaces| grep pre-delete`  - which gives you the list of all namespaces and jobs
+          - `kubectl logs <job_name> --namespace=<name_space_name>` - where you specify the desired job and namespace
+          
+        Note that the pre-delete job is only visible for approximately one minute after the job execution is completed. 
+  
+        If you don't have an access to the pre-delete job, use kubectl to view details about the failed resource and check its status by running:
+        
+          - `kubectl describe <resource_type> <resource_name>` 
+          
+        Check for resources with the deletion timestamp to determine if it tried to be deleted. 
+
 
 ## Contributions
 We currently do not accept community contributions. 

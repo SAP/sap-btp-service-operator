@@ -28,6 +28,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/SAP/sap-btp-service-operator/api"
 	"github.com/SAP/sap-btp-service-operator/client/sm/types"
 	"github.com/SAP/sap-btp-service-operator/internal/auth"
 	"github.com/SAP/sap-btp-service-operator/internal/httputil"
@@ -45,8 +46,8 @@ const (
 type Client interface {
 	ListInstances(*Parameters) (*types.ServiceInstances, error)
 	GetInstanceByID(string, *Parameters) (*types.ServiceInstance, error)
-	UpdateInstance(id string, updatedInstance *types.ServiceInstance, serviceName string, planName string, q *Parameters, user string) (*types.ServiceInstance, string, error)
-	Provision(instance *types.ServiceInstance, serviceName string, planName string, q *Parameters, user string) (*ProvisionResponse, error)
+	UpdateInstance(id string, updatedInstance *types.ServiceInstance, serviceName string, planName string, q *Parameters, user string, dataCenter string) (*types.ServiceInstance, string, error)
+	Provision(instance *types.ServiceInstance, serviceName string, planName string, q *Parameters, user string, dataCenter string) (*ProvisionResponse, error)
 	Deprovision(id string, q *Parameters, user string) (string, error)
 
 	ListBindings(*Parameters) (*types.ServiceBindings, error)
@@ -54,6 +55,8 @@ type Client interface {
 	Bind(binding *types.ServiceBinding, q *Parameters, user string) (*types.ServiceBinding, string, error)
 	Unbind(id string, q *Parameters, user string) (string, error)
 	RenameBinding(id, newName, newK8SName string) (*types.ServiceBinding, error)
+	ShareInstance(id string, user string) error
+	UnShareInstance(id string, user string) error
 
 	ListOfferings(*Parameters) (*types.ServiceOfferings, error)
 	ListPlans(*Parameters) (*types.ServicePlans, error)
@@ -64,13 +67,15 @@ type Client interface {
 	// It should be used only in case there is no already implemented method for such an operation
 	Call(method string, smpath string, body io.Reader, q *Parameters) (*http.Response, error)
 }
+
 type ServiceManagerError struct {
-	Message    string
-	StatusCode int
+	Description string
+	StatusCode  int
+	BrokerError *api.HTTPStatusCodeError `json:"broker_error,omitempty"`
 }
 
 func (e *ServiceManagerError) Error() string {
-	return e.Message
+	return e.Description
 }
 
 type serviceManagerClient struct {
@@ -91,7 +96,7 @@ type ProvisionResponse struct {
 	Tags       json.RawMessage
 }
 
-// NewClientWithAuth returns new SM Client configured with the provided configuration
+// NewClient NewClientWithAuth returns new SM Client configured with the provided configuration
 func NewClient(ctx context.Context, config *ClientConfig, httpClient auth.HTTPClient) (Client, error) {
 	if httpClient != nil {
 		return &serviceManagerClient{Context: ctx, Config: config, HTTPClient: httpClient}, nil
@@ -117,14 +122,14 @@ func NewClient(ctx context.Context, config *ClientConfig, httpClient auth.HTTPCl
 }
 
 // Provision provisions a new service instance in service manager
-func (client *serviceManagerClient) Provision(instance *types.ServiceInstance, serviceName string, planName string, q *Parameters, user string) (*ProvisionResponse, error) {
+func (client *serviceManagerClient) Provision(instance *types.ServiceInstance, serviceName string, planName string, q *Parameters, user string, dataCenter string) (*ProvisionResponse, error) {
 	var newInstance *types.ServiceInstance
 	var instanceID string
 	if len(serviceName) == 0 || len(planName) == 0 {
 		return nil, fmt.Errorf("missing field values. Specify service name and plan name for the instance '%s'", instance.Name)
 	}
 
-	planInfo, err := client.getPlanInfo(instance.ServicePlanID, serviceName, planName)
+	planInfo, err := client.getPlanInfo(instance.ServicePlanID, serviceName, planName, dataCenter)
 	if err != nil {
 		return nil, err
 	}
@@ -213,10 +218,10 @@ func (client *serviceManagerClient) Unbind(id string, q *Parameters, user string
 	return client.delete(types.ServiceBindingsURL+"/"+id, q, user)
 }
 
-func (client *serviceManagerClient) UpdateInstance(id string, updatedInstance *types.ServiceInstance, serviceName string, planName string, q *Parameters, user string) (*types.ServiceInstance, string, error) {
+func (client *serviceManagerClient) UpdateInstance(id string, updatedInstance *types.ServiceInstance, serviceName string, planName string, q *Parameters, user string, dataCenter string) (*types.ServiceInstance, string, error) {
 	var result *types.ServiceInstance
 
-	planInfo, err := client.getPlanInfo(updatedInstance.ServicePlanID, serviceName, planName)
+	planInfo, err := client.getPlanInfo(updatedInstance.ServicePlanID, serviceName, planName, dataCenter)
 	if err != nil {
 		return nil, "", err
 	}
@@ -308,7 +313,7 @@ func (client *serviceManagerClient) register(resource interface{}, url string, q
 	case http.StatusAccepted:
 		return response.Header.Get("Location"), nil
 	default:
-		return "", handleFailedResponse(response)
+		return "", handleResponseError(response)
 	}
 }
 
@@ -327,7 +332,7 @@ func (client *serviceManagerClient) delete(url string, q *Parameters, user strin
 	case http.StatusAccepted:
 		return response.Header.Get("Location"), nil
 	default:
-		return "", handleFailedResponse(response)
+		return "", handleResponseError(response)
 	}
 }
 
@@ -338,7 +343,7 @@ func (client *serviceManagerClient) get(result interface{}, url string, q *Param
 	}
 
 	if response.StatusCode != http.StatusOK {
-		return handleFailedResponse(response)
+		return handleResponseError(response)
 	}
 	return httputil.UnmarshalResponse(response, &result)
 }
@@ -360,16 +365,38 @@ func (client *serviceManagerClient) update(resource interface{}, url string, id 
 	case http.StatusAccepted:
 		return response.Header.Get("Location"), nil
 	default:
-		return "", handleFailedResponse(response)
+		return "", handleResponseError(response)
 	}
 }
 
-func handleFailedResponse(response *http.Response) error {
-	err := handleResponseError(response)
-	return &ServiceManagerError{
-		StatusCode: response.StatusCode,
-		Message:    err.Error(),
+func (client *serviceManagerClient) ShareInstance(id string, user string) error {
+	return client.executeShareInstanceRequest(true, id, user)
+}
+
+func (client *serviceManagerClient) UnShareInstance(id string, user string) error {
+	return client.executeShareInstanceRequest(false, id, user)
+}
+
+func (client *serviceManagerClient) executeShareInstanceRequest(shouldShare bool, id string, user string) error {
+	bodyRequest := map[string]interface{}{
+		"shared": shouldShare,
 	}
+	shareBody, err := json.Marshal(bodyRequest)
+	if err != nil {
+		return err
+	}
+
+	buffer := bytes.NewBuffer(shareBody)
+
+	response, err := client.callWithUser(http.MethodPatch, types.ServiceInstancesURL+"/"+id, buffer, nil, user)
+	if response.StatusCode != http.StatusOK {
+		if err == nil {
+			return handleResponseError(response)
+		}
+		return httputil.UnmarshalResponse(response, err)
+	}
+
+	return nil
 }
 
 func (client *serviceManagerClient) Call(method string, smpath string, body io.Reader, q *Parameters) (*http.Response, error) {
@@ -396,21 +423,23 @@ func (client *serviceManagerClient) callWithUser(method string, smpath string, b
 	return resp, nil
 }
 
-func (client *serviceManagerClient) getPlanInfo(planID string, serviceName string, planName string) (*planInfo, error) {
-	offerings, err := client.getServiceOfferingsByName(serviceName)
+func (client *serviceManagerClient) getPlanInfo(planID string, serviceName string, planName string, dataCenter string) (*planInfo, error) {
+
+	offerings, err := client.getServiceOfferingsByNameAndDataCenter(serviceName, dataCenter)
 	if err != nil {
 		return nil, err
 	}
 
 	var commaSepOfferingIds string
 	if len(offerings.ServiceOfferings) == 0 {
-		return nil, fmt.Errorf("couldn't find the service offering '%s'", serviceName)
+		return nil, fmt.Errorf("couldn't find the service offering '%s' on dataCenter '%s'", serviceName, dataCenter)
 	}
 
 	serviceOfferingIds := make([]string, 0, len(offerings.ServiceOfferings))
 	for _, svc := range offerings.ServiceOfferings {
 		serviceOfferingIds = append(serviceOfferingIds, svc.ID)
 	}
+
 	commaSepOfferingIds = "'" + strings.Join(serviceOfferingIds, "', '") + "'"
 
 	query := &Parameters{
@@ -447,9 +476,9 @@ func (client *serviceManagerClient) getPlanInfo(planID string, serviceName strin
 	return nil, err
 }
 
-func (client *serviceManagerClient) getServiceOfferingsByName(serviceName string) (*types.ServiceOfferings, error) {
+func (client *serviceManagerClient) getServiceOfferingsByNameAndDataCenter(serviceName string, dataCenter string) (*types.ServiceOfferings, error) {
 	query := &Parameters{
-		FieldQuery: []string{fmt.Sprintf("catalog_name eq '%s'", serviceName)},
+		FieldQuery: []string{fmt.Sprintf("catalog_name eq '%s' and data_center eq '%s'", serviceName, dataCenter)},
 	}
 	offerings, err := client.ListOfferings(query)
 	if err != nil {
@@ -505,11 +534,13 @@ func handleResponseError(response *http.Response) error {
 		body = []byte(fmt.Sprintf("error reading response body: %s", err))
 	}
 
-	err = fmt.Errorf("StatusCode: %d Body: %s", response.StatusCode, body)
-	if response.Request != nil {
-		return fmt.Errorf("request %s %s failed: %s", response.Request.Method, response.Request.URL, err)
+	smError := &ServiceManagerError{
+		StatusCode:  response.StatusCode,
+		Description: "",
 	}
-	return fmt.Errorf("request failed: %s", err)
+	_ = json.Unmarshal(body, &smError)
+
+	return smError
 }
 
 func bodyToBytes(closer io.ReadCloser) ([]byte, error) {

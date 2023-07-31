@@ -47,7 +47,7 @@ deploy: manifests helm-charts
         --create-namespace \
         --namespace=sap-btp-operator \
         --values=hack/override_values.yaml \
-		--set manager.image.repository=controller \
+		--set manager.image.repository=${IMG} \
 		--set manager.image.tag=latest
 
 undeploy:

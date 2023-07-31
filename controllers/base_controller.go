@@ -2,8 +2,10 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 	"net/http"
+	"strings"
+
+	"fmt"
 
 	"github.com/SAP/sap-btp-service-operator/api"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
@@ -37,10 +39,15 @@ const (
 	DeleteInProgress = "DeleteInProgress"
 	InProgress       = "InProgress"
 
-	CreateFailed = "CreateFailed"
-	UpdateFailed = "UpdateFailed"
-	DeleteFailed = "DeleteFailed"
-	Failed       = "Failed"
+	CreateFailed      = "CreateFailed"
+	UpdateFailed      = "UpdateFailed"
+	DeleteFailed      = "DeleteFailed"
+	Failed            = "Failed"
+	ShareFailed       = "ShareFailed"
+	ShareSucceeded    = "ShareSucceeded"
+	ShareNotSupported = "ShareNotSupported"
+	UnShareFailed     = "UnShareFailed"
+	UnShareSucceeded  = "UnShareSucceeded"
 
 	Blocked = "Blocked"
 	Unknown = "Unknown"
@@ -131,10 +138,7 @@ func (r *BaseReconciler) updateStatus(ctx context.Context, object api.SAPBTPReso
 func (r *BaseReconciler) init(ctx context.Context, obj api.SAPBTPResource) error {
 	obj.SetReady(metav1.ConditionFalse)
 	setInProgressConditions(smClientTypes.CREATE, "Pending", obj)
-	if err := r.updateStatus(ctx, obj); err != nil {
-		return err
-	}
-	return nil
+	return r.updateStatus(ctx, obj)
 }
 
 func getConditionReason(opType smClientTypes.OperationCategory, state smClientTypes.OperationState) string {
@@ -296,21 +300,56 @@ func isDelete(object metav1.ObjectMeta) bool {
 	return !object.DeletionTimestamp.IsZero()
 }
 
-func isTransientError(ctx context.Context, err error) bool {
+func isTransientError(ctx context.Context, err error) (bool, string) {
 	log := GetLogger(ctx)
-	if smError, ok := err.(*sm.ServiceManagerError); ok {
-		log.Info(fmt.Sprintf("SM returned error status code %d", smError.StatusCode))
-		return smError.StatusCode == http.StatusTooManyRequests || smError.StatusCode == http.StatusServiceUnavailable ||
-			smError.StatusCode == http.StatusGatewayTimeout || smError.StatusCode == http.StatusNotFound || smError.StatusCode == http.StatusBadGateway
+	smError, ok := err.(*sm.ServiceManagerError)
+	if !ok {
+		return false, err.Error()
 	}
-	return false
+
+	statusCode := smError.StatusCode
+	errMsg := smError.Error()
+	if isBrokerErrorExist(smError) {
+		log.Info(fmt.Sprintf("Broker returned error status code %d", smError.BrokerError.StatusCode))
+		statusCode = smError.BrokerError.StatusCode
+		errMsg = smError.BrokerError.Error()
+	} else {
+		log.Info(fmt.Sprintf("SM returned error status code %d", smError.StatusCode))
+	}
+	return isTransientStatusCode(statusCode, errMsg), errMsg
 }
 
-func (r *BaseReconciler) markAsNonTransientError(ctx context.Context, operationType smClientTypes.OperationCategory, nonTransientErr error, object api.SAPBTPResource) (ctrl.Result, error) {
+func isTransientStatusCode(StatusCode int, description string) bool {
+	if StatusCode == http.StatusTooManyRequests || StatusCode == http.StatusServiceUnavailable ||
+		StatusCode == http.StatusGatewayTimeout || StatusCode == http.StatusNotFound || StatusCode == http.StatusBadGateway {
+		return true
+	}
+	/* In case of 422 we only want to identify the error as transient if it is a concurrent operation error,
+	   it may be also un-processable entity which is non-transient */
+	return StatusCode == http.StatusUnprocessableEntity && strings.Contains(description, "Another concurrent operation in progress for this resource")
+}
+
+func isBrokerErrorExist(smError *sm.ServiceManagerError) bool {
+	return smError.BrokerError != nil && smError.BrokerError.StatusCode != 0
+}
+
+func (r *BaseReconciler) handleError(ctx context.Context, operationType smClientTypes.OperationCategory, err error, resource api.SAPBTPResource) (ctrl.Result, error) {
+	var (
+		isTransient bool
+		errMsg      string
+	)
+
+	if isTransient, errMsg = isTransientError(ctx, err); isTransient {
+		return r.markAsTransientError(ctx, operationType, errMsg, resource)
+	}
+	return r.markAsNonTransientError(ctx, operationType, errMsg, resource)
+}
+
+func (r *BaseReconciler) markAsNonTransientError(ctx context.Context, operationType smClientTypes.OperationCategory, errMsg string, object api.SAPBTPResource) (ctrl.Result, error) {
 	log := GetLogger(ctx)
-	setFailureConditions(operationType, nonTransientErr.Error(), object)
+	setFailureConditions(operationType, errMsg, object)
 	if operationType != smClientTypes.DELETE {
-		log.Info(fmt.Sprintf("operation %s of %s encountered a non transient error %s, giving up operation :(", operationType, object.GetControllerName(), nonTransientErr.Error()))
+		log.Info(fmt.Sprintf("operation %s of %s encountered a non transient error %s, giving up operation :(", operationType, object.GetControllerName(), errMsg))
 	}
 	object.SetObservedGeneration(object.GetGeneration())
 	err := r.updateStatus(ctx, object)
@@ -318,19 +357,20 @@ func (r *BaseReconciler) markAsNonTransientError(ctx context.Context, operationT
 		return ctrl.Result{}, err
 	}
 	if operationType == smClientTypes.DELETE {
-		return ctrl.Result{}, nonTransientErr
+		return ctrl.Result{}, fmt.Errorf(errMsg)
 	}
 	return ctrl.Result{}, nil
 }
 
-func (r *BaseReconciler) markAsTransientError(ctx context.Context, operationType smClientTypes.OperationCategory, transientErr error, object api.SAPBTPResource) (ctrl.Result, error) {
+func (r *BaseReconciler) markAsTransientError(ctx context.Context, operationType smClientTypes.OperationCategory, errMsg string, object api.SAPBTPResource) (ctrl.Result, error) {
 	log := GetLogger(ctx)
-	setInProgressConditions(operationType, transientErr.Error(), object)
-	log.Info(fmt.Sprintf("operation %s of %s encountered a transient error %s, retrying operation :)", operationType, object.GetControllerName(), transientErr.Error()))
+	setInProgressConditions(operationType, errMsg, object)
+	log.Info(fmt.Sprintf("operation %s of %s encountered a transient error %s, retrying operation :)", operationType, object.GetControllerName(), errMsg))
 	if err := r.updateStatus(ctx, object); err != nil {
 		return ctrl.Result{}, err
 	}
-	return ctrl.Result{}, transientErr
+
+	return ctrl.Result{}, fmt.Errorf(errMsg)
 }
 
 func isInProgress(object api.SAPBTPResource) bool {
@@ -357,5 +397,5 @@ func getReadyCondition(object api.SAPBTPResource) metav1.Condition {
 		reason = "Provisioned"
 	}
 
-	return metav1.Condition{Type: api.ConditionReady, Status: status, Reason: reason}
+	return metav1.Condition{Type: api.ConditionReady, Status: status, Reason: reason, ObservedGeneration: object.GetGeneration()}
 }

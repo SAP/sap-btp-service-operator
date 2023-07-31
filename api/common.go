@@ -1,6 +1,8 @@
 package api
 
 import (
+	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -17,6 +19,30 @@ const (
 	ForceRotateAnnotation       string         = "services.cloud.sap.com/forceRotate"
 )
 
+type HTTPStatusCodeError struct {
+	// StatusCode is the HTTP status code returned by the broker.
+	StatusCode int
+	// ErrorMessage is a machine-readable error string that may be returned by the broker.
+	ErrorMessage *string
+	// Description is a human-readable description of the error that may be returned by the broker.
+	Description *string
+	// ResponseError is set to the error that occurred when unmarshalling a response body from the broker.
+	ResponseError error
+}
+
+func (e HTTPStatusCodeError) Error() string {
+	errorMessage := "<nil>"
+	description := "<nil>"
+
+	if e.ErrorMessage != nil {
+		errorMessage = *e.ErrorMessage
+	}
+	if e.Description != nil {
+		description = *e.Description
+	}
+	return fmt.Sprintf("Status: %v; ErrorMessage: %v; Description: %v; ResponseError: %v", e.StatusCode, errorMessage, description, e.ResponseError)
+}
+
 const (
 	// ConditionSucceeded represents whether the last operation CREATE/UPDATE/DELETE was successful.
 	ConditionSucceeded = "Succeeded"
@@ -32,6 +58,9 @@ const (
 
 	// ConditionPendingTermination resource is waiting for termination pre-conditions
 	ConditionPendingTermination = "PendingTermination"
+
+	// ConditionShared represents information about the instance share situation
+	ConditionShared = "Shared"
 )
 
 // +kubebuilder:object:generate=false

@@ -12,8 +12,10 @@ spec:
   selector:
     matchLabels:
       control-plane: controller-manager
+      {{- if eq .Values.manager.kubernetesMatchLabels.enabled true }}
       app.kubernetes.io/instance: sap-btp-operator
       app.kubernetes.io/name: sap-btp-operator
+      {{- end }}
   template:
     metadata:
       annotations:
@@ -30,6 +32,7 @@ spec:
         app.kubernetes.io/instance: sap-btp-operator
         app.kubernetes.io/name: sap-btp-operator
     spec:
+      serviceAccountName: sap-btp-operator
       containers:
         - args:
             - --secure-listen-address=0.0.0.0:8443
@@ -37,14 +40,16 @@ spec:
             - --logtostderr=true
             - --v=10
 
-          {{- if .Values.manager.rbacProxy.image.sha }}
+          {{- if and ( .Values.manager.rbacProxy.image.sha ) ( .Values.manager.rbacProxy.image.tag ) }}
+          image: "{{.Values.manager.rbacProxy.image.repository}}:{{.Values.manager.rbacProxy.image.tag}}@sha256:{{.Values.manager.rbacProxy.image.sha}}"
+          {{- else if .Values.manager.rbacProxy.image.sha }}
           image: "{{.Values.manager.rbacProxy.image.repository}}@sha256:{{.Values.manager.rbacProxy.image.sha}}"
           {{- else }}
           image: "{{.Values.manager.rbacProxy.image.repository}}:{{.Values.manager.rbacProxy.image.tag}}"
           {{- end }}
           {{- if .Values.manager.securityContext }}
           securityContext:
-          {{ toYaml .Values.manager.securityContext | indent 2 }}
+          {{- toYaml .Values.manager.securityContext | nindent 12 }}
           {{- end }}
           name: kube-rbac-proxy
           resources:
@@ -75,7 +80,9 @@ spec:
           envFrom:
             - configMapRef:
                 name: sap-btp-operator-config
-          {{- if .Values.manager.image.sha}}
+          {{- if and ( .Values.manager.image.sha ) ( .Values.manager.image.tag ) }}
+          image: "{{.Values.manager.image.repository}}:{{.Values.manager.image.tag}}@sha256:{{.Values.manager.image.sha}}"
+          {{- else if .Values.manager.image.sha}}
           image: "{{.Values.manager.image.repository}}@sha256:{{.Values.manager.image.sha}}"
           {{- else }}
           image: "{{.Values.manager.image.repository}}:{{.Values.manager.image.tag}}"
@@ -83,7 +90,7 @@ spec:
           imagePullPolicy: IfNotPresent
           {{- if .Values.manager.securityContext }}
           securityContext:
-          {{ toYaml .Values.manager.securityContext | indent 2 }}
+          {{- toYaml .Values.manager.securityContext | nindent 12 }}
           {{- end }}
           name: manager
           ports:

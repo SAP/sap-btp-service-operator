@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+
 	"fmt"
 
 	servicesv1 "github.com/SAP/sap-btp-service-operator/api/v1"
@@ -30,6 +31,11 @@ func buildParameters(kubeClient client.Client, namespace string, parametersFrom 
 				return nil, nil, err
 			}
 			for k, v := range fps {
+				// we don't want to add shared param because sm api does not support updating
+				// shared param with other params, for sharing we have different function.
+				if k == "shared" {
+					continue
+				}
 				if _, ok := params[k]; ok {
 					return nil, nil, fmt.Errorf("conflict: duplicate entry for parameter %q", k)
 				}
