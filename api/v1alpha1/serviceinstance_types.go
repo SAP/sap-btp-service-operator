@@ -52,6 +52,11 @@ type ServiceInstanceSpec struct {
 	// +kubebuilder:default={}
 	Shared *bool `json:"shared,omitempty"`
 
+	// Indicates if the instance deletion will be prevented
+	// +optional
+	// +kubebuilder:default=false
+	PreventDeletion bool `json:"prevent_deletion"`
+
 	// Provisioning parameters for the instance.
 	//
 	// The Parameters field is NOT secret or secured in any way and should
