@@ -25,6 +25,9 @@ spec:
     - jsonPath: .spec.shared
       name: shared
       type: boolean
+    - jsonPath: .spec.preventDeletion
+      name: preventDeletion
+      type: boolean
     - jsonPath: .spec.dataCenter
       name: dataCenter
       type: string
@@ -127,6 +130,9 @@ spec:
                 type: string
               shared:
                 description: Indicates the desired shared state
+                type: boolean
+              preventDeletion:
+                description: Indicates if the instance deletion will be prevented
                 type: boolean
               userInfo:
                 description: UserInfo contains information about the user that last
@@ -371,6 +377,9 @@ spec:
                 type: string
               shared:
                 description: Indicates the desired shared state
+                type: boolean
+              preventDeletion:
+                description: Indicates if the instance deletion will be prevented
                 type: boolean
               userInfo:
                 description: UserInfo contains information about the user that last
