@@ -2,7 +2,6 @@
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
-  creationTimestamp: null
   name: mutating-webhook-configuration
 webhooks:
 - admissionReviewVersions:
@@ -51,7 +50,6 @@ webhooks:
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
-  creationTimestamp: null
   name: validating-webhook-configuration
 webhooks:
 - admissionReviewVersions:
@@ -74,4 +72,24 @@ webhooks:
     - UPDATE
     resources:
     - servicebindings
+  sideEffects: None
+- admissionReviewVersions:
+    - v1beta1
+    - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-services-cloud-sap-com-v1-serviceinstance
+  failurePolicy: Fail
+  name: vserviceinstance.kb.io
+  rules:
+    - apiGroups:
+        - services.cloud.sap.com
+      apiVersions:
+        - v1
+      operations:
+        - DELETE
+      resources:
+        - serviceinstances
   sideEffects: None

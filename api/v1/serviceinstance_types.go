@@ -17,11 +17,13 @@ limitations under the License.
 package v1
 
 import (
+	"fmt"
 	"github.com/SAP/sap-btp-service-operator/api"
 	"github.com/SAP/sap-btp-service-operator/client/sm/types"
 	v1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -140,6 +142,21 @@ type ServiceInstance struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	Spec              ServiceInstanceSpec   `json:"spec,omitempty"`
 	Status            ServiceInstanceStatus `json:"status,omitempty"`
+}
+
+func (si *ServiceInstance) ValidateCreate() (warnings admission.Warnings, err error) {
+	return nil, nil
+}
+
+func (si *ServiceInstance) ValidateUpdate(old runtime.Object) (warnings admission.Warnings, err error) {
+	return nil, nil
+}
+
+func (si *ServiceInstance) ValidateDelete() (warnings admission.Warnings, err error) {
+	if si.Spec.PreventDeletion {
+		return nil, fmt.Errorf("service instance %s marked as prevent deletion", si.Name)
+	}
+	return nil, nil
 }
 
 func (si *ServiceInstance) GetConditions() []metav1.Condition {
