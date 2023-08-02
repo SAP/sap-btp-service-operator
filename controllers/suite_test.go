@@ -19,15 +19,16 @@ package controllers
 import (
 	"context"
 	"crypto/tls"
+	"github.com/SAP/sap-btp-service-operator/api/v1/webhooks"
 	"net"
 	"path/filepath"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 	"testing"
 	"time"
 
-	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
-
+	"fmt"
 	"github.com/SAP/sap-btp-service-operator/api"
-	"github.com/SAP/sap-btp-service-operator/api/v1/webhooks"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
 	"github.com/SAP/sap-btp-service-operator/client/sm/smfakes"
 	"github.com/SAP/sap-btp-service-operator/internal/config"
@@ -35,9 +36,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
-
-	"fmt"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 
@@ -113,6 +111,16 @@ var _ = BeforeSuite(func(done Done) {
 	testConfig := config.Get()
 	testConfig.SyncPeriod = syncPeriod
 	testConfig.PollInterval = pollInterval
+
+	k8sManager.GetWebhookServer().Register("/mutate-services-cloud-sap-com-v1-serviceinstance", &webhook.Admission{Handler: &webhooks.ServiceInstanceDefaulter{Decoder: admission.NewDecoder(k8sManager.GetScheme())}})
+	k8sManager.GetWebhookServer().Register("/mutate-services-cloud-sap-com-v1-servicebinding", &webhook.Admission{Handler: &webhooks.ServiceBindingDefaulter{Decoder: admission.NewDecoder(k8sManager.GetScheme())}})
+
+	err = (&servicesv1.ServiceBinding{}).SetupWebhookWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
+	err = (&servicesv1.ServiceInstance{}).SetupWebhookWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
 	err = (&ServiceInstanceReconciler{
 		BaseReconciler: &BaseReconciler{
 			Client:   k8sManager.GetClient(),
@@ -123,12 +131,6 @@ var _ = BeforeSuite(func(done Done) {
 			Recorder: k8sManager.GetEventRecorderFor("ServiceInstance"),
 		},
 	}).SetupWithManager(k8sManager)
-	Expect(err).ToNot(HaveOccurred())
-
-	k8sManager.GetWebhookServer().Register("/mutate-services-cloud-sap-com-v1-serviceinstance", &webhook.Admission{Handler: &webhooks.ServiceInstanceDefaulter{Decoder: admission.NewDecoder(k8sManager.GetScheme())}})
-	k8sManager.GetWebhookServer().Register("/mutate-services-cloud-sap-com-v1-servicebinding", &webhook.Admission{Handler: &webhooks.ServiceBindingDefaulter{Decoder: admission.NewDecoder(k8sManager.GetScheme())}})
-
-	err = (&servicesv1.ServiceBinding{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	err = (&ServiceBindingReconciler{
