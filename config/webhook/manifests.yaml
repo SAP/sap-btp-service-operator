@@ -74,8 +74,8 @@ webhooks:
     - servicebindings
   sideEffects: None
 - admissionReviewVersions:
-    - v1beta1
-    - v1
+  - v1beta1
+  - v1
   clientConfig:
     service:
       name: webhook-service
@@ -84,12 +84,12 @@ webhooks:
   failurePolicy: Fail
   name: vserviceinstance.kb.io
   rules:
-    - apiGroups:
-        - services.cloud.sap.com
-      apiVersions:
-        - v1
-      operations:
-        - DELETE
-      resources:
-        - serviceinstances
+  - apiGroups:
+    - services.cloud.sap.com
+    apiVersions:
+    - v1
+    operations:
+    - DELETE
+    resources:
+    - serviceinstances
   sideEffects: None
