@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/utils/pointer"
@@ -626,6 +627,21 @@ var _ = Describe("ServiceInstance controller", func() {
 				})
 				It("should delete the k8s instance", func() {
 					deleteInstance(ctx, serviceInstance, true)
+				})
+			})
+
+			When("instance is marked for prevent deletion", func() {
+				BeforeEach(func() {
+					fakeClient.UpdateInstanceReturns(nil, "", nil)
+					fakeClient.DeprovisionReturns("", nil)
+				})
+				It("should not delete the instance", func() {
+					serviceInstance.Spec.PreventDeletion = true
+					Expect(k8sClient.Update(ctx, serviceInstance)).To(Succeed())
+					deleteInstance(ctx, serviceInstance, false)
+					time.Sleep(10)
+					err := k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+					Expect(err).ToNot(HaveOccurred())
 				})
 			})
 
