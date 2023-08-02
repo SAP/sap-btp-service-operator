@@ -17,9 +17,12 @@ limitations under the License.
 package v1
 
 import (
+	"fmt"
+	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 // log is for logging in this package.
@@ -37,3 +40,18 @@ func (si *ServiceInstance) SetupWebhookWithManager(mgr ctrl.Manager) error {
 // +kubebuilder:webhook:verbs=delete,path=/validate-services-cloud-sap-com-v1-serviceinstance,mutating=false,failurePolicy=fail,groups=services.cloud.sap.com,resources=serviceinstances,versions=v1,name=vserviceinstance.kb.io,sideEffects=None,admissionReviewVersions=v1beta1;v1
 
 var _ webhook.Validator = &ServiceInstance{}
+
+func (si *ServiceInstance) ValidateCreate() (warnings admission.Warnings, err error) {
+	return nil, nil
+}
+
+func (si *ServiceInstance) ValidateUpdate(old runtime.Object) (warnings admission.Warnings, err error) {
+	return nil, nil
+}
+
+func (si *ServiceInstance) ValidateDelete() (warnings admission.Warnings, err error) {
+	if si.Spec.PreventDeletion {
+		return nil, fmt.Errorf("service instance %s marked as prevent deletion", si.Name)
+	}
+	return nil, nil
+}
