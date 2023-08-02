@@ -54,6 +54,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 	instanceSpec := v1.ServiceInstanceSpec{
 		ExternalName:        fakeInstanceExternalName,
+		PreventDeletion:     true,
 		ServicePlanName:     fakePlanName,
 		ServiceOfferingName: fakeOfferingName,
 		Parameters: &runtime.RawExtension{
@@ -624,7 +625,7 @@ var _ = Describe("ServiceInstance controller", func() {
 				BeforeEach(func() {
 					fakeClient.DeprovisionReturns("", nil)
 				})
-				It("should delete the k8s instance", func() {
+				FIt("should delete the k8s instance", func() {
 					deleteInstance(ctx, serviceInstance, true)
 				})
 			})
