@@ -30,7 +30,7 @@ var _ = Describe("Service Instance Webhook Test", func() {
 			})
 		})
 
-		When("service instance is marked as prevent deletion, but not with true as value", func() {
+		When("service instance prevent deletion annotation is not set with true", func() {
 			It("should not return error from webhook", func() {
 				instance.Annotations = map[string]string{
 					api.PreventDeletion: "not-true",
