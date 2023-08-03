@@ -29,5 +29,15 @@ var _ = Describe("Service Binding Webhook Test", func() {
 				Expect(err).ToNot(HaveOccurred())
 			})
 		})
+
+		When("service instance is marked as prevent deletion, but not with true as value", func() {
+			It("should not return error from webhook", func() {
+				instance.Annotations = map[string]string{
+					api.PreventDeletion: "not-true",
+				}
+				_, err := instance.ValidateDelete()
+				Expect(err).ToNot(HaveOccurred())
+			})
+		})
 	})
 })

@@ -18,6 +18,7 @@ package v1
 
 import (
 	"fmt"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -47,7 +48,8 @@ func (si *ServiceInstance) ValidateUpdate(old runtime.Object) (warnings admissio
 
 func (si *ServiceInstance) ValidateDelete() (warnings admission.Warnings, err error) {
 	if si.Annotations != nil {
-		if _, ok := si.Annotations[api.PreventDeletion]; ok {
+		preventDeletion, ok := si.Annotations[api.PreventDeletion]
+		if ok && strings.ToLower(preventDeletion) == "true" {
 			return nil, fmt.Errorf("service instance %s marked as prevent deletion", si.Name)
 		}
 	}
