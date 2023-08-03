@@ -639,8 +639,8 @@ var _ = Describe("ServiceInstance controller", func() {
 					}
 					Expect(k8sClient.Update(ctx, serviceInstance)).To(Succeed())
 					err := k8sClient.Delete(ctx, serviceInstance)
-					strError := fmt.Sprintf("%v", err)
-					Expect(strError).To(ContainSubstring("marked as prevent deletion"))
+					Expect(err.Error()).To(ContainSubstring("marked as prevent deletion"))
+
 					serviceInstance.Annotations = nil
 					Expect(k8sClient.Update(ctx, serviceInstance)).To(Succeed())
 					deleteInstance(ctx, serviceInstance, true)
