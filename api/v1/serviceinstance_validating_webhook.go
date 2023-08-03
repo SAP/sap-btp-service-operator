@@ -18,11 +18,13 @@ package v1
 
 import (
 	"fmt"
-	"github.com/SAP/sap-btp-service-operator/api"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	"github.com/SAP/sap-btp-service-operator/api"
 )
 
 func (si *ServiceInstance) SetupWebhookWithManager(mgr ctrl.Manager) error {
