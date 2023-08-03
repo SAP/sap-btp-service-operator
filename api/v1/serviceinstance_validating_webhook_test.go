@@ -6,7 +6,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Service Binding Webhook Test", func() {
+var _ = Describe("Service Instance Webhook Test", func() {
 	var instance *ServiceInstance
 	BeforeEach(func() {
 		instance = getInstance()
