@@ -14,7 +14,7 @@ var _ = Describe("Service Binding Webhook Test", func() {
 
 	Context("Validate Delete", func() {
 		When("service instance is marked as prevent deletion", func() {
-			It("should not delete the instance", func() {
+			It("should return error from webhook", func() {
 				instance.Annotations = map[string]string{
 					api.PreventDeletion: "true",
 				}
@@ -24,7 +24,7 @@ var _ = Describe("Service Binding Webhook Test", func() {
 		})
 
 		When("service instance is not marked as prevent deletion", func() {
-			It("should delete the instance", func() {
+			It("should not return error from webhook", func() {
 				_, err := instance.ValidateDelete()
 				Expect(err).ToNot(HaveOccurred())
 			})
