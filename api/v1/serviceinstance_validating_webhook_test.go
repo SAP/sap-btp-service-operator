@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"github.com/SAP/sap-btp-service-operator/api"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -14,7 +15,9 @@ var _ = Describe("Service Binding Webhook Test", func() {
 	Context("Validate Delete", func() {
 		When("service instance is marked as prevent deletion", func() {
 			It("should not delete the instance", func() {
-				instance.Spec.PreventDeletion = true
+				instance.Annotations = map[string]string{
+					api.PreventDeletion: "true",
+				}
 				_, err := instance.ValidateDelete()
 				Expect(err).To(HaveOccurred())
 			})

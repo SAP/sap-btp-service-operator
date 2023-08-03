@@ -645,9 +645,6 @@ spec:
               shared:
                 description: Indicates if the instance aim to be shared, default is false
                 type: boolean
-              preventDeletion:
-                description: Indicates if the instance deletion will be prevented
-                type: boolean
               userInfo:
                 description: UserInfo contains information about the user that last
                   modified this instance. This field is set by the API server and
@@ -894,9 +891,6 @@ spec:
                 type: string
               shared:
                 description: Indicates if the instance aim to be shared, default is false
-                type: boolean
-              preventDeletion:
-                description: Indicates if the instance deletion will be prevented
                 type: boolean
               userInfo:
                 description: UserInfo contains information about the user that last

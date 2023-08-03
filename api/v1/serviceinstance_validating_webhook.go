@@ -18,6 +18,7 @@ package v1
 
 import (
 	"fmt"
+	"github.com/SAP/sap-btp-service-operator/api"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -43,8 +44,10 @@ func (si *ServiceInstance) ValidateUpdate(old runtime.Object) (warnings admissio
 }
 
 func (si *ServiceInstance) ValidateDelete() (warnings admission.Warnings, err error) {
-	if si.Spec.PreventDeletion {
-		return nil, fmt.Errorf("service instance %s marked as prevent deletion", si.Name)
+	if si.Annotations != nil {
+		if _, ok := si.Annotations[api.PreventDeletion]; ok {
+			return nil, fmt.Errorf("service instance %s marked as prevent deletion", si.Name)
+		}
 	}
 	return nil, nil
 }

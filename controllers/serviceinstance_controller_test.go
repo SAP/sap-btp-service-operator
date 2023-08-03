@@ -3,12 +3,10 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"strings"
-	"time"
-
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/utils/pointer"
+	"net/http"
+	"strings"
 
 	"github.com/SAP/sap-btp-service-operator/api"
 	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
@@ -636,12 +634,16 @@ var _ = Describe("ServiceInstance controller", func() {
 					fakeClient.DeprovisionReturns("", nil)
 				})
 				It("should not delete the instance", func() {
-					serviceInstance.Spec.PreventDeletion = true
+					serviceInstance.Annotations = map[string]string{
+						api.PreventDeletion: "true",
+					}
 					Expect(k8sClient.Update(ctx, serviceInstance)).To(Succeed())
-					deleteInstance(ctx, serviceInstance, false)
-					time.Sleep(10)
-					err := k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-					Expect(err).ToNot(HaveOccurred())
+					err := k8sClient.Delete(ctx, serviceInstance)
+					strError := fmt.Sprintf("%v", err)
+					Expect(strError).To(ContainSubstring("marked as prevent deletion"))
+					serviceInstance.Annotations = nil
+					Expect(k8sClient.Update(ctx, serviceInstance)).To(Succeed())
+					deleteInstance(ctx, serviceInstance, true)
 				})
 			})
 
