@@ -634,9 +634,8 @@ var _ = Describe("ServiceInstance controller", func() {
 					fakeClient.DeprovisionReturns("", nil)
 				})
 				It("should fail deleting the instance because of the webhook delete validation", func() {
-					serviceInstance.Annotations = map[string]string{
-						api.PreventDeletion: "true",
-					}
+					markInstanceAsPreventDeletion(serviceInstance)
+
 					Expect(k8sClient.Update(ctx, serviceInstance)).To(Succeed())
 					err := k8sClient.Delete(ctx, serviceInstance)
 					Expect(err.Error()).To(ContainSubstring("marked as prevent deletion"))
@@ -1249,4 +1248,10 @@ func isInstanceShared(serviceInstance *v1.ServiceInstance) bool {
 	}
 
 	return sharedCond.Status == metav1.ConditionTrue
+}
+
+func markInstanceAsPreventDeletion(serviceInstance *v1.ServiceInstance) {
+	serviceInstance.Annotations = map[string]string{
+		api.PreventDeletion: "true",
+	}
 }
