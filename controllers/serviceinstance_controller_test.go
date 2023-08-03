@@ -633,7 +633,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					fakeClient.UpdateInstanceReturns(nil, "", nil)
 					fakeClient.DeprovisionReturns("", nil)
 				})
-				It("should not delete the instance", func() {
+				It("should fail deleting the instance because of the webhook delete validation", func() {
 					serviceInstance.Annotations = map[string]string{
 						api.PreventDeletion: "true",
 					}
@@ -641,6 +641,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					err := k8sClient.Delete(ctx, serviceInstance)
 					Expect(err.Error()).To(ContainSubstring("marked as prevent deletion"))
 
+					/* After annotation is removed the instance should be deleted properly */
 					serviceInstance.Annotations = nil
 					Expect(k8sClient.Update(ctx, serviceInstance)).To(Succeed())
 					deleteInstance(ctx, serviceInstance, true)
