@@ -26,7 +26,6 @@ The SAP BTP service operator is based on the [Kubernetes Operator pattern](https
 * [SAP BTP kubectl Extension](#sap-btp-kubectl-plugin-experimental) 
 * [Credentials Rotation](#credentials-rotation)
 * [Multitenancy](#multitenancy)
-* [PreventDeletion] (#PreventDeletion)
 * [Troubleshooting and Support](#troubleshooting-and-support)
 * [Uninstalling the Operator](#uninstalling-the-operator)
 
@@ -252,7 +251,11 @@ Review the supported Kubernetes API versions for the following SAP BTP Service O
 | conditions       |  `[]condition`   | An array of conditions describing the status of the service instance.<br/>The possible condition types are:<br>- `Ready`: set to `true`  if the instance is ready and usable<br/>- `Failed`: set to `true` when an operation on the service instance fails.<br/> In the case of failure, the details about the error are available in the condition message.<br>- `Succeeded`: set to `true` when an operation on the service instance succeeded. In case of `false` operation considered as in progress unless `Failed` condition exists.<br>- `Shared`: set to `true` when sharing of the service instance succeeded. set to `false` when unsharing of the service instance succeeded or when service instance is not shared. |
 | tags       |  `[]string`   | Tags describing the ServiceInstance as provided in service catalog, will be copied to `ServiceBinding` secret in the key called `tags`.
 
-
+#### Anotations
+| Parameter         | Type     | Description                                                                                                   |
+|:-----------------|:---------|:-----------------------------------------------------------------------------------------------------------|
+| services.cloud.sap.com/preventDeletion   | `string` | You can prevent deletion of any service instance by adding the following annotation: services.cloud.sap.com/preventDeletion : "true".
+To enable back the deletion of the instance, either remove the annotation or set it to false.  |
 
 ### Service Binding 
 #### Spec
@@ -422,12 +425,6 @@ You can also choose the `services.cloud.sap.com/forceRotate` annotation (value d
 **Note:**<br> It isn't possible to enable automatic credentials rotation to an already-rotated `ServiceBinding` (with the `services.cloud.sap.com/stale` label).
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
-
-
-## PreventDeletion
-
-You can prevent deletion of any service instance by adding the following annotation: services.cloud.sap.com/preventDeletion: "true".
-To enable back the deletion of the instance, either remove the annotation or set it to false.
 
 ## Multitenancy
 You can configure the SAP BTP service operator to work with more than one subaccount in the same Kubernetes cluster. This means that different namespaces can be connected to different subaccounts.
