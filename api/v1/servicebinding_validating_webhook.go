@@ -17,19 +17,17 @@ limitations under the License.
 package v1
 
 import (
+	"fmt"
 	"reflect"
 	"time"
-
-	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
-
-	"fmt"
-
-	"github.com/SAP/sap-btp-service-operator/api"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	"github.com/SAP/sap-btp-service-operator/api"
 )
 
 // log is for logging in this package.
