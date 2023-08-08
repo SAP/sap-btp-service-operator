@@ -50,7 +50,7 @@ func (si *ServiceInstance) ValidateDelete() (warnings admission.Warnings, err er
 	if si.Annotations != nil {
 		preventDeletion, ok := si.Annotations[api.PreventDeletion]
 		if ok && strings.ToLower(preventDeletion) == "true" {
-			return nil, fmt.Errorf("service instance %s marked as prevent deletion", si.Name)
+			return nil, fmt.Errorf("service instance '%s' is marked with \"prevent deletion\"", si.Name)
 		}
 	}
 	return nil, nil
