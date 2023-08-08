@@ -638,7 +638,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 					Expect(k8sClient.Update(ctx, serviceInstance)).To(Succeed())
 					err := k8sClient.Delete(ctx, serviceInstance)
-					Expect(err.Error()).To(ContainSubstring("marked as prevent deletion"))
+					Expect(err.Error()).To(ContainSubstring("is marked with \"prevent deletion\""))
 
 					/* After annotation is removed the instance should be deleted properly */
 					serviceInstance.Annotations = nil
