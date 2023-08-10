@@ -252,10 +252,9 @@ Review the supported Kubernetes API versions for the following SAP BTP Service O
 | tags       |  `[]string`   | Tags describing the ServiceInstance as provided in service catalog, will be copied to `ServiceBinding` secret in the key called `tags`.
 
 #### Anotations
-| Parameter         | Type     | Description                                                                                                   |
-|:-----------------|:---------|:-----------------------------------------------------------------------------------------------------------|
-| services.cloud.sap.com/preventDeletion   | `string` | You can prevent deletion of any service instance by adding the following annotation: services.cloud.sap.com/preventDeletion : "true".
-To enable back the deletion of the instance, either remove the annotation or set it to false.  |
+| Parameter         | Type                 | Description                                                                                                                                                                                                                         |
+|:-----------------|:---------------------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| services.cloud.sap.com/preventDeletion   | `map[string] string` | You can prevent deletion of any service instance by adding the following annotation: services.cloud.sap.com/preventDeletion : "true". To enable back the deletion of the instance, either remove the annotation or set it to false. |
 
 ### Service Binding 
 #### Spec
