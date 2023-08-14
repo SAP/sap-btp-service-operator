@@ -130,6 +130,7 @@ type ServiceInstanceStatus struct {
 // +kubebuilder:printcolumn:JSONPath=".metadata.creationTimestamp",name="Age",type=date
 // +kubebuilder:printcolumn:JSONPath=".status.instanceID",name="ID",type=string,priority=1
 // +kubebuilder:printcolumn:JSONPath=".status.conditions[0].message",name="Message",type=string,priority=1
+// +kubebuilder:printcolumn:JSONPath=".status.isInOrphanMitigation",name="IsInOrphanMitigation",type=boolean
 
 // ServiceInstance is the Schema for the serviceinstances API
 type ServiceInstance struct {
