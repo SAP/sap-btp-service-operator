@@ -21,9 +21,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
-
 	"fmt"
-
 	"net/http"
 
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -369,9 +367,15 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 				return ctrl.Result{}, err
 			}
 			if smInstance != nil {
-				log.Info("instance exists in SM continue with deletion")
 				serviceInstance.Status.InstanceID = smInstance.ID
-				setInProgressConditions(smClientTypes.DELETE, "delete after recovery", serviceInstance)
+				if inOrphanMitigationState(smInstance.LastOperation) {
+					log.Info(OrphanMitigationLog)
+					updateInstanceAsInOrphanMitigation(serviceInstance)
+				} else {
+					log.Info("instance exists in SM continue with deletion")
+					serviceInstance.Status.IsInOrphanMitigation = false
+					setInProgressConditions(smClientTypes.DELETE, "delete after recovery", serviceInstance)
+				}
 				return ctrl.Result{}, r.updateStatus(ctx, serviceInstance)
 			}
 			log.Info("instance does not exists in SM, removing finalizer")
@@ -397,10 +401,9 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 
 			return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, nil
 		}
+
 		log.Info("Instance was deleted successfully")
-		serviceInstance.Status.InstanceID = ""
-		serviceInstance.Status.IsInOrphanMitigation = false
-		setSuccessConditions(smClientTypes.DELETE, serviceInstance)
+		setInstanceAsDeletedSuccessfully(serviceInstance)
 		if err := r.updateStatus(ctx, serviceInstance); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -417,6 +420,12 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 	return ctrl.Result{}, nil
 }
 
+func setInstanceAsDeletedSuccessfully(instance *servicesv1.ServiceInstance) {
+	instance.Status.InstanceID = ""
+	instance.Status.IsInOrphanMitigation = false
+	setSuccessConditions(smClientTypes.DELETE, instance)
+}
+
 func (r *ServiceInstanceReconciler) resyncInstanceStatus(ctx context.Context, smClient sm.Client, k8sInstance *servicesv1.ServiceInstance, smInstance *smClientTypes.ServiceInstance) {
 	log := GetLogger(ctx)
 
@@ -431,10 +440,7 @@ func (r *ServiceInstanceReconciler) resyncInstanceStatus(ctx context.Context, sm
 
 	if inOrphanMitigationState(smInstance.LastOperation) {
 		log.Info(OrphanMitigationLog)
-		k8sInstance.Status.IsInOrphanMitigation = true
-		operationType := smClientTypes.DELETE
-		description := OrphanMitigationLog
-		setFailureConditions(operationType, description, k8sInstance)
+		updateInstanceAsInOrphanMitigation(k8sInstance)
 		return
 	}
 
@@ -480,8 +486,15 @@ func (r *ServiceInstanceReconciler) resyncInstanceStatus(ctx context.Context, sm
 	}
 }
 
+func updateInstanceAsInOrphanMitigation(instance *servicesv1.ServiceInstance) {
+	instance.Status.IsInOrphanMitigation = true
+	operationType := smClientTypes.DELETE
+	description := OrphanMitigationLog
+	setFailureConditions(operationType, description, instance)
+}
+
 func inOrphanMitigationState(operation *smClientTypes.Operation) bool {
-	return !operation.DeletionScheduled.IsZero()
+	return operation != nil && !operation.DeletionScheduled.IsZero()
 }
 
 func (r *ServiceInstanceReconciler) SetupWithManager(mgr ctrl.Manager) error {

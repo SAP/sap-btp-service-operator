@@ -786,7 +786,7 @@ var _ = Describe("ServiceInstance controller", func() {
 		})
 	})
 
-	FContext("Recovery", func() {
+	Context("Recovery", func() {
 		When("instance exists in SM", func() {
 			recoveredInstance := smclientTypes.ServiceInstance{
 				ID:            fakeInstanceID,
