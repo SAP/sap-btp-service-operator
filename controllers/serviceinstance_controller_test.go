@@ -886,7 +886,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					})
 				})
 
-				FWhen("last operation state is orphan mitigation", func() {
+				When("last operation state is orphan mitigation", func() {
 					BeforeEach(func() {
 						recoveredInstance.LastOperation = &smClientTypes.Operation{State: smClientTypes.FAILED, Type: smClientTypes.DELETE, DeletionScheduled: time.Now()}
 						fakeClient.ListInstancesReturns(&smclientTypes.ServiceInstances{
