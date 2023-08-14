@@ -113,6 +113,9 @@ type ServiceInstanceStatus struct {
 
 	// HashedSpec is the hashed spec without the shared property
 	HashedSpec string `json:"hashedSpec,omitempty"`
+
+	// Is the instance is in orphan mitigation state in SM
+	IsInOrphanMitigation bool `json:"isInOrphanMitigation,omitempty"`
 }
 
 // +kubebuilder:object:root=true

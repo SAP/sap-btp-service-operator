@@ -236,6 +236,9 @@ spec:
               hashedSpec:
                 description: HashedSpec is the hashed spec without the shared property
                 type: string
+              isInOrphanMitigation:
+                description: Is the instance is in orphan mitigation state in SM
+                type: boolean
               instanceID:
                 description: The generated ID of the instance, will be automatically
                   filled once the instance is created

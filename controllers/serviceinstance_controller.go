@@ -46,6 +46,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
+const OrphanMitigationLog = "service instance is in orphan mitigation state"
+
 // ServiceInstanceReconciler reconciles a ServiceInstance object
 type ServiceInstanceReconciler struct {
 	*BaseReconciler
@@ -89,7 +91,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return r.poll(ctx, smClient, serviceInstance)
 	}
 
-	if isDelete(serviceInstance.ObjectMeta) {
+	if isDelete(serviceInstance.ObjectMeta) || isInOrphanMitigation(serviceInstance) {
 		return r.deleteInstance(ctx, smClient, serviceInstance)
 	}
 
@@ -397,6 +399,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 		}
 		log.Info("Instance was deleted successfully")
 		serviceInstance.Status.InstanceID = ""
+		serviceInstance.Status.IsInOrphanMitigation = false
 		setSuccessConditions(smClientTypes.DELETE, serviceInstance)
 		if err := r.updateStatus(ctx, serviceInstance); err != nil {
 			return ctrl.Result{}, err
@@ -424,6 +427,15 @@ func (r *ServiceInstanceReconciler) resyncInstanceStatus(ctx context.Context, sm
 		k8sInstance.SetObservedGeneration(1)
 	} else {
 		k8sInstance.SetObservedGeneration(0)
+	}
+
+	if inOrphanMitigationState(smInstance.LastOperation) {
+		log.Info(OrphanMitigationLog)
+		k8sInstance.Status.IsInOrphanMitigation = true
+		operationType := smClientTypes.DELETE
+		description := OrphanMitigationLog
+		setFailureConditions(operationType, description, k8sInstance)
+		return
 	}
 
 	if smInstance.Ready {
@@ -466,6 +478,10 @@ func (r *ServiceInstanceReconciler) resyncInstanceStatus(ctx context.Context, sm
 	case smClientTypes.FAILED:
 		setFailureConditions(operationType, description, k8sInstance)
 	}
+}
+
+func inOrphanMitigationState(operation *smClientTypes.Operation) bool {
+	return !operation.DeletionScheduled.IsZero()
 }
 
 func (r *ServiceInstanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
@@ -657,4 +673,8 @@ func setSharedCondition(object api.SAPBTPResource, status metav1.ConditionStatus
 
 func updateHashedSpecValue(serviceInstance *servicesv1.ServiceInstance) {
 	serviceInstance.Status.HashedSpec = getSpecHash(serviceInstance)
+}
+
+func isInOrphanMitigation(instance *servicesv1.ServiceInstance) bool {
+	return instance.Status.IsInOrphanMitigation
 }

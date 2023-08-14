@@ -3,11 +3,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/utils/pointer"
-	"net/http"
-	"strings"
-
 	"github.com/SAP/sap-btp-service-operator/api"
 	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
@@ -20,9 +15,14 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
+	"net/http"
+	"strings"
+	"time"
 )
 
 // +kubebuilder:docs-gen:collapse=Imports
@@ -786,7 +786,7 @@ var _ = Describe("ServiceInstance controller", func() {
 		})
 	})
 
-	Context("Recovery", func() {
+	FContext("Recovery", func() {
 		When("instance exists in SM", func() {
 			recoveredInstance := smclientTypes.ServiceInstance{
 				ID:            fakeInstanceID,
@@ -883,6 +883,36 @@ var _ = Describe("ServiceInstance controller", func() {
 						cond := meta.FindStatusCondition(serviceInstance.Status.Conditions, api.ConditionSucceeded)
 						Expect(cond).ToNot(BeNil())
 						Expect(cond.Reason).To(Equal(CreateFailed))
+					})
+				})
+
+				FWhen("last operation state is orphan mitigation", func() {
+					BeforeEach(func() {
+						recoveredInstance.LastOperation = &smClientTypes.Operation{State: smClientTypes.FAILED, Type: smClientTypes.DELETE, DeletionScheduled: time.Now()}
+						fakeClient.ListInstancesReturns(&smclientTypes.ServiceInstances{
+							ServiceInstances: []smclientTypes.ServiceInstance{recoveredInstance}}, nil)
+						fakeClient.DeprovisionReturns("", fmt.Errorf("failed to delete instance"))
+					})
+					It("should recover the existing instance and mark it for deletion", func() {
+						serviceInstance = createInstance(ctx, instanceSpec, false)
+						Eventually(func() bool {
+							k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+							return serviceInstance.Status.IsInOrphanMitigation
+						}, timeout, interval).Should(BeTrue())
+
+						fakeClient.DeprovisionReturns("", nil)
+						// verify deletion
+						Eventually(func() bool {
+							err := k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+							if err == nil {
+								cond := meta.FindStatusCondition(serviceInstance.GetConditions(), api.ConditionSucceeded)
+								if cond == nil {
+									return false
+								}
+								return cond.Status == metav1.ConditionTrue && cond.Reason == Deleted
+							}
+							return false
+						}, timeout, interval).Should(BeTrue())
 					})
 				})
 
