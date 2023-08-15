@@ -22,6 +22,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/SAP/sap-btp-service-operator/internal/httputil"
 	"net/http"
 
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -358,6 +359,8 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 
 func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient sm.Client, serviceInstance *servicesv1.ServiceInstance) (ctrl.Result, error) {
 	log := GetLogger(ctx)
+	instanceDeletedSuccessfully := false
+
 	if controllerutil.ContainsFinalizer(serviceInstance, api.FinalizerName) {
 		if len(serviceInstance.Status.InstanceID) == 0 {
 			log.Info("No instance id found validating instance does not exists in SM before removing finalizer")
@@ -382,24 +385,49 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 			return ctrl.Result{}, r.removeFinalizer(ctx, serviceInstance, api.FinalizerName)
 		}
 
-		log.Info(fmt.Sprintf("Deleting instance with id %v from SM", serviceInstance.Status.InstanceID))
-		operationURL, deprovisionErr := smClient.Deprovision(serviceInstance.Status.InstanceID, nil, buildUserInfo(ctx, serviceInstance.Spec.UserInfo))
-		if deprovisionErr != nil {
-			// delete will proceed anyway
-			return r.markAsNonTransientError(ctx, smClientTypes.DELETE, deprovisionErr.Error(), serviceInstance)
+		// first try sending get request to check if the instance already got deleted and if its in orphan mitigation state
+		response, err := smClient.Call(http.MethodGet, smClientTypes.ServiceInstancesURL+"/"+serviceInstance.Status.InstanceID, nil, nil)
+		if err == nil {
+			switch response.StatusCode {
+			case http.StatusNotFound:
+				instanceDeletedSuccessfully = true
+			case http.StatusOK:
+				getInstance := &smClientTypes.ServiceInstance{}
+				httputil.UnmarshalResponse(response, &getInstance)
+				if getInstance != nil && inOrphanMitigationState(getInstance.LastOperation) {
+					log.Info(OrphanMitigationLog)
+					updateInstanceAsInOrphanMitigation(serviceInstance)
+					return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, nil
+				} else {
+					serviceInstance.Status.IsInOrphanMitigation = false
+					err := r.updateStatus(ctx, serviceInstance)
+					if err != nil {
+						return ctrl.Result{}, err
+					}
+				}
+			}
 		}
 
-		if operationURL != "" {
-			log.Info("Deleting instance async")
-			serviceInstance.Status.OperationURL = operationURL
-			serviceInstance.Status.OperationType = smClientTypes.DELETE
-			setInProgressConditions(smClientTypes.DELETE, "", serviceInstance)
-
-			if err := r.updateStatus(ctx, serviceInstance); err != nil {
-				return ctrl.Result{}, err
+		if !instanceDeletedSuccessfully {
+			log.Info(fmt.Sprintf("Deleting instance with id %v from SM", serviceInstance.Status.InstanceID))
+			operationURL, deprovisionErr := smClient.Deprovision(serviceInstance.Status.InstanceID, nil, buildUserInfo(ctx, serviceInstance.Spec.UserInfo))
+			if deprovisionErr != nil {
+				// delete will proceed anyway
+				return r.markAsNonTransientError(ctx, smClientTypes.DELETE, deprovisionErr.Error(), serviceInstance)
 			}
 
-			return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, nil
+			if operationURL != "" {
+				log.Info("Deleting instance async")
+				serviceInstance.Status.OperationURL = operationURL
+				serviceInstance.Status.OperationType = smClientTypes.DELETE
+				setInProgressConditions(smClientTypes.DELETE, "", serviceInstance)
+
+				if err := r.updateStatus(ctx, serviceInstance); err != nil {
+					return ctrl.Result{}, err
+				}
+
+				return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, nil
+			}
 		}
 
 		log.Info("Instance was deleted successfully")

@@ -338,6 +338,7 @@ func (client *serviceManagerClient) delete(url string, q *Parameters, user strin
 	if err != nil {
 		return "", err
 	}
+
 	switch response.StatusCode {
 	case http.StatusGone:
 		fallthrough
