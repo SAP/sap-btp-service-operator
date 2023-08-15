@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/SAP/sap-btp-service-operator/api"
-
 	servicesv1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	v1admission "k8s.io/api/admission/v1"
 	v1 "k8s.io/api/authentication/v1"
@@ -40,21 +38,13 @@ func (s *ServiceBindingDefaulter) Handle(_ context.Context, req admission.Reques
 		binding.Spec.SecretName = binding.Name
 	}
 
-	if binding.Labels != nil {
-		if _, ok := binding.Labels[api.StaleBindingIDLabel]; ok {
-			if binding.Spec.CredRotationPolicy != nil {
-				binding.Spec.CredRotationPolicy.Enabled = false
-			}
-		}
-	}
-
 	if binding.Spec.CredRotationPolicy != nil {
 		if len(binding.Spec.CredRotationPolicy.RotationFrequency) == 0 {
-			binding.Spec.CredRotationPolicy.RotationFrequency = "0ns"
+			binding.Spec.CredRotationPolicy.RotationFrequency = "72h"
 		}
 
 		if len(binding.Spec.CredRotationPolicy.RotatedBindingTTL) == 0 {
-			binding.Spec.CredRotationPolicy.RotatedBindingTTL = "0ns"
+			binding.Spec.CredRotationPolicy.RotatedBindingTTL = "48h"
 		}
 	}
 

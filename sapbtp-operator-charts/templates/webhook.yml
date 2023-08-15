@@ -98,3 +98,29 @@ webhooks:
         resources:
           - servicebindings
     sideEffects: None
+  - admissionReviewVersions:
+      - v1beta1
+      - v1
+    clientConfig:
+      service:
+        name: sap-btp-operator-webhook-service
+        namespace: {{.Release.Namespace}}
+        path: /validate-services-cloud-sap-com-v1-serviceinstance
+      {{- if .Values.manager.certificates.selfSigned }}
+      caBundle: {{.Values.manager.certificates.selfSigned.caBundle }}
+      {{- end }}
+      {{- if .Values.manager.certificates.gardenerCertManager }}
+      caBundle: {{.Values.manager.certificates.gardenerCertManager.caBundle }}
+      {{- end }}
+    failurePolicy: Fail
+    name: vserviceinstance.kb.io
+    rules:
+      - apiGroups:
+          - services.cloud.sap.com
+        apiVersions:
+          - v1
+        operations:
+          - DELETE
+        resources:
+          - serviceinstances
+    sideEffects: None

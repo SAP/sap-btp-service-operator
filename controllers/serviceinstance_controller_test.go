@@ -3,11 +3,10 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"strings"
-
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/utils/pointer"
+	"net/http"
+	"strings"
 
 	"github.com/SAP/sap-btp-service-operator/api"
 	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
@@ -629,6 +628,25 @@ var _ = Describe("ServiceInstance controller", func() {
 				})
 			})
 
+			When("instance is marked for prevent deletion", func() {
+				BeforeEach(func() {
+					fakeClient.UpdateInstanceReturns(nil, "", nil)
+					fakeClient.DeprovisionReturns("", nil)
+				})
+				It("should fail deleting the instance because of the webhook delete validation", func() {
+					markInstanceAsPreventDeletion(serviceInstance)
+
+					Expect(k8sClient.Update(ctx, serviceInstance)).To(Succeed())
+					err := k8sClient.Delete(ctx, serviceInstance)
+					Expect(err.Error()).To(ContainSubstring("is marked with \"prevent deletion\""))
+
+					/* After annotation is removed the instance should be deleted properly */
+					serviceInstance.Annotations = nil
+					Expect(k8sClient.Update(ctx, serviceInstance)).To(Succeed())
+					deleteInstance(ctx, serviceInstance, true)
+				})
+			})
+
 			When("delete without instance id", func() {
 				JustBeforeEach(func() {
 					fakeClient.DeprovisionReturns("", nil)
@@ -1230,4 +1248,10 @@ func isInstanceShared(serviceInstance *v1.ServiceInstance) bool {
 	}
 
 	return sharedCond.Status == metav1.ConditionTrue
+}
+
+func markInstanceAsPreventDeletion(serviceInstance *v1.ServiceInstance) {
+	serviceInstance.Annotations = map[string]string{
+		api.PreventDeletion: "true",
+	}
 }
