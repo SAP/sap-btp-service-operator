@@ -909,7 +909,7 @@ var _ = Describe("ServiceInstance controller", func() {
 		})
 	})
 
-	FContext("Orphan mitigation", func() {
+	Context("Orphan mitigation", func() {
 		recoveredInstance := smclientTypes.ServiceInstance{
 			ID:            fakeInstanceID,
 			Name:          fakeInstanceName,
@@ -953,21 +953,20 @@ var _ = Describe("ServiceInstance controller", func() {
 
 		When("orphan mitigation in sm ends in failed deleting - broker returns 400", func() {
 
-			FIt("should mark the instance as in orphan mitigation and eventually as failed to delete", func() {
+			It("should mark the instance as in orphan mitigation and eventually as failed to delete", func() {
 				serviceInstance = createInstance(ctx, instanceSpec, false)
 				Eventually(func() bool {
 					k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
 					return serviceInstance.Status.IsInOrphanMitigation
 				}, timeout, interval).Should(BeTrue())
 
-				recoveredInstance.LastOperation = &smClientTypes.Operation{State: smClientTypes.FAILED, Type: smClientTypes.DELETE}
-				fakeClient.ListInstancesReturns(&smclientTypes.ServiceInstances{
-					ServiceInstances: []smclientTypes.ServiceInstance{recoveredInstance}}, nil)
+				smInstance := &smclientTypes.ServiceInstance{ID: fakeInstanceID, Ready: true, LastOperation: &smClientTypes.Operation{State: smClientTypes.FAILED, Type: smClientTypes.DELETE}}
+				fakeClient.GetInstanceByIDReturns(smInstance, nil)
 
 				// verify mark of orphan mitigation was removed
 				Eventually(func() bool {
-					err := k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-					return err != nil && !serviceInstance.Status.IsInOrphanMitigation
+					k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+					return !serviceInstance.Status.IsInOrphanMitigation
 				}, timeout, interval).Should(BeTrue())
 			})
 		})

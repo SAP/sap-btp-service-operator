@@ -22,7 +22,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/SAP/sap-btp-service-operator/internal/httputil"
 	"net/http"
 
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -385,26 +384,20 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 			return ctrl.Result{}, r.removeFinalizer(ctx, serviceInstance, api.FinalizerName)
 		}
 
-		// first try sending get request to check if the instance already got deleted and if its in orphan mitigation state
-		response, err := smClient.Call(http.MethodGet, smClientTypes.ServiceInstancesURL+"/"+serviceInstance.Status.InstanceID, nil, nil)
-		if err == nil {
-			switch response.StatusCode {
-			case http.StatusNotFound:
+		/* First try sending get request to check if the instance already got deleted
+		   and if its in orphan mitigation state */
+		response, err := smClient.GetInstanceByID(serviceInstance.Status.InstanceID, nil)
+		if err != nil {
+			smError, ok := err.(*sm.ServiceManagerError)
+			if ok && smError.StatusCode == http.StatusNotFound {
 				instanceDeletedSuccessfully = true
-			case http.StatusOK:
-				getInstance := &smClientTypes.ServiceInstance{}
-				httputil.UnmarshalResponse(response, &getInstance)
-				if getInstance != nil && inOrphanMitigationState(getInstance.LastOperation) {
-					log.Info(OrphanMitigationLog)
-					updateInstanceAsInOrphanMitigation(serviceInstance)
-					return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, nil
-				} else {
-					serviceInstance.Status.IsInOrphanMitigation = false
-					err := r.updateStatus(ctx, serviceInstance)
-					if err != nil {
-						return ctrl.Result{}, err
-					}
-				}
+			}
+		} else {
+			serviceInstance.Status.IsInOrphanMitigation = false
+			if inOrphanMitigationState(response.LastOperation) {
+				// In case the instance is in orphan mitigation state we don't want to send another delete request
+				serviceInstance.Status.IsInOrphanMitigation = true
+				return ctrl.Result{}, r.updateStatus(ctx, serviceInstance)
 			}
 		}
 
