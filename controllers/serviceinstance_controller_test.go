@@ -961,10 +961,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					err := k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
 					if err == nil {
 						cond := meta.FindStatusCondition(serviceInstance.GetConditions(), api.ConditionSucceeded)
-						if cond == nil {
-							return false
-						}
-						return cond.Status == metav1.ConditionTrue && cond.Reason == Deleted
+						return cond != nil && cond.Status == metav1.ConditionTrue && cond.Reason == Deleted
 					}
 					return false
 				}, timeout, interval).Should(BeTrue())
