@@ -390,6 +390,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 		if err != nil {
 			smError, ok := err.(*sm.ServiceManagerError)
 			if ok && smError.StatusCode == http.StatusNotFound {
+				log.Info("get request to sm returned instance not found")
 				instanceDeletedSuccessfully = true
 			}
 		} else {
