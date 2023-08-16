@@ -464,27 +464,28 @@ func (r *ServiceInstanceReconciler) resyncInstanceStatus(ctx context.Context, sm
 		k8sInstance.SetObservedGeneration(0)
 	}
 
-	if inOrphanMitigationState(smInstance.LastOperation) {
-		log.Info(OrphanMitigationLog)
-		updateInstanceAsInOrphanMitigation(k8sInstance)
-		return
-	}
-
+	k8sInstance.Status.InstanceID = smInstance.ID
+	k8sInstance.Status.OperationURL = ""
+	k8sInstance.Status.OperationType = ""
 	if smInstance.Ready {
 		k8sInstance.Status.Ready = metav1.ConditionTrue
 	}
 	if smInstance.Shared {
 		setSharedCondition(k8sInstance, metav1.ConditionTrue, ShareSucceeded, "Instance shared successfully")
 	}
-	k8sInstance.Status.InstanceID = smInstance.ID
-	k8sInstance.Status.OperationURL = ""
-	k8sInstance.Status.OperationType = ""
+
 	tags, err := getOfferingTags(smClient, smInstance.ServicePlanID)
 	if err != nil {
 		log.Error(err, "could not recover offering tags")
 	}
 	if len(tags) > 0 {
 		k8sInstance.Status.Tags = tags
+	}
+
+	if inOrphanMitigationState(smInstance.LastOperation) {
+		log.Info(OrphanMitigationLog)
+		updateInstanceAsInOrphanMitigation(k8sInstance)
+		return
 	}
 
 	instanceState := smClientTypes.SUCCEEDED
