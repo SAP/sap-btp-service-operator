@@ -1316,7 +1316,6 @@ func verifyOrphanMitigationStatus(expected bool, defaultLookupKey types.Namespac
 	instance := &v1.ServiceInstance{}
 	Eventually(func() bool {
 		k8sClient.Get(ctx, defaultLookupKey, instance)
-		fmt.Println(instance.Status.IsInOrphanMitigation)
 		return instance.Status.IsInOrphanMitigation == expected
 	}, timeout, interval).Should(BeTrue())
 }
