@@ -909,7 +909,7 @@ var _ = Describe("ServiceInstance controller", func() {
 		})
 	})
 
-	FContext("Orphan mitigation", func() {
+	Context("Orphan mitigation", func() {
 		recoveredInstance := smclientTypes.ServiceInstance{
 			ID:            fakeInstanceID,
 			Name:          fakeInstanceName,
