@@ -404,8 +404,6 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 			}
 		}
 
-		log.Info("Trying to delete instance")
-
 		if !instanceDeletedSuccessfully {
 			log.Info(fmt.Sprintf("Deleting instance with id %v from SM", serviceInstance.Status.InstanceID))
 			operationURL, deprovisionErr := smClient.Deprovision(serviceInstance.Status.InstanceID, nil, buildUserInfo(ctx, serviceInstance.Spec.UserInfo))
