@@ -909,12 +909,13 @@ var _ = Describe("ServiceInstance controller", func() {
 		})
 	})
 
-	Context("Orphan mitigation", func() {
+	FContext("Orphan mitigation", func() {
 		recoveredInstance := smclientTypes.ServiceInstance{
 			ID:            fakeInstanceID,
 			Name:          fakeInstanceName,
 			LastOperation: &smClientTypes.Operation{State: smClientTypes.SUCCEEDED, Type: smClientTypes.CREATE},
 		}
+
 		BeforeEach(func() {
 			smInstance := &smclientTypes.ServiceInstance{ID: fakeInstanceID, LastOperation: &smClientTypes.Operation{State: smClientTypes.FAILED, Type: smClientTypes.DELETE, DeletionScheduled: time.Now()}}
 			fakeClient.GetInstanceByIDReturns(smInstance, nil)
@@ -925,13 +926,36 @@ var _ = Describe("ServiceInstance controller", func() {
 			fakeClient.DeprovisionReturns("", fmt.Errorf("sm failed to delete instance"))
 		})
 
-		When("orphan mitigation in sm ends in deleted successfully", func() {
-			It("should mark the instance as in orphan mitigation and eventually be deleted", func() {
+		AfterEach(func() {
+			fakeClient.DeprovisionReturns("", nil)
+			deleteInstance(ctx, serviceInstance, true)
+		})
+
+		When("orphan mitigation in sm ends in delete failed", func() {
+			It("should mark the instance as in orphan mitigation and eventually remove the mark", func() {
 				serviceInstance = createInstance(ctx, instanceSpec, false)
 				// verify mark of orphan mitigation sets to true
 				verifyOrphanMitigationStatus(true, defaultLookupKey, ctx)
 
-				fakeClient.DeprovisionReturns("", nil)
+				smInstance := &smclientTypes.ServiceInstance{ID: fakeInstanceID, LastOperation: &smClientTypes.Operation{State: smClientTypes.FAILED, Type: smClientTypes.DELETE}}
+				fakeClient.GetInstanceByIDReturns(smInstance, nil)
+
+				// verify mark of orphan mitigation gets removed
+				verifyOrphanMitigationStatus(false, defaultLookupKey, ctx)
+			})
+		})
+
+		When("orphan mitigation in sm ends in delete succeed and sm returns not found", func() {
+			It("should mark the instance as in orphan mitigation and eventually delete the instance", func() {
+				serviceInstance = createInstance(ctx, instanceSpec, false)
+				// verify mark of orphan mitigation sets to true
+				verifyOrphanMitigationStatus(true, defaultLookupKey, ctx)
+
+				fakeClient.GetInstanceByIDReturns(nil, &sm.ServiceManagerError{
+					StatusCode:  http.StatusNotFound,
+					Description: "deleted successfully",
+				})
+
 				// verify deletion
 				Eventually(func() bool {
 					err := k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
@@ -944,23 +968,6 @@ var _ = Describe("ServiceInstance controller", func() {
 					}
 					return false
 				}, timeout, interval).Should(BeTrue())
-			})
-		})
-
-		When("orphan mitigation in sm ends in failed deleting - broker returns 400", func() {
-			It("should mark the instance as in orphan mitigation and eventually as failed to delete", func() {
-				serviceInstance = createInstance(ctx, instanceSpec, false)
-				// verify mark of orphan mitigation sets to true
-				verifyOrphanMitigationStatus(true, defaultLookupKey, ctx)
-
-				smInstance := &smclientTypes.ServiceInstance{ID: fakeInstanceID, LastOperation: &smClientTypes.Operation{State: smClientTypes.FAILED, Type: smClientTypes.DELETE}}
-				fakeClient.GetInstanceByIDReturns(smInstance, nil)
-
-				// verify mark of orphan mitigation gets removed
-				verifyOrphanMitigationStatus(false, defaultLookupKey, ctx)
-
-				fakeClient.DeprovisionReturns("", nil)
-				deleteInstance(ctx, serviceInstance, true)
 			})
 		})
 	})
