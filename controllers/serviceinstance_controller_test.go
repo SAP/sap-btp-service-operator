@@ -910,25 +910,58 @@ var _ = Describe("ServiceInstance controller", func() {
 	})
 
 	Context("Orphan mitigation", func() {
-		recoveredInstance := smclientTypes.ServiceInstance{
-			ID:            fakeInstanceID,
-			Name:          fakeInstanceName,
-			LastOperation: &smClientTypes.Operation{State: smClientTypes.SUCCEEDED, Type: smClientTypes.CREATE},
-		}
-
-		BeforeEach(func() {
-			smInstance := &smclientTypes.ServiceInstance{ID: fakeInstanceID, LastOperation: &smClientTypes.Operation{State: smClientTypes.FAILED, Type: smClientTypes.DELETE, DeletionScheduled: time.Now()}}
-			fakeClient.GetInstanceByIDReturns(smInstance, nil)
-			fakeClient.ProvisionReturns(nil, fmt.Errorf("ERROR"))
-			recoveredInstance.LastOperation = &smClientTypes.Operation{State: smClientTypes.FAILED, Type: smClientTypes.DELETE, DeletionScheduled: time.Now()}
-			fakeClient.ListInstancesReturns(&smclientTypes.ServiceInstances{
-				ServiceInstances: []smclientTypes.ServiceInstance{recoveredInstance}}, nil)
-			fakeClient.DeprovisionReturns("", fmt.Errorf("sm failed to delete instance"))
-		})
 
 		AfterEach(func() {
 			fakeClient.DeprovisionReturns("", nil)
 			deleteInstance(ctx, serviceInstance, true)
+		})
+
+		Context("delete failed", func() {
+			It("polls until sm return not found", func() {
+				serviceInstance = createInstance(ctx, instanceSpec, true)
+
+				fakeClient.DeprovisionReturns("", fmt.Errorf("sm failed to delete instance"))
+				fakeClient.GetInstanceByIDReturns(&smclientTypes.ServiceInstance{ID: fakeInstanceID, Ready: true,
+					LastOperation: &smClientTypes.Operation{State: smClientTypes.INPROGRESS, Type: smClientTypes.DELETE,
+						DeletionScheduled: time.Now()}}, nil)
+
+				k8sClient.Delete(ctx, serviceInstance)
+				verifyOrphanMitigationStatus(true, defaultLookupKey, ctx)
+				fakeClient.GetInstanceByIDReturns(nil, &sm.ServiceManagerError{
+					StatusCode:  http.StatusNotFound,
+					Description: "deleted successfully",
+				})
+
+				Eventually(func() bool {
+					err := k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+					return apierrors.IsNotFound(err)
+				}, timeout, interval).Should(BeTrue())
+
+				Expect(fakeClient.DeprovisionCallCount()).To(BeZero())
+			})
+		})
+
+		Context("recovery", func() {
+			FIt("polls until sm returns not found - and marks the resource for deletion", func() {
+				smInstance := smclientTypes.ServiceInstance{ID: fakeInstanceID, LastOperation: &smClientTypes.Operation{State: smClientTypes.FAILED, Type: smClientTypes.DELETE, DeletionScheduled: time.Now()}}
+				fakeClient.ListInstancesReturns(&smclientTypes.ServiceInstances{
+					ServiceInstances: []smclientTypes.ServiceInstance{smInstance}}, nil)
+				fakeClient.DeprovisionReturns("", fmt.Errorf("sm failed to delete instance"))
+				fakeClient.GetInstanceByIDReturns(&smInstance, nil)
+				serviceInstance = createInstance(ctx, instanceSpec, false)
+				verifyOrphanMitigationStatus(true, defaultLookupKey, ctx)
+
+				fakeClient.GetInstanceByIDReturns(nil, &sm.ServiceManagerError{
+					StatusCode:  http.StatusNotFound,
+					Description: "deleted successfully",
+				})
+
+				Eventually(func() bool {
+					err := k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+					return apierrors.IsNotFound(err)
+				}, timeout, interval).Should(BeTrue())
+
+			})
 		})
 
 		When("orphan mitigation in sm ends in delete failed", func() {
@@ -963,6 +996,12 @@ var _ = Describe("ServiceInstance controller", func() {
 						cond := meta.FindStatusCondition(serviceInstance.GetConditions(), api.ConditionSucceeded)
 						return cond != nil && cond.Status == metav1.ConditionTrue && cond.Reason == Deleted
 					}
+					return false
+				}, timeout, interval).Should(BeTrue())
+
+				Eventually(func() bool {
+					e := k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+					fmt.Println(e)
 					return false
 				}, timeout, interval).Should(BeTrue())
 			})
