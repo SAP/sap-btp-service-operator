@@ -373,7 +373,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 				serviceInstance.Status.InstanceID = smInstance.ID
 				if inOrphanMitigationState(smInstance.LastOperation) {
 					log.Info(OrphanMitigationLog)
-					r.updateInstanceAsInOrphanMitigation(serviceInstance, ctx)
+					r.updateInstanceAsInOrphanMitigation(ctx, serviceInstance)
 				} else {
 					serviceInstance.Status.IsInOrphanMitigation = false
 					setInProgressConditions(smClientTypes.DELETE, "delete after recovery", serviceInstance)
@@ -413,7 +413,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 			if deprovisionErr != nil {
 				if isOrphanMitigationError(deprovisionErr) {
 					log.Info(OrphanMitigationLog)
-					r.updateInstanceAsInOrphanMitigation(serviceInstance, ctx)
+					r.updateInstanceAsInOrphanMitigation(ctx, serviceInstance)
 					return ctrl.Result{}, r.updateStatus(ctx, serviceInstance)
 				}
 				// delete will proceed anyway
@@ -511,7 +511,7 @@ func (r *ServiceInstanceReconciler) resyncInstanceStatus(ctx context.Context, sm
 
 	if inOrphanMitigationState(smInstance.LastOperation) {
 		log.Info(OrphanMitigationLog)
-		r.updateInstanceAsInOrphanMitigation(k8sInstance, ctx)
+		r.updateInstanceAsInOrphanMitigation(ctx, k8sInstance)
 		return
 	}
 
@@ -540,12 +540,15 @@ func (r *ServiceInstanceReconciler) resyncInstanceStatus(ctx context.Context, sm
 	}
 }
 
-func (r *ServiceInstanceReconciler) updateInstanceAsInOrphanMitigation(instance *servicesv1.ServiceInstance, ctx context.Context) {
+func (r *ServiceInstanceReconciler) updateInstanceAsInOrphanMitigation(ctx context.Context, instance *servicesv1.ServiceInstance) {
 	instance.Status.IsInOrphanMitigation = true
 	operationType := smClientTypes.DELETE
 	description := OrphanMitigationLog
 	setFailureConditions(operationType, description, instance)
-	r.Delete(ctx, instance)
+	if err := r.Delete(ctx, instance); err != nil {
+		log := GetLogger(ctx)
+		log.Info(fmt.Sprintf("failed deleting instance %s", instance.Status.InstanceID))
+	}
 }
 
 func inOrphanMitigationState(operation *smClientTypes.Operation) bool {
