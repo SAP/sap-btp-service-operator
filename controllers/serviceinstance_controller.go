@@ -373,7 +373,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 				serviceInstance.Status.InstanceID = smInstance.ID
 				if inOrphanMitigationState(smInstance.LastOperation) {
 					log.Info(OrphanMitigationLog)
-					updateInstanceAsInOrphanMitigation(serviceInstance)
+					r.updateInstanceAsInOrphanMitigation(serviceInstance, ctx)
 				} else {
 					serviceInstance.Status.IsInOrphanMitigation = false
 					setInProgressConditions(smClientTypes.DELETE, "delete after recovery", serviceInstance)
@@ -386,22 +386,24 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 
 		/* First try sending get request to check if the instance already got deleted
 		   and if its in orphan mitigation state */
-		response, err := smClient.GetInstanceByID(serviceInstance.Status.InstanceID, nil)
-		if err != nil {
-			smError, ok := err.(*sm.ServiceManagerError)
-			if ok && smError.StatusCode == http.StatusNotFound {
-				log.Info("get request to sm returned instance not found")
-				instanceDeletedSuccessfully = true
-			}
-		} else {
-			// In case the instance is in orphan mitigation state we don't want to send another delete request
-			serviceInstance.Status.IsInOrphanMitigation = inOrphanMitigationState(response.LastOperation)
-			if err := r.updateStatus(ctx, serviceInstance); err != nil {
-				return ctrl.Result{}, err
-			}
-			if serviceInstance.Status.IsInOrphanMitigation {
-				log.Info("get request to sm returned instance in orphan mitigation state")
-				return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, nil
+		if serviceInstance.Status.IsInOrphanMitigation {
+			response, err := smClient.GetInstanceByID(serviceInstance.Status.InstanceID, nil)
+			if err != nil {
+				smError, ok := err.(*sm.ServiceManagerError)
+				if ok && smError.StatusCode == http.StatusNotFound {
+					log.Info("get request to sm returned instance not found")
+					instanceDeletedSuccessfully = true
+				}
+			} else {
+				// In case the instance is in orphan mitigation state we don't want to send another delete request
+				serviceInstance.Status.IsInOrphanMitigation = inOrphanMitigationState(response.LastOperation)
+				if err := r.updateStatus(ctx, serviceInstance); err != nil {
+					return ctrl.Result{}, err
+				}
+				if serviceInstance.Status.IsInOrphanMitigation {
+					log.Info("get request to sm returned instance in orphan mitigation state")
+					return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, nil
+				}
 			}
 		}
 
@@ -409,6 +411,11 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 			log.Info(fmt.Sprintf("Deleting instance with id %v from SM", serviceInstance.Status.InstanceID))
 			operationURL, deprovisionErr := smClient.Deprovision(serviceInstance.Status.InstanceID, nil, buildUserInfo(ctx, serviceInstance.Spec.UserInfo))
 			if deprovisionErr != nil {
+				if isOrphanMitigationError(deprovisionErr) {
+					log.Info(OrphanMitigationLog)
+					r.updateInstanceAsInOrphanMitigation(serviceInstance, ctx)
+					return ctrl.Result{}, r.updateStatus(ctx, serviceInstance)
+				}
 				// delete will proceed anyway
 				return r.markAsNonTransientError(ctx, smClientTypes.DELETE, deprovisionErr.Error(), serviceInstance)
 			}
@@ -443,6 +450,27 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 
 	}
 	return ctrl.Result{}, nil
+}
+
+func isOrphanMitigationError(err error) bool {
+	smError, ok := err.(*sm.ServiceManagerError)
+	if !ok {
+		return false
+	}
+
+	if smError.BrokerError == nil || smError.BrokerError.StatusCode == 0 {
+		return false
+	}
+
+	statusCode := smError.BrokerError.StatusCode
+
+	/* sm-sap code */
+	is2XX := statusCode >= 200 && statusCode < 300
+	is5XX := statusCode >= 500 && statusCode < 600
+	return (is2XX && statusCode != http.StatusOK) ||
+		statusCode == http.StatusRequestTimeout ||
+		is5XX
+
 }
 
 func setInstanceAsDeletedSuccessfully(instance *servicesv1.ServiceInstance) {
@@ -483,7 +511,7 @@ func (r *ServiceInstanceReconciler) resyncInstanceStatus(ctx context.Context, sm
 
 	if inOrphanMitigationState(smInstance.LastOperation) {
 		log.Info(OrphanMitigationLog)
-		updateInstanceAsInOrphanMitigation(k8sInstance)
+		r.updateInstanceAsInOrphanMitigation(k8sInstance, ctx)
 		return
 	}
 
@@ -512,11 +540,12 @@ func (r *ServiceInstanceReconciler) resyncInstanceStatus(ctx context.Context, sm
 	}
 }
 
-func updateInstanceAsInOrphanMitigation(instance *servicesv1.ServiceInstance) {
+func (r *ServiceInstanceReconciler) updateInstanceAsInOrphanMitigation(instance *servicesv1.ServiceInstance, ctx context.Context) {
 	instance.Status.IsInOrphanMitigation = true
 	operationType := smClientTypes.DELETE
 	description := OrphanMitigationLog
 	setFailureConditions(operationType, description, instance)
+	r.Delete(ctx, instance)
 }
 
 func inOrphanMitigationState(operation *smClientTypes.Operation) bool {

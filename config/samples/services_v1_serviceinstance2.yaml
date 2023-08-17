@@ -3,5 +3,5 @@ kind: ServiceInstance
 metadata:
   name: sample-instance-2
 spec:
-  serviceOfferingName: service-manager
-  servicePlanName: subaccount-admin
+  serviceOfferingName: overview-service-tal
+  servicePlanName: small-tal
