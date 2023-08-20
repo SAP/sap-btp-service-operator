@@ -925,13 +925,14 @@ var _ = Describe("ServiceInstance controller", func() {
 
 		Context("delete failed", func() {
 			It("polls until sm returns not found", func() {
+				serviceInstance = createInstance(ctx, instanceSpec, true)
+
 				smInstance := smclientTypes.ServiceInstance{ID: fakeInstanceID, LastOperation: &smClientTypes.Operation{State: smClientTypes.FAILED, Type: smClientTypes.DELETE, DeletionScheduled: time.Now()}}
-				fakeClient.ListInstancesReturns(&smclientTypes.ServiceInstances{
-					ServiceInstances: []smclientTypes.ServiceInstance{smInstance}}, nil)
+
 				fakeClient.GetInstanceByIDReturns(&smInstance, nil)
 				fakeClient.DeprovisionReturns("", orphanMitigationErr)
 
-				serviceInstance = createInstance(ctx, instanceSpec, false)
+				deleteInstance(ctx, serviceInstance, false)
 
 				verifyOrphanMitigationStatus(true, defaultLookupKey, ctx)
 
