@@ -274,6 +274,11 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	if provisionErr != nil {
 		log.Error(provisionErr, "failed to create service instance", "serviceOfferingName", serviceInstance.Spec.ServiceOfferingName,
 			"servicePlanName", serviceInstance.Spec.ServicePlanName)
+		if isOrphanMitigationError(provisionErr) {
+			log.Info(OrphanMitigationLog)
+			r.updateInstanceAsInOrphanMitigation(ctx, serviceInstance)
+			return ctrl.Result{}, r.updateStatus(ctx, serviceInstance)
+		}
 		return r.handleError(ctx, smClientTypes.CREATE, provisionErr, serviceInstance)
 	}
 

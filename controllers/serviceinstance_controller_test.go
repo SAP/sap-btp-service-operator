@@ -923,6 +923,30 @@ var _ = Describe("ServiceInstance controller", func() {
 				}}
 		})
 
+		Context("create failed", func() {
+			It("polls until sm returns not found", func() {
+				fakeClient.ProvisionReturns(nil, orphanMitigationErr)
+				fakeClient.DeprovisionReturns("", orphanMitigationErr)
+				smInstance := smclientTypes.ServiceInstance{ID: fakeInstanceID, LastOperation: &smClientTypes.Operation{State: smClientTypes.FAILED, Type: smClientTypes.DELETE, DeletionScheduled: time.Now()}}
+				fakeClient.GetInstanceByIDReturns(&smInstance, nil)
+				fakeClient.ListInstancesReturns(&smclientTypes.ServiceInstances{
+					ServiceInstances: []smclientTypes.ServiceInstance{smInstance}}, nil)
+				serviceInstance = createInstance(ctx, instanceSpec, false)
+				verifyOrphanMitigationStatus(true, defaultLookupKey, ctx)
+
+				/* only after sm returns not found the instance should be deleted */
+				fakeClient.GetInstanceByIDReturns(nil, &sm.ServiceManagerError{
+					StatusCode:  http.StatusNotFound,
+					Description: "deleted successfully",
+				})
+
+				Eventually(func() bool {
+					err := k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+					return apierrors.IsNotFound(err)
+				}, timeout, interval).Should(BeTrue())
+			})
+		})
+
 		Context("delete failed", func() {
 			It("polls until sm returns not found", func() {
 				serviceInstance = createInstance(ctx, instanceSpec, true)
