@@ -324,7 +324,7 @@ var _ = Describe("ServiceInstance controller", func() {
 			})
 		})
 
-		FContext("Async", func() {
+		Context("Async", func() {
 			BeforeEach(func() {
 				fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: fakeInstanceID, Location: "/v1/service_instances/fakeid/operations/1234"}, nil)
 				fakeClient.StatusReturns(&smclientTypes.Operation{
