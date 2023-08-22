@@ -251,13 +251,13 @@ func getErrorMsg(status *smClientTypes.Operation) string {
 	if status == nil || len(status.Errors) == 0 {
 		return defaultErr
 	}
-	var errs map[string]interface{}
+	var errMap map[string]interface{}
 
-	if err := json.Unmarshal(status.Errors, &errs); err != nil {
+	if err := json.Unmarshal(status.Errors, &errMap); err != nil {
 		return defaultErr
 	}
 
-	if description, found := errs["description"]; found {
+	if description, found := errMap["description"]; found {
 		if descStr, ok := description.(string); ok {
 			return descStr
 		}
