@@ -360,7 +360,23 @@ var _ = Describe("ServiceInstance controller", func() {
 						return isFailed(serviceInstance)
 					}, timeout, interval).Should(BeTrue())
 
-					Expect(serviceInstance.Status.Conditions[0].Message).To(ContainSubstring("broker-failure"))
+					Expect(serviceInstance.Status.Conditions[0].Message).To(Equal("ServiceInstance create failed: broker-failure"))
+				})
+
+				It("should set the first description as message", func() {
+					serviceInstance = createInstance(ctx, instanceSpec, false)
+					fakeClient.StatusReturns(&smclientTypes.Operation{
+						ID:     "1234",
+						Type:   smClientTypes.CREATE,
+						State:  smClientTypes.FAILED,
+						Errors: []byte(`[{"error": "brokerError","description":"broker-failure1"}, {"error": "brokerError","description":"broker-failure2"}]`),
+					}, nil)
+					Eventually(func() bool {
+						_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
+						return isFailed(serviceInstance)
+					}, timeout, interval).Should(BeTrue())
+
+					Expect(serviceInstance.Status.Conditions[0].Message).To(Equal("ServiceInstance create failed: broker-failure1"))
 				})
 			})
 

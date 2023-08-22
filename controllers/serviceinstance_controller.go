@@ -216,10 +216,7 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client
 	case smClientTypes.PENDING:
 		return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, nil
 	case smClientTypes.FAILED:
-		errMsg := "async operation failed"
-		if status.Errors != nil {
-			errMsg = fmt.Sprintf("%s. Errors: %s", errMsg, string(status.Errors))
-		}
+		errMsg := getErrorMsg(status)
 		setFailureConditions(status.Type, errMsg, serviceInstance)
 		// in order to delete eventually the object we need return with error
 		if serviceInstance.Status.OperationType == smClientTypes.DELETE {
@@ -247,6 +244,23 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client
 	serviceInstance.Status.OperationType = ""
 
 	return ctrl.Result{}, r.updateStatus(ctx, serviceInstance)
+}
+
+func getErrorMsg(status *smClientTypes.Operation) string {
+	errMsg := fmt.Sprintf("polling error")
+	if status == nil || len(status.Errors) == 0 {
+		return errMsg
+	}
+	var description smClientTypes.Description
+	if err := json.Unmarshal(status.Errors, &description); err != nil {
+		var descriptions []smClientTypes.Description
+		if err := json.Unmarshal(status.Errors, &descriptions); err != nil {
+			return errMsg
+		}
+		return descriptions[0].Description
+	}
+
+	return description.Description
 }
 
 func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient sm.Client, serviceInstance *servicesv1.ServiceInstance) (ctrl.Result, error) {

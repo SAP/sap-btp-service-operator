@@ -27,3 +27,7 @@ const (
 	INPROGRESS OperationState = "in progress"
 	FAILED     OperationState = "failed"
 )
+
+type Description struct {
+	Description string `json:"description"`
+}
