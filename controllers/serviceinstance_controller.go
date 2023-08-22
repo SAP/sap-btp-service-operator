@@ -247,15 +247,14 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client
 }
 
 func getErrorMsg(status *smClientTypes.Operation) string {
-	errMsg := fmt.Sprintf("polling error")
 	if status == nil || len(status.Errors) == 0 {
-		return errMsg
+		return "polling error"
 	}
 	var description smClientTypes.Description
 	if err := json.Unmarshal(status.Errors, &description); err != nil {
 		var descriptions []smClientTypes.Description
 		if err := json.Unmarshal(status.Errors, &descriptions); err != nil {
-			return errMsg
+			return "polling error"
 		}
 		return descriptions[0].Description
 	}
