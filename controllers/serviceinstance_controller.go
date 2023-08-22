@@ -216,17 +216,17 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client
 	case smClientTypes.PENDING:
 		return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, nil
 	case smClientTypes.FAILED:
-		setFailureConditions(smClientTypes.OperationCategory(status.Type), status.Description, serviceInstance)
+		errMsg := "async operation failed"
+		if status.Errors != nil {
+			errMsg = fmt.Sprintf("%s. Errors: %s", errMsg, string(status.Errors))
+		}
+		setFailureConditions(status.Type, errMsg, serviceInstance)
 		// in order to delete eventually the object we need return with error
 		if serviceInstance.Status.OperationType == smClientTypes.DELETE {
 			serviceInstance.Status.OperationURL = ""
 			serviceInstance.Status.OperationType = ""
 			if err := r.updateStatus(ctx, serviceInstance); err != nil {
 				return ctrl.Result{}, err
-			}
-			errMsg := "async deprovisioning operation failed"
-			if status.Errors != nil {
-				errMsg = fmt.Sprintf("%s. Errors: %s", errMsg, string(status.Errors))
 			}
 			return ctrl.Result{}, fmt.Errorf(errMsg)
 		}
