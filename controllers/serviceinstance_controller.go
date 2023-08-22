@@ -247,19 +247,22 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client
 }
 
 func getErrorMsg(status *smClientTypes.Operation) string {
+	defaultErr := "async polling error"
 	if status == nil || len(status.Errors) == 0 {
-		return "polling error"
+		return defaultErr
 	}
-	var description smClientTypes.Description
-	if err := json.Unmarshal(status.Errors, &description); err != nil {
-		var descriptions []smClientTypes.Description
-		if err := json.Unmarshal(status.Errors, &descriptions); err != nil {
-			return "polling error"
-		}
-		return descriptions[0].Description
+	var errs map[string]interface{}
+
+	if err := json.Unmarshal(status.Errors, &errs); err != nil {
+		return defaultErr
 	}
 
-	return description.Description
+	if description, found := errs["description"]; found {
+		if descStr, ok := description.(string); ok {
+			return descStr
+		}
+	}
+	return defaultErr
 }
 
 func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient sm.Client, serviceInstance *servicesv1.ServiceInstance) (ctrl.Result, error) {
