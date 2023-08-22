@@ -7,6 +7,7 @@ import (
 	"k8s.io/utils/pointer"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/SAP/sap-btp-service-operator/api"
 	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
@@ -399,10 +400,18 @@ var _ = Describe("ServiceInstance controller", func() {
 					serviceInstance.Spec.ExternalName = newName
 					deleteInstance(ctx, serviceInstance, false)
 
-					// stop polling state
+					fakeClient.DeprovisionReturns("/v1/service_instances/id/operations/1234", nil)
 					fakeClient.StatusReturns(&smclientTypes.Operation{
 						ID:    "1234",
-						Type:  smClientTypes.CREATE,
+						Type:  smClientTypes.DELETE,
+						State: smClientTypes.INPROGRESS,
+					}, nil)
+
+					time.Sleep(2 * time.Second)
+
+					fakeClient.StatusReturns(&smclientTypes.Operation{
+						ID:    "1234",
+						Type:  smClientTypes.DELETE,
 						State: smClientTypes.SUCCEEDED,
 					}, nil)
 

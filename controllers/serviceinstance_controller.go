@@ -21,7 +21,6 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
-
 	"fmt"
 
 	"net/http"
@@ -84,13 +83,13 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return r.markAsTransientError(ctx, Unknown, err.Error(), serviceInstance)
 	}
 
+	if isDelete(serviceInstance.ObjectMeta) {
+		return r.deleteInstance(ctx, smClient, serviceInstance)
+	}
+
 	if len(serviceInstance.Status.OperationURL) > 0 {
 		// ongoing operation - poll status from SM
 		return r.poll(ctx, smClient, serviceInstance)
-	}
-
-	if isDelete(serviceInstance.ObjectMeta) {
-		return r.deleteInstance(ctx, smClient, serviceInstance)
 	}
 
 	if !controllerutil.ContainsFinalizer(serviceInstance, api.FinalizerName) {
@@ -392,6 +391,11 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 			return ctrl.Result{}, r.removeFinalizer(ctx, serviceInstance, api.FinalizerName)
 		}
 
+		if len(serviceInstance.Status.OperationURL) > 0 {
+			// ongoing delete operation - poll status from SM
+			return r.poll(ctx, smClient, serviceInstance)
+		}
+
 		log.Info(fmt.Sprintf("Deleting instance with id %v from SM", serviceInstance.Status.InstanceID))
 		operationURL, deprovisionErr := smClient.Deprovision(serviceInstance.Status.InstanceID, nil, buildUserInfo(ctx, serviceInstance.Spec.UserInfo))
 		if deprovisionErr != nil {
@@ -401,16 +405,9 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 
 		if operationURL != "" {
 			log.Info("Deleting instance async")
-			serviceInstance.Status.OperationURL = operationURL
-			serviceInstance.Status.OperationType = smClientTypes.DELETE
-			setInProgressConditions(smClientTypes.DELETE, "", serviceInstance)
-
-			if err := r.updateStatus(ctx, serviceInstance); err != nil {
-				return ctrl.Result{}, err
-			}
-
-			return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, nil
+			return r.handleAsyncDelete(ctx, serviceInstance, operationURL)
 		}
+
 		log.Info("Instance was deleted successfully")
 		serviceInstance.Status.InstanceID = ""
 		setSuccessConditions(smClientTypes.DELETE, serviceInstance)
@@ -428,6 +425,18 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 
 	}
 	return ctrl.Result{}, nil
+}
+
+func (r *ServiceInstanceReconciler) handleAsyncDelete(ctx context.Context, serviceInstance *servicesv1.ServiceInstance, opUrl string) (ctrl.Result, error) {
+	serviceInstance.Status.OperationURL = opUrl
+	serviceInstance.Status.OperationType = smClientTypes.DELETE
+	setInProgressConditions(smClientTypes.DELETE, "", serviceInstance)
+
+	if err := r.updateStatus(ctx, serviceInstance); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, nil
 }
 
 func (r *ServiceInstanceReconciler) resyncInstanceStatus(ctx context.Context, smClient sm.Client, k8sInstance *servicesv1.ServiceInstance, smInstance *smClientTypes.ServiceInstance) {
