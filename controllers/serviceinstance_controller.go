@@ -427,8 +427,8 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 	return ctrl.Result{}, nil
 }
 
-func (r *ServiceInstanceReconciler) handleAsyncDelete(ctx context.Context, serviceInstance *servicesv1.ServiceInstance, opUrl string) (ctrl.Result, error) {
-	serviceInstance.Status.OperationURL = opUrl
+func (r *ServiceInstanceReconciler) handleAsyncDelete(ctx context.Context, serviceInstance *servicesv1.ServiceInstance, opURL string) (ctrl.Result, error) {
+	serviceInstance.Status.OperationURL = opURL
 	serviceInstance.Status.OperationType = smClientTypes.DELETE
 	setInProgressConditions(smClientTypes.DELETE, "", serviceInstance)
 
