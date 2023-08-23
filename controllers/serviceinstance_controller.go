@@ -103,6 +103,10 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	if isFinalState(serviceInstance) {
 		log.Info(fmt.Sprintf("Final state, spec did not change, and we are not in progress - ignoring... Generation is - %v", serviceInstance.Generation))
+		if len(serviceInstance.Status.HashedSpec) == 0 {
+			updateHashedSpecValue(serviceInstance)
+			return ctrl.Result{}, r.Status().Update(ctx, serviceInstance)
+		}
 		return ctrl.Result{}, nil
 	}
 
@@ -546,7 +550,9 @@ func (r *ServiceInstanceReconciler) HandleInstanceSharingError(ctx context.Conte
 func isFinalState(serviceInstance *servicesv1.ServiceInstance) bool {
 	for _, cond := range serviceInstance.GetConditions() {
 		if cond.ObservedGeneration != serviceInstance.Generation {
-			return false
+			if cond.Type != api.ConditionReady {
+				return false
+			}
 		}
 	}
 
