@@ -391,7 +391,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 			return ctrl.Result{}, r.removeFinalizer(ctx, serviceInstance, api.FinalizerName)
 		}
 
-		if len(serviceInstance.Status.OperationURL) > 0 {
+		if len(serviceInstance.Status.OperationURL) > 0 && serviceInstance.Status.OperationType == smClientTypes.DELETE {
 			// ongoing delete operation - poll status from SM
 			return r.poll(ctx, smClient, serviceInstance)
 		}

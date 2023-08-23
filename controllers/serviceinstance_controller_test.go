@@ -3,12 +3,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/utils/pointer"
-	"net/http"
-	"strings"
-	"time"
-
 	"github.com/SAP/sap-btp-service-operator/api"
 	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
@@ -21,9 +15,13 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
+	"net/http"
+	"strings"
 )
 
 // +kubebuilder:docs-gen:collapse=Imports
@@ -396,8 +394,8 @@ var _ = Describe("ServiceInstance controller", func() {
 			When("deleting during create", func() {
 				It("should be deleted", func() {
 					serviceInstance = createInstance(ctx, instanceSpec, false)
-					newName := "new-name" + uuid.New().String()
-					serviceInstance.Spec.ExternalName = newName
+					waitForCreateInProgress(serviceInstance, ctx, defaultLookupKey)
+
 					deleteInstance(ctx, serviceInstance, false)
 
 					fakeClient.DeprovisionReturns("/v1/service_instances/id/operations/1234", nil)
@@ -407,7 +405,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						State: smClientTypes.INPROGRESS,
 					}, nil)
 
-					time.Sleep(2 * time.Second)
+					waitForDeleteInProgress(serviceInstance, ctx, defaultLookupKey)
 
 					fakeClient.StatusReturns(&smclientTypes.Operation{
 						ID:    "1234",
@@ -1152,6 +1150,20 @@ var _ = Describe("ServiceInstance controller", func() {
 		})
 	})
 })
+
+func waitForCreateInProgress(instance *v1.ServiceInstance, ctx context.Context, key types.NamespacedName) {
+	Eventually(func() bool {
+		k8sClient.Get(ctx, key, instance)
+		return len(instance.Status.Conditions) > 0 && instance.Status.Conditions[0].Reason == CreateInProgress
+	}, timeout, interval).Should(BeTrue())
+}
+
+func waitForDeleteInProgress(instance *v1.ServiceInstance, ctx context.Context, key types.NamespacedName) {
+	Eventually(func() bool {
+		k8sClient.Get(ctx, key, instance)
+		return len(instance.Status.Conditions) > 0 && instance.Status.Conditions[0].Reason == DeleteInProgress
+	}, timeout, interval).Should(BeTrue())
+}
 
 func waitForInstanceToBeReady(instance *v1.ServiceInstance, ctx context.Context, key types.NamespacedName) {
 	Eventually(func() bool {
