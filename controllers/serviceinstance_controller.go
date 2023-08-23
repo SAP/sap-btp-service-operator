@@ -545,8 +545,11 @@ func (r *ServiceInstanceReconciler) HandleInstanceSharingError(ctx context.Conte
 
 func isFinalState(serviceInstance *servicesv1.ServiceInstance) bool {
 	for _, cond := range serviceInstance.GetConditions() {
-		if cond.ObservedGeneration != serviceInstance.Generation {
-			return false
+		// in previous versions ready condition did not have ObservedGeneration value
+		if cond.ObservedGeneration != 0 && cond.ObservedGeneration != serviceInstance.Generation {
+			if cond.Type != api.ConditionReady {
+				return false
+			}
 		}
 	}
 

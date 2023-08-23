@@ -3,11 +3,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/utils/pointer"
-	"net/http"
-	"strings"
-
 	"github.com/SAP/sap-btp-service-operator/api"
 	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
@@ -20,9 +15,13 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
+	"net/http"
+	"strings"
 )
 
 // +kubebuilder:docs-gen:collapse=Imports
@@ -1138,6 +1137,92 @@ var _ = Describe("ServiceInstance controller", func() {
 						cond := meta.FindStatusCondition(conditions, api.ConditionShared)
 						return cond != nil && cond.Reason == UnShareFailed
 					}, timeout, interval).Should(BeTrue())
+				})
+			})
+		})
+	})
+
+	Context("Unit Tests", func() {
+		Context("isFinalState", func() {
+			When("Ready.ObservedGeneration == 0", func() {
+				It("should be true", func() {
+					var instance = &v1.ServiceInstance{Status: v1.ServiceInstanceStatus{
+						Conditions: []metav1.Condition{
+							{
+								Type:               api.ConditionReady,
+								Status:             metav1.ConditionTrue,
+								ObservedGeneration: 0,
+							},
+							{
+								Type:               api.ConditionSucceeded,
+								Status:             metav1.ConditionTrue,
+								ObservedGeneration: 1,
+							}},
+					}}
+					instance.SetGeneration(1)
+					Expect(isFinalState(instance)).To(BeTrue())
+				})
+
+				When("Succeeded is false", func() {
+					It("should return false", func() {
+						var instance = &v1.ServiceInstance{Status: v1.ServiceInstanceStatus{
+							Conditions: []metav1.Condition{
+								{
+									Type:               api.ConditionReady,
+									Status:             metav1.ConditionTrue,
+									ObservedGeneration: 0,
+								},
+								{
+									Type:               api.ConditionSucceeded,
+									Status:             metav1.ConditionFalse,
+									ObservedGeneration: 1,
+								}},
+						}}
+						instance.SetGeneration(1)
+						Expect(isFinalState(instance)).To(BeFalse())
+					})
+				})
+			})
+
+			When("generation is > 1", func() {
+				When("observed generation == genration", func() {
+					It("should return true ", func() {
+						var instance = &v1.ServiceInstance{Status: v1.ServiceInstanceStatus{
+							Conditions: []metav1.Condition{
+								{
+									Type:               api.ConditionReady,
+									Status:             metav1.ConditionTrue,
+									ObservedGeneration: 1,
+								},
+								{
+									Type:               api.ConditionSucceeded,
+									Status:             metav1.ConditionTrue,
+									ObservedGeneration: 8,
+								}},
+						}}
+						instance.SetGeneration(8)
+						Expect(isFinalState(instance)).To(BeTrue())
+					})
+				})
+
+				When("observed generation != generation", func() {
+					It("should return false ", func() {
+						var instance = &v1.ServiceInstance{Status: v1.ServiceInstanceStatus{
+							Conditions: []metav1.Condition{
+								{
+									Type:               api.ConditionReady,
+									Status:             metav1.ConditionTrue,
+									ObservedGeneration: 1,
+								},
+								{
+									Type:               api.ConditionSucceeded,
+									Status:             metav1.ConditionTrue,
+									ObservedGeneration: 7,
+								}},
+						}}
+						instance.SetGeneration(8)
+						Expect(isFinalState(instance)).To(BeFalse())
+					})
 				})
 			})
 		})
