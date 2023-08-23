@@ -395,9 +395,7 @@ var _ = Describe("ServiceInstance controller", func() {
 			When("deleting during create", func() {
 				It("should be deleted", func() {
 					serviceInstance = createInstance(ctx, instanceSpec, false)
-					waitForInProgressReason(serviceInstance, ctx, defaultLookupKey, CreateInProgress)
-
-					deleteInstance(ctx, serviceInstance, false)
+					waitForInProgressReason(ctx, defaultLookupKey, CreateInProgress)
 
 					fakeClient.DeprovisionReturns("/v1/service_instances/id/operations/1234", nil)
 					fakeClient.StatusReturns(&smclientTypes.Operation{
@@ -405,8 +403,9 @@ var _ = Describe("ServiceInstance controller", func() {
 						Type:  smClientTypes.DELETE,
 						State: smClientTypes.INPROGRESS,
 					}, nil)
+					deleteInstance(ctx, serviceInstance, false)
 
-					waitForInProgressReason(serviceInstance, ctx, defaultLookupKey, DeleteInProgress)
+					waitForInProgressReason(ctx, defaultLookupKey, DeleteInProgress)
 
 					fakeClient.StatusReturns(&smclientTypes.Operation{
 						ID:    "1234",
@@ -1152,10 +1151,11 @@ var _ = Describe("ServiceInstance controller", func() {
 	})
 })
 
-func waitForInProgressReason(instance *v1.ServiceInstance, ctx context.Context, key types.NamespacedName, reason string) {
+func waitForInProgressReason(ctx context.Context, key types.NamespacedName, reason string) {
+	si := &v1.ServiceInstance{}
 	Eventually(func() bool {
-		k8sClient.Get(ctx, key, instance)
-		return len(instance.Status.Conditions) > 0 && instance.Status.Conditions[0].Reason == reason
+		k8sClient.Get(ctx, key, si)
+		return len(si.Status.Conditions) > 0 && si.Status.Conditions[0].Reason == reason
 	}, timeout, interval).Should(BeTrue())
 }
 
