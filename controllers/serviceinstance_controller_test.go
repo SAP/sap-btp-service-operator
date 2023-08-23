@@ -350,14 +350,17 @@ var _ = Describe("ServiceInstance controller", func() {
 				It("should update in progress condition and afterwards failure condition", func() {
 					serviceInstance = createInstance(ctx, instanceSpec, false)
 					fakeClient.StatusReturns(&smclientTypes.Operation{
-						ID:    "1234",
-						Type:  smClientTypes.CREATE,
-						State: smClientTypes.FAILED,
+						ID:     "1234",
+						Type:   smClientTypes.CREATE,
+						State:  smClientTypes.FAILED,
+						Errors: []byte(`{"error": "brokerError","description":"broker-failure"}`),
 					}, nil)
 					Eventually(func() bool {
 						_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
 						return isFailed(serviceInstance)
 					}, timeout, interval).Should(BeTrue())
+
+					Expect(serviceInstance.Status.Conditions[0].Message).To(Equal("ServiceInstance create failed: broker-failure"))
 				})
 			})
 
