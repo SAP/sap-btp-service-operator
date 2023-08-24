@@ -161,7 +161,8 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	//set owner instance only for original bindings (not rotated)
 	if serviceBinding.Labels == nil || len(serviceBinding.Labels[api.StaleBindingIDLabel]) == 0 {
-		if !bindingAlreadyOwnedByInstance(serviceInstance, serviceBinding) {
+		if !bindingAlreadyOwnedByInstance(serviceInstance, serviceBinding) &&
+			serviceInstance.Namespace == serviceBinding.Namespace { //cross namespace reference not allowed
 			return ctrl.Result{}, r.SetOwner(ctx, serviceInstance, serviceBinding)
 		}
 	}
@@ -428,7 +429,11 @@ func serviceNotUsable(instance *servicesv1.ServiceInstance) bool {
 
 func (r *ServiceBindingReconciler) getServiceInstanceForBinding(ctx context.Context, binding *servicesv1.ServiceBinding) (*servicesv1.ServiceInstance, error) {
 	serviceInstance := &servicesv1.ServiceInstance{}
-	if err := r.Get(ctx, types.NamespacedName{Name: binding.Spec.ServiceInstanceName, Namespace: binding.Namespace}, serviceInstance); err != nil {
+	namespace := binding.Namespace
+	if len(binding.Spec.ServiceInstanceNamespace) > 0 {
+		namespace = binding.Spec.ServiceInstanceNamespace
+	}
+	if err := r.Get(ctx, types.NamespacedName{Name: binding.Spec.ServiceInstanceName, Namespace: namespace}, serviceInstance); err != nil {
 		return nil, err
 	}
 

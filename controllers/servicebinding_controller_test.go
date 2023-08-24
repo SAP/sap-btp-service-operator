@@ -710,6 +710,43 @@ var _ = Describe("ServiceBinding controller", func() {
 					}, timeout, interval).Should(BeTrue())
 				})
 			})
+
+			When("binding is created in a different namespace than the instance", func() {
+				var tempNamespace *corev1.Namespace
+				var binding *v1.ServiceBinding
+				BeforeEach(func() {
+					tempNamespace = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "temp-namespace"}}
+					Expect(k8sClient.Create(context.Background(), tempNamespace)).To(Succeed())
+				})
+				AfterEach(func() {
+					if binding != nil {
+						Expect(k8sClient.Delete(context.Background(), binding))
+					}
+					if tempNamespace != nil {
+						Expect(k8sClient.Delete(context.Background(), tempNamespace))
+					}
+				})
+				It("should succeed", func() {
+					binding = generateBasicBindingTemplate(bindingName, tempNamespace.Name, instanceName, "")
+					binding.Spec.ServiceInstanceNamespace = bindingTestNamespace
+					binding.Spec.ParametersFrom = nil
+					Expect(k8sClient.Create(context.Background(), binding)).To(Succeed())
+
+					bindingLookupKey := types.NamespacedName{Name: bindingName, Namespace: tempNamespace.Name}
+					createdBinding = &v1.ServiceBinding{}
+					Eventually(func() bool {
+						err := k8sClient.Get(context.Background(), bindingLookupKey, createdBinding)
+						if err != nil {
+							return false
+						}
+
+						return isReady(createdBinding)
+					}, timeout, interval).Should(BeTrue())
+
+					By("Verify binding secret created")
+					_ = getSecret(context.Background(), createdBinding.Spec.SecretName, createdBinding.Namespace, true)
+				})
+			})
 		})
 	})
 
