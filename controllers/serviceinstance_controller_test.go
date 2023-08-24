@@ -304,7 +304,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						serviceInstance = createInstance(ctx, instanceSpec, false)
 						expectForInstanceCreationFailure(ctx, defaultLookupKey, serviceInstance, errorMessage)
 						fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
-						waitForInstanceToBeReady(serviceInstance, ctx, defaultLookupKey)
+						waitForInstanceToBeReady(ctx, defaultLookupKey)
 					})
 				})
 
@@ -324,6 +324,7 @@ var _ = Describe("ServiceInstance controller", func() {
 		})
 
 		Context("Async", func() {
+
 			BeforeEach(func() {
 				fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: fakeInstanceID, Location: "/v1/service_instances/fakeid/operations/1234"}, nil)
 				fakeClient.StatusReturns(&smclientTypes.Operation{
@@ -341,7 +342,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						Type:  smClientTypes.CREATE,
 						State: smClientTypes.SUCCEEDED,
 					}, nil)
-					waitForInstanceToBeReady(serviceInstance, ctx, defaultLookupKey)
+					waitForInstanceToBeReady(ctx, defaultLookupKey)
 				})
 			})
 
@@ -391,21 +392,33 @@ var _ = Describe("ServiceInstance controller", func() {
 				})
 			})
 
-			When("deleting during create", func() {
-				It("should be deleted", func() {
+			When("deleting while create is in progress", func() {
+				It("should be deleted successfully", func() {
 					serviceInstance = createInstance(ctx, instanceSpec, false)
-					newName := "new-name" + uuid.New().String()
-					serviceInstance.Spec.ExternalName = newName
-					deleteInstance(ctx, serviceInstance, false)
 
-					// stop polling state
+					By("waiting for instance to be CreateInProgress")
+					waitForInstanceConditionAndReason(ctx, defaultLookupKey, api.ConditionSucceeded, CreateInProgress)
+
+					fakeClient.DeprovisionReturns("/v1/service_instances/id/operations/1234", nil)
 					fakeClient.StatusReturns(&smclientTypes.Operation{
 						ID:    "1234",
-						Type:  smClientTypes.CREATE,
+						Type:  smClientTypes.DELETE,
+						State: smClientTypes.INPROGRESS,
+					}, nil)
+
+					By("deleting instance")
+					deleteInstance(ctx, serviceInstance, false)
+
+					By("waiting for instance to be DeleteInProgress")
+					waitForInstanceConditionAndReason(ctx, defaultLookupKey, api.ConditionSucceeded, DeleteInProgress)
+
+					fakeClient.StatusReturns(&smclientTypes.Operation{
+						ID:    "1234",
+						Type:  smClientTypes.DELETE,
 						State: smClientTypes.SUCCEEDED,
 					}, nil)
 
-					// validate deletion
+					By("verify instance was deleted successfully")
 					Eventually(func() bool {
 						err := k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
 						return apierrors.IsNotFound(err)
@@ -558,7 +571,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					Expect(updatedInstance.Status.Conditions[0].Message).To(ContainSubstring(errMessage))
 					fakeClient.UpdateInstanceReturns(nil, "", nil)
 					updatedInstance = updateInstance(ctx, serviceInstance)
-					waitForInstanceToBeReady(updatedInstance, ctx, defaultLookupKey)
+					waitForInstanceToBeReady(ctx, defaultLookupKey)
 				})
 			})
 
@@ -1229,11 +1242,19 @@ var _ = Describe("ServiceInstance controller", func() {
 	})
 })
 
-func waitForInstanceToBeReady(instance *v1.ServiceInstance, ctx context.Context, key types.NamespacedName) {
+func waitForInstanceConditionAndReason(ctx context.Context, key types.NamespacedName, conditionType, reason string) {
+	si := &v1.ServiceInstance{}
 	Eventually(func() bool {
-		_ = k8sClient.Get(ctx, key, instance)
-		return isReady(instance)
+		if err := k8sClient.Get(ctx, key, si); err != nil {
+			return false
+		}
+		cond := meta.FindStatusCondition(si.GetConditions(), conditionType)
+		return cond != nil && cond.Reason == reason
 	}, timeout, interval).Should(BeTrue())
+}
+
+func waitForInstanceToBeReady(ctx context.Context, key types.NamespacedName) {
+	waitForInstanceConditionAndReason(ctx, key, api.ConditionReady, Provisioned)
 }
 
 func getNonTransientBrokerError(errMessage string) error {
