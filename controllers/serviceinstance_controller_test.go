@@ -1159,7 +1159,9 @@ var _ = Describe("ServiceInstance controller", func() {
 func waitForInstanceConditionAndReason(ctx context.Context, key types.NamespacedName, conditionType, reason string) {
 	si := &v1.ServiceInstance{}
 	Eventually(func() bool {
-		_ = k8sClient.Get(ctx, key, si)
+		if err := k8sClient.Get(ctx, key, si); err != nil {
+			return false
+		}
 		cond := meta.FindStatusCondition(si.GetConditions(), conditionType)
 		return cond != nil && cond.Reason == reason
 	}, timeout, interval).Should(BeTrue())
