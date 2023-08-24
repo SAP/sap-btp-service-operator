@@ -355,11 +355,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						State:  smClientTypes.FAILED,
 						Errors: []byte(`{"error": "brokerError","description":"broker-failure"}`),
 					}, nil)
-					Eventually(func() bool {
-						_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-						return isFailed(serviceInstance)
-					}, timeout, interval).Should(BeTrue())
-
+					waitForInstanceToBeFailed(ctx, defaultLookupKey)
 					Expect(serviceInstance.Status.Conditions[0].Message).To(Equal("ServiceInstance create failed: broker-failure"))
 				})
 			})
