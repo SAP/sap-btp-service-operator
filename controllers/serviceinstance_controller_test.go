@@ -1168,7 +1168,7 @@ func waitForInstanceConditionAndReason(ctx context.Context, key types.Namespaced
 }
 
 func waitForInstanceToBeReady(ctx context.Context, key types.NamespacedName) {
-	waitForInstanceConditionAndReason(ctx, key, api.ConditionSucceeded, Created)
+	waitForInstanceConditionAndReason(ctx, key, api.ConditionReady, Provisioned)
 }
 
 func getNonTransientBrokerError(errMessage string) error {

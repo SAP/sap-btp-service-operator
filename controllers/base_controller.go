@@ -27,10 +27,12 @@ const (
 	k8sNameLabel   = "_k8sname"
 	clusterIDLabel = "_clusterid"
 
-	Created  = "Created"
-	Updated  = "Updated"
-	Deleted  = "Deleted"
-	Finished = "Finished"
+	Created        = "Created"
+	Updated        = "Updated"
+	Deleted        = "Deleted"
+	Finished       = "Finished"
+	Provisioned    = "Provisioned"
+	NotProvisioned = "NotProvisioned"
 
 	CreateInProgress = "CreateInProgress"
 	UpdateInProgress = "UpdateInProgress"
@@ -386,10 +388,10 @@ func isFailed(resource api.SAPBTPResource) bool {
 
 func getReadyCondition(object api.SAPBTPResource) metav1.Condition {
 	status := metav1.ConditionFalse
-	reason := "NotProvisioned"
+	reason := NotProvisioned
 	if object.GetReady() == metav1.ConditionTrue {
 		status = metav1.ConditionTrue
-		reason = "Provisioned"
+		reason = Provisioned
 	}
 
 	return metav1.Condition{Type: api.ConditionReady, Status: status, Reason: reason, ObservedGeneration: object.GetGeneration()}
