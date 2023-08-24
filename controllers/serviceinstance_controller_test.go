@@ -482,7 +482,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						newSpec := updateSpec()
 						serviceInstance.Spec = newSpec
 						updatedInstance := updateInstance(ctx, serviceInstance)
-						Expect(updatedInstance.Status.Conditions[0].Reason).To(Equal(UpdateInProgress))
+						waitForInstanceConditionAndReason(ctx, defaultLookupKey, api.ConditionSucceeded, UpdateInProgress)
 						fakeClient.StatusReturns(&smclientTypes.Operation{
 							ID:    "1234",
 							Type:  smClientTypes.UPDATE,
@@ -817,7 +817,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						serviceInstance = createInstance(ctx, instanceSpec, false)
 						waitForInstanceID(ctx, defaultLookupKey, fakeInstanceID)
 						Expect(fakeClient.ProvisionCallCount()).To(Equal(0))
-						Expect(serviceInstance.Status.Conditions[0].Reason).To(Equal(CreateInProgress))
+						waitForInstanceConditionAndReason(ctx, defaultLookupKey, api.ConditionSucceeded, CreateInProgress)
 						fakeClient.StatusReturns(&smclientTypes.Operation{ResourceID: fakeInstanceID, State: smClientTypes.SUCCEEDED, Type: smClientTypes.CREATE}, nil)
 						waitForInstanceToBeReady(ctx, defaultLookupKey)
 					})
