@@ -533,7 +533,7 @@ var _ = Describe("ServiceBinding controller", func() {
 
 						It("should detect the error as transient and eventually succeed", func() {
 							createdBinding, _ := createBindingWithoutAssertionsAndWait(context.Background(),
-								bindingName, bindingTestNamespace, instanceName, "binding-external-name", "", false)
+								bindingName, bindingTestNamespace, instanceName, "", "binding-external-name", false)
 							expectBindingToBeInFailedStateWithMsg(createdBinding, errorMessage)
 
 							fakeClient.BindReturns(&smClientTypes.ServiceBinding{ID: fakeBindingID,
