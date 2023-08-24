@@ -408,15 +408,15 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 			return r.handleAsyncDelete(ctx, serviceInstance, operationURL)
 		}
 
+		// remove our finalizer from the list and update it.
+		if err := r.removeFinalizer(ctx, serviceInstance, api.FinalizerName); err != nil {
+			return ctrl.Result{}, err
+		}
+
 		log.Info("Instance was deleted successfully")
 		serviceInstance.Status.InstanceID = ""
 		setSuccessConditions(smClientTypes.DELETE, serviceInstance)
 		if err := r.updateStatus(ctx, serviceInstance); err != nil {
-			return ctrl.Result{}, err
-		}
-
-		// remove our finalizer from the list and update it.
-		if err := r.removeFinalizer(ctx, serviceInstance, api.FinalizerName); err != nil {
 			return ctrl.Result{}, err
 		}
 
