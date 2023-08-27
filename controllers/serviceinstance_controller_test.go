@@ -896,7 +896,7 @@ var _ = Describe("ServiceInstance controller", func() {
 			})
 
 			When("instance creation failed", func() {
-				FIt("should not attempt to share the instance", func() {
+				It("should not attempt to share the instance", func() {
 					fakeClient.ProvisionReturns(nil, &sm.ServiceManagerError{
 						StatusCode:  http.StatusBadRequest,
 						Description: "errMessage",
