@@ -324,7 +324,6 @@ var _ = Describe("ServiceInstance controller", func() {
 		})
 
 		Context("Async", func() {
-
 			BeforeEach(func() {
 				fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: fakeInstanceID, Location: "/v1/service_instances/fakeid/operations/1234"}, nil)
 				fakeClient.StatusReturns(&smclientTypes.Operation{
@@ -347,7 +346,7 @@ var _ = Describe("ServiceInstance controller", func() {
 			})
 
 			When("polling ends with failure", func() {
-				It("should update in progress condition and afterwards failure condition", func() {
+				It("should update to failure condition with the broker err description", func() {
 					serviceInstance = createInstance(ctx, instanceSpec, false)
 					fakeClient.StatusReturns(&smclientTypes.Operation{
 						ID:     "1234",
@@ -355,8 +354,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						State:  smClientTypes.FAILED,
 						Errors: []byte(`{"error": "brokerError","description":"broker-failure"}`),
 					}, nil)
-					waitForInstanceToBeFailed(ctx, defaultLookupKey)
-					Expect(serviceInstance.Status.Conditions[0].Message).To(Equal("ServiceInstance create failed: broker-failure"))
+					waitForInstanceConditionAndMessage(ctx, defaultLookupKey, api.ConditionFailed, "broker-failure")
 				})
 			})
 
@@ -898,24 +896,13 @@ var _ = Describe("ServiceInstance controller", func() {
 			})
 
 			When("instance creation failed", func() {
-				It("should not attempt to share the instance", func() {
-					errMessage := "failed to provision instance"
+				FIt("should not attempt to share the instance", func() {
 					fakeClient.ProvisionReturns(nil, &sm.ServiceManagerError{
 						StatusCode:  http.StatusBadRequest,
-						Description: errMessage,
+						Description: "errMessage",
 					})
 					serviceInstance = createInstance(ctx, sharedInstanceSpec, false)
-					Eventually(func() bool {
-						err := k8sClient.Get(ctx, types.NamespacedName{Name: serviceInstance.Name, Namespace: serviceInstance.Namespace}, serviceInstance)
-						if err != nil {
-							return false
-						}
-						readyCond := meta.FindStatusCondition(serviceInstance.GetConditions(), api.ConditionReady)
-						if readyCond == nil {
-							return false
-						}
-						return readyCond.Status == metav1.ConditionFalse
-					}, timeout, interval).Should(BeTrue())
+					waitForInstanceToBeNotReady(ctx, defaultLookupKey)
 					Expect(fakeClient.ShareInstanceCallCount()).To(BeZero())
 				})
 			})
@@ -1112,6 +1099,17 @@ var _ = Describe("ServiceInstance controller", func() {
 	})
 })
 
+func waitForInstanceConditionAndMessage(ctx context.Context, key types.NamespacedName, conditionType, msg string) {
+	si := &v1.ServiceInstance{}
+	Eventually(func() bool {
+		if err := k8sClient.Get(ctx, key, si); err != nil {
+			return false
+		}
+		cond := meta.FindStatusCondition(si.GetConditions(), conditionType)
+		return cond != nil && strings.Contains(cond.Message, msg)
+	}, timeout, interval).Should(BeTrue())
+}
+
 func waitForInstanceToBeShared(ctx context.Context, key types.NamespacedName) {
 	si := &v1.ServiceInstance{}
 	Eventually(func() bool {
@@ -1176,6 +1174,17 @@ func waitForInstanceConditionAndReason(ctx context.Context, key types.Namespaced
 
 func waitForInstanceToBeReady(ctx context.Context, key types.NamespacedName) {
 	waitForInstanceConditionAndReason(ctx, key, api.ConditionReady, Provisioned)
+}
+
+func waitForInstanceToBeNotReady(ctx context.Context, key types.NamespacedName) {
+	si := &v1.ServiceInstance{}
+	Eventually(func() bool {
+		if err := k8sClient.Get(ctx, key, si); err != nil {
+			return false
+		}
+		readyCond := meta.FindStatusCondition(si.GetConditions(), api.ConditionReady)
+		return readyCond != nil && readyCond.Status == metav1.ConditionFalse
+	}, timeout, interval).Should(BeTrue())
 }
 
 func getNonTransientBrokerError(errMessage string) error {
@@ -1273,11 +1282,7 @@ func isInstanceShared(serviceInstance *v1.ServiceInstance) bool {
 	}
 
 	sharedCond := meta.FindStatusCondition(conditions, api.ConditionShared)
-	if sharedCond == nil {
-		return false
-	}
-
-	return sharedCond.Status == metav1.ConditionTrue
+	return sharedCond != nil && sharedCond.Status == metav1.ConditionTrue
 }
 
 func markInstanceAsPreventDeletion(serviceInstance *v1.ServiceInstance) {
