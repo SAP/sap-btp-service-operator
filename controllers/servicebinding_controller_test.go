@@ -39,6 +39,7 @@ var _ = Describe("ServiceBinding controller", func() {
 	var instanceName string
 	var bindingName string
 	var guid string
+	var defaultLookupKey types.NamespacedName
 
 	createBindingWithoutAssertionsAndWait := func(ctx context.Context, name string, namespace string, instanceName string, externalName string, wait bool) (*v1.ServiceBinding, error) {
 		binding := generateBasicBindingTemplate(name, namespace, instanceName, externalName)
@@ -144,6 +145,7 @@ var _ = Describe("ServiceBinding controller", func() {
 		smInstance := &smClientTypes.ServiceInstance{ID: fakeInstanceID, Ready: true, LastOperation: &smClientTypes.Operation{State: smClientTypes.SUCCEEDED, Type: smClientTypes.UPDATE}}
 		fakeClient.GetInstanceByIDReturns(smInstance, nil)
 		secret := &corev1.Secret{}
+		defaultLookupKey = types.NamespacedName{Namespace: bindingTestNamespace, Name: bindingName}
 		err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: bindingTestNamespace, Name: "param-secret"}, secret)
 		if apierrors.IsNotFound(err) {
 			createParamsSecret(bindingTestNamespace)
@@ -156,7 +158,7 @@ var _ = Describe("ServiceBinding controller", func() {
 		if createdBinding != nil {
 			fakeClient.UnbindReturns("", nil)
 			_ = k8sClient.Delete(context.Background(), createdBinding)
-			waitForBindingAndSecretToBeDeleted(context.Background(), types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace})
+			waitForBindingAndSecretToBeDeleted(context.Background(), defaultLookupKey)
 			createdBinding = nil
 		}
 
@@ -464,7 +466,7 @@ var _ = Describe("ServiceBinding controller", func() {
 
 							fakeClient.BindReturns(&smClientTypes.ServiceBinding{ID: fakeBindingID,
 								Credentials: json.RawMessage("{\"secret_key\": \"secret_value\"}")}, "", nil)
-							waitForBindingToBeReady(context.Background(), types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace})
+							waitForBindingToBeReady(context.Background(), defaultLookupKey)
 						})
 					})
 
@@ -488,7 +490,7 @@ var _ = Describe("ServiceBinding controller", func() {
 					It("creation will fail with appropriate message", func() {
 						ctx := context.Background()
 						createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "")
-						waitForBindingConditionReasonAndMessage(ctx, types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}, api.ConditionFailed, "CreateFailed", "failed to create secret")
+						waitForBindingConditionReasonAndMessage(ctx, defaultLookupKey, api.ConditionFailed, "CreateFailed", "failed to create secret")
 					})
 				})
 			})
@@ -540,7 +542,7 @@ var _ = Describe("ServiceBinding controller", func() {
 					It("should eventually succeed", func() {
 						_, err := createBindingWithoutAssertions(context.Background(), bindingName, bindingTestNamespace, instanceName, "")
 						Expect(err).ToNot(HaveOccurred())
-						waitForBindingToBeReady(context.Background(), types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace})
+						waitForBindingToBeReady(context.Background(), defaultLookupKey)
 					})
 				})
 			})
@@ -578,7 +580,7 @@ var _ = Describe("ServiceBinding controller", func() {
 					setSuccessConditions(smClientTypes.CREATE, createdInstance)
 					err := k8sClient.Status().Update(context.Background(), createdInstance)
 					Expect(err).ToNot(HaveOccurred())
-					waitForBindingToBeReady(context.Background(), types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace})
+					waitForBindingToBeReady(context.Background(), defaultLookupKey)
 				})
 			})
 
@@ -606,7 +608,7 @@ var _ = Describe("ServiceBinding controller", func() {
 					err = k8sClient.Status().Update(context.Background(), createdInstance)
 					Expect(err).ToNot(HaveOccurred())
 
-					waitForBindingToBeReady(context.Background(), types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace})
+					waitForBindingToBeReady(context.Background(), defaultLookupKey)
 				})
 			})
 		})
@@ -663,14 +665,14 @@ var _ = Describe("ServiceBinding controller", func() {
 			secretName := binding.Spec.SecretName
 			Expect(secretName).ToNot(BeEmpty())
 			Expect(k8sClient.Delete(context.Background(), binding)).To(Succeed())
-			waitForBindingAndSecretToBeDeleted(context.Background(), types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace})
+			waitForBindingAndSecretToBeDeleted(context.Background(), defaultLookupKey)
 		}
 
 		validateBindingNotDeleted := func(binding *v1.ServiceBinding, errorMessage string) {
 			secretName := createdBinding.Spec.SecretName
 			Expect(secretName).ToNot(BeEmpty())
 			Expect(k8sClient.Delete(context.Background(), createdBinding)).To(Succeed())
-			key := types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}
+			key := defaultLookupKey
 			err := k8sClient.Get(context.Background(), key, createdBinding)
 			Expect(err).ToNot(HaveOccurred())
 
@@ -831,7 +833,7 @@ var _ = Describe("ServiceBinding controller", func() {
 						Expect(smCallArgs.FieldQuery[1]).To(ContainSubstring("context/clusterid"))
 						Expect(smCallArgs.FieldQuery[2]).To(ContainSubstring("context/namespace"))
 
-						waitForBindingConditionAndReason(context.Background(), types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}, api.ConditionSucceeded, getConditionReason(testCase.lastOpType, testCase.lastOpState))
+						waitForBindingConditionAndReason(context.Background(), defaultLookupKey, api.ConditionSucceeded, getConditionReason(testCase.lastOpType, testCase.lastOpState))
 
 						switch testCase.lastOpState {
 						case smClientTypes.FAILED:
@@ -911,7 +913,7 @@ var _ = Describe("ServiceBinding controller", func() {
 		})
 
 		It("should rotate the credentials and create old binding", func() {
-			Expect(k8sClient.Get(context.Background(), types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}, createdBinding)).To(Succeed())
+			Expect(k8sClient.Get(context.Background(), defaultLookupKey, createdBinding)).To(Succeed())
 			createdBinding.Spec.CredRotationPolicy = &v1.CredentialsRotationPolicy{
 				Enabled:           true,
 				RotatedBindingTTL: "1h",
@@ -925,7 +927,7 @@ var _ = Describe("ServiceBinding controller", func() {
 			// binding rotated
 			myBinding := &v1.ServiceBinding{}
 			Eventually(func() bool {
-				err := k8sClient.Get(ctx, types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}, myBinding)
+				err := k8sClient.Get(ctx, defaultLookupKey, myBinding)
 				return err == nil && myBinding.Status.LastCredentialsRotationTime != nil && len(myBinding.Status.Conditions) == 2
 			}, timeout, interval).Should(BeTrue())
 
@@ -950,7 +952,7 @@ var _ = Describe("ServiceBinding controller", func() {
 		})
 
 		It("should rotate the credentials with force rotate annotation", func() {
-			Expect(k8sClient.Get(context.Background(), types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}, createdBinding)).To(Succeed())
+			Expect(k8sClient.Get(context.Background(), defaultLookupKey, createdBinding)).To(Succeed())
 			createdBinding.Spec.CredRotationPolicy = &v1.CredentialsRotationPolicy{
 				Enabled:           true,
 				RotationFrequency: "1h",
@@ -963,7 +965,7 @@ var _ = Describe("ServiceBinding controller", func() {
 			// binding rotated
 			myBinding := &v1.ServiceBinding{}
 			Eventually(func() bool {
-				err := k8sClient.Get(ctx, types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}, myBinding)
+				err := k8sClient.Get(ctx, defaultLookupKey, myBinding)
 				return err == nil && myBinding.Status.LastCredentialsRotationTime != nil
 			}, timeout, interval).Should(BeTrue())
 
