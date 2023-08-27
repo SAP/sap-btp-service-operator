@@ -70,7 +70,7 @@ var _ = Describe("ServiceBinding controller", func() {
 	}
 
 	createBindingWithError := func(ctx context.Context, name, namespace, instanceName, externalName, failureMessage string) {
-		_, err := createBindingWithoutAssertions(ctx, name, namespace, instanceName, externalName)
+		_, err := createBindingWithoutAssertions(ctx, name, namespace, instanceName, "", externalName)
 		if err != nil {
 			Expect(err.Error()).To(ContainSubstring(failureMessage))
 		} else {
