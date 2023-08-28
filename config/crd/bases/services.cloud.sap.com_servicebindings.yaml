@@ -130,6 +130,10 @@ spec:
                   be in the namespace of the binding
                 minLength: 1
                 type: string
+              serviceInstanceNamespace:
+                description: The namespace of the referenced instance, if empty Binding's
+                  namespace will be used
+                type: string
               userInfo:
                 description: UserInfo contains information about the user that last
                   modified this instance. This field is set by the API server and
