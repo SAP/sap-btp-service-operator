@@ -145,6 +145,7 @@ var _ = Describe("ServiceBinding controller", func() {
 		smInstance := &smClientTypes.ServiceInstance{ID: fakeInstanceID, Ready: true, LastOperation: &smClientTypes.Operation{State: smClientTypes.SUCCEEDED, Type: smClientTypes.UPDATE}}
 		fakeClient.GetInstanceByIDReturns(smInstance, nil)
 		secret := &corev1.Secret{}
+		defaultLookupKey = types.NamespacedName{Namespace: bindingTestNamespace, Name: bindingName}
 		err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: bindingTestNamespace, Name: "param-secret"}, secret)
 		if apierrors.IsNotFound(err) {
 			createParamsSecret(bindingTestNamespace)
