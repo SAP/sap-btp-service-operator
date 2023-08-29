@@ -263,7 +263,7 @@ var _ = Describe("ServiceInstance controller", func() {
 			When("provision request to SM fails", func() {
 				Context("with 400 status", func() {
 					errMessage := "failed to provision instance"
-					JustBeforeEach(func() {
+					BeforeEach(func() {
 						fakeClient.ProvisionReturns(nil, &sm.ServiceManagerError{
 							StatusCode:  http.StatusBadRequest,
 							Description: errMessage,
@@ -278,7 +278,7 @@ var _ = Describe("ServiceInstance controller", func() {
 				})
 
 				Context("with 429 status eventually succeeds", func() {
-					JustBeforeEach(func() {
+					BeforeEach(func() {
 						errMessage := "failed to provision instance"
 						fakeClient.ProvisionReturnsOnCall(0, nil, &sm.ServiceManagerError{
 							StatusCode:  http.StatusTooManyRequests,
@@ -296,7 +296,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 				Context("with sm status code 502 and broker status code 429", func() {
 					errorMessage := "broker too many requests"
-					JustBeforeEach(func() {
+					BeforeEach(func() {
 						fakeClient.ProvisionReturns(nil, getTransientBrokerError(errorMessage))
 					})
 
@@ -310,7 +310,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 				Context("with sm status code 502 and broker status code 400", func() {
 					errMessage := "failed to provision instance"
-					JustBeforeEach(func() {
+					BeforeEach(func() {
 						fakeClient.ProvisionReturns(nil, getNonTransientBrokerError(errMessage))
 						fakeClient.ProvisionReturnsOnCall(1, &sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
 					})
@@ -438,7 +438,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 	Describe("Update", func() {
 
-		JustBeforeEach(func() {
+		BeforeEach(func() {
 			serviceInstance = createInstance(ctx, instanceSpec, true)
 			Expect(serviceInstance.Spec.ExternalName).To(Equal(fakeInstanceExternalName))
 		})
@@ -548,7 +548,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 			Context("spec is changed, sm returns 502 and broker returns 429", func() {
 				errMessage := "broker too many requests"
-				JustBeforeEach(func() {
+				BeforeEach(func() {
 					fakeClient.UpdateInstanceReturns(nil, "", getTransientBrokerError(errMessage))
 				})
 
@@ -587,7 +587,7 @@ var _ = Describe("ServiceInstance controller", func() {
 				})
 
 				When("Instance has operation url to operation that no longer exist in SM", func() {
-					JustBeforeEach(func() {
+					BeforeEach(func() {
 						fakeClient.UpdateInstanceReturnsOnCall(0, nil, "/v1/service_instances/id/operations/1234", nil)
 						fakeClient.UpdateInstanceReturnsOnCall(1, nil, "", nil)
 						fakeClient.StatusReturns(nil, &sm.ServiceManagerError{StatusCode: http.StatusNotFound})
@@ -642,7 +642,7 @@ var _ = Describe("ServiceInstance controller", func() {
 			})
 
 			When("delete without instance id", func() {
-				JustBeforeEach(func() {
+				BeforeEach(func() {
 					fakeClient.ListInstancesReturns(&smclientTypes.ServiceInstances{
 						ServiceInstances: []smclientTypes.ServiceInstance{
 							{
@@ -671,7 +671,7 @@ var _ = Describe("ServiceInstance controller", func() {
 		})
 
 		Context("Async", func() {
-			JustBeforeEach(func() {
+			BeforeEach(func() {
 				fakeClient.DeprovisionReturns("/v1/service_instances/id/operations/1234", nil)
 				fakeClient.StatusReturns(&smclientTypes.Operation{
 					ID:    "1234",
@@ -683,7 +683,7 @@ var _ = Describe("ServiceInstance controller", func() {
 			})
 
 			When("polling ends with success", func() {
-				JustBeforeEach(func() {
+				BeforeEach(func() {
 					fakeClient.StatusReturns(&smclientTypes.Operation{
 						ID:    "1234",
 						Type:  smClientTypes.DELETE,
@@ -696,7 +696,7 @@ var _ = Describe("ServiceInstance controller", func() {
 			})
 
 			When("polling ends with failure", func() {
-				JustBeforeEach(func() {
+				BeforeEach(func() {
 					fakeClient.StatusReturns(&smclientTypes.Operation{
 						ID:     "1234",
 						Type:   smClientTypes.DELETE,
