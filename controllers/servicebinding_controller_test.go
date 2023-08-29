@@ -123,9 +123,7 @@ var _ = Describe("ServiceBinding controller", func() {
 		}
 		Expect(k8sClient.Create(ctx, instance)).Should(Succeed())
 		instanceLookupKey := types.NamespacedName{Name: name, Namespace: namespace}
-		createdInstance := &v1.ServiceInstance{}
-		waitForInstanceToBeReady(ctx, instanceLookupKey)
-		k8sClient.Get(ctx, instanceLookupKey, createdInstance)
+		createdInstance := waitForInstanceToBeReady(ctx, instanceLookupKey)
 		Expect(createdInstance.Status.InstanceID).ToNot(BeEmpty())
 		return createdInstance
 	}
