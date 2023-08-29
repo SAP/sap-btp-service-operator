@@ -660,7 +660,7 @@ var _ = Describe("ServiceBinding controller", func() {
 
 	})
 
-	FContext("Delete", func() {
+	Context("Delete", func() {
 		validateBindingDeletion := func(binding *v1.ServiceBinding) {
 			secretName := binding.Spec.SecretName
 			Expect(secretName).ToNot(BeEmpty())
@@ -787,7 +787,7 @@ var _ = Describe("ServiceBinding controller", func() {
 		})
 	})
 
-	FContext("Recovery", func() {
+	Context("Recovery", func() {
 		type recoveryTestCase struct {
 			lastOpType  smClientTypes.OperationCategory
 			lastOpState smClientTypes.OperationState
@@ -995,7 +995,7 @@ var _ = Describe("ServiceBinding controller", func() {
 
 		When("original binding ready=false (rotation failed)", func() {
 			var failedBinding *v1.ServiceBinding
-			JustBeforeEach(func() {
+			BeforeEach(func() {
 				failedBinding = newBindingObject("failedbinding", bindingTestNamespace)
 				failedBinding.Spec.ServiceInstanceName = "notexistinstance"
 				Expect(k8sClient.Create(ctx, failedBinding)).To(Succeed())
@@ -1096,7 +1096,7 @@ var _ = Describe("ServiceBinding controller", func() {
 					return nil, nil
 				}
 			})
-			AfterEach(func() {
+			JustAfterEach(func() {
 				if crossBinding != nil {
 					Expect(k8sClient.Delete(context.Background(), crossBinding))
 				}
