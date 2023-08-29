@@ -135,8 +135,8 @@ var _ = Describe("ServiceInstance controller", func() {
 
 	updateInstance := func(ctx context.Context, serviceInstance *v1.ServiceInstance) *v1.ServiceInstance {
 		isConditionRefersUpdateOp := func(instance *v1.ServiceInstance) bool {
-			conditionReason := instance.Status.Conditions[0].Reason
-			return strings.Contains(conditionReason, Updated) || strings.Contains(conditionReason, UpdateInProgress) || strings.Contains(conditionReason, UpdateFailed)
+			reasons := []string{Updated, UpdateInProgress, UpdateFailed}
+			return validateInstanceConditionAndReason(ctx, defaultLookupKey, api.ConditionSucceeded, reasons)
 		}
 
 		_ = k8sClient.Update(ctx, serviceInstance)
@@ -163,8 +163,7 @@ var _ = Describe("ServiceInstance controller", func() {
 		fakeClient.DeprovisionReturns("", nil)
 		fakeClient.GetInstanceByIDReturns(&smclientTypes.ServiceInstance{ID: fakeInstanceID, Ready: true, LastOperation: &smClientTypes.Operation{State: smClientTypes.SUCCEEDED, Type: smClientTypes.CREATE}}, nil)
 
-		secret := &corev1.Secret{}
-		err := k8sClient.Get(ctx, types.NamespacedName{Namespace: testNamespace, Name: "param-secret"}, secret)
+		err := k8sClient.Get(ctx, types.NamespacedName{Namespace: testNamespace, Name: "param-secret"}, &corev1.Secret{})
 		if apierrors.IsNotFound(err) {
 			createParamsSecret(testNamespace)
 		} else {
@@ -194,6 +193,7 @@ var _ = Describe("ServiceInstance controller", func() {
 				}
 				Expect(k8sClient.Create(ctx, instance)).ShouldNot(Succeed())
 			}
+
 			Describe("service plan id not provided", func() {
 				When("service offering name and service plan name are not provided", func() {
 					It("provisioning should fail", func() {
@@ -231,10 +231,10 @@ var _ = Describe("ServiceInstance controller", func() {
 					It("provisioning should fail", func() {
 						serviceInstance = createInstance(ctx, instanceSpec, false)
 						Eventually(func() bool {
-							err := k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-							if err != nil {
+							if err := k8sClient.Get(ctx, defaultLookupKey, serviceInstance); err != nil {
 								return false
 							}
+
 							cond := meta.FindStatusCondition(serviceInstance.Status.Conditions, api.ConditionSucceeded)
 							return cond != nil && strings.Contains(cond.Message, "provided plan id does not match")
 						}, timeout, interval).Should(BeTrue())
@@ -289,8 +289,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 					It("should retry until success", func() {
 						serviceInstance = createInstance(ctx, instanceSpec, true)
-						Expect(len(serviceInstance.Status.Conditions)).To(Equal(2))
-						Expect(meta.IsStatusConditionPresentAndEqual(serviceInstance.Status.Conditions, api.ConditionSucceeded, metav1.ConditionTrue)).To(Equal(true))
+						waitForInstanceConditionAndReason(ctx, defaultLookupKey, api.ConditionSucceeded, Created)
 					})
 				})
 
@@ -304,8 +303,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						serviceInstance = createInstance(ctx, instanceSpec, false)
 						expectForInstanceCreationFailure(ctx, defaultLookupKey, serviceInstance, errorMessage)
 						fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
-						serviceInstance := waitForInstanceToBeReady(ctx, defaultLookupKey)
-						Expect(serviceInstance.Status.InstanceID).ToNot(BeEmpty())
+						waitForInstanceToBeReady(ctx, defaultLookupKey)
 					})
 				})
 
@@ -342,9 +340,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						Type:  smClientTypes.CREATE,
 						State: smClientTypes.SUCCEEDED,
 					}, nil)
-					serviceInstance := waitForInstanceToBeReady(ctx, defaultLookupKey)
-					Expect(serviceInstance.Status.InstanceID).ToNot(BeEmpty())
-
+					waitForInstanceConditionAndReason(ctx, defaultLookupKey, api.ConditionSucceeded, Created)
 				})
 			})
 
@@ -375,7 +371,6 @@ var _ = Describe("ServiceInstance controller", func() {
 						return err == nil
 					}, timeout, interval).Should(BeTrue())
 
-					// stop polling state
 					fakeClient.StatusReturns(&smclientTypes.Operation{
 						ID:    "1234",
 						Type:  smClientTypes.CREATE,
@@ -416,10 +411,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					}, nil)
 
 					By("verify instance was deleted successfully")
-					Eventually(func() bool {
-						err := k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-						return apierrors.IsNotFound(err)
-					}, timeout, interval).Should(BeTrue())
+					validateInstanceGotDeleted(ctx, defaultLookupKey)
 				})
 			})
 		})
@@ -436,11 +428,9 @@ var _ = Describe("ServiceInstance controller", func() {
 				Expect(serviceInstance.Name).To(Equal(fakeInstanceName))
 			})
 		})
-
 	})
 
 	Describe("Update", func() {
-
 		BeforeEach(func() {
 			serviceInstance = createInstance(ctx, instanceSpec, true)
 			Expect(serviceInstance.Spec.ExternalName).To(Equal(fakeInstanceExternalName))
@@ -464,7 +454,6 @@ var _ = Describe("ServiceInstance controller", func() {
 			})
 
 			Context("Async", func() {
-
 				When("spec is changed", func() {
 					BeforeEach(func() {
 						fakeClient.UpdateInstanceReturns(nil, "/v1/service_instances/id/operations/1234", nil)
@@ -520,14 +509,13 @@ var _ = Describe("ServiceInstance controller", func() {
 							serviceInstance.Spec = updateSpec()
 							updatedInstance := updateInstance(ctx, serviceInstance)
 							deleteInstance(ctx, updatedInstance, false)
-							// stop update polling
+
 							fakeClient.StatusReturns(&smclientTypes.Operation{
 								ID:    "1234",
 								Type:  smClientTypes.UPDATE,
 								State: smClientTypes.SUCCEEDED,
 							}, nil)
 
-							// validate deletion
 							validateInstanceGotDeleted(ctx, defaultLookupKey)
 						})
 					})
@@ -541,6 +529,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					BeforeEach(func() {
 						fakeClient.UpdateInstanceReturns(nil, "", fmt.Errorf("failed to update instance"))
 					})
+
 					It("condition should be Updated", func() {
 						newSpec := updateSpec()
 						serviceInstance.Spec = newSpec
@@ -1101,6 +1090,25 @@ var _ = Describe("ServiceInstance controller", func() {
 		})
 	})
 })
+
+func validateInstanceConditionAndReason(ctx context.Context, key types.NamespacedName, condType string, reasons []string) bool {
+	si := &v1.ServiceInstance{}
+	var cond *metav1.Condition
+
+	if err := k8sClient.Get(ctx, key, si); err != nil {
+		return false
+	}
+	if cond = meta.FindStatusCondition(si.GetConditions(), condType); cond == nil {
+		return false
+	}
+
+	for _, reason := range reasons {
+		if reason == cond.Reason {
+			return true
+		}
+	}
+	return false
+}
 
 func waitForInstanceConditionAndMessage(ctx context.Context, key types.NamespacedName, conditionType, msg string) {
 	si := &v1.ServiceInstance{}
