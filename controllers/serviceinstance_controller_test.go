@@ -663,9 +663,10 @@ var _ = Describe("ServiceInstance controller", func() {
 
 			When("delete in SM fails", func() {
 				It("should not delete the k8s instance and should update the condition", func() {
-					fakeClient.DeprovisionReturns("", fmt.Errorf("failed to delete instance"))
+					err := "failed to delete instance"
+					fakeClient.DeprovisionReturns("", fmt.Errorf(err))
 					deleteInstance(ctx, serviceInstance, false)
-					waitForInstanceToBeFailed(ctx, defaultLookupKey)
+					waitForInstanceToBeFailedWithMsg(ctx, defaultLookupKey, err)
 					fakeClient.DeprovisionReturns("", nil)
 				})
 			})
@@ -681,6 +682,10 @@ var _ = Describe("ServiceInstance controller", func() {
 				}, nil)
 				deleteInstance(ctx, serviceInstance, false)
 				waitForInstanceToBeInProgress(ctx, defaultLookupKey)
+			})
+
+			AfterEach(func() {
+				fakeClient.DeprovisionReturns("", nil)
 			})
 
 			When("polling ends with success", func() {
@@ -699,19 +704,16 @@ var _ = Describe("ServiceInstance controller", func() {
 			When("polling ends with failure", func() {
 				JustBeforeEach(func() {
 					fakeClient.StatusReturns(&smclientTypes.Operation{
-						ID:    "1234",
-						Type:  smClientTypes.DELETE,
-						State: smClientTypes.FAILED,
+						ID:     "1234",
+						Type:   smClientTypes.DELETE,
+						State:  smClientTypes.FAILED,
+						Errors: []byte(`{"error": "brokerError","description":"broker-failure"}`),
 					}, nil)
-				})
-
-				AfterEach(func() {
-					fakeClient.DeprovisionReturns("", nil)
 				})
 
 				It("should not delete the k8s instance and condition is updated with failure", func() {
 					deleteInstance(ctx, serviceInstance, false)
-					waitForInstanceToBeFailed(ctx, defaultLookupKey)
+					waitForInstanceToBeFailedWithMsg(ctx, defaultLookupKey, "broker-failure")
 				})
 			})
 		})
@@ -1145,11 +1147,12 @@ func waitForInstanceToBeInProgress(ctx context.Context, key types.NamespacedName
 	}, timeout, interval).Should(BeTrue())
 }
 
-func waitForInstanceToBeFailed(ctx context.Context, key types.NamespacedName) {
+func waitForInstanceToBeFailedWithMsg(ctx context.Context, key types.NamespacedName, msg string) {
 	si := &v1.ServiceInstance{}
 	Eventually(func() bool {
 		err := k8sClient.Get(ctx, key, si)
-		return err == nil && isFailed(si)
+		cond := meta.FindStatusCondition(si.GetConditions(), api.ConditionFailed)
+		return err == nil && isFailed(si) && strings.Contains(cond.Message, msg)
 	}, timeout, interval).Should(BeTrue())
 }
 
