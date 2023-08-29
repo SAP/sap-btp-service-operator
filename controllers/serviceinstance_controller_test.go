@@ -35,7 +35,7 @@ const (
 )
 
 var _ = Describe("ServiceInstance controller", func() {
-
+	var updateReasons = []string{Updated, UpdateInProgress, UpdateFailed}
 	var serviceInstance *v1.ServiceInstance
 	var fakeInstanceName string
 	var ctx context.Context
@@ -135,8 +135,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 	updateInstance := func(ctx context.Context, serviceInstance *v1.ServiceInstance) *v1.ServiceInstance {
 		isConditionRefersUpdateOp := func(instance *v1.ServiceInstance) bool {
-			reasons := []string{Updated, UpdateInProgress, UpdateFailed}
-			return validateInstanceConditionAndReason(ctx, defaultLookupKey, api.ConditionSucceeded, reasons)
+			return validateInstanceConditionAndReason(ctx, defaultLookupKey, api.ConditionSucceeded, updateReasons)
 		}
 
 		_ = k8sClient.Update(ctx, serviceInstance)
