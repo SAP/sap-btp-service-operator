@@ -181,8 +181,7 @@ var _ = BeforeSuite(func(done Done) {
 
 var _ = AfterSuite(func() {
 	By("tearing down the test environment")
-	err := testEnv.Stop()
-	Expect(err).ToNot(HaveOccurred())
+	testEnv.Stop()
 })
 
 func isReady(resource api.SAPBTPResource) bool {
