@@ -610,12 +610,14 @@ var _ = Describe("ServiceInstance controller", func() {
 	Describe("Delete", func() {
 		BeforeEach(func() {
 			serviceInstance = createInstance(ctx, instanceSpec, true)
+			fakeClient.DeprovisionReturns("", nil)
 		})
+		AfterEach(func() {
+			fakeClient.DeprovisionReturns("", nil)
+		})
+
 		Context("Sync", func() {
 			When("delete in SM succeeds", func() {
-				BeforeEach(func() {
-					fakeClient.DeprovisionReturns("", nil)
-				})
 				It("should delete the k8s instance", func() {
 					deleteInstance(ctx, serviceInstance, true)
 				})
@@ -624,7 +626,6 @@ var _ = Describe("ServiceInstance controller", func() {
 			When("instance is marked for prevent deletion", func() {
 				BeforeEach(func() {
 					fakeClient.UpdateInstanceReturns(nil, "", nil)
-					fakeClient.DeprovisionReturns("", nil)
 				})
 				It("should fail deleting the instance because of the webhook delete validation", func() {
 					markInstanceAsPreventDeletion(serviceInstance)
@@ -642,8 +643,6 @@ var _ = Describe("ServiceInstance controller", func() {
 
 			When("delete without instance id", func() {
 				JustBeforeEach(func() {
-					fakeClient.DeprovisionReturns("", nil)
-
 					fakeClient.ListInstancesReturns(&smclientTypes.ServiceInstances{
 						ServiceInstances: []smclientTypes.ServiceInstance{
 							{
@@ -667,7 +666,6 @@ var _ = Describe("ServiceInstance controller", func() {
 					fakeClient.DeprovisionReturns("", fmt.Errorf(err))
 					deleteInstance(ctx, serviceInstance, false)
 					waitForInstanceToBeFailedWithMsg(ctx, defaultLookupKey, err)
-					fakeClient.DeprovisionReturns("", nil)
 				})
 			})
 		})
@@ -682,10 +680,6 @@ var _ = Describe("ServiceInstance controller", func() {
 				}, nil)
 				deleteInstance(ctx, serviceInstance, false)
 				waitForInstanceToBeInProgress(ctx, defaultLookupKey)
-			})
-
-			AfterEach(func() {
-				fakeClient.DeprovisionReturns("", nil)
 			})
 
 			When("polling ends with success", func() {
@@ -723,6 +717,10 @@ var _ = Describe("ServiceInstance controller", func() {
 				serviceInstance.Status.InstanceID = ""
 				Expect(k8sClient.Status().Update(context.Background(), serviceInstance)).Should(Succeed())
 			})
+			AfterEach(func() {
+				fakeClient.DeprovisionReturns("", nil)
+			})
+
 			When("instance not exist in SM", func() {
 				It("should be deleted successfully", func() {
 					deleteInstance(ctx, serviceInstance, true)
@@ -742,7 +740,6 @@ var _ = Describe("ServiceInstance controller", func() {
 				}
 				fakeClient.ListInstancesReturns(&smclientTypes.ServiceInstances{
 					ServiceInstances: []smclientTypes.ServiceInstance{recoveredInstance}}, nil)
-				fakeClient.DeprovisionReturns("", nil)
 
 				deleteInstance(ctx, serviceInstance, true)
 				Expect(fakeClient.DeprovisionCallCount()).To(Equal(1))
