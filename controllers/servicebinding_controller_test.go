@@ -196,7 +196,6 @@ var _ = Describe("ServiceBinding controller", func() {
 			})
 
 			When("secret name is already taken", func() {
-
 				var secret *corev1.Secret
 				var secretName string
 				BeforeEach(func() {
@@ -235,7 +234,6 @@ var _ = Describe("ServiceBinding controller", func() {
 			})
 
 			When("secret belong to a different binding", func() {
-
 				var tmpBinding *v1.ServiceBinding
 				var secretName string
 				JustBeforeEach(func() {
@@ -251,6 +249,7 @@ var _ = Describe("ServiceBinding controller", func() {
 				JustAfterEach(func() {
 					Expect(k8sClient.Delete(ctx, tmpBinding)).Should(Succeed())
 				})
+
 				It("should fail the request with relevant message and allow the user to replace secret name", func() {
 					binding := newBindingObject(bindingName, bindingTestNamespace)
 					binding.Spec.ServiceInstanceName = instanceName
@@ -274,7 +273,6 @@ var _ = Describe("ServiceBinding controller", func() {
 
 		Context("Valid parameters", func() {
 			Context("Sync", func() {
-
 				validateInstanceInfo := func(bindingSecret *corev1.Secret) {
 					validateSecretData(bindingSecret, "plan", `a-plan-name`)
 					validateSecretData(bindingSecret, "label", `an-offering-name`)
