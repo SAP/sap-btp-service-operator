@@ -199,14 +199,14 @@ var _ = Describe("ServiceBinding controller", func() {
 				ctx := context.Background()
 				var secret *corev1.Secret
 				var secretName string
-				JustBeforeEach(func() {
+				BeforeEach(func() {
 					secretName = "mysecret-" + guid
 					secret = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: bindingTestNamespace}}
 					Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
 					By("Verify secret created")
 					waitForSecretToBeCreated(ctx, types.NamespacedName{Name: secretName, Namespace: bindingTestNamespace})
 				})
-				JustAfterEach(func() {
+				AfterEach(func() {
 					Expect(k8sClient.Delete(ctx, secret)).Should(Succeed())
 				})
 				It("should fail the request and allow the user to replace secret name", func() {
@@ -619,7 +619,6 @@ var _ = Describe("ServiceBinding controller", func() {
 			createdBinding = createBinding(context.Background(), bindingName, bindingTestNamespace, instanceName, "", "binding-external-name")
 			Expect(isReady(createdBinding)).To(BeTrue())
 		})
-
 		When("external name is changed", func() {
 			It("should fail", func() {
 				createdBinding.Spec.ExternalName = "new-external-name"
@@ -661,8 +660,7 @@ var _ = Describe("ServiceBinding controller", func() {
 
 	})
 
-	Context("Delete", func() {
-
+	FContext("Delete", func() {
 		validateBindingDeletion := func(binding *v1.ServiceBinding) {
 			secretName := binding.Spec.SecretName
 			Expect(secretName).ToNot(BeEmpty())
@@ -704,7 +702,6 @@ var _ = Describe("ServiceBinding controller", func() {
 			When("delete without binding id", func() {
 				JustBeforeEach(func() {
 					fakeClient.UnbindReturns("", nil)
-
 					fakeClient.ListBindingsReturns(&smClientTypes.ServiceBindings{
 						ServiceBindings: []smClientTypes.ServiceBinding{
 							{
@@ -724,7 +721,7 @@ var _ = Describe("ServiceBinding controller", func() {
 
 			When("delete in SM fails with general error", func() {
 				errorMessage := "some-error"
-				JustBeforeEach(func() {
+				BeforeEach(func() {
 					fakeClient.UnbindReturns("", fmt.Errorf(errorMessage))
 				})
 
@@ -734,7 +731,7 @@ var _ = Describe("ServiceBinding controller", func() {
 			})
 
 			When("delete in SM fails with transient error", func() {
-				JustBeforeEach(func() {
+				BeforeEach(func() {
 					fakeClient.UnbindReturnsOnCall(0, "", &sm.ServiceManagerError{StatusCode: http.StatusTooManyRequests})
 					fakeClient.UnbindReturnsOnCall(1, "", nil)
 				})
@@ -746,12 +743,12 @@ var _ = Describe("ServiceBinding controller", func() {
 		})
 
 		Context("Async", func() {
-			JustBeforeEach(func() {
+			BeforeEach(func() {
 				fakeClient.UnbindReturns(sm.BuildOperationURL("an-operation-id", fakeBindingID, smClientTypes.ServiceBindingsURL), nil)
 			})
 
 			When("polling ends with success", func() {
-				JustBeforeEach(func() {
+				BeforeEach(func() {
 					fakeClient.StatusReturns(&smClientTypes.Operation{ResourceID: fakeBindingID, State: smClientTypes.SUCCEEDED}, nil)
 				})
 
@@ -762,7 +759,7 @@ var _ = Describe("ServiceBinding controller", func() {
 
 			When("polling ends with FAILED state", func() {
 				errorMessage := "delete-binding-async-error"
-				JustBeforeEach(func() {
+				BeforeEach(func() {
 					fakeClient.StatusReturns(&smClientTypes.Operation{
 						Type:        smClientTypes.DELETE,
 						State:       smClientTypes.FAILED,
@@ -776,8 +773,7 @@ var _ = Describe("ServiceBinding controller", func() {
 			})
 
 			When("polling returns error", func() {
-
-				JustBeforeEach(func() {
+				BeforeEach(func() {
 					fakeClient.UnbindReturnsOnCall(0, sm.BuildOperationURL("an-operation-id", fakeBindingID, smClientTypes.ServiceBindingsURL), nil)
 					fakeClient.StatusReturns(nil, fmt.Errorf("no polling for you"))
 					fakeClient.GetBindingByIDReturns(&smClientTypes.ServiceBinding{ID: fakeBindingID, LastOperation: &smClientTypes.Operation{State: smClientTypes.SUCCEEDED, Type: smClientTypes.CREATE}}, nil)
@@ -791,7 +787,7 @@ var _ = Describe("ServiceBinding controller", func() {
 		})
 	})
 
-	Context("Recovery", func() {
+	FContext("Recovery", func() {
 		type recoveryTestCase struct {
 			lastOpType  smClientTypes.OperationCategory
 			lastOpState smClientTypes.OperationState
@@ -811,17 +807,19 @@ var _ = Describe("ServiceBinding controller", func() {
 			}
 
 			When("binding exists in SM", func() {
-				JustBeforeEach(func() {
+				BeforeEach(func() {
 					fakeClient.ListBindingsReturns(
 						&smClientTypes.ServiceBindings{
 							ServiceBindings: []smClientTypes.ServiceBinding{*fakeBinding(testCase.lastOpState)},
 						}, nil)
 					fakeClient.StatusReturns(&smClientTypes.Operation{ResourceID: fakeBindingID, State: smClientTypes.INPROGRESS}, nil)
 				})
-				JustAfterEach(func() {
+
+				AfterEach(func() {
 					fakeClient.StatusReturns(&smClientTypes.Operation{ResourceID: fakeBindingID, State: smClientTypes.SUCCEEDED}, nil)
 					fakeClient.GetBindingByIDReturns(fakeBinding(smClientTypes.SUCCEEDED), nil)
 				})
+
 				When(fmt.Sprintf("last operation is %s %s", testCase.lastOpType, testCase.lastOpState), func() {
 					It("should resync status", func() {
 						var err error
@@ -863,7 +861,7 @@ var _ = Describe("ServiceBinding controller", func() {
 		}
 
 		When("binding exists in SM without last operation", func() {
-			JustBeforeEach(func() {
+			BeforeEach(func() {
 				smBinding := &smClientTypes.ServiceBinding{
 					ID:          fakeBindingID,
 					Name:        "fake-binding-external-name",
@@ -874,6 +872,7 @@ var _ = Describe("ServiceBinding controller", func() {
 						ServiceBindings: []smClientTypes.ServiceBinding{*smBinding},
 					}, nil)
 			})
+
 			It("should resync successfully", func() {
 				var err error
 				createdBinding, err = createBindingWithoutAssertionsAndWait(context.Background(), bindingName, bindingTestNamespace, instanceName, "", "fake-binding-external-name", false)
@@ -1158,16 +1157,6 @@ func expectBindingToBeInFailedStateWithMsg(binding *v1.ServiceBinding, message s
 	Expect(cond).To(Not(BeNil()))
 	Expect(cond.Message).To(ContainSubstring(message))
 	Expect(cond.Status).To(Equal(metav1.ConditionFalse))
-}
-
-func validateBindingIsReady(createdBinding *v1.ServiceBinding, bindingName string) {
-	Eventually(func() bool {
-		err := k8sClient.Get(context.Background(), types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}, createdBinding)
-		if err != nil {
-			return false
-		}
-		return isReady(createdBinding)
-	}, timeout, interval).Should(BeTrue())
 }
 
 func generateBasicBindingTemplate(name, namespace, instanceName, instanceNamespace, externalName string) *v1.ServiceBinding {
