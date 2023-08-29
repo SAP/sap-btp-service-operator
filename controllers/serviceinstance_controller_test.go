@@ -304,7 +304,8 @@ var _ = Describe("ServiceInstance controller", func() {
 						serviceInstance = createInstance(ctx, instanceSpec, false)
 						expectForInstanceCreationFailure(ctx, defaultLookupKey, serviceInstance, errorMessage)
 						fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
-						waitForInstanceToBeReady(ctx, defaultLookupKey)
+						serviceInstance := waitForInstanceToBeReady(ctx, defaultLookupKey)
+						Expect(serviceInstance.Status.InstanceID).ToNot(BeEmpty())
 					})
 				})
 
@@ -341,7 +342,9 @@ var _ = Describe("ServiceInstance controller", func() {
 						Type:  smClientTypes.CREATE,
 						State: smClientTypes.SUCCEEDED,
 					}, nil)
-					waitForInstanceToBeReady(ctx, defaultLookupKey)
+					serviceInstance := waitForInstanceToBeReady(ctx, defaultLookupKey)
+					Expect(serviceInstance.Status.InstanceID).ToNot(BeEmpty())
+
 				})
 			})
 
@@ -475,15 +478,16 @@ var _ = Describe("ServiceInstance controller", func() {
 					It("condition should be updated from in progress to Updated", func() {
 						newSpec := updateSpec()
 						serviceInstance.Spec = newSpec
-						updatedInstance := updateInstance(ctx, serviceInstance)
+						updateInstance(ctx, serviceInstance)
 						waitForInstanceConditionAndReason(ctx, defaultLookupKey, api.ConditionSucceeded, UpdateInProgress)
 						fakeClient.StatusReturns(&smclientTypes.Operation{
 							ID:    "1234",
 							Type:  smClientTypes.UPDATE,
 							State: smClientTypes.SUCCEEDED,
 						}, nil)
-						waitForInstanceToBeReady(ctx, defaultLookupKey)
-						Expect(updatedInstance.Spec.ExternalName).To(Equal(newSpec.ExternalName))
+						instance := waitForInstanceToBeReady(ctx, defaultLookupKey)
+						Expect(instance.Status.InstanceID).ToNot(BeEmpty())
+						Expect(instance.Spec.ExternalName).To(Equal(newSpec.ExternalName))
 					})
 
 					When("updating during update", func() {
@@ -1161,7 +1165,7 @@ func validateInstanceGotDeleted(ctx context.Context, key types.NamespacedName) {
 	}, timeout, interval).Should(BeTrue())
 }
 
-func waitForInstanceConditionAndReason(ctx context.Context, key types.NamespacedName, conditionType, reason string) {
+func waitForInstanceConditionAndReason(ctx context.Context, key types.NamespacedName, conditionType, reason string) *v1.ServiceInstance {
 	si := &v1.ServiceInstance{}
 	Eventually(func() bool {
 		if err := k8sClient.Get(ctx, key, si); err != nil {
@@ -1170,10 +1174,11 @@ func waitForInstanceConditionAndReason(ctx context.Context, key types.Namespaced
 		cond := meta.FindStatusCondition(si.GetConditions(), conditionType)
 		return cond != nil && cond.Reason == reason
 	}, timeout, interval).Should(BeTrue())
+	return si
 }
 
-func waitForInstanceToBeReady(ctx context.Context, key types.NamespacedName) {
-	waitForInstanceConditionAndReason(ctx, key, api.ConditionReady, Provisioned)
+func waitForInstanceToBeReady(ctx context.Context, key types.NamespacedName) *v1.ServiceInstance {
+	return waitForInstanceConditionAndReason(ctx, key, api.ConditionReady, Provisioned)
 }
 
 func waitForInstanceToBeNotReady(ctx context.Context, key types.NamespacedName) {
