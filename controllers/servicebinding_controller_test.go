@@ -493,39 +493,31 @@ var _ = Describe("ServiceBinding controller", func() {
 				})
 
 				When("bind polling returns success", func() {
-					JustBeforeEach(func() {
+					It("Should create binding and store the binding credentials in a secret", func() {
 						fakeClient.StatusReturns(&smClientTypes.Operation{ResourceID: fakeBindingID, State: smClientTypes.SUCCEEDED}, nil)
 						fakeClient.GetBindingByIDReturns(&smClientTypes.ServiceBinding{ID: fakeBindingID, Credentials: json.RawMessage("{\"secret_key\": \"secret_value\"}")}, nil)
-					})
-
-					It("Should create binding and store the binding credentials in a secret", func() {
 						createdBinding = createBinding(ctx, bindingName, bindingTestNamespace, instanceName, "", "")
 					})
 				})
 
 				When("bind polling returns FAILED state", func() {
-					errorMessage := "no binding for you"
-					JustBeforeEach(func() {
+					It("should fail with the error returned from SM", func() {
+						errorMessage := "no binding for you"
 						fakeClient.StatusReturns(&smClientTypes.Operation{
 							Type:        smClientTypes.CREATE,
 							State:       smClientTypes.FAILED,
 							Description: errorMessage,
 						}, nil)
-					})
-
-					It("should fail with the error returned from SM", func() {
 						createBindingWithError(ctx, bindingName, bindingTestNamespace, instanceName, "existing-name", errorMessage)
 					})
 				})
 
 				When("bind polling returns error", func() {
-					JustBeforeEach(func() {
+					It("should eventually succeed", func() {
 						fakeClient.BindReturns(nil, "/v1/service_bindings/id/operations/1234", nil)
 						fakeClient.StatusReturnsOnCall(0, nil, fmt.Errorf("no polling for you"))
 						fakeClient.StatusReturnsOnCall(1, &smClientTypes.Operation{ResourceID: fakeBindingID, State: smClientTypes.SUCCEEDED, Type: smClientTypes.CREATE}, nil)
 						fakeClient.GetBindingByIDReturns(&smClientTypes.ServiceBinding{ID: fakeBindingID, LastOperation: &smClientTypes.Operation{State: smClientTypes.SUCCEEDED, Type: smClientTypes.CREATE}}, nil)
-					})
-					It("should eventually succeed", func() {
 						_, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "")
 						Expect(err).ToNot(HaveOccurred())
 						waitForBindingToBeReady(ctx, defaultLookupKey)
@@ -551,33 +543,26 @@ var _ = Describe("ServiceBinding controller", func() {
 			})
 
 			When("referenced service instance is failed", func() {
-				JustBeforeEach(func() {
-					setFailureConditions(smClientTypes.CREATE, "Failed to create instance (test)", createdInstance)
-					err := k8sClient.Status().Update(ctx, createdInstance)
-					Expect(err).ToNot(HaveOccurred())
-				})
 
 				It("should retry and succeed once the instance is ready", func() {
+					setFailureConditions(smClientTypes.CREATE, "Failed to create instance (test)", createdInstance)
+					Expect(k8sClient.Status().Update(ctx, createdInstance)).ToNot(HaveOccurred())
 					createBindingWithBlockedError(ctx, bindingName, bindingTestNamespace, instanceName, "binding-external-name", "is not usable")
 					setSuccessConditions(smClientTypes.CREATE, createdInstance)
-					err := k8sClient.Status().Update(ctx, createdInstance)
-					Expect(err).ToNot(HaveOccurred())
+					Expect(k8sClient.Status().Update(ctx, createdInstance)).ToNot(HaveOccurred())
 					waitForBindingToBeReady(ctx, defaultLookupKey)
 				})
 			})
 
 			When("referenced service instance is not ready", func() {
-				JustBeforeEach(func() {
+				It("should retry and succeed once the instance is ready", func() {
+					var err error
+
 					fakeClient.StatusReturns(&smClientTypes.Operation{ResourceID: fakeInstanceID, State: smClientTypes.INPROGRESS}, nil)
 					setInProgressConditions(smClientTypes.CREATE, "", createdInstance)
 					createdInstance.Status.OperationURL = "/1234"
 					createdInstance.Status.OperationType = smClientTypes.CREATE
-					err := k8sClient.Status().Update(ctx, createdInstance)
-					Expect(err).ToNot(HaveOccurred())
-				})
-
-				It("should retry and succeed once the instance is ready", func() {
-					var err error
+					Expect(k8sClient.Status().Update(ctx, createdInstance)).ToNot(HaveOccurred())
 
 					createdBinding, err = createBindingWithoutAssertionsAndWait(ctx, bindingName, bindingTestNamespace, instanceName, "", "binding-external-name", false)
 					Expect(err).ToNot(HaveOccurred())
@@ -700,11 +685,9 @@ var _ = Describe("ServiceBinding controller", func() {
 
 			When("delete in SM fails with general error", func() {
 				errorMessage := "some-error"
-				BeforeEach(func() {
-					fakeClient.UnbindReturns("", fmt.Errorf(errorMessage))
-				})
 
 				It("should not remove finalizer and keep the secret", func() {
+					fakeClient.UnbindReturns("", fmt.Errorf(errorMessage))
 					validateBindingNotDeleted(createdBinding, errorMessage)
 				})
 			})
