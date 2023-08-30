@@ -624,6 +624,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 					Expect(k8sClient.Update(ctx, serviceInstance)).To(Succeed())
 					err := k8sClient.Delete(ctx, serviceInstance)
+					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("is marked with \"prevent deletion\""))
 
 					/* After annotation is removed the instance should be deleted properly */
@@ -644,7 +645,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					}, nil)
 
 					serviceInstance.Status.InstanceID = ""
-					Expect(k8sClient.Status().Update(context.Background(), serviceInstance)).To(Succeed())
+					Expect(k8sClient.Status().Update(ctx, serviceInstance)).To(Succeed())
 				})
 
 				It("should delete the k8s instance", func() {
@@ -707,7 +708,7 @@ var _ = Describe("ServiceInstance controller", func() {
 		Context("Instance ID is empty", func() {
 			BeforeEach(func() {
 				serviceInstance.Status.InstanceID = ""
-				Expect(k8sClient.Status().Update(context.Background(), serviceInstance)).Should(Succeed())
+				Expect(k8sClient.Status().Update(ctx, serviceInstance)).Should(Succeed())
 			})
 			AfterEach(func() {
 				fakeClient.DeprovisionReturns("", nil)
@@ -1123,7 +1124,9 @@ func waitForInstanceConditionAndMessage(ctx context.Context, key types.Namespace
 func waitForInstanceToBeShared(ctx context.Context, key types.NamespacedName) {
 	si := &v1.ServiceInstance{}
 	Eventually(func() bool {
-		_ = k8sClient.Get(ctx, key, si)
+		if err := k8sClient.Get(ctx, key, si); err != nil {
+			return false
+		}
 		return isInstanceShared(si)
 	}, timeout, interval).Should(BeTrue())
 }
@@ -1131,7 +1134,9 @@ func waitForInstanceToBeShared(ctx context.Context, key types.NamespacedName) {
 func waitForInstanceToBeUnShared(ctx context.Context, key types.NamespacedName) {
 	si := &v1.ServiceInstance{}
 	Eventually(func() bool {
-		_ = k8sClient.Get(ctx, key, si)
+		if err := k8sClient.Get(ctx, key, si); err != nil {
+			return false
+		}
 		return !isInstanceShared(si)
 	}, timeout, interval).Should(BeTrue())
 }
@@ -1139,8 +1144,7 @@ func waitForInstanceToBeUnShared(ctx context.Context, key types.NamespacedName) 
 func waitForInstanceID(ctx context.Context, key types.NamespacedName, id string) {
 	si := &v1.ServiceInstance{}
 	Eventually(func() bool {
-		err := k8sClient.Get(ctx, key, si)
-		if err != nil {
+		if err := k8sClient.Get(ctx, key, si); err != nil {
 			return false
 		}
 		return si.Status.InstanceID == id
@@ -1158,9 +1162,11 @@ func waitForInstanceToBeInProgress(ctx context.Context, key types.NamespacedName
 func waitForInstanceToBeFailedWithMsg(ctx context.Context, key types.NamespacedName, msg string) {
 	si := &v1.ServiceInstance{}
 	Eventually(func() bool {
-		err := k8sClient.Get(ctx, key, si)
+		if err := k8sClient.Get(ctx, key, si); err != nil {
+			return false
+		}
 		cond := meta.FindStatusCondition(si.GetConditions(), api.ConditionFailed)
-		return err == nil && isFailed(si) && strings.Contains(cond.Message, msg)
+		return cond != nil && isFailed(si) && strings.Contains(cond.Message, msg)
 	}, timeout, interval).Should(BeTrue())
 }
 
@@ -1283,8 +1289,8 @@ func createParamsSecret(namespace string) {
 		},
 		Data: credentialsMap,
 	}
-	err := k8sClient.Create(context.Background(), secret)
-	Expect(err).ToNot(HaveOccurred())
+
+	Expect(k8sClient.Create(context.Background(), secret)).ToNot(HaveOccurred())
 }
 
 func isInstanceShared(serviceInstance *v1.ServiceInstance) bool {

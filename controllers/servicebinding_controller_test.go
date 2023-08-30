@@ -208,6 +208,7 @@ var _ = Describe("ServiceBinding controller", func() {
 				AfterEach(func() {
 					Expect(k8sClient.Delete(ctx, secret)).Should(Succeed())
 				})
+
 				It("should fail the request and allow the user to replace secret name", func() {
 					binding := newBindingObject(bindingName, bindingTestNamespace)
 					binding.Spec.ServiceInstanceName = instanceName
@@ -215,14 +216,7 @@ var _ = Describe("ServiceBinding controller", func() {
 
 					Expect(k8sClient.Create(ctx, binding)).To(Succeed())
 					bindingLookupKey := types.NamespacedName{Name: binding.Name, Namespace: binding.Namespace}
-					Eventually(func() bool {
-						if err := k8sClient.Get(ctx, bindingLookupKey, binding); err != nil {
-							return false
-						}
-						cond := meta.FindStatusCondition(binding.GetConditions(), api.ConditionSucceeded)
-						return cond != nil && cond.Reason == Blocked && strings.Contains(cond.Message, "is already taken. Choose another name and try again")
-					}, timeout, interval).Should(BeTrue())
-
+					binding = waitForBindingConditionReasonAndMessage(ctx, bindingLookupKey, api.ConditionSucceeded, Blocked, "is already taken. Choose another name and try again")
 					binding.Spec.SecretName = secretName + "-new"
 					Expect(k8sClient.Update(ctx, binding)).Should(Succeed())
 					waitForBindingToBeReady(ctx, bindingLookupKey)
@@ -234,23 +228,15 @@ var _ = Describe("ServiceBinding controller", func() {
 			})
 
 			When("secret belong to a different binding", func() {
-				var tmpBinding *v1.ServiceBinding
-				var secretName string
-				JustBeforeEach(func() {
+				It("should fail the request with relevant message and allow the user to replace secret name", func() {
 					tmpBindingName := bindingName + "-tmp"
-					secretName = "mysecret-" + guid
-					tmpBinding = newBindingObject(tmpBindingName, bindingTestNamespace)
+					secretName := "mysecret-" + guid
+					tmpBinding := newBindingObject(tmpBindingName, bindingTestNamespace)
 					tmpBinding.Spec.ServiceInstanceName = instanceName
 					tmpBinding.Spec.SecretName = secretName
-
-					_ = k8sClient.Create(ctx, tmpBinding)
+					k8sClient.Create(ctx, tmpBinding)
 					waitForBindingToBeReady(ctx, types.NamespacedName{Name: tmpBindingName, Namespace: bindingTestNamespace})
-				})
-				JustAfterEach(func() {
-					Expect(k8sClient.Delete(ctx, tmpBinding)).Should(Succeed())
-				})
 
-				It("should fail the request with relevant message and allow the user to replace secret name", func() {
 					binding := newBindingObject(bindingName, bindingTestNamespace)
 					binding.Spec.ServiceInstanceName = instanceName
 					binding.Spec.SecretName = secretName
@@ -267,6 +253,8 @@ var _ = Describe("ServiceBinding controller", func() {
 					By("Verify binding secret created")
 					bindingSecret := getSecret(ctx, binding.Spec.SecretName, binding.Namespace, true)
 					Expect(bindingSecret).ToNot(BeNil())
+
+					Expect(k8sClient.Delete(ctx, tmpBinding)).Should(Succeed())
 				})
 			})
 		})
@@ -556,23 +544,21 @@ var _ = Describe("ServiceBinding controller", func() {
 
 			When("referenced service instance is not ready", func() {
 				It("should retry and succeed once the instance is ready", func() {
-					var err error
-
 					fakeClient.StatusReturns(&smClientTypes.Operation{ResourceID: fakeInstanceID, State: smClientTypes.INPROGRESS}, nil)
 					setInProgressConditions(smClientTypes.CREATE, "", createdInstance)
 					createdInstance.Status.OperationURL = "/1234"
 					createdInstance.Status.OperationType = smClientTypes.CREATE
 					Expect(k8sClient.Status().Update(ctx, createdInstance)).ToNot(HaveOccurred())
 
-					createdBinding, err = createBindingWithoutAssertionsAndWait(ctx, bindingName, bindingTestNamespace, instanceName, "", "binding-external-name", false)
+					createdBinding, err := createBindingWithoutAssertionsAndWait(ctx, bindingName, bindingTestNamespace, instanceName, "", "binding-external-name", false)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(isInProgress(createdBinding)).To(BeTrue())
 
 					setSuccessConditions(smClientTypes.CREATE, createdInstance)
 					createdInstance.Status.OperationType = ""
 					createdInstance.Status.OperationURL = ""
-					err = k8sClient.Status().Update(ctx, createdInstance)
-					Expect(err).ToNot(HaveOccurred())
+
+					Expect(k8sClient.Status().Update(ctx, createdInstance)).ToNot(HaveOccurred())
 					waitForBindingToBeReady(ctx, defaultLookupKey)
 				})
 			})
@@ -637,15 +623,13 @@ var _ = Describe("ServiceBinding controller", func() {
 			Expect(secretName).ToNot(BeEmpty())
 			Expect(k8sClient.Delete(ctx, createdBinding)).To(Succeed())
 			key := defaultLookupKey
-			err := k8sClient.Get(ctx, key, createdBinding)
-			Expect(err).ToNot(HaveOccurred())
+			Expect(k8sClient.Get(ctx, key, createdBinding)).ToNot(HaveOccurred())
 
 			waitForBindingConditionAndReason(ctx, key, api.ConditionSucceeded, getConditionReason(smClientTypes.DELETE, smClientTypes.FAILED))
 			waitForBindingConditionAndReason(ctx, key, api.ConditionReady, "Provisioned")
 			waitForBindingConditionReasonAndMessage(ctx, key, api.ConditionFailed, getConditionReason(smClientTypes.DELETE, smClientTypes.FAILED), errorMessage)
 
-			err = k8sClient.Get(ctx, key, &corev1.Secret{})
-			Expect(err).ToNot(HaveOccurred())
+			Expect(k8sClient.Get(ctx, key, &corev1.Secret{})).ToNot(HaveOccurred())
 		}
 
 		JustBeforeEach(func() {
@@ -1208,7 +1192,7 @@ func waitForBindingConditionMessageAndStatus(ctx context.Context, key types.Name
 	}, timeout, interval).Should(BeTrue())
 }
 
-func waitForBindingConditionReasonAndMessage(ctx context.Context, key types.NamespacedName, conditionType, reason, msg string) {
+func waitForBindingConditionReasonAndMessage(ctx context.Context, key types.NamespacedName, conditionType, reason, msg string) *v1.ServiceBinding {
 	sb := &v1.ServiceBinding{}
 	Eventually(func() bool {
 		if err := k8sClient.Get(ctx, key, sb); err != nil {
@@ -1217,6 +1201,7 @@ func waitForBindingConditionReasonAndMessage(ctx context.Context, key types.Name
 		cond := meta.FindStatusCondition(sb.GetConditions(), conditionType)
 		return cond != nil && cond.Reason == reason && strings.Contains(cond.Message, msg)
 	}, 2*timeout, interval).Should(BeTrue())
+	return sb
 }
 
 func waitForSecretToBeCreated(ctx context.Context, key types.NamespacedName) {
