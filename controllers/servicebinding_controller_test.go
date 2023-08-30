@@ -861,7 +861,7 @@ var _ = Describe("ServiceBinding controller", func() {
 		})
 
 		It("should rotate the credentials and create old binding", func() {
-			Expect(k8sClient.Get(ctx, defaultLookupKey, createdBinding)).To(Succeed())
+			Expect(k8sClient.Get(context.Background(), types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}, createdBinding)).To(Succeed())
 			createdBinding.Spec.CredRotationPolicy = &v1.CredentialsRotationPolicy{
 				Enabled:           true,
 				RotatedBindingTTL: "1h",
