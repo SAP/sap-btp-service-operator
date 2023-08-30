@@ -963,7 +963,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						serviceInstance.Spec.Shared = pointer.BoolPtr(false)
 						serviceInstance.Spec.ExternalName = "new"
 						Expect(k8sClient.Update(ctx, serviceInstance)).To(Succeed())
-						waitForInstanceToBeUnShared(ctx, defaultLookupKey)
+						serviceInstance = waitForInstanceToBeUnShared(ctx, defaultLookupKey)
 						Expect(serviceInstance.Spec.ExternalName).To(Equal("new"))
 					})
 				})
@@ -1117,7 +1117,7 @@ func waitForInstanceToBeShared(ctx context.Context, key types.NamespacedName) {
 	}, timeout, interval).Should(BeTrue())
 }
 
-func waitForInstanceToBeUnShared(ctx context.Context, key types.NamespacedName) {
+func waitForInstanceToBeUnShared(ctx context.Context, key types.NamespacedName) *v1.ServiceInstance {
 	si := &v1.ServiceInstance{}
 	Eventually(func() bool {
 		if err := k8sClient.Get(ctx, key, si); err != nil {
@@ -1125,6 +1125,7 @@ func waitForInstanceToBeUnShared(ctx context.Context, key types.NamespacedName) 
 		}
 		return !isInstanceShared(si)
 	}, timeout, interval).Should(BeTrue())
+	return si
 }
 
 func waitForInstanceID(ctx context.Context, key types.NamespacedName, id string) {
