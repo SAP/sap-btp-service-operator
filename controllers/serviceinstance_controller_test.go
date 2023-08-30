@@ -102,8 +102,7 @@ var _ = Describe("ServiceInstance controller", func() {
 		createdInstance := &v1.ServiceInstance{}
 
 		Eventually(func() bool {
-			err := k8sClient.Get(ctx, defaultLookupKey, createdInstance)
-			if err != nil {
+			if err := k8sClient.Get(ctx, defaultLookupKey, createdInstance); err != nil {
 				return false
 			}
 			if !waitForReady {
@@ -142,8 +141,7 @@ var _ = Describe("ServiceInstance controller", func() {
 		updatedInstance := &v1.ServiceInstance{}
 
 		Eventually(func() bool {
-			err := k8sClient.Get(ctx, defaultLookupKey, updatedInstance)
-			if err != nil {
+			if err := k8sClient.Get(ctx, defaultLookupKey, updatedInstance); err != nil {
 				return false
 			}
 			return len(updatedInstance.Status.Conditions) > 0 && isConditionRefersUpdateOp(updatedInstance)
@@ -229,14 +227,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 					It("provisioning should fail", func() {
 						serviceInstance = createInstance(ctx, instanceSpec, false)
-						Eventually(func() bool {
-							if err := k8sClient.Get(ctx, defaultLookupKey, serviceInstance); err != nil {
-								return false
-							}
-
-							cond := meta.FindStatusCondition(serviceInstance.Status.Conditions, api.ConditionSucceeded)
-							return cond != nil && strings.Contains(cond.Message, "provided plan id does not match")
-						}, timeout, interval).Should(BeTrue())
+						waitForInstanceConditionAndMessage(ctx, defaultLookupKey, api.ConditionSucceeded, "provided plan id does not match")
 					})
 				})
 			})
@@ -272,7 +263,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 					It("should have failure condition", func() {
 						serviceInstance = createInstance(ctx, instanceSpec, false)
-						expectForInstanceCreationFailure(ctx, defaultLookupKey, serviceInstance, errMessage)
+						waitForInstanceCreationFailure(ctx, defaultLookupKey, serviceInstance, errMessage)
 					})
 				})
 
@@ -300,7 +291,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 					It("should be transient error and eventually succeed", func() {
 						serviceInstance = createInstance(ctx, instanceSpec, false)
-						expectForInstanceCreationFailure(ctx, defaultLookupKey, serviceInstance, errorMessage)
+						waitForInstanceCreationFailure(ctx, defaultLookupKey, serviceInstance, errorMessage)
 						fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
 						waitForInstanceToBeReady(ctx, defaultLookupKey)
 					})
@@ -315,7 +306,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 					It("should have failure condition - non transient error", func() {
 						serviceInstance = createInstance(ctx, instanceSpec, false)
-						expectForInstanceCreationFailure(ctx, defaultLookupKey, serviceInstance, errMessage)
+						waitForInstanceCreationFailure(ctx, defaultLookupKey, serviceInstance, errMessage)
 					})
 				})
 			})
@@ -361,13 +352,11 @@ var _ = Describe("ServiceInstance controller", func() {
 					serviceInstance = createInstance(ctx, instanceSpec, false)
 					newName := "new-name" + uuid.New().String()
 					Eventually(func() bool {
-						err := k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-						if err != nil {
+						if err := k8sClient.Get(ctx, defaultLookupKey, serviceInstance); err != nil {
 							return false
 						}
 						serviceInstance.Spec.ExternalName = newName
-						err = k8sClient.Update(ctx, serviceInstance)
-						return err == nil
+						return k8sClient.Update(ctx, serviceInstance) == nil
 					}, timeout, interval).Should(BeTrue())
 
 					fakeClient.StatusReturns(&smclientTypes.Operation{
@@ -397,10 +386,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						State: smClientTypes.INPROGRESS,
 					}, nil)
 
-					By("deleting instance")
 					deleteInstance(ctx, serviceInstance, false)
-
-					By("waiting for instance to be DeleteInProgress")
 					waitForInstanceConditionAndReason(ctx, defaultLookupKey, api.ConditionSucceeded, DeleteInProgress)
 
 					fakeClient.StatusReturns(&smclientTypes.Operation{
@@ -409,7 +395,6 @@ var _ = Describe("ServiceInstance controller", func() {
 						State: smClientTypes.SUCCEEDED,
 					}, nil)
 
-					By("verify instance was deleted successfully")
 					validateInstanceGotDeleted(ctx, defaultLookupKey)
 				})
 			})
@@ -480,22 +465,19 @@ var _ = Describe("ServiceInstance controller", func() {
 
 					When("updating during update", func() {
 						It("should save the latest spec", func() {
-							By("updating first time")
 							serviceInstance.Spec = updateSpec()
 							updatedInstance := updateInstance(ctx, serviceInstance)
 
-							By("updating second time")
 							lastSpec := updateSpec()
 							updatedInstance.Spec = lastSpec
-							err := k8sClient.Update(ctx, updatedInstance)
-							Expect(err).ToNot(HaveOccurred())
+							Expect(k8sClient.Update(ctx, updatedInstance)).ToNot(HaveOccurred())
 
-							// stop polling state
 							fakeClient.StatusReturns(&smclientTypes.Operation{
 								ID:    "1234",
 								Type:  smClientTypes.UPDATE,
 								State: smClientTypes.SUCCEEDED,
 							}, nil)
+
 							Eventually(func() bool {
 								_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
 								return isReady(serviceInstance) && serviceInstance.Spec.ExternalName == lastSpec.ExternalName
@@ -547,7 +529,7 @@ var _ = Describe("ServiceInstance controller", func() {
 				It("recognize the error as transient and eventually succeed", func() {
 					serviceInstance.Spec = updateSpec()
 					updateInstance(ctx, serviceInstance)
-					waitForInstanceConditionAndReason(ctx, defaultLookupKey, api.ConditionSucceeded, UpdateInProgress)
+					serviceInstance = waitForInstanceConditionAndReason(ctx, defaultLookupKey, api.ConditionSucceeded, UpdateInProgress)
 					fakeClient.UpdateInstanceReturns(nil, "", nil)
 					updateInstance(ctx, serviceInstance)
 					waitForInstanceToBeReady(ctx, defaultLookupKey)
@@ -1110,6 +1092,10 @@ func validateInstanceConditionAndReason(ctx context.Context, key types.Namespace
 	return false
 }
 
+func waitForInstanceToBeReady(ctx context.Context, key types.NamespacedName) *v1.ServiceInstance {
+	return waitForInstanceConditionAndReason(ctx, key, api.ConditionReady, Provisioned)
+}
+
 func waitForInstanceConditionAndMessage(ctx context.Context, key types.NamespacedName, conditionType, msg string) {
 	si := &v1.ServiceInstance{}
 	Eventually(func() bool {
@@ -1190,10 +1176,6 @@ func waitForInstanceConditionAndReason(ctx context.Context, key types.Namespaced
 	return si
 }
 
-func waitForInstanceToBeReady(ctx context.Context, key types.NamespacedName) *v1.ServiceInstance {
-	return waitForInstanceConditionAndReason(ctx, key, api.ConditionReady, Provisioned)
-}
-
 func waitForInstanceToBeNotReady(ctx context.Context, key types.NamespacedName) {
 	si := &v1.ServiceInstance{}
 	Eventually(func() bool {
@@ -1226,7 +1208,7 @@ func getTransientBrokerError(errorMessage string) error {
 	}
 }
 
-func expectForInstanceCreationFailure(ctx context.Context, defaultLookupKey types.NamespacedName, serviceInstance *v1.ServiceInstance, errMessage string) {
+func waitForInstanceCreationFailure(ctx context.Context, defaultLookupKey types.NamespacedName, serviceInstance *v1.ServiceInstance, errMessage string) {
 	Eventually(func() bool {
 		if err := k8sClient.Get(ctx, defaultLookupKey, serviceInstance); err != nil {
 			return false
