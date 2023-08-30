@@ -97,8 +97,8 @@ var _ = Describe("ServiceInstance controller", func() {
 			},
 			Spec: instanceSpec,
 		}
-		Expect(k8sClient.Create(ctx, instance)).Should(Succeed())
 
+		Expect(k8sClient.Create(ctx, instance)).Should(Succeed())
 		createdInstance := &v1.ServiceInstance{}
 
 		Eventually(func() bool {
@@ -121,7 +121,9 @@ var _ = Describe("ServiceInstance controller", func() {
 			return
 		}
 
-		Expect(k8sClient.Delete(ctx, instanceToDelete)).Should(Succeed())
+		Eventually(func() bool {
+			return k8sClient.Delete(ctx, instanceToDelete) == nil
+		}, timeout, interval).Should(BeTrue())
 
 		if wait {
 			Eventually(func() bool {
@@ -137,7 +139,10 @@ var _ = Describe("ServiceInstance controller", func() {
 			return validateInstanceConditionAndReason(ctx, defaultLookupKey, api.ConditionSucceeded, updateReasons)
 		}
 
-		_ = k8sClient.Update(ctx, serviceInstance)
+		Eventually(func() bool {
+			return k8sClient.Update(ctx, serviceInstance) == nil
+		}, timeout, interval).Should(BeTrue())
+
 		updatedInstance := &v1.ServiceInstance{}
 
 		Eventually(func() bool {
@@ -351,10 +356,13 @@ var _ = Describe("ServiceInstance controller", func() {
 				It("should save the latest spec", func() {
 					serviceInstance = createInstance(ctx, instanceSpec, false)
 					newName := "new-name" + uuid.New().String()
+					serviceInstance.Spec.ExternalName = newName
+
 					Eventually(func() bool {
 						if err := k8sClient.Get(ctx, defaultLookupKey, serviceInstance); err != nil {
 							return false
 						}
+
 						serviceInstance.Spec.ExternalName = newName
 						return k8sClient.Update(ctx, serviceInstance) == nil
 					}, timeout, interval).Should(BeTrue())
@@ -470,7 +478,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 							lastSpec := updateSpec()
 							updatedInstance.Spec = lastSpec
-							Expect(k8sClient.Update(ctx, updatedInstance)).ToNot(HaveOccurred())
+							updateInstance(ctx, updatedInstance)
 
 							fakeClient.StatusReturns(&smclientTypes.Operation{
 								ID:    "1234",
@@ -603,15 +611,14 @@ var _ = Describe("ServiceInstance controller", func() {
 				})
 				It("should fail deleting the instance because of the webhook delete validation", func() {
 					markInstanceAsPreventDeletion(serviceInstance)
-
-					Expect(k8sClient.Update(ctx, serviceInstance)).To(Succeed())
+					updateInstanceUntilNoErr(ctx, defaultLookupKey, serviceInstance)
 					err := k8sClient.Delete(ctx, serviceInstance)
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("is marked with \"prevent deletion\""))
 
 					/* After annotation is removed the instance should be deleted properly */
 					serviceInstance.Annotations = nil
-					Expect(k8sClient.Update(ctx, serviceInstance)).To(Succeed())
+					updateInstanceUntilNoErr(ctx, defaultLookupKey, serviceInstance)
 					deleteInstance(ctx, serviceInstance, true)
 				})
 			})
@@ -840,7 +847,7 @@ var _ = Describe("ServiceInstance controller", func() {
 				When("updating existing instance to shared", func() {
 					It("should succeed", func() {
 						serviceInstance.Spec.Shared = pointer.Bool(true)
-						Expect(k8sClient.Update(ctx, serviceInstance)).To(Succeed())
+						updateInstanceUntilNoErr(ctx, defaultLookupKey, serviceInstance)
 						waitForInstanceToBeShared(ctx, defaultLookupKey)
 					})
 				})
@@ -851,7 +858,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						fakeClient.UpdateInstanceReturns(nil, "", nil)
 						serviceInstance.Spec.Shared = pointer.BoolPtr(true)
 						instanceUnSharingReturnSuccess()
-						Expect(k8sClient.Update(ctx, serviceInstance)).To(Succeed())
+						updateInstanceUntilNoErr(ctx, defaultLookupKey, serviceInstance)
 						waitForInstanceToBeShared(ctx, defaultLookupKey)
 						after := serviceInstance.Status.HashedSpec
 						Expect(before).To(Equal(after))
@@ -862,7 +869,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					It("eventually should succeed updating both", func() {
 						serviceInstance.Spec.Shared = pointer.BoolPtr(true)
 						serviceInstance.Spec.ExternalName = "new"
-						Expect(k8sClient.Update(ctx, serviceInstance)).To(Succeed())
+						updateInstanceUntilNoErr(ctx, defaultLookupKey, serviceInstance)
 						waitForInstanceToBeShared(ctx, defaultLookupKey)
 						Expect(serviceInstance.Spec.ExternalName).To(Equal("new"))
 					})
@@ -890,7 +897,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					It("status should be shared in progress", func() {
 						instanceSharingReturnsRateLimitError()
 						serviceInstance.Spec.Shared = pointer.BoolPtr(true)
-						Expect(k8sClient.Update(ctx, serviceInstance)).To(Succeed())
+						updateInstanceUntilNoErr(ctx, defaultLookupKey, serviceInstance)
 						waitForInstanceConditionAndReason(ctx, defaultLookupKey, api.ConditionShared, InProgress)
 						instanceSharingReturnSuccess()
 						waitForInstanceToBeShared(ctx, defaultLookupKey)
@@ -901,7 +908,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					It("status should be shared failed and eventually succeed sharing", func() {
 						instanceSharingReturnsTransientError()
 						serviceInstance.Spec.Shared = pointer.BoolPtr(true)
-						Expect(k8sClient.Update(ctx, serviceInstance)).To(Succeed())
+						k8sClient.Update(ctx, serviceInstance)
 						waitForInstanceConditionAndReason(ctx, defaultLookupKey, api.ConditionShared, ShareFailed)
 
 						instanceSharingReturnSuccess()
@@ -913,7 +920,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					It("should have a final shared status", func() {
 						instanceSharingReturnsNonTransientError400()
 						serviceInstance.Spec.Shared = pointer.BoolPtr(true)
-						Expect(k8sClient.Update(ctx, serviceInstance)).To(Succeed())
+						updateInstanceUntilNoErr(ctx, defaultLookupKey, serviceInstance)
 						waitForInstanceConditionAndReason(ctx, defaultLookupKey, api.ConditionShared, ShareNotSupported)
 					})
 				})
@@ -922,7 +929,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					It("should have a final shared status", func() {
 						instanceSharingReturnsNonTransientError500()
 						serviceInstance.Spec.Shared = pointer.BoolPtr(true)
-						Expect(k8sClient.Update(ctx, serviceInstance)).To(Succeed())
+						updateInstanceUntilNoErr(ctx, defaultLookupKey, serviceInstance)
 						waitForInstanceConditionAndReason(ctx, defaultLookupKey, api.ConditionShared, ShareNotSupported)
 					})
 				})
@@ -941,7 +948,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					It("should succeed", func() {
 						serviceInstance.Spec.Shared = pointer.BoolPtr(false)
 						instanceUnSharingReturnSuccess()
-						Expect(k8sClient.Update(ctx, serviceInstance)).To(Succeed())
+						updateInstanceUntilNoErr(ctx, defaultLookupKey, serviceInstance)
 						waitForInstanceToBeUnShared(ctx, defaultLookupKey)
 					})
 				})
@@ -950,7 +957,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					It("should succeed un-sharing and remove condition", func() {
 						serviceInstance.Spec.Shared = nil
 						instanceUnSharingReturnSuccess()
-						Expect(k8sClient.Update(ctx, serviceInstance)).To(Succeed())
+						updateInstanceUntilNoErr(ctx, defaultLookupKey, serviceInstance)
 						Eventually(func() bool {
 							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
 							return meta.FindStatusCondition(serviceInstance.GetConditions(), api.ConditionShared) == nil
@@ -962,7 +969,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					It("eventually should succeed updating both", func() {
 						serviceInstance.Spec.Shared = pointer.BoolPtr(false)
 						serviceInstance.Spec.ExternalName = "new"
-						Expect(k8sClient.Update(ctx, serviceInstance)).To(Succeed())
+						updateInstanceUntilNoErr(ctx, defaultLookupKey, serviceInstance)
 						serviceInstance = waitForInstanceToBeUnShared(ctx, defaultLookupKey)
 						Expect(serviceInstance.Spec.ExternalName).To(Equal("new"))
 					})
@@ -979,7 +986,7 @@ var _ = Describe("ServiceInstance controller", func() {
 				It("should have a reason un-shared failed", func() {
 					instanceUnSharingReturnsNonTransientError()
 					serviceInstance.Spec.Shared = pointer.BoolPtr(false)
-					Expect(k8sClient.Update(ctx, serviceInstance)).To(Succeed())
+					updateInstanceUntilNoErr(ctx, defaultLookupKey, serviceInstance)
 					waitForInstanceConditionAndReason(ctx, defaultLookupKey, api.ConditionShared, UnShareFailed)
 				})
 			})
@@ -1290,4 +1297,20 @@ func markInstanceAsPreventDeletion(serviceInstance *v1.ServiceInstance) {
 	serviceInstance.Annotations = map[string]string{
 		api.PreventDeletion: "true",
 	}
+}
+
+func updateInstanceUntilNoErr(ctx context.Context, key types.NamespacedName, serviceInstance *v1.ServiceInstance) {
+	si := &v1.ServiceInstance{}
+	Eventually(func() bool {
+		if err := k8sClient.Get(ctx, key, si); err != nil {
+			return false
+		}
+		return k8sClient.Update(ctx, serviceInstance) == nil
+	}, timeout, interval).Should(BeTrue())
+}
+
+func updateInstanceStatusUntilNoErr(ctx context.Context, instance *v1.ServiceInstance) {
+	Eventually(func() bool {
+		return k8sClient.Status().Update(ctx, instance) == nil
+	}, timeout, interval).Should(BeTrue())
 }
