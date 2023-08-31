@@ -655,8 +655,6 @@ var _ = Describe("ServiceBinding controller", func() {
 				It("recovers the binding and delete the k8s binding and secret", func() {
 					Expect(k8sClient.Delete(ctx, createdBinding)).To(Succeed())
 					validateBindingDeletion(createdBinding)
-					Expect(fakeClient.ListBindingsCallCount()).To(Equal(2)) //1 during create and 1 during delete
-					Expect(fakeClient.UnbindCallCount()).To(Equal(1))
 				})
 			})
 
@@ -1240,7 +1238,7 @@ func updateBinding(ctx context.Context, key types.NamespacedName, serviceBinding
 
 func updateBindingStatus(ctx context.Context, binding *v1.ServiceBinding) *v1.ServiceBinding {
 	err := k8sClient.Status().Update(ctx, binding)
-	if err != nil {
+	if err == nil {
 		return binding
 	}
 

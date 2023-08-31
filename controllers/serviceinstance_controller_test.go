@@ -1259,8 +1259,19 @@ func updateInstance(ctx context.Context, serviceInstance *v1.ServiceInstance) *v
 	return si
 }
 
-func updateInstanceStatus(ctx context.Context, instance *v1.ServiceInstance) {
+func updateInstanceStatus(ctx context.Context, instance *v1.ServiceInstance) *v1.ServiceInstance {
+	err := k8sClient.Status().Update(ctx, instance)
+	if err == nil {
+		return instance
+	}
+
+	si := &v1.ServiceInstance{}
 	Eventually(func() bool {
-		return k8sClient.Status().Update(ctx, instance) == nil
+		if err := k8sClient.Get(ctx, types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, si); err != nil {
+			return false
+		}
+		si.Status = instance.Status
+		return k8sClient.Status().Update(ctx, si) == nil
 	}, timeout, interval).Should(BeTrue())
+	return si
 }
