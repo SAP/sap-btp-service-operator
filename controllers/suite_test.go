@@ -186,5 +186,5 @@ var _ = AfterSuite(func() {
 })
 
 func isReady(resource api.SAPBTPResource) bool {
-	return meta.IsStatusConditionPresentAndEqual(resource.GetConditions(), api.ConditionSucceeded, metav1.ConditionTrue)
+	return meta.IsStatusConditionPresentAndEqual(resource.GetConditions(), api.ConditionReady, metav1.ConditionTrue)
 }

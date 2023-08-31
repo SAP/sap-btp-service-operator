@@ -81,7 +81,7 @@ var _ = BeforeEach(func() {
 	}
 })
 
-var _ = JustBeforeEach(func() {
+var _ = BeforeEach(func() {
 	var err error
 	smServer = httptest.NewServer(createSMHandler())
 	fakeAuthClient = &FakeAuthClient{AccessToken: validToken}

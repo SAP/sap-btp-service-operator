@@ -227,8 +227,15 @@ func setSuccessConditions(operationType smClientTypes.OperationCategory, object 
 		Message:            message,
 		ObservedGeneration: object.GetGeneration(),
 	}
+	readyCondition := metav1.Condition{
+		Type:               api.ConditionReady,
+		Status:             metav1.ConditionTrue,
+		Reason:             Provisioned,
+		Message:            message,
+		ObservedGeneration: object.GetGeneration(),
+	}
 	meta.SetStatusCondition(&conditions, lastOpCondition)
-	meta.SetStatusCondition(&conditions, getReadyCondition(object))
+	meta.SetStatusCondition(&conditions, readyCondition)
 
 	object.SetConditions(conditions)
 }

@@ -144,19 +144,6 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 	}
 
-	doUpdateStatus := false
-	conditions := serviceInstance.GetConditions()
-	for _, cond := range conditions {
-		if cond.ObservedGeneration != serviceInstance.Generation {
-			cond.ObservedGeneration = serviceInstance.Generation
-			doUpdateStatus = true
-		}
-	}
-	if doUpdateStatus {
-		serviceInstance.SetConditions(conditions)
-		return ctrl.Result{}, r.updateStatus(ctx, serviceInstance)
-	}
-
 	return ctrl.Result{}, nil
 }
 
@@ -190,6 +177,12 @@ func (r *ServiceInstanceReconciler) handleInstanceSharing(ctx context.Context, s
 			serviceInstance.SetConditions(conditions)
 		}
 	}
+	conditions := []metav1.Condition{}
+	for _, cond := range serviceInstance.GetConditions() {
+		cond.ObservedGeneration = serviceInstance.Generation
+		conditions = append(conditions, cond)
+	}
+	serviceInstance.SetConditions(conditions)
 
 	return r.updateStatus(ctx, serviceInstance)
 }
@@ -213,6 +206,10 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client
 		return ctrl.Result{}, statusErr
 	}
 
+	if status == nil {
+		log.Error(fmt.Errorf("last operation is nil"), fmt.Sprintf("polling %s returned nil", serviceInstance.Status.OperationURL))
+		return ctrl.Result{}, fmt.Errorf("last operation is nil")
+	}
 	switch status.State {
 	case smClientTypes.INPROGRESS:
 		fallthrough
