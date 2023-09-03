@@ -259,20 +259,20 @@ Review the supported Kubernetes API versions for the following SAP BTP Service O
 
 ### Service Binding 
 #### Spec
-| Parameter             | Type       | Description                                                                                                                                                                                                                                                |
-|:-----------------|:---------|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| serviceInstanceName`*`   | `string`   | The Kubernetes name of the service instance to bind, should be in the namespace of the binding.                                                                                                                                                            |
-| externalName       | `string`   | The name for the service binding in SAP BTP, defaults to the binding `metadata.name` if not specified.                                                                                                                                                     |
-| secretName       | `string`   | The name of the secret where the credentials are stored, defaults to the binding `metadata.name` if not specified.                                                                                                                                         |
-| secretKey | `string`  | The key inside the binding secret to store the credentials returned by the broker encoded as json to support complex data structures. [Example](#secret-formats)                                                                                           |
-| secretRootKey | `string`  | The key inside the secret to store all binding data including credentials returned by the broker and additional info under single key.<br/>Convenient way to store whole binding data in single file when using `volumeMounts`. [Example](#secret-formats) |
-| parameters       |  `[]object`  | Some services support the provisioning of additional configuration parameters during the bind request.<br/>For the list of supported parameters, check the documentation of the particular service offering.                                               |
-| parametersFrom | `[]object` | List of sources to populate parameters.                                                                                                                                                                                                                    |
-| userInfo | `object`  | Contains information about the user that last modified this service binding.                                                                                                                                                                               |
-| credentialsRotationPolicy | `object`  | Holds automatic credentials rotation configuration.                                                                                                                                                                                                        |
-| credentialsRotationPolicy.enabled | `boolean`  | Indicates whether automatic credentials rotation are enabled.                                                                                                                                                                                              |
-| credentialsRotationPolicy.rotationFrequency | `duration`  | Specifies the frequency at which the binding rotation is performed.                                                                                                                                                                                        |
-| credentialsRotationPolicy.rotatedBindingTTL | `duration`  | Specifies the time period for which to keep the rotated binding.                                                                                                                                                                                           |
+| Parameter             | Type       | Description                                                                                                   |
+|:-----------------|:---------|:-----------------------------------------------------------------------------------------------------------|
+| serviceInstanceName`*`   | `string`   |  The Kubernetes name of the service instance to bind, should be in the namespace of the binding. |
+| externalName       | `string`   |  The name for the service binding in SAP BTP, defaults to the binding `metadata.name` if not specified. |
+| secretName       | `string`   |  The name of the secret where the credentials are stored, defaults to the binding `metadata.name` if not specified. |
+| secretKey | `string`  | The key inside the binding secret to store the credentials returned by the broker encoded as json to support complex data structures. [Example](#secret-formats)|
+| secretRootKey | `string`  | The key inside the secret to store all binding data including credentials returned by the broker and additional info under single key.<br/>Convenient way to store whole binding data in single file when using `volumeMounts`. [Example](#secret-formats)|
+| parameters       |  `[]object`  |  Some services support the provisioning of additional configuration parameters during the bind request.<br/>For the list of supported parameters, check the documentation of the particular service offering.|
+| parametersFrom | `[]object` | List of sources to populate parameters. |
+| userInfo | `object`  | Contains information about the user that last modified this service binding. |
+| credentialsRotationPolicy | `object`  | Holds automatic credentials rotation configuration. |
+| credentialsRotationPolicy.enabled | `boolean`  | Indicates whether automatic credentials rotation are enabled. |
+| credentialsRotationPolicy.rotationFrequency | `duration`  | Specifies the frequency at which the binding rotation is performed. |
+| credentialsRotationPolicy.rotatedBindingTTL | `duration`  | Specifies the time period for which to keep the rotated binding. |
 
 
 
