@@ -519,68 +519,76 @@ The SAP BTP service operator project maintainers will respond to the best of the
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
 ## Secret Formats
-
 ### Default
 ```bash
-Name:         sample-binding-1 
-Namespace:    default
-Labels:       <none>
-Annotations:  binding: sample-binding-1
-
-Type:  Opaque
-
-Data
-
-clientsecret:            81 bytes
-instance_guid:           36 bytes
-plan:                    16 bytes
-url:                     75 bytes
-clientid:                65 bytes
-instance_external_name:  17 bytes
-instance_name:           17 bytes
-label:                   15 bytes
-sm_url:                  63 bytes
-type:                    15 bytes
-xsappname:               62 bytes
-.metadata:               406 bytes
+apiVersion: v1
+data:
+  .metadata: <hashed value>
+  instance_external_name: c2FtcGxlLWluc3RhbmNl
+  instance_guid: M2I5NzExYzMtMmQwMS00ZmY2LWI2ODQtYzk2NTU5MDdhYzA1
+  instance_name: c2FtcGxlLWluc3RhbmNl
+  label: b3ZlcnZpZXctc2VydmljZS10YWw=
+  password: SGZMT2dEMHJwUHFCMkEwRQ==
+  plan: c21hbGwtdGFs
+  tags: WyJvdmVydmlldy1icm9rZXIiXQ==
+  type: b3ZlcnZpZXctc2VydmljZS10YWw=
+  username: YWRtaW4=
+kind: Secret
+metadata:
+  annotations:
+    binding: sample-binding
+  name: sample-binding
+  namespace: default
+  ownerReferences:
+  - apiVersion: services.cloud.sap.com/v1
+    kind: ServiceBinding
+    name: sample-binding
+type: Opaque
 ```
 ### SecretKey
 Done by adding in the binding spec:  **secretKey: my-secret-key**
 ```bash
-Name:         sample-binding-1
-Namespace:    default
-Labels:       <none>
-Annotations:  binding: sample-binding-1
-
-Type:  Opaque
-
-Data
-====
-instance_guid:           36 bytes
-instance_name:           17 bytes
-label:                   15 bytes
-my-secret-key:           415 bytes
-plan:                    16 bytes
-type:                    15 bytes
-.metadata:               286 bytes
-instance_external_name:  17 bytes
+apiVersion: v1
+data:
+  .metadata: <hashed value>
+  instance_external_name: c2FtcGxlLWluc3RhbmNl
+  instance_guid: M2I5NzExYzMtMmQwMS00ZmY2LWI2ODQtYzk2NTU5MDdhYzA1
+  instance_name: c2FtcGxlLWluc3RhbmNl
+  label: b3ZlcnZpZXctc2VydmljZS10YWw=
+  my-secret-key: eyJwYXNzd29yZCI6ImM4RmJjekl0ZXZTN2pWSHciLCJ1c2VybmFtZSI6ImFkbWluIn0=
+  plan: c21hbGwtdGFs
+  tags: WyJvdmVydmlldy1icm9rZXIiXQ==
+  type: b3ZlcnZpZXctc2VydmljZS10YWw=
+kind: Secret
+metadata:
+  annotations:
+    binding: sample-binding
+  name: sample-binding
+  namespace: default
+  ownerReferences:
+  - apiVersion: services.cloud.sap.com/v1
+    kind: ServiceBinding
+    name: sample-binding
+type: Opaque
 ```
-
 ### SecretRootKey
-Done by adding in the binding spec:  **SecretRootKey: my-secret-root-key**
+Done by adding in the binding spec:  **secretRootKey: my-secret-root-key**
 ```bash
-Name:         sample-binding-1
-Namespace:    default
-Labels:       <none>
-Annotations:  binding: sample-binding-1
-
-Type:  Opaque
-
-Data
-====
-my-secret-root-key:  628 bytes
+apiVersion: v1
+data:
+  my-secret-root-key: <hashed value>
+kind: Secret
+metadata:
+  annotations:
+    binding: sample-binding
+  name: sample-binding
+  namespace: default
+  ownerReferences:
+  - apiVersion: services.cloud.sap.com/v1
+    kind: ServiceBinding
+    name: sample-binding
+type: Opaque
 ```
-
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
 ## Uninstalling the Operator
