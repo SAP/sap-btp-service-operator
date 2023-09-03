@@ -550,7 +550,6 @@ Done by adding in the binding spec:  **secretKey: my-secret-key**
 ```bash
 apiVersion: v1
 data:
-  .metadata: <hashed value>
   instance_external_name: c2FtcGxlLWluc3RhbmNl
   instance_guid: M2I5NzExYzMtMmQwMS00ZmY2LWI2ODQtYzk2NTU5MDdhYzA1
   instance_name: c2FtcGxlLWluc3RhbmNl
