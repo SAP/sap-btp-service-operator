@@ -27,6 +27,7 @@ The SAP BTP service operator is based on the [Kubernetes Operator pattern](https
 * [Credentials Rotation](#credentials-rotation)
 * [Multitenancy](#multitenancy)
 * [Troubleshooting and Support](#troubleshooting-and-support)
+* [Secret Formats](#secret-formats)
 * [Uninstalling the Operator](#uninstalling-the-operator)
 
 ## Architecture
@@ -514,6 +515,71 @@ data:
 
 You're welcome to raise issues related to feature requests, bugs, or give us general feedback on this project's GitHub Issues page. 
 The SAP BTP service operator project maintainers will respond to the best of their abilities. 
+
+[Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
+
+## Secret Formats
+
+### Default
+```bash
+Name:         sample-binding-1 
+Namespace:    default
+Labels:       <none>
+Annotations:  binding: sample-binding-1
+
+Type:  Opaque
+
+Data
+
+clientsecret:            81 bytes
+instance_guid:           36 bytes
+plan:                    16 bytes
+url:                     75 bytes
+clientid:                65 bytes
+instance_external_name:  17 bytes
+instance_name:           17 bytes
+label:                   15 bytes
+sm_url:                  63 bytes
+type:                    15 bytes
+xsappname:               62 bytes
+.metadata:               406 bytes
+```
+### SecretKey
+Done by adding in the binding spec:  **secretKey: my-secret-key**
+```bash
+Name:         sample-binding-1
+Namespace:    default
+Labels:       <none>
+Annotations:  binding: sample-binding-1
+
+Type:  Opaque
+
+Data
+====
+instance_guid:           36 bytes
+instance_name:           17 bytes
+label:                   15 bytes
+my-secret-key:           415 bytes
+plan:                    16 bytes
+type:                    15 bytes
+.metadata:               286 bytes
+instance_external_name:  17 bytes
+```
+
+### SecretRootKey
+Done by adding in the binding spec:  **SecretRootKey: my-secret-root-key**
+```bash
+Name:         sample-binding-1
+Namespace:    default
+Labels:       <none>
+Annotations:  binding: sample-binding-1
+
+Type:  Opaque
+
+Data
+====
+my-secret-root-key:  628 bytes
+```
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
