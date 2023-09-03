@@ -22,7 +22,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-
 	"net/http"
 
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -159,7 +158,6 @@ func (r *ServiceInstanceReconciler) handleInstanceSharing(ctx context.Context, s
 			handleInstanceSharingError(ctx, err, serviceInstance, metav1.ConditionFalse, ShareFailed)
 			return r.updateStatus(ctx, serviceInstance)
 		}
-
 		log.Info("instance shared successfully")
 		setSharedCondition(serviceInstance, metav1.ConditionTrue, ShareSucceeded, "instance shared successfully")
 	} else { //un-share
@@ -668,15 +666,15 @@ func setSharedCondition(object api.SAPBTPResource, status metav1.ConditionStatus
 		Message:            msg,
 		ObservedGeneration: object.GetGeneration(),
 	}
-
-	conditions := object.GetConditions()
-	meta.SetStatusCondition(&conditions, shareCondition)
+	conditions := []metav1.Condition{}
 
 	// align all conditions to latest generation
 	for _, cond := range object.GetConditions() {
 		cond.ObservedGeneration = object.GetGeneration()
 		conditions = append(conditions, cond)
 	}
+
+	meta.SetStatusCondition(&conditions, shareCondition)
 	object.SetConditions(conditions)
 }
 

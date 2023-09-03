@@ -808,7 +808,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						before := serviceInstance.Status.HashedSpec
 						fakeClient.UpdateInstanceReturns(nil, "", nil)
 						serviceInstance.Spec.Shared = pointer.BoolPtr(true)
-						instanceUnSharingReturnSuccess()
+						instanceSharingReturnSuccess()
 						updateInstance(ctx, serviceInstance)
 						waitForInstanceToBeShared(ctx, defaultLookupKey)
 						after := serviceInstance.Status.HashedSpec
