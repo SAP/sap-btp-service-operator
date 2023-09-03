@@ -4,3 +4,4 @@ metadata:
   name: sample-binding-1
 spec:
   serviceInstanceName: sample-instance-1
+  secretRootKey: my-secret-root-key
