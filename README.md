@@ -519,6 +519,7 @@ The SAP BTP service operator project maintainers will respond to the best of the
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
 ## Secret Formats
+
 ### Default
 ```bash
 apiVersion: v1
