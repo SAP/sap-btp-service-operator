@@ -555,7 +555,10 @@ data:
   instance_guid: M2I5NzExYzMtMmQwMS00ZmY2LWI2ODQtYzk2NTU5MDdhYzA1
   instance_name: c2FtcGxlLWluc3RhbmNl
   label: b3ZlcnZpZXctc2VydmljZS10YWw=
-  my-secret-key: eyJwYXNzd29yZCI6ImM4RmJjekl0ZXZTN2pWSHciLCJ1c2VybmFtZSI6ImFkbWluIn0=
+  my-secret-key: 
+    password: "c8FbczItevS7jVHw",
+    username: "admin",
+    alg: "HS256"
   plan: c21hbGwtdGFs
   tags: WyJvdmVydmlldy1icm9rZXIiXQ==
   type: b3ZlcnZpZXctc2VydmljZS10YWw=
@@ -576,7 +579,14 @@ Done by adding in the binding spec:  **secretRootKey: my-secret-root-key**
 ```bash
 apiVersion: v1
 data:
-  my-secret-root-key: <hashed value>
+  my-secret-root-key: 
+    instance_external_name: "sample-instance",
+    instance_guid: "3b9711c3-2d01-4ff6-b684-c9655907ac05",
+    instance_name: "sample-instance",
+    label: "overview-service-tal",
+    password: "koUER5re924BuDEE",
+    plan: "small-tal",
+    username": "admin"
 kind: Secret
 metadata:
   annotations:
