@@ -1,0 +1,10 @@
+apiVersion: services.cloud.sap.com/v1
+kind: ServiceInstance
+metadata:
+  name: sample-instance-shared
+spec:
+  serviceOfferingName: xsuaa
+  servicePlanName: reference-instance
+  parameters:
+    referenced_instance_id: 6d7f809c-c064-4e9c-89c1-1d89d2aaa1e3
+

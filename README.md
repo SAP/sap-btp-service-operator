@@ -520,9 +520,6 @@ The SAP BTP service operator project maintainers will respond to the best of the
 
 ## Secret Formats
 
-
-## Secret Formats
-
 ### Default
 ```bash
 Name:         sample-binding-1 
