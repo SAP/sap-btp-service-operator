@@ -524,80 +524,50 @@ The SAP BTP service operator project maintainers will respond to the best of the
 ```bash
 apiVersion: v1
 data:
-  .metadata: <hashed value>
-  instance_external_name: c2FtcGxlLWluc3RhbmNl
-  instance_guid: M2I5NzExYzMtMmQwMS00ZmY2LWI2ODQtYzk2NTU5MDdhYzA1
-  instance_name: c2FtcGxlLWluc3RhbmNl
-  label: b3ZlcnZpZXctc2VydmljZS10YWw=
-  password: SGZMT2dEMHJwUHFCMkEwRQ==
-  plan: c21hbGwtdGFs
-  tags: WyJvdmVydmlldy1icm9rZXIiXQ==
-  type: b3ZlcnZpZXctc2VydmljZS10YWw=
-  username: YWRtaW4=
-kind: Secret
-metadata:
-  annotations:
-    binding: sample-binding
-  name: sample-binding
-  namespace: default
-  ownerReferences:
-  - apiVersion: services.cloud.sap.com/v1
-    kind: ServiceBinding
-    name: sample-binding
-type: Opaque
-```
-### SecretKey
-Done by adding in the binding spec:  **secretKey: my-secret-key**
-```bash
-apiVersion: v1
-data:
-  instance_external_name: c2FtcGxlLWluc3RhbmNl
-  instance_guid: M2I5NzExYzMtMmQwMS00ZmY2LWI2ODQtYzk2NTU5MDdhYzA1
-  instance_name: c2FtcGxlLWluc3RhbmNl
-  label: b3ZlcnZpZXctc2VydmljZS10YWw=
-  my-secret-key: 
-    password: "c8FbczItevS7jVHw",
-    username: "admin",
-    alg: "HS256"
-  plan: c21hbGwtdGFs
-  tags: WyJvdmVydmlldy1icm9rZXIiXQ==
-  type: b3ZlcnZpZXctc2VydmljZS10YWw=
-kind: Secret
-metadata:
-  annotations:
-    binding: sample-binding
-  name: sample-binding
-  namespace: default
-  ownerReferences:
-  - apiVersion: services.cloud.sap.com/v1
-    kind: ServiceBinding
-    name: sample-binding
-type: Opaque
-```
-### SecretRootKey
-Done by adding in the binding spec:  **secretRootKey: my-secret-root-key**
-```bash
-apiVersion: v1
-data:
-  my-secret-root-key: 
-    instance_external_name: "sample-instance",
-    instance_guid: "3b9711c3-2d01-4ff6-b684-c9655907ac05",
-    instance_name: "sample-instance",
-    label: "overview-service-tal",
-    password: "koUER5re924BuDEE",
-    plan: "small-tal",
-    username": "admin"
-kind: Secret
-metadata:
-  annotations:
-    binding: sample-binding
-  name: sample-binding
-  namespace: default
-  ownerReferences:
-  - apiVersion: services.cloud.sap.com/v1
-    kind: ServiceBinding
-    name: sample-binding
-type: Opaque
+  .metadata: {
+  "credentialProperties": [
+    {
+      "name": "password",
+      "format": "text"
+    },
+    {
+      "name": "uri",
+      "format": "text"
+    },
+    {
+      "name": "username",
+      "format": "text"
+    }
+  ],
+  "metaDataProperties": [
+    {
+      "name": "instance_name",
+      "format": "text"
+    },
+    {
+      "name": "instance_guid",
+      "format": "text"
+    },
+    {
+      "name": "plan",
+      "format": "text"
+    },
+    {
+      "name": "type",
+      "format": "text"
+    }
+  ]
+}
+
+  // Credentials section
+  uri: https://feature-flags.cfapps.stagingaws.hanavlab.ondemand.com
+  username: c2Jzc19sYmo4MG9sanczZm9hcTg3YnJqcnl6NmJxZStwd25kbmxyZWdoL3piZWR0bGFieGhpNWdmZXcxaGM1dGYrdWhjdzBnPQ==
+  password: YWFfeXZZdjY4WWwxYnNyZ1VqUGNEMWk3anZWNWpNPQ==
+  // Additional data added by the operator
+  instance_guid: bd9bda65-1405-4ea0-a716-5afeb13eca5b
+  instance_name: sample-instance    
+  plan: lite                        
+  type: feature-flags  // The service offering name
 ```
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
