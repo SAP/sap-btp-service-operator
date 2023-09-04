@@ -785,8 +785,9 @@ var _ = Describe("ServiceInstance controller", func() {
 			When("creating instance with shared=true", func() {
 				It("should succeed to provision and sharing the instance", func() {
 					instanceSharingReturnSuccess()
-					serviceInstance = createInstance(ctx, sharedInstanceSpec, true)
-					waitForInstanceToBeShared(ctx, defaultLookupKey)
+					createInstance(ctx, sharedInstanceSpec, true)
+					serviceInstance = waitForInstanceToBeShared(ctx, defaultLookupKey)
+					Expect(len(serviceInstance.Status.Conditions)).To(Equal(3))
 				})
 			})
 
@@ -858,8 +859,8 @@ var _ = Describe("ServiceInstance controller", func() {
 				When("shared failed with transient error which is not rate limit", func() {
 					It("status should be shared failed and eventually succeed sharing", func() {
 						instanceSharingReturnsTransientError()
-						serviceInstance.Spec.Shared = pointer.BoolPtr(true)
-						k8sClient.Update(ctx, serviceInstance)
+						serviceInstance.Spec.Shared = pointer.Bool(true)
+						updateInstance(ctx, serviceInstance)
 						waitForInstanceConditionAndReason(ctx, defaultLookupKey, api.ConditionShared, ShareFailed)
 
 						instanceSharingReturnSuccess()
@@ -900,7 +901,9 @@ var _ = Describe("ServiceInstance controller", func() {
 						serviceInstance.Spec.Shared = pointer.BoolPtr(false)
 						instanceUnSharingReturnSuccess()
 						updateInstance(ctx, serviceInstance)
-						waitForInstanceToBeUnShared(ctx, defaultLookupKey)
+						serviceInstance = waitForInstanceToBeUnShared(ctx, defaultLookupKey)
+						Expect(len(serviceInstance.Status.Conditions)).To(Equal(3))
+
 					})
 				})
 
@@ -912,6 +915,7 @@ var _ = Describe("ServiceInstance controller", func() {
 							_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
 							return meta.FindStatusCondition(serviceInstance.GetConditions(), api.ConditionShared) == nil
 						}, timeout, interval).Should(BeTrue())
+						Expect(len(serviceInstance.Status.Conditions)).To(Equal(2))
 					})
 				})
 
@@ -1064,14 +1068,15 @@ func waitForInstanceConditionAndMessage(ctx context.Context, key types.Namespace
 	}, timeout, interval).Should(BeTrue())
 }
 
-func waitForInstanceToBeShared(ctx context.Context, key types.NamespacedName) {
+func waitForInstanceToBeShared(ctx context.Context, key types.NamespacedName) *v1.ServiceInstance {
 	si := &v1.ServiceInstance{}
 	Eventually(func() bool {
 		if err := k8sClient.Get(ctx, key, si); err != nil {
 			return false
 		}
 		return isInstanceShared(si)
-	}, timeout, interval).Should(BeTrue())
+	}, timeout*4, interval).Should(BeTrue())
+	return si
 }
 
 func waitForInstanceToBeUnShared(ctx context.Context, key types.NamespacedName) *v1.ServiceInstance {
@@ -1192,7 +1197,7 @@ func instanceSharingReturnsNonTransientError500() {
 
 func instanceSharingReturnsTransientError() {
 	fakeClient.ShareInstanceReturns(&sm.ServiceManagerError{
-		StatusCode:  http.StatusTooEarly,
+		StatusCode:  http.StatusServiceUnavailable,
 		Description: "transient",
 	})
 }

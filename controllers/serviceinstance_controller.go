@@ -138,15 +138,13 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	// Handle instance share if needed
 	if sharingUpdateRequired(serviceInstance) {
-		if err := r.handleInstanceSharing(ctx, serviceInstance, smClient); err != nil {
-			return ctrl.Result{}, err
-		}
+		return r.handleInstanceSharing(ctx, serviceInstance, smClient)
 	}
 
 	return ctrl.Result{}, nil
 }
 
-func (r *ServiceInstanceReconciler) handleInstanceSharing(ctx context.Context, serviceInstance *servicesv1.ServiceInstance, smClient sm.Client) error {
+func (r *ServiceInstanceReconciler) handleInstanceSharing(ctx context.Context, serviceInstance *servicesv1.ServiceInstance, smClient sm.Client) (ctrl.Result, error) {
 	log := GetLogger(ctx)
 	log.Info("Handling change in instance sharing")
 
@@ -155,8 +153,7 @@ func (r *ServiceInstanceReconciler) handleInstanceSharing(ctx context.Context, s
 		err := smClient.ShareInstance(serviceInstance.Status.InstanceID, buildUserInfo(ctx, serviceInstance.Spec.UserInfo))
 		if err != nil {
 			log.Error(err, "failed to share instance")
-			handleInstanceSharingError(ctx, err, serviceInstance, metav1.ConditionFalse, ShareFailed)
-			return r.updateStatus(ctx, serviceInstance)
+			return r.handleInstanceSharingError(ctx, err, serviceInstance, metav1.ConditionFalse, ShareFailed)
 		}
 		log.Info("instance shared successfully")
 		setSharedCondition(serviceInstance, metav1.ConditionTrue, ShareSucceeded, "instance shared successfully")
@@ -165,8 +162,7 @@ func (r *ServiceInstanceReconciler) handleInstanceSharing(ctx context.Context, s
 		err := smClient.UnShareInstance(serviceInstance.Status.InstanceID, buildUserInfo(ctx, serviceInstance.Spec.UserInfo))
 		if err != nil {
 			log.Error(err, "failed to un-share instance")
-			handleInstanceSharingError(ctx, err, serviceInstance, metav1.ConditionTrue, UnShareFailed)
-			return r.updateStatus(ctx, serviceInstance)
+			return r.handleInstanceSharingError(ctx, err, serviceInstance, metav1.ConditionTrue, UnShareFailed)
 		}
 		log.Info("instance un-shared successfully")
 		if serviceInstance.Spec.Shared != nil {
@@ -179,7 +175,7 @@ func (r *ServiceInstanceReconciler) handleInstanceSharing(ctx context.Context, s
 		}
 	}
 
-	return r.updateStatus(ctx, serviceInstance)
+	return ctrl.Result{}, r.updateStatus(ctx, serviceInstance)
 }
 
 func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client, serviceInstance *servicesv1.ServiceInstance) (ctrl.Result, error) {
@@ -521,12 +517,14 @@ func (r *ServiceInstanceReconciler) getInstanceForRecovery(ctx context.Context, 
 	return nil, nil
 }
 
-func handleInstanceSharingError(ctx context.Context, err error, object api.SAPBTPResource, status metav1.ConditionStatus, reason string) {
+func (r *ServiceInstanceReconciler) handleInstanceSharingError(ctx context.Context, err error, object api.SAPBTPResource, status metav1.ConditionStatus, reason string) (ctrl.Result, error) {
 	log := GetLogger(ctx)
 
+	var statusCode int
 	errMsg := err.Error()
 	if smError, ok := err.(*sm.ServiceManagerError); ok {
 		log.Info(fmt.Sprintf("SM returned error status code %d", smError.StatusCode))
+		statusCode = smError.StatusCode
 		if smError.StatusCode == http.StatusTooManyRequests {
 			errMsg = "in progress"
 			reason = InProgress
@@ -541,6 +539,7 @@ func handleInstanceSharingError(ctx context.Context, err error, object api.SAPBT
 	}
 
 	setSharedCondition(object, status, reason, errMsg)
+	return ctrl.Result{Requeue: isTransientStatusCode(statusCode)}, r.updateStatus(ctx, object)
 }
 
 func isFinalState(serviceInstance *servicesv1.ServiceInstance) bool {
@@ -666,15 +665,15 @@ func setSharedCondition(object api.SAPBTPResource, status metav1.ConditionStatus
 		Message:            msg,
 		ObservedGeneration: object.GetGeneration(),
 	}
-	conditions := []metav1.Condition{}
+	conditions := object.GetConditions()
+	meta.SetStatusCondition(&conditions, shareCondition)
 
 	// align all conditions to latest generation
 	for _, cond := range object.GetConditions() {
 		cond.ObservedGeneration = object.GetGeneration()
-		conditions = append(conditions, cond)
+		meta.SetStatusCondition(&conditions, cond)
 	}
 
-	meta.SetStatusCondition(&conditions, shareCondition)
 	object.SetConditions(conditions)
 }
 
