@@ -54,6 +54,10 @@ func (sb *ServiceBinding) ValidateCreate() (admission.Warnings, error) {
 			return nil, err
 		}
 	}
+
+	if sb.Spec.SecretRootKey != nil && sb.Spec.SecretKey != nil {
+		return nil, fmt.Errorf("setting both secretRootKey and secretKey is not allowed")
+	}
 	return nil, nil
 }
 

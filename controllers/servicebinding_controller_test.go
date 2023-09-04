@@ -331,6 +331,21 @@ var _ = Describe("ServiceBinding controller", func() {
 					Expect(bindingSecret).ToNot(BeNil())
 				})
 			})
+
+			When("both secretRootKey and secretKey sets", func() {
+				ctx := context.Background()
+				It("should fail the request with relevant message and allow the user to replace secret name", func() {
+					binding := newBindingObject(bindingName, bindingTestNamespace)
+					binding.Spec.ServiceInstanceName = "g"
+					str := "f"
+					binding.Spec.SecretKey = &str
+					binding.Spec.SecretRootKey = &str
+
+					err := k8sClient.Create(ctx, binding)
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("setting both secretRootKey and secretKey is not allowed"))
+				})
+			})
 		})
 
 		Context("Valid parameters", func() {

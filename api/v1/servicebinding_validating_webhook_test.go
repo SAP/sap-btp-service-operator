@@ -19,6 +19,15 @@ var _ = Describe("Service Binding Webhook Test", func() {
 				_, err := binding.ValidateCreate()
 				Expect(err).ToNot(HaveOccurred())
 			})
+
+			It("should fail when both secretRootKey and secretKey sets", func() {
+				str := "f"
+				binding.Spec.SecretKey = &str
+				binding.Spec.SecretRootKey = &str
+				_, err := binding.ValidateCreate()
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("setting both secretRootKey and secretKey is not allowed"))
+			})
 		})
 
 		Context("Validate update of spec before binding is created (failure recovery)", func() {
