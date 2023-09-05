@@ -544,10 +544,8 @@ func (r *ServiceInstanceReconciler) handleInstanceSharingError(ctx context.Conte
 
 func isFinalState(serviceInstance *servicesv1.ServiceInstance) bool {
 	for _, cond := range serviceInstance.GetConditions() {
-		if cond.ObservedGeneration != serviceInstance.Generation {
-			if cond.Type != api.ConditionReady {
-				return false
-			}
+		if cond.ObservedGeneration != 0 && cond.ObservedGeneration != serviceInstance.Generation {
+			return false
 		}
 	}
 
@@ -658,21 +656,24 @@ func generateEncodedMD5Hash(str string) string {
 }
 
 func setSharedCondition(object api.SAPBTPResource, status metav1.ConditionStatus, reason, msg string) {
-	shareCondition := metav1.Condition{
-		Type:               api.ConditionShared,
-		Status:             status,
-		Reason:             reason,
-		Message:            msg,
-		ObservedGeneration: object.GetGeneration(),
-	}
 	conditions := object.GetConditions()
-	meta.SetStatusCondition(&conditions, shareCondition)
-
 	// align all conditions to latest generation
 	for _, cond := range object.GetConditions() {
-		cond.ObservedGeneration = object.GetGeneration()
-		meta.SetStatusCondition(&conditions, cond)
+		if cond.Type != api.ConditionShared {
+			cond.ObservedGeneration = object.GetGeneration()
+			meta.SetStatusCondition(&conditions, cond)
+		}
 	}
+
+	shareCondition := metav1.Condition{
+		Type:    api.ConditionShared,
+		Status:  status,
+		Reason:  reason,
+		Message: msg,
+		//shared condition does not contain observed generation
+	}
+	meta.RemoveStatusCondition(&conditions, api.ConditionShared) //remove shared condition with observed generation
+	meta.SetStatusCondition(&conditions, shareCondition)
 
 	object.SetConditions(conditions)
 }
