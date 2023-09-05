@@ -995,11 +995,6 @@ var _ = Describe("ServiceInstance controller", func() {
 						var instance = &v1.ServiceInstance{Status: v1.ServiceInstanceStatus{
 							Conditions: []metav1.Condition{
 								{
-									Type:               api.ConditionReady,
-									Status:             metav1.ConditionTrue,
-									ObservedGeneration: 1,
-								},
-								{
 									Type:               api.ConditionSucceeded,
 									Status:             metav1.ConditionTrue,
 									ObservedGeneration: 8,
