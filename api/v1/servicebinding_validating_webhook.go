@@ -56,7 +56,7 @@ func (sb *ServiceBinding) ValidateCreate() (admission.Warnings, error) {
 	}
 
 	if sb.Spec.SecretRootKey != nil && sb.Spec.SecretKey != nil {
-		return nil, fmt.Errorf("setting both secretRootKey and secretKey is not allowed")
+		return nil, fmt.Errorf("spec error. setting both secretRootKey and secretKey is not allowed")
 	}
 	return nil, nil
 }
@@ -75,7 +75,7 @@ func (sb *ServiceBinding) ValidateUpdate(old runtime.Object) (admission.Warnings
 	if oldBinding.Labels != nil {
 		if _, ok := oldBinding.Labels[api.StaleBindingIDLabel]; ok {
 			if sb.Spec.CredRotationPolicy.Enabled {
-				return nil, fmt.Errorf("enabling cred rotation for rotated binding is not allowed")
+				return nil, fmt.Errorf("spec error. enabling cred rotation for rotated binding is not allowed")
 			}
 			if !sb.validateRotationLabels(oldBinding) {
 				return nil, fmt.Errorf("modifying rotation labels is not allowed")
