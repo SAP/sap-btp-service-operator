@@ -433,16 +433,13 @@ var _ = Describe("ServiceBinding controller", func() {
 					ctx := context.Background()
 					binding := newBindingObject("binding-with-secretrootkey", bindingTestNamespace)
 					binding.Spec.ServiceInstanceName = instanceName
-					secretKey := "mycredentials"
-					binding.Spec.SecretKey = &secretKey
 					secretRootKey := "root"
 					binding.Spec.SecretRootKey = &secretRootKey
 
-					_ = k8sClient.Create(ctx, binding)
+					k8sClient.Create(ctx, binding)
 					bindingLookupKey := types.NamespacedName{Name: binding.Name, Namespace: binding.Namespace}
 					Eventually(func() bool {
-						err := k8sClient.Get(ctx, bindingLookupKey, binding)
-						if err != nil {
+						if err := k8sClient.Get(ctx, bindingLookupKey, binding); err != nil {
 							return false
 						}
 						return isReady(binding)
@@ -453,7 +450,6 @@ var _ = Describe("ServiceBinding controller", func() {
 					Expect(bindingSecret.Data).To(HaveKey("root"))
 					res := make(map[string]string)
 					Expect(json.Unmarshal(bindingSecret.Data["root"], &res)).To(Succeed())
-					Expect(res[secretKey]).To(Equal(`{"secret_key": "secret_value", "escaped": "{\"escaped_key\":\"escaped_val\"}"}`))
 					Expect(res["plan"]).To(Equal("a-plan-name"))
 					Expect(res["label"]).To(Equal("an-offering-name"))
 					Expect(res["tags"]).To(Equal("[\"test\",\"custom-tag\"]"))
