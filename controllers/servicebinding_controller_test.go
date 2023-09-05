@@ -343,7 +343,7 @@ var _ = Describe("ServiceBinding controller", func() {
 
 					err := k8sClient.Create(ctx, binding)
 					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("setting both secretRootKey and secretKey is not allowed"))
+					Expect(err.Error()).To(ContainSubstring("spec error. setting both secretRootKey and secretKey is not allowed"))
 				})
 			})
 		})

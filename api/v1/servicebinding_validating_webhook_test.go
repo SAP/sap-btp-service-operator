@@ -26,7 +26,7 @@ var _ = Describe("Service Binding Webhook Test", func() {
 				binding.Spec.SecretRootKey = &str
 				_, err := binding.ValidateCreate()
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("setting both secretRootKey and secretKey is not allowed"))
+				Expect(err.Error()).To(ContainSubstring("spec error. setting both secretRootKey and secretKey is not allowed"))
 			})
 		})
 
