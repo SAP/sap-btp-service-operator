@@ -670,9 +670,9 @@ func setSharedCondition(object api.SAPBTPResource, status metav1.ConditionStatus
 		Status:  status,
 		Reason:  reason,
 		Message: msg,
-		//shared condition does not contain observed generation
+		// shared condition does not contain observed generation
 	}
-	meta.RemoveStatusCondition(&conditions, api.ConditionShared) //remove shared condition with observed generation
+	meta.RemoveStatusCondition(&conditions, api.ConditionShared)
 	meta.SetStatusCondition(&conditions, shareCondition)
 
 	object.SetConditions(conditions)
