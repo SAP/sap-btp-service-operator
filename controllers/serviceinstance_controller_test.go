@@ -947,7 +947,7 @@ var _ = Describe("ServiceInstance controller", func() {
 		})
 	})
 
-	FContext("Unit Tests", func() {
+	Context("Unit Tests", func() {
 		Context("isFinalState", func() {
 			When("Ready.ObservedGeneration == 0", func() {
 				It("should be true", func() {
