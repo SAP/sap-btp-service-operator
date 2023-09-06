@@ -8,8 +8,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"fmt"
 )
 
 type FakeAuthClient struct {
@@ -39,13 +37,24 @@ func TestSMClient(t *testing.T) {
 var (
 	client         Client
 	handlerDetails []HandlerDetails
-	validToken     = "valid-token"
 	smServer       *httptest.Server
 	fakeAuthClient *FakeAuthClient
-	params         *Parameters
+
+	validToken = "valid-token"
+	params     = &Parameters{
+		GeneralParams: []string{"key=value"},
+	}
 )
 
-var createSMHandler = func() http.Handler {
+var _ = JustBeforeEach(func() {
+	var err error
+	smServer = httptest.NewServer(createSMHandler())
+	fakeAuthClient = &FakeAuthClient{AccessToken: validToken}
+	client, err = NewClient(context.TODO(), &ClientConfig{URL: smServer.URL}, fakeAuthClient)
+	Expect(err).ToNot(HaveOccurred())
+})
+
+func createSMHandler() http.Handler {
 	mux := http.NewServeMux()
 	for i := range handlerDetails {
 		v := handlerDetails[i]
@@ -68,23 +77,3 @@ var createSMHandler = func() http.Handler {
 	}
 	return mux
 }
-
-var verifyErrorMsg = func(errorMsg, path string, body []byte, statusCode int) {
-	Expect(errorMsg).To(ContainSubstring(BuildURL(smServer.URL+path, params)))
-	Expect(errorMsg).To(ContainSubstring(string(body)))
-	Expect(errorMsg).To(ContainSubstring(fmt.Sprintf("StatusCode: %d", statusCode)))
-}
-
-var _ = BeforeEach(func() {
-	params = &Parameters{
-		GeneralParams: []string{"key=value"},
-	}
-})
-
-var _ = BeforeEach(func() {
-	var err error
-	smServer = httptest.NewServer(createSMHandler())
-	fakeAuthClient = &FakeAuthClient{AccessToken: validToken}
-	client, err = NewClient(context.TODO(), &ClientConfig{URL: smServer.URL}, fakeAuthClient)
-	Expect(err).ToNot(HaveOccurred())
-})

@@ -76,7 +76,19 @@ type ServiceManagerError struct {
 }
 
 func (e *ServiceManagerError) Error() string {
+	if e.BrokerError != nil {
+		return e.BrokerError.Error()
+	}
+
 	return e.Description
+}
+
+func (e *ServiceManagerError) GetStatusCode() int {
+	if e.BrokerError != nil {
+		return e.BrokerError.StatusCode
+	}
+
+	return e.StatusCode
 }
 
 type serviceManagerClient struct {
