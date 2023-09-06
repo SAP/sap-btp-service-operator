@@ -890,9 +890,13 @@ var _ = Describe("ServiceBinding controller", func() {
 				RotatedBindingTTL: "1h",
 				RotationFrequency: "1ns",
 			}
-			secret := getSecret(ctx, createdBinding.Spec.SecretName, bindingTestNamespace, true)
-			secret.Data = map[string][]byte{}
-			Expect(k8sClient.Update(ctx, secret)).To(Succeed())
+
+			var secret *corev1.Secret
+			Eventually(func() bool {
+				secret = getSecret(ctx, createdBinding.Spec.SecretName, bindingTestNamespace, true)
+				secret.Data = map[string][]byte{}
+				return k8sClient.Update(ctx, secret) == nil
+			}, timeout, interval).Should(BeTrue())
 
 			updateBinding(ctx, defaultLookupKey, createdBinding)
 

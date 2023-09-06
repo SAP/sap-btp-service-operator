@@ -990,10 +990,15 @@ var _ = Describe("ServiceInstance controller", func() {
 			})
 
 			When("generation is > 1", func() {
-				When("observed generation == genration", func() {
+				When("observed generation == generation", func() {
 					It("should return true ", func() {
 						var instance = &v1.ServiceInstance{Status: v1.ServiceInstanceStatus{
 							Conditions: []metav1.Condition{
+								{
+									Type:               api.ConditionReady,
+									Status:             metav1.ConditionTrue,
+									ObservedGeneration: 0,
+								},
 								{
 									Type:               api.ConditionSucceeded,
 									Status:             metav1.ConditionTrue,
@@ -1006,13 +1011,13 @@ var _ = Describe("ServiceInstance controller", func() {
 				})
 
 				When("observed generation != generation", func() {
-					It("should return false ", func() {
+					It("should return false", func() {
 						var instance = &v1.ServiceInstance{Status: v1.ServiceInstanceStatus{
 							Conditions: []metav1.Condition{
 								{
 									Type:               api.ConditionReady,
 									Status:             metav1.ConditionTrue,
-									ObservedGeneration: 1,
+									ObservedGeneration: 0,
 								},
 								{
 									Type:               api.ConditionSucceeded,
