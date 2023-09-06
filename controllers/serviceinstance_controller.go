@@ -592,14 +592,11 @@ func sharingUpdateRequired(serviceInstance *servicesv1.ServiceInstance) bool {
 		return true
 	}
 
-	if sharedCondition.ObservedGeneration != serviceInstance.Generation {
-		if serviceInstance.IsSharedDesired() {
-			return sharedCondition.Status != metav1.ConditionTrue
-		}
-		return sharedCondition.Status == metav1.ConditionTrue
+	if serviceInstance.IsSharedDesired() {
+		return sharedCondition.Status == metav1.ConditionFalse
 	}
 
-	return false
+	return sharedCondition.Status == metav1.ConditionTrue
 }
 
 func getOfferingTags(smClient sm.Client, planID string) ([]string, error) {
