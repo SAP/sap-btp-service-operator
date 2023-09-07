@@ -22,7 +22,9 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net"
+	"net/http"
 	"path/filepath"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"strings"
 	"testing"
 	"time"
@@ -211,45 +213,22 @@ var _ = AfterSuite(func() {
 })
 
 func isResourceReady(resource api.SAPBTPResource) bool {
-	return meta.IsStatusConditionPresentAndEqual(resource.GetConditions(), api.ConditionReady, metav1.ConditionTrue)
+	return resource.GetObservedGeneration() == resource.GetGeneration() &&
+		meta.IsStatusConditionPresentAndEqual(resource.GetConditions(), api.ConditionReady, metav1.ConditionTrue)
 }
 
-func waitForBindingToBeReady(ctx context.Context, key types.NamespacedName) *v1.ServiceBinding {
-	sb := &v1.ServiceBinding{}
-	Eventually(func() bool {
-		err := k8sClient.Get(ctx, key, sb)
-		if err != nil {
-			return false
-		}
-		return isResourceReady(sb)
-	}, timeout, interval).Should(BeTrue())
-	return sb
+func waitForResourceToBeReady(ctx context.Context, resource api.SAPBTPResource) {
+	waitForResourceCondition(ctx, resource, api.ConditionReady, metav1.ConditionTrue, "", "")
 }
 
-func waitForInstanceToBeReady(ctx context.Context, key types.NamespacedName) *v1.ServiceInstance {
-	si := &v1.ServiceInstance{}
-	Eventually(func() bool {
-		err := k8sClient.Get(ctx, key, si)
-		if err != nil {
-			return false
-		}
-		return isResourceReady(si)
-	}, timeout, interval).Should(BeTrue())
-	return si
-}
-
-func waitForInstanceCondition(ctx context.Context, instance *v1.ServiceInstance, conditionType string, status metav1.ConditionStatus, reason, message string) *v1.ServiceInstance {
-	return waitForResourceCondition(ctx, instance, conditionType, status, reason, message).(*v1.ServiceInstance)
-}
-
-func waitForBindingCondition(ctx context.Context, binding *v1.ServiceBinding, conditionType string, status metav1.ConditionStatus, reason, message string) *v1.ServiceBinding {
-	return waitForResourceCondition(ctx, binding, conditionType, status, reason, message).(*v1.ServiceBinding)
-}
-
-func waitForResourceCondition(ctx context.Context, resource api.SAPBTPResource, conditionType string, status metav1.ConditionStatus, reason, message string) api.SAPBTPResource {
+func waitForResourceCondition(ctx context.Context, resource api.SAPBTPResource, conditionType string, status metav1.ConditionStatus, reason, message string) {
 	key := getResourceNamespacedName(resource)
 	Eventually(func() bool {
 		if err := k8sClient.Get(ctx, key, resource); err != nil {
+			return false
+		}
+
+		if resource.GetObservedGeneration() != resource.GetGeneration() {
 			return false
 		}
 
@@ -271,9 +250,12 @@ func waitForResourceCondition(ctx context.Context, resource api.SAPBTPResource, 
 		}
 
 		return true
-	}, timeout, interval).Should(BeTrue())
-
-	return resource
+	}, timeout, interval).Should(BeTrue(),
+		eventuallyMsgForResource(
+			fmt.Sprintf("expected condition: {type: %s, status: %s, reason: %s, message: %s} was not met", conditionType, status, reason, message),
+			key,
+			resource),
+	)
 }
 
 func getResourceNamespacedName(resource client.Object) types.NamespacedName {
@@ -300,7 +282,7 @@ func deleteAndWait(ctx context.Context, key types.NamespacedName, resource clien
 		}
 
 		return true
-	}, timeout, interval).Should(BeTrue(), fmt.Sprintf("failed to mark %s %s for deletion", resource.GetObjectKind().GroupVersionKind().Kind, key.String()))
+	}, timeout, interval).Should(BeTrue(), eventuallyMsgForResource("failed to mark for deletion", key, resource))
 
 	if wait {
 		waitForResourceToBeDeleted(ctx, key, resource)
@@ -310,7 +292,7 @@ func deleteAndWait(ctx context.Context, key types.NamespacedName, resource clien
 func waitForResourceToBeDeleted(ctx context.Context, key types.NamespacedName, resource client.Object) {
 	Eventually(func() bool {
 		return apierrors.IsNotFound(k8sClient.Get(ctx, key, resource))
-	}, timeout, interval).Should(BeTrue(), fmt.Sprintf("%s %s was not deleted", resource.GetObjectKind().GroupVersionKind().Kind, key.String()))
+	}, timeout, interval).Should(BeTrue(), eventuallyMsgForResource("resource is not deleted", key, resource))
 }
 
 func createParamsSecret(namespace string) {
@@ -337,4 +319,30 @@ func printSection(str string) {
 	fmt.Println(ul.String())
 
 	fmt.Println()
+}
+
+func getNonTransientBrokerError(errMessage string) error {
+	return &sm.ServiceManagerError{
+		StatusCode:  http.StatusBadRequest,
+		Description: "smErrMessage",
+		BrokerError: &api.HTTPStatusCodeError{
+			StatusCode:   400,
+			ErrorMessage: &errMessage,
+		}}
+}
+
+func getTransientBrokerError(errorMessage string) error {
+	return &sm.ServiceManagerError{
+		StatusCode:  http.StatusBadGateway,
+		Description: "smErrMessage",
+		BrokerError: &api.HTTPStatusCodeError{
+			StatusCode:   http.StatusTooManyRequests,
+			ErrorMessage: &errorMessage,
+		},
+	}
+}
+
+func eventuallyMsgForResource(message string, key types.NamespacedName, resource client.Object) string {
+	gvk, _ := apiutil.GVKForObject(resource, scheme.Scheme)
+	return fmt.Sprintf("eventaully failure for %s %s. message: %s", gvk.Kind, key.String(), message)
 }

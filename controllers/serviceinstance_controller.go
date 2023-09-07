@@ -69,6 +69,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	serviceInstance = serviceInstance.DeepCopy()
+	serviceInstance.SetObservedGeneration(serviceInstance.Generation)
 
 	if len(serviceInstance.GetConditions()) == 0 {
 		err := r.init(ctx, serviceInstance)
@@ -186,7 +187,7 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client
 		log.Info(fmt.Sprintf("failed to fetch operation, got error from SM: %s", statusErr.Error()), "operationURL", serviceInstance.Status.OperationURL)
 		setInProgressConditions(serviceInstance.Status.OperationType, statusErr.Error(), serviceInstance)
 		// if failed to read operation status we cleanup the status to trigger re-sync from SM
-		freshStatus := servicesv1.ServiceInstanceStatus{Conditions: serviceInstance.GetConditions()}
+		freshStatus := servicesv1.ServiceInstanceStatus{Conditions: serviceInstance.GetConditions(), ObservedGeneration: serviceInstance.Generation}
 		if isDelete(serviceInstance.ObjectMeta) {
 			freshStatus.InstanceID = serviceInstance.Status.InstanceID
 		}
@@ -555,9 +556,15 @@ func isFinalState(serviceInstance *servicesv1.ServiceInstance) bool {
 		return false
 	}
 
+	// for cases of instance update while polling for create/update
+	if getSpecHash(serviceInstance) != serviceInstance.Status.HashedSpec {
+		return false
+	}
+
 	return !sharingUpdateRequired(serviceInstance)
 }
 
+// TODO unit test
 func updateRequired(serviceInstance *servicesv1.ServiceInstance) bool {
 	//update is not supported for failed instances (this can occur when instance creation was asynchronously)
 	if serviceInstance.Status.Ready != metav1.ConditionTrue {
@@ -572,6 +579,7 @@ func updateRequired(serviceInstance *servicesv1.ServiceInstance) bool {
 	return getSpecHash(serviceInstance) != serviceInstance.Status.HashedSpec
 }
 
+// TODO unit test
 func sharingUpdateRequired(serviceInstance *servicesv1.ServiceInstance) bool {
 	//relevant only for non-shared instances - sharing instance is possible only for usable instances
 	if serviceInstance.Status.Ready != metav1.ConditionTrue {

@@ -81,6 +81,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	serviceBinding = serviceBinding.DeepCopy()
+	serviceBinding.SetObservedGeneration(serviceBinding.Generation)
 
 	if len(serviceBinding.GetConditions()) == 0 {
 		if err := r.init(ctx, serviceBinding); err != nil {

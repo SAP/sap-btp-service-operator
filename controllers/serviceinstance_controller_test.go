@@ -104,7 +104,8 @@ var _ = Describe("ServiceInstance controller", func() {
 		if !waitForReady {
 			return instance
 		}
-		return waitForInstanceToBeReady(ctx, types.NamespacedName{Name: fakeInstanceName, Namespace: testNamespace})
+		waitForResourceToBeReady(ctx, instance)
+		return instance
 	}
 
 	deleteInstance := func(ctx context.Context, instanceToDelete *v1.ServiceInstance, wait bool) {
@@ -240,7 +241,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 					It("should have failure condition", func() {
 						serviceInstance = createInstance(ctx, instanceSpec, false)
-						waitForInstanceCreationFailure(ctx, defaultLookupKey, serviceInstance, errMessage)
+						waitForResourceCondition(ctx, serviceInstance, api.ConditionFailed, metav1.ConditionTrue, CreateFailed, errMessage)
 					})
 				})
 
@@ -256,21 +257,21 @@ var _ = Describe("ServiceInstance controller", func() {
 
 					It("should retry until success", func() {
 						serviceInstance = createInstance(ctx, instanceSpec, true)
-						waitForInstanceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionTrue, Created, "")
+						waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionTrue, Created, "")
 					})
 				})
 
 				Context("with sm status code 502 and broker status code 429", func() {
-					errorMessage := "broker too many requests"
+					errMessage := "broker too many requests"
 					BeforeEach(func() {
-						fakeClient.ProvisionReturns(nil, getTransientBrokerError(errorMessage))
+						fakeClient.ProvisionReturns(nil, getTransientBrokerError(errMessage))
 					})
 
 					It("should be transient error and eventually succeed", func() {
 						serviceInstance = createInstance(ctx, instanceSpec, false)
-						waitForInstanceCreationFailure(ctx, defaultLookupKey, serviceInstance, errorMessage)
+						waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionFalse, CreateInProgress, errMessage)
 						fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
-						waitForInstanceToBeReady(ctx, defaultLookupKey)
+						waitForResourceToBeReady(ctx, serviceInstance)
 					})
 				})
 
@@ -283,7 +284,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 					It("should have failure condition - non transient error", func() {
 						serviceInstance = createInstance(ctx, instanceSpec, false)
-						waitForInstanceCreationFailure(ctx, defaultLookupKey, serviceInstance, errMessage)
+						waitForResourceCondition(ctx, serviceInstance, api.ConditionFailed, metav1.ConditionTrue, CreateFailed, errMessage)
 					})
 				})
 			})
@@ -307,7 +308,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						Type:  smClientTypes.CREATE,
 						State: smClientTypes.SUCCEEDED,
 					}, nil)
-					waitForInstanceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionTrue, Created, "")
+					waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionTrue, Created, "")
 				})
 			})
 
@@ -325,10 +326,10 @@ var _ = Describe("ServiceInstance controller", func() {
 			})
 
 			When("updating during create", func() {
-				It("should save the latest spec", func() {
+				It("should update the instance after created successfully", func() {
 					serviceInstance = createInstance(ctx, instanceSpec, false)
+					waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionFalse, CreateInProgress, "")
 					newName := "new-name" + uuid.New().String()
-					serviceInstance.Spec.ExternalName = newName
 
 					Eventually(func() bool {
 						if err := k8sClient.Get(ctx, defaultLookupKey, serviceInstance); err != nil {
@@ -339,16 +340,16 @@ var _ = Describe("ServiceInstance controller", func() {
 						return k8sClient.Update(ctx, serviceInstance) == nil
 					}, timeout, interval).Should(BeTrue())
 
+					Expect(fakeClient.UpdateInstanceCallCount()).To(Equal(0))
+
 					fakeClient.StatusReturns(&smclientTypes.Operation{
 						ID:    "1234",
 						Type:  smClientTypes.CREATE,
 						State: smClientTypes.SUCCEEDED,
 					}, nil)
-
-					Eventually(func() bool {
-						_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-						return isResourceReady(serviceInstance) && serviceInstance.Spec.ExternalName == newName
-					}, timeout, interval).Should(BeTrue())
+					waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionTrue, Updated, "")
+					Expect(fakeClient.UpdateInstanceCallCount()).To(BeNumerically(">", 0))
+					Expect(fakeClient.ProvisionCallCount()).To(Equal(1))
 				})
 			})
 
@@ -357,7 +358,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					serviceInstance = createInstance(ctx, instanceSpec, false)
 
 					By("waiting for instance to be CreateInProgress")
-					waitForInstanceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionFalse, CreateInProgress, "")
+					waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionFalse, CreateInProgress, "")
 
 					fakeClient.DeprovisionReturns("/v1/service_instances/id/operations/1234", nil)
 					fakeClient.StatusReturns(&smclientTypes.Operation{
@@ -367,7 +368,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					}, nil)
 
 					deleteInstance(ctx, serviceInstance, false)
-					waitForInstanceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionFalse, DeleteInProgress, "")
+					waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionFalse, DeleteInProgress, "")
 
 					fakeClient.StatusReturns(&smclientTypes.Operation{
 						ID:    "1234",
@@ -375,7 +376,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						State: smClientTypes.SUCCEEDED,
 					}, nil)
 
-					validateInstanceGotDeleted(ctx, defaultLookupKey)
+					waitForResourceToBeDeleted(ctx, getResourceNamespacedName(serviceInstance), serviceInstance)
 				})
 			})
 		})
@@ -412,7 +413,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						serviceInstance = updateInstance(ctx, serviceInstance)
 						Expect(serviceInstance.Spec.ExternalName).To(Equal(newSpec.ExternalName))
 						Expect(serviceInstance.Spec.UserInfo).NotTo(BeNil())
-						waitForInstanceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionTrue, Updated, "")
+						waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionTrue, Updated, "")
 					})
 				})
 			})
@@ -432,15 +433,15 @@ var _ = Describe("ServiceInstance controller", func() {
 						newSpec := updateSpec()
 						serviceInstance.Spec = newSpec
 						updateInstance(ctx, serviceInstance)
-						waitForInstanceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionFalse, UpdateInProgress, "")
+						waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionFalse, UpdateInProgress, "")
 						fakeClient.StatusReturns(&smclientTypes.Operation{
 							ID:    "1234",
 							Type:  smClientTypes.UPDATE,
 							State: smClientTypes.SUCCEEDED,
 						}, nil)
-						instance := waitForInstanceToBeReady(ctx, defaultLookupKey)
-						Expect(instance.Status.InstanceID).ToNot(BeEmpty())
-						Expect(instance.Spec.ExternalName).To(Equal(newSpec.ExternalName))
+						waitForResourceToBeReady(ctx, serviceInstance)
+						Expect(serviceInstance.Status.InstanceID).ToNot(BeEmpty())
+						Expect(serviceInstance.Spec.ExternalName).To(Equal(newSpec.ExternalName))
 					})
 
 					When("updating during update", func() {
@@ -477,7 +478,7 @@ var _ = Describe("ServiceInstance controller", func() {
 								State: smClientTypes.SUCCEEDED,
 							}, nil)
 
-							validateInstanceGotDeleted(ctx, defaultLookupKey)
+							waitForResourceToBeDeleted(ctx, getResourceNamespacedName(serviceInstance), serviceInstance)
 						})
 					})
 				})
@@ -495,7 +496,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						newSpec := updateSpec()
 						serviceInstance.Spec = newSpec
 						updateInstance(ctx, serviceInstance)
-						waitForInstanceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionFalse, UpdateFailed, "")
+						waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionFalse, UpdateFailed, "")
 					})
 				})
 			})
@@ -509,10 +510,10 @@ var _ = Describe("ServiceInstance controller", func() {
 				It("recognize the error as transient and eventually succeed", func() {
 					serviceInstance.Spec = updateSpec()
 					updateInstance(ctx, serviceInstance)
-					serviceInstance = waitForInstanceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionFalse, UpdateInProgress, "")
+					waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionFalse, UpdateInProgress, "")
 					fakeClient.UpdateInstanceReturns(nil, "", nil)
 					updateInstance(ctx, serviceInstance)
-					waitForInstanceToBeReady(ctx, defaultLookupKey)
+					waitForResourceToBeReady(ctx, serviceInstance)
 				})
 			})
 
@@ -530,13 +531,13 @@ var _ = Describe("ServiceInstance controller", func() {
 					It("condition should be updated from in progress to Updated", func() {
 						serviceInstance.Spec = updateSpec()
 						updateInstance(ctx, serviceInstance)
-						waitForInstanceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionFalse, UpdateInProgress, "")
+						waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionFalse, UpdateInProgress, "")
 						fakeClient.StatusReturns(&smclientTypes.Operation{
 							ID:    "1234",
 							Type:  smClientTypes.UPDATE,
 							State: smClientTypes.FAILED,
 						}, nil)
-						waitForInstanceToBeReady(ctx, defaultLookupKey)
+						waitForResourceToBeReady(ctx, serviceInstance)
 					})
 				})
 
@@ -554,7 +555,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					It("should recover", func() {
 						serviceInstance.Spec = updateSpec()
 						updateInstance(ctx, serviceInstance)
-						waitForInstanceToBeReady(ctx, defaultLookupKey)
+						waitForResourceToBeReady(ctx, serviceInstance)
 					})
 				})
 			})
@@ -618,10 +619,10 @@ var _ = Describe("ServiceInstance controller", func() {
 
 			When("delete in SM fails", func() {
 				It("should not delete the k8s instance and should update the condition", func() {
-					err := "failed to delete instance"
-					fakeClient.DeprovisionReturns("", fmt.Errorf(err))
+					errMsg := "failed to delete instance"
+					fakeClient.DeprovisionReturns("", fmt.Errorf(errMsg))
 					deleteInstance(ctx, serviceInstance, false)
-					waitForInstanceToBeFailedWithMsg(ctx, defaultLookupKey, err)
+					waitForResourceCondition(ctx, serviceInstance, api.ConditionFailed, metav1.ConditionTrue, DeleteFailed, errMsg)
 				})
 			})
 		})
@@ -635,7 +636,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					State: smClientTypes.INPROGRESS,
 				}, nil)
 				deleteInstance(ctx, serviceInstance, false)
-				waitForInstanceToBeInProgress(ctx, defaultLookupKey)
+				waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionFalse, DeleteInProgress, "")
 			})
 
 			When("polling ends with success", func() {
@@ -663,7 +664,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 				It("should not delete the k8s instance and condition is updated with failure", func() {
 					deleteInstance(ctx, serviceInstance, false)
-					waitForInstanceToBeFailedWithMsg(ctx, defaultLookupKey, "broker-failure")
+					waitForResourceCondition(ctx, serviceInstance, api.ConditionFailed, metav1.ConditionTrue, DeleteFailed, "broker-failure")
 				})
 			})
 		})
@@ -746,11 +747,15 @@ var _ = Describe("ServiceInstance controller", func() {
 
 					It("should recover the existing instance and poll until instance is ready", func() {
 						serviceInstance = createInstance(ctx, instanceSpec, false)
-						waitForInstanceID(ctx, defaultLookupKey, fakeInstanceID)
+						key := getResourceNamespacedName(serviceInstance)
+						Eventually(func() bool {
+							_ = k8sClient.Get(ctx, key, serviceInstance)
+							return serviceInstance.Status.InstanceID == fakeInstanceID
+						}, timeout, interval).Should(BeTrue(), eventuallyMsgForResource("service instance id not recovered", key, serviceInstance))
 						Expect(fakeClient.ProvisionCallCount()).To(Equal(0))
-						waitForInstanceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionFalse, CreateInProgress, "")
+						Expect(fakeClient.ListInstancesCallCount()).To(BeNumerically(">", 0))
 						fakeClient.StatusReturns(&smclientTypes.Operation{ResourceID: fakeInstanceID, State: smClientTypes.SUCCEEDED, Type: smClientTypes.CREATE}, nil)
-						waitForInstanceToBeReady(ctx, defaultLookupKey)
+						waitForResourceToBeReady(ctx, serviceInstance)
 					})
 				})
 
@@ -763,23 +768,41 @@ var _ = Describe("ServiceInstance controller", func() {
 
 					It("should recover the existing instance and update condition failure", func() {
 						serviceInstance = createInstance(ctx, instanceSpec, false)
-						waitForInstanceID(ctx, defaultLookupKey, fakeInstanceID)
+						waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionFalse, CreateFailed, "")
+						Expect(serviceInstance.Status.InstanceID).To(Equal(fakeInstanceID))
 						Expect(fakeClient.ProvisionCallCount()).To(Equal(0))
-						waitForInstanceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionFalse, CreateFailed, "")
 					})
 				})
 
 				When("no last operation", func() {
-					BeforeEach(func() {
+					JustBeforeEach(func() {
 						recoveredInstance.LastOperation = nil
 						fakeClient.ListInstancesReturns(&smclientTypes.ServiceInstances{
 							ServiceInstances: []smclientTypes.ServiceInstance{recoveredInstance}}, nil)
 					})
-					It("should recover the existing instance", func() {
-						serviceInstance = createInstance(ctx, instanceSpec, false)
-						waitForInstanceID(ctx, defaultLookupKey, fakeInstanceID)
-						Expect(fakeClient.ProvisionCallCount()).To(Equal(0))
+					When("instance is ready in SM", func() {
+						BeforeEach(func() {
+							recoveredInstance.Ready = true
+						})
+						It("should recover the instance with status Ready=true", func() {
+							serviceInstance = createInstance(ctx, instanceSpec, false)
+							waitForResourceToBeReady(ctx, serviceInstance)
+							Expect(fakeClient.ProvisionCallCount()).To(Equal(0))
+							Expect(serviceInstance.Status.InstanceID).To(Equal(fakeInstanceID))
+						})
 					})
+					When("instance is not ready in SM", func() {
+						BeforeEach(func() {
+							recoveredInstance.Ready = false
+						})
+						It("should recover the instance with status Ready=false", func() {
+							serviceInstance = createInstance(ctx, instanceSpec, false)
+							waitForResourceCondition(ctx, serviceInstance, api.ConditionFailed, metav1.ConditionTrue, CreateFailed, "")
+							Expect(fakeClient.ProvisionCallCount()).To(Equal(0))
+							Expect(serviceInstance.Status.InstanceID).To(Equal(fakeInstanceID))
+						})
+					})
+
 				})
 			})
 		})
@@ -790,9 +813,8 @@ var _ = Describe("ServiceInstance controller", func() {
 			When("creating instance with shared=true", func() {
 				It("should succeed to provision and sharing the instance", func() {
 					fakeClient.ShareInstanceReturns(nil)
-					createInstance(ctx, sharedInstanceSpec, true)
-					serviceInstance = waitForInstanceToBeShared(ctx, defaultLookupKey)
-					Expect(len(serviceInstance.Status.Conditions)).To(Equal(3))
+					serviceInstance = createInstance(ctx, sharedInstanceSpec, true)
+					waitForInstanceToBeShared(ctx, serviceInstance)
 				})
 			})
 
@@ -805,20 +827,20 @@ var _ = Describe("ServiceInstance controller", func() {
 					It("should succeed", func() {
 						serviceInstance.Spec.Shared = pointer.Bool(true)
 						updateInstance(ctx, serviceInstance)
-						waitForInstanceToBeShared(ctx, defaultLookupKey)
+						waitForInstanceToBeShared(ctx, serviceInstance)
 					})
 				})
 
 				When("sharing succeeds", func() {
 					It("hashed spec should be the same before and after", func() {
-						before := serviceInstance.Status.HashedSpec
+						originalHashedSpec := serviceInstance.Status.HashedSpec
 						fakeClient.UpdateInstanceReturns(nil, "", nil)
 						serviceInstance.Spec.Shared = pointer.Bool(true)
 						fakeClient.ShareInstanceReturns(nil)
 						updateInstance(ctx, serviceInstance)
-						waitForInstanceToBeShared(ctx, defaultLookupKey)
-						after := serviceInstance.Status.HashedSpec
-						Expect(before).To(Equal(after))
+						waitForInstanceToBeShared(ctx, serviceInstance)
+						newHashedSpec := serviceInstance.Status.HashedSpec
+						Expect(originalHashedSpec).To(Equal(newHashedSpec))
 					})
 				})
 
@@ -827,8 +849,8 @@ var _ = Describe("ServiceInstance controller", func() {
 						serviceInstance.Spec.Shared = pointer.Bool(true)
 						serviceInstance.Spec.ExternalName = "new"
 						updateInstance(ctx, serviceInstance)
-						waitForInstanceToBeShared(ctx, defaultLookupKey)
-						Expect(serviceInstance.Spec.ExternalName).To(Equal("new"))
+						waitForInstanceToBeShared(ctx, serviceInstance)
+						Expect(fakeClient.UpdateInstanceCallCount()).To(Equal(1))
 					})
 				})
 			})
@@ -840,7 +862,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						Description: "errMessage",
 					})
 					serviceInstance = createInstance(ctx, sharedInstanceSpec, false)
-					waitForInstanceCondition(ctx, serviceInstance, api.ConditionFailed, metav1.ConditionTrue, CreateFailed, "")
+					waitForResourceCondition(ctx, serviceInstance, api.ConditionFailed, metav1.ConditionTrue, CreateFailed, "")
 					Expect(fakeClient.ShareInstanceCallCount()).To(BeZero())
 				})
 			})
@@ -858,9 +880,9 @@ var _ = Describe("ServiceInstance controller", func() {
 						})
 						serviceInstance.Spec.Shared = pointer.Bool(true)
 						updateInstance(ctx, serviceInstance)
-						waitForInstanceCondition(ctx, serviceInstance, api.ConditionShared, metav1.ConditionFalse, InProgress, "")
+						waitForResourceCondition(ctx, serviceInstance, api.ConditionShared, metav1.ConditionFalse, InProgress, "")
 						fakeClient.ShareInstanceReturns(nil)
-						waitForInstanceToBeShared(ctx, defaultLookupKey)
+						waitForInstanceToBeShared(ctx, serviceInstance)
 					})
 				})
 
@@ -872,10 +894,10 @@ var _ = Describe("ServiceInstance controller", func() {
 						})
 						serviceInstance.Spec.Shared = pointer.Bool(true)
 						updateInstance(ctx, serviceInstance)
-						waitForInstanceCondition(ctx, serviceInstance, api.ConditionShared, metav1.ConditionFalse, ShareFailed, "")
+						waitForResourceCondition(ctx, serviceInstance, api.ConditionShared, metav1.ConditionFalse, ShareFailed, "")
 
 						fakeClient.ShareInstanceReturns(nil)
-						waitForInstanceToBeShared(ctx, defaultLookupKey)
+						waitForInstanceToBeShared(ctx, serviceInstance)
 					})
 				})
 
@@ -887,7 +909,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						})
 						serviceInstance.Spec.Shared = pointer.Bool(true)
 						updateInstance(ctx, serviceInstance)
-						waitForInstanceCondition(ctx, serviceInstance, api.ConditionShared, metav1.ConditionFalse, ShareNotSupported, "")
+						waitForResourceCondition(ctx, serviceInstance, api.ConditionShared, metav1.ConditionFalse, ShareNotSupported, "")
 					})
 				})
 
@@ -899,7 +921,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						})
 						serviceInstance.Spec.Shared = pointer.Bool(true)
 						updateInstance(ctx, serviceInstance)
-						waitForInstanceCondition(ctx, serviceInstance, api.ConditionShared, metav1.ConditionFalse, ShareNotSupported, "")
+						waitForResourceCondition(ctx, serviceInstance, api.ConditionShared, metav1.ConditionFalse, ShareNotSupported, "")
 					})
 				})
 			})
@@ -910,7 +932,7 @@ var _ = Describe("ServiceInstance controller", func() {
 				BeforeEach(func() {
 					fakeClient.ShareInstanceReturns(nil)
 					serviceInstance = createInstance(ctx, sharedInstanceSpec, true)
-					waitForInstanceToBeShared(ctx, defaultLookupKey)
+					waitForInstanceToBeShared(ctx, serviceInstance)
 				})
 
 				When("updating instance to un-shared and sm return success", func() {
@@ -918,9 +940,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						serviceInstance.Spec.Shared = pointer.Bool(false)
 						fakeClient.UnShareInstanceReturns(nil)
 						updateInstance(ctx, serviceInstance)
-						serviceInstance = waitForInstanceToBeUnShared(ctx, defaultLookupKey)
-						Expect(len(serviceInstance.Status.Conditions)).To(Equal(3))
-
+						waitForInstanceToBeUnShared(ctx, serviceInstance)
 					})
 				})
 
@@ -941,8 +961,8 @@ var _ = Describe("ServiceInstance controller", func() {
 						serviceInstance.Spec.Shared = pointer.Bool(false)
 						serviceInstance.Spec.ExternalName = "new"
 						updateInstance(ctx, serviceInstance)
-						serviceInstance = waitForInstanceToBeUnShared(ctx, defaultLookupKey)
-						Expect(serviceInstance.Spec.ExternalName).To(Equal("new"))
+						waitForInstanceToBeUnShared(ctx, serviceInstance)
+						Expect(fakeClient.UpdateInstanceCallCount()).To(Equal(1))
 					})
 				})
 			})
@@ -951,7 +971,7 @@ var _ = Describe("ServiceInstance controller", func() {
 				BeforeEach(func() {
 					fakeClient.ShareInstanceReturns(nil)
 					serviceInstance = createInstance(ctx, sharedInstanceSpec, true)
-					waitForInstanceToBeShared(ctx, defaultLookupKey)
+					waitForInstanceToBeShared(ctx, serviceInstance)
 					fakeClient.UnShareInstanceReturns(&sm.ServiceManagerError{
 						StatusCode:  http.StatusBadRequest,
 						Description: "nonTransient",
@@ -961,7 +981,7 @@ var _ = Describe("ServiceInstance controller", func() {
 				It("should have a reason un-shared failed", func() {
 					serviceInstance.Spec.Shared = pointer.Bool(false)
 					updateInstance(ctx, serviceInstance)
-					waitForInstanceCondition(ctx, serviceInstance, api.ConditionShared, metav1.ConditionTrue, UnShareFailed, "")
+					waitForResourceCondition(ctx, serviceInstance, api.ConditionShared, metav1.ConditionTrue, UnShareFailed, "")
 				})
 			})
 		})
@@ -969,28 +989,10 @@ var _ = Describe("ServiceInstance controller", func() {
 
 	Context("Unit Tests", func() {
 		Context("isFinalState", func() {
-			When("Ready.ObservedGeneration == 0", func() {
-				It("should be true", func() {
-					var instance = &v1.ServiceInstance{Status: v1.ServiceInstanceStatus{
-						Conditions: []metav1.Condition{
-							{
-								Type:               api.ConditionReady,
-								Status:             metav1.ConditionTrue,
-								ObservedGeneration: 0,
-							},
-							{
-								Type:               api.ConditionSucceeded,
-								Status:             metav1.ConditionTrue,
-								ObservedGeneration: 1,
-							}},
-					}}
-					instance.SetGeneration(1)
-					Expect(isFinalState(instance)).To(BeTrue())
-				})
-
-				When("Succeeded is false", func() {
-					It("should return false", func() {
-						var instance = &v1.ServiceInstance{Status: v1.ServiceInstanceStatus{
+			When("Succeeded condition is not for current generation", func() {
+				It("should be false", func() {
+					var instance = &v1.ServiceInstance{
+						Status: v1.ServiceInstanceStatus{
 							Conditions: []metav1.Condition{
 								{
 									Type:               api.ConditionReady,
@@ -999,55 +1001,159 @@ var _ = Describe("ServiceInstance controller", func() {
 								},
 								{
 									Type:               api.ConditionSucceeded,
-									Status:             metav1.ConditionFalse,
+									Status:             metav1.ConditionTrue,
 									ObservedGeneration: 1,
-								}},
+								},
+							},
+							HashedSpec: "929e78f4449f8036ce39da3cc3e7eaea",
+						},
+						Spec: v1.ServiceInstanceSpec{
+							ExternalName: "name",
 						}}
+					instance.SetGeneration(2)
+					Expect(isFinalState(instance)).To(BeFalse())
+				})
+
+				When("Succeeded is false", func() {
+					It("should return false", func() {
+						var instance = &v1.ServiceInstance{
+							Status: v1.ServiceInstanceStatus{
+								Conditions: []metav1.Condition{
+									{
+										Type:               api.ConditionReady,
+										Status:             metav1.ConditionTrue,
+										ObservedGeneration: 0,
+									},
+									{
+										Type:               api.ConditionSucceeded,
+										Status:             metav1.ConditionFalse,
+										ObservedGeneration: 1,
+									},
+								},
+								HashedSpec: "929e78f4449f8036ce39da3cc3e7eaea",
+							},
+							Spec: v1.ServiceInstanceSpec{
+								ExternalName: "name",
+							},
+						}
 						instance.SetGeneration(1)
 						Expect(isFinalState(instance)).To(BeFalse())
 					})
 				})
 			})
 
-			When("generation is > 1", func() {
-				When("observed generation == generation", func() {
-					It("should return true ", func() {
-						var instance = &v1.ServiceInstance{Status: v1.ServiceInstanceStatus{
+			When("in progress", func() {
+				It("should return false", func() {
+					var instance = &v1.ServiceInstance{
+						Status: v1.ServiceInstanceStatus{
 							Conditions: []metav1.Condition{
 								{
 									Type:               api.ConditionReady,
 									Status:             metav1.ConditionTrue,
-									ObservedGeneration: 0,
+									ObservedGeneration: 1,
 								},
 								{
 									Type:               api.ConditionSucceeded,
-									Status:             metav1.ConditionTrue,
-									ObservedGeneration: 8,
-								}},
+									Status:             metav1.ConditionFalse,
+									ObservedGeneration: 2,
+								},
+							},
+							HashedSpec: "929e78f4449f8036ce39da3cc3e7eaea",
+						},
+						Spec: v1.ServiceInstanceSpec{
+							ExternalName: "name",
 						}}
-						instance.SetGeneration(8)
-						Expect(isFinalState(instance)).To(BeTrue())
-					})
+					instance.SetGeneration(2)
+					Expect(isFinalState(instance)).To(BeFalse())
 				})
+			})
 
-				When("observed generation != generation", func() {
-					It("should return false", func() {
-						var instance = &v1.ServiceInstance{Status: v1.ServiceInstanceStatus{
+			When("spec changed", func() {
+				It("should return false", func() {
+					var instance = &v1.ServiceInstance{
+						Status: v1.ServiceInstanceStatus{
 							Conditions: []metav1.Condition{
 								{
 									Type:               api.ConditionReady,
 									Status:             metav1.ConditionTrue,
-									ObservedGeneration: 0,
+									ObservedGeneration: 1,
 								},
 								{
 									Type:               api.ConditionSucceeded,
 									Status:             metav1.ConditionTrue,
-									ObservedGeneration: 7,
-								}},
+									ObservedGeneration: 2,
+								},
+							},
+							HashedSpec: "bla",
+						},
+						Spec: v1.ServiceInstanceSpec{
+							ExternalName: "name",
 						}}
-						instance.SetGeneration(8)
-						Expect(isFinalState(instance)).To(BeFalse())
-					})
+					instance.SetGeneration(2)
+					Expect(isFinalState(instance)).To(BeFalse())
+				})
+			})
+
+			When("sharing update is required", func() {
+				It("should return false", func() {
+					var instance = &v1.ServiceInstance{
+						Status: v1.ServiceInstanceStatus{
+							Conditions: []metav1.Condition{
+								{
+									Type:               api.ConditionReady,
+									Status:             metav1.ConditionTrue,
+									ObservedGeneration: 1,
+								},
+								{
+									Type:               api.ConditionSucceeded,
+									Status:             metav1.ConditionTrue,
+									ObservedGeneration: 2,
+								},
+								{
+									Type:   api.ConditionShared,
+									Status: metav1.ConditionFalse,
+								},
+							},
+							HashedSpec: "929e78f4449f8036ce39da3cc3e7eaea",
+							Ready:      metav1.ConditionTrue,
+						},
+						Spec: v1.ServiceInstanceSpec{
+							ExternalName: "name",
+							Shared:       pointer.Bool(true),
+						}}
+					instance.SetGeneration(2)
+					Expect(isFinalState(instance)).To(BeFalse())
+				})
+			})
+
+			When("in final state", func() {
+				It("should return true", func() {
+					var instance = &v1.ServiceInstance{
+						Status: v1.ServiceInstanceStatus{
+							Conditions: []metav1.Condition{
+								{
+									Type:               api.ConditionReady,
+									Status:             metav1.ConditionTrue,
+									ObservedGeneration: 1,
+								},
+								{
+									Type:               api.ConditionSucceeded,
+									Status:             metav1.ConditionTrue,
+									ObservedGeneration: 2,
+								},
+								{
+									Type:   api.ConditionShared,
+									Status: metav1.ConditionTrue,
+								},
+							},
+							HashedSpec: "929e78f4449f8036ce39da3cc3e7eaea",
+						},
+						Spec: v1.ServiceInstanceSpec{
+							ExternalName: "name",
+							Shared:       pointer.Bool(true),
+						}}
+					instance.SetGeneration(2)
+					Expect(isFinalState(instance)).To(BeTrue())
 				})
 			})
 		})
@@ -1065,104 +1171,14 @@ func waitForInstanceConditionAndMessage(ctx context.Context, key types.Namespace
 	}, timeout, interval).Should(BeTrue())
 }
 
-func waitForInstanceToBeShared(ctx context.Context, key types.NamespacedName) *v1.ServiceInstance {
-	si := &v1.ServiceInstance{}
-	Eventually(func() bool {
-		if err := k8sClient.Get(ctx, key, si); err != nil {
-			return false
-		}
-		return isInstanceShared(si)
-	}, timeout*4, interval).Should(BeTrue())
-	return si
+func waitForInstanceToBeShared(ctx context.Context, serviceInstance *v1.ServiceInstance) {
+	waitForResourceCondition(ctx, serviceInstance, api.ConditionShared, metav1.ConditionTrue, "", "")
+	Expect(len(serviceInstance.Status.Conditions)).To(Equal(3))
 }
 
-func waitForInstanceToBeUnShared(ctx context.Context, key types.NamespacedName) *v1.ServiceInstance {
-	si := &v1.ServiceInstance{}
-	Eventually(func() bool {
-		if err := k8sClient.Get(ctx, key, si); err != nil {
-			return false
-		}
-		return !isInstanceShared(si)
-	}, timeout, interval).Should(BeTrue())
-	return si
-}
-
-func waitForInstanceID(ctx context.Context, key types.NamespacedName, id string) {
-	si := &v1.ServiceInstance{}
-	Eventually(func() bool {
-		if err := k8sClient.Get(ctx, key, si); err != nil {
-			return false
-		}
-		return si.Status.InstanceID == id
-	}, timeout, interval).Should(BeTrue())
-}
-
-func waitForInstanceToBeInProgress(ctx context.Context, key types.NamespacedName) {
-	si := &v1.ServiceInstance{}
-	Eventually(func() bool {
-		err := k8sClient.Get(ctx, key, si)
-		return err == nil && isInProgress(si)
-	}, timeout, interval).Should(BeTrue())
-}
-
-func waitForInstanceToBeFailedWithMsg(ctx context.Context, key types.NamespacedName, msg string) {
-	si := &v1.ServiceInstance{}
-	Eventually(func() bool {
-		if err := k8sClient.Get(ctx, key, si); err != nil {
-			return false
-		}
-		cond := meta.FindStatusCondition(si.GetConditions(), api.ConditionFailed)
-		return cond != nil && isFailed(si) && strings.Contains(cond.Message, msg)
-	}, timeout, interval).Should(BeTrue())
-}
-
-func validateInstanceGotDeleted(ctx context.Context, key types.NamespacedName) {
-	si := &v1.ServiceInstance{}
-	Eventually(func() bool {
-		err := k8sClient.Get(ctx, key, si)
-		return apierrors.IsNotFound(err)
-	}, timeout, interval).Should(BeTrue())
-}
-
-func getNonTransientBrokerError(errMessage string) error {
-	return &sm.ServiceManagerError{
-		StatusCode:  http.StatusBadRequest,
-		Description: "smErrMessage",
-		BrokerError: &api.HTTPStatusCodeError{
-			StatusCode:   400,
-			ErrorMessage: &errMessage,
-		}}
-}
-
-func getTransientBrokerError(errorMessage string) error {
-	return &sm.ServiceManagerError{
-		StatusCode:  http.StatusBadGateway,
-		Description: "smErrMessage",
-		BrokerError: &api.HTTPStatusCodeError{
-			StatusCode:   http.StatusTooManyRequests,
-			ErrorMessage: &errorMessage,
-		},
-	}
-}
-
-func waitForInstanceCreationFailure(ctx context.Context, defaultLookupKey types.NamespacedName, serviceInstance *v1.ServiceInstance, errMessage string) {
-	Eventually(func() bool {
-		if err := k8sClient.Get(ctx, defaultLookupKey, serviceInstance); err != nil {
-			return false
-		}
-		cond := meta.FindStatusCondition(serviceInstance.Status.Conditions, api.ConditionSucceeded)
-		return cond != nil && cond.Status == metav1.ConditionFalse && strings.Contains(cond.Message, errMessage)
-	}, timeout, interval).Should(BeTrue())
-}
-
-func isInstanceShared(serviceInstance *v1.ServiceInstance) bool {
-	conditions := serviceInstance.GetConditions()
-	if conditions == nil {
-		return false
-	}
-
-	sharedCond := meta.FindStatusCondition(conditions, api.ConditionShared)
-	return sharedCond != nil && sharedCond.Status == metav1.ConditionTrue
+func waitForInstanceToBeUnShared(ctx context.Context, serviceInstance *v1.ServiceInstance) {
+	waitForResourceCondition(ctx, serviceInstance, api.ConditionShared, metav1.ConditionFalse, "", "")
+	Expect(len(serviceInstance.Status.Conditions)).To(Equal(3))
 }
 
 func updateInstance(ctx context.Context, serviceInstance *v1.ServiceInstance) *v1.ServiceInstance {
