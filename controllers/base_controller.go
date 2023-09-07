@@ -307,16 +307,10 @@ func isDelete(object metav1.ObjectMeta) bool {
 	return !object.DeletionTimestamp.IsZero()
 }
 
-func isTransientError(ctx context.Context, err error) (bool, string) {
-	log := GetLogger(ctx)
-	smError, ok := err.(*sm.ServiceManagerError)
-	if !ok {
-		return false, err.Error()
-	}
-
+func isTransientError(smError *sm.ServiceManagerError, log logr.Logger) bool {
 	statusCode := smError.GetStatusCode()
 	log.Info(fmt.Sprintf("SM returned error with status code %d", statusCode))
-	return isConcurrentOperationError(smError) || isTransientStatusCode(statusCode), smError.Error()
+	return isTransientStatusCode(statusCode) || isConcurrentOperationError(smError)
 }
 
 func isConcurrentOperationError(smError *sm.ServiceManagerError) bool {
@@ -333,15 +327,17 @@ func isTransientStatusCode(StatusCode int) bool {
 }
 
 func (r *BaseReconciler) handleError(ctx context.Context, operationType smClientTypes.OperationCategory, err error, resource api.SAPBTPResource) (ctrl.Result, error) {
-	var (
-		isTransient bool
-		errMsg      string
-	)
-
-	if isTransient, errMsg = isTransientError(ctx, err); isTransient {
-		return r.markAsTransientError(ctx, operationType, errMsg, resource)
+	log := GetLogger(ctx)
+	smError, ok := err.(*sm.ServiceManagerError)
+	if !ok {
+		log.Info("unable to cast error to SM error, will be treated as non transient")
+		return r.markAsNonTransientError(ctx, operationType, err.Error(), resource)
 	}
-	return r.markAsNonTransientError(ctx, operationType, errMsg, resource)
+
+	if isTransient := isTransientError(smError, log); isTransient {
+		return r.markAsTransientError(ctx, operationType, smError.Error(), resource)
+	}
+	return r.markAsNonTransientError(ctx, operationType, smError.Error(), resource)
 }
 
 func (r *BaseReconciler) markAsNonTransientError(ctx context.Context, operationType smClientTypes.OperationCategory, errMsg string, object api.SAPBTPResource) (ctrl.Result, error) {

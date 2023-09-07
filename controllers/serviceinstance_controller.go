@@ -519,12 +519,12 @@ func (r *ServiceInstanceReconciler) getInstanceForRecovery(ctx context.Context, 
 func (r *ServiceInstanceReconciler) handleInstanceSharingError(ctx context.Context, object api.SAPBTPResource, status metav1.ConditionStatus, reason string, err error) (ctrl.Result, error) {
 	log := GetLogger(ctx)
 
-	var statusCode int
 	errMsg := err.Error()
+	isTransient := false
 
 	if smError, ok := err.(*sm.ServiceManagerError); ok {
-		log.Info(fmt.Sprintf("SM returned error status code %d", smError.StatusCode))
-		statusCode = smError.StatusCode
+		log.Info(fmt.Sprintf("SM returned error with status code %d", smError.StatusCode))
+		isTransient = isTransientError(smError, log)
 		errMsg = smError.Error()
 
 		if smError.StatusCode == http.StatusTooManyRequests {
@@ -540,7 +540,7 @@ func (r *ServiceInstanceReconciler) handleInstanceSharingError(ctx context.Conte
 	}
 
 	setSharedCondition(object, status, reason, errMsg)
-	return ctrl.Result{Requeue: isTransientStatusCode(statusCode)}, r.updateStatus(ctx, object)
+	return ctrl.Result{Requeue: isTransient}, r.updateStatus(ctx, object)
 }
 
 func isFinalState(serviceInstance *servicesv1.ServiceInstance) bool {
