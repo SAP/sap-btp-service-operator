@@ -227,8 +227,15 @@ func setSuccessConditions(operationType smClientTypes.OperationCategory, object 
 		Message:            message,
 		ObservedGeneration: object.GetGeneration(),
 	}
+	readyCondition := metav1.Condition{
+		Type:               api.ConditionReady,
+		Status:             metav1.ConditionTrue,
+		Reason:             Provisioned,
+		Message:            message,
+		ObservedGeneration: object.GetGeneration(),
+	}
 	meta.SetStatusCondition(&conditions, lastOpCondition)
-	meta.SetStatusCondition(&conditions, getReadyCondition(object))
+	meta.SetStatusCondition(&conditions, readyCondition)
 
 	object.SetConditions(conditions)
 }
@@ -300,23 +307,10 @@ func isDelete(object metav1.ObjectMeta) bool {
 	return !object.DeletionTimestamp.IsZero()
 }
 
-func isTransientError(ctx context.Context, err error) (bool, string) {
-	log := GetLogger(ctx)
-	smError, ok := err.(*sm.ServiceManagerError)
-	if !ok {
-		return false, err.Error()
-	}
-
-	log.Info(fmt.Sprintf("SM returned error status code %d", smError.StatusCode))
-	statusCode := smError.StatusCode
-	errMsg := smError.Error()
-	if smError.BrokerError != nil {
-		log.Info(fmt.Sprintf("Broker returned error status code %d", smError.BrokerError.StatusCode))
-		statusCode = smError.BrokerError.StatusCode
-		errMsg = smError.BrokerError.Error()
-	}
-
-	return isConcurrentOperationError(smError) || isTransientStatusCode(statusCode), errMsg
+func isTransientError(smError *sm.ServiceManagerError, log logr.Logger) bool {
+	statusCode := smError.GetStatusCode()
+	log.Info(fmt.Sprintf("SM returned error with status code %d", statusCode))
+	return isTransientStatusCode(statusCode) || isConcurrentOperationError(smError)
 }
 
 func isConcurrentOperationError(smError *sm.ServiceManagerError) bool {
@@ -326,20 +320,24 @@ func isConcurrentOperationError(smError *sm.ServiceManagerError) bool {
 }
 
 func isTransientStatusCode(StatusCode int) bool {
-	return StatusCode == http.StatusTooManyRequests || StatusCode == http.StatusServiceUnavailable ||
-		StatusCode == http.StatusGatewayTimeout || StatusCode == http.StatusNotFound || StatusCode == http.StatusBadGateway
+	return StatusCode == http.StatusTooManyRequests ||
+		StatusCode == http.StatusServiceUnavailable ||
+		StatusCode == http.StatusGatewayTimeout ||
+		StatusCode == http.StatusBadGateway
 }
 
 func (r *BaseReconciler) handleError(ctx context.Context, operationType smClientTypes.OperationCategory, err error, resource api.SAPBTPResource) (ctrl.Result, error) {
-	var (
-		isTransient bool
-		errMsg      string
-	)
-
-	if isTransient, errMsg = isTransientError(ctx, err); isTransient {
-		return r.markAsTransientError(ctx, operationType, errMsg, resource)
+	log := GetLogger(ctx)
+	smError, ok := err.(*sm.ServiceManagerError)
+	if !ok {
+		log.Info("unable to cast error to SM error, will be treated as non transient")
+		return r.markAsNonTransientError(ctx, operationType, err.Error(), resource)
 	}
-	return r.markAsNonTransientError(ctx, operationType, errMsg, resource)
+
+	if isTransient := isTransientError(smError, log); isTransient {
+		return r.markAsTransientError(ctx, operationType, smError.Error(), resource)
+	}
+	return r.markAsNonTransientError(ctx, operationType, smError.Error(), resource)
 }
 
 func (r *BaseReconciler) markAsNonTransientError(ctx context.Context, operationType smClientTypes.OperationCategory, errMsg string, object api.SAPBTPResource) (ctrl.Result, error) {
