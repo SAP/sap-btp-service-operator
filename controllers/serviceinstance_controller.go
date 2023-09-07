@@ -544,7 +544,7 @@ func (r *ServiceInstanceReconciler) handleInstanceSharingError(ctx context.Conte
 }
 
 func isFinalState(serviceInstance *servicesv1.ServiceInstance) bool {
-	// succeeded condition represents last operation, and is constantly synced with generation
+	// succeeded condition represents last operation, and it is constantly synced with generation
 	succeededCondition := meta.FindStatusCondition(serviceInstance.GetConditions(), api.ConditionSucceeded)
 	if succeededCondition == nil || succeededCondition.ObservedGeneration != serviceInstance.Generation {
 		return false
@@ -569,10 +569,7 @@ func updateRequired(serviceInstance *servicesv1.ServiceInstance) bool {
 		return true
 	}
 
-	if getSpecHash(serviceInstance) == serviceInstance.Status.HashedSpec {
-		return false
-	}
-	return true
+	return getSpecHash(serviceInstance) != serviceInstance.Status.HashedSpec
 }
 
 func sharingUpdateRequired(serviceInstance *servicesv1.ServiceInstance) bool {
