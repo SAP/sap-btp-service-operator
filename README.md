@@ -559,15 +559,16 @@ data:
   ]
 }
 
-  // Credentials section
-  uri: https://feature-flags.cfapps.stagingaws.hanavlab.ondemand.com
-  username: c2Jzc19sYmo4MG9sanczZm9hcTg3YnJqcnl6NmJxZStwd25kbmxyZWdoL3piZWR0bGFieGhpNWdmZXcxaGM1dGYrdWhjdzBnPQ==
-  password: YWFfeXZZdjY4WWwxYnNyZ1VqUGNEMWk3anZWNWpNPQ==
-  // Additional data added by the operator
-  instance_guid: bd9bda65-1405-4ea0-a716-5afeb13eca5b
-  instance_name: sample-instance    
-  plan: lite                        
-  type: feature-flags  // The service offering name
+#Credentials section
+uri: https://feature-flags.cfapps.stagingaws.hanavlab.ondemand.com
+username: c2Jzc19sYmo4MG9sanczZm9hcTg3YnJqcnl6NmJxZStwd25kbmxyZWdoL3piZWR0bGFieGhpNWdmZXcxaGM1dGYrdWhjdzBnPQ==
+password: YWFfeXZZdjY4WWwxYnNyZ1VqUGNEMWk3anZWNWpNPQ==
+
+#Additional data added by the operator
+instance_guid: bd9bda65-1405-4ea0-a716-5afeb13eca5b
+instance_name: sample-instance    
+plan: lite                        
+type: feature feature-flags  // The service offering name
 ```
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
