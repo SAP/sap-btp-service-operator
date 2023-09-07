@@ -48,6 +48,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
+const (
+	secretNameTakenErrorFormat    = "the specified secret name '%s' is already taken. Choose another name and try again"
+	secretAlreadyOwnedErrorFormat = "secret %s belongs to another binding %s, choose a different name"
+)
+
 // ServiceBindingReconciler reconciles a ServiceBinding object
 type ServiceBindingReconciler struct {
 	*BaseReconciler
@@ -659,11 +664,11 @@ func (r *ServiceBindingReconciler) validateSecretNameIsAvailable(ctx context.Con
 		}
 
 		if owner.Group == binding.GroupVersionKind().Group && ownerRef.Kind == binding.Kind {
-			return fmt.Errorf("secret %s belongs to another binding %s, choose a different name", binding.Spec.SecretName, ownerRef.Name)
+			return fmt.Errorf(secretAlreadyOwnedErrorFormat, binding.Spec.SecretName, ownerRef.Name)
 		}
 	}
 
-	return fmt.Errorf("the specified secret name '%s' is already taken. Choose another name and try again", binding.Spec.SecretName)
+	return fmt.Errorf(secretNameTakenErrorFormat, binding.Spec.SecretName)
 }
 
 func (r *ServiceBindingReconciler) maintain(ctx context.Context, binding *servicesv1.ServiceBinding) (ctrl.Result, error) {
