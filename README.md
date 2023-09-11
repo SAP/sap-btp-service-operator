@@ -595,6 +595,7 @@ Done by adding to the spec -> secretRootKey: YourSecretValue
     xsappname: <app_name>
     zoneid: <zone_id>
 ```
+
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
 ## Uninstalling the Operator
