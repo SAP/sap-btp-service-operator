@@ -261,7 +261,7 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	}
 
 	provision, provisionErr := smClient.Provision(&smClientTypes.ServiceInstance{
-		Name:          serviceInstance.Spec.ExternalName,
+		Name:          getServiceInstanceBTPName(serviceInstance),
 		ServicePlanID: serviceInstance.Spec.ServicePlanID,
 		Parameters:    instanceParameters,
 		Labels: smClientTypes.Labels{
@@ -329,7 +329,7 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 	}
 
 	_, operationURL, err := smClient.UpdateInstance(serviceInstance.Status.InstanceID, &smClientTypes.ServiceInstance{
-		Name:          serviceInstance.Spec.ExternalName,
+		Name:          getServiceInstanceBTPName(serviceInstance),
 		ServicePlanID: serviceInstance.Spec.ServicePlanID,
 		Parameters:    instanceParameters,
 	}, serviceInstance.Spec.ServiceOfferingName, serviceInstance.Spec.ServicePlanName, nil, buildUserInfo(ctx, serviceInstance.Spec.UserInfo), serviceInstance.Spec.DataCenter)
@@ -479,7 +479,7 @@ func (r *ServiceInstanceReconciler) getInstanceForRecovery(ctx context.Context, 
 	log := GetLogger(ctx)
 	parameters := sm.Parameters{
 		FieldQuery: []string{
-			fmt.Sprintf("name eq '%s'", serviceInstance.Spec.ExternalName),
+			fmt.Sprintf("name eq '%s'", getServiceInstanceBTPName(serviceInstance)),
 			fmt.Sprintf("context/clusterid eq '%s'", r.Config.ClusterID),
 			fmt.Sprintf("context/namespace eq '%s'", serviceInstance.Namespace)},
 		LabelQuery: []string{
@@ -498,6 +498,13 @@ func (r *ServiceInstanceReconciler) getInstanceForRecovery(ctx context.Context, 
 	}
 	log.Info("instance not found in SM")
 	return nil, nil
+}
+
+func getServiceInstanceBTPName(instance *servicesv1.ServiceInstance) string {
+	if instance.Spec.BTPInstanceName != "" {
+		return instance.Spec.BTPInstanceName
+	}
+	return instance.Spec.ExternalName
 }
 
 func (r *ServiceInstanceReconciler) HandleInstanceSharingError(ctx context.Context, err error, object api.SAPBTPResource, status metav1.ConditionStatus, reason string) error {

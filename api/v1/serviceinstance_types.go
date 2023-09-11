@@ -52,7 +52,7 @@ type ServiceInstanceSpec struct {
 	ExternalName string `json:"externalName,omitempty"`
 
 	// The name of the instance in Service Manager - will also be used in the secret instance_name
-	BTPInstanceName string `json:"btpInstanceName ,omitempty"`
+	BTPInstanceName string `json:"btpInstanceName,omitempty"`
 
 	// Indicates the desired shared state
 	// +optional

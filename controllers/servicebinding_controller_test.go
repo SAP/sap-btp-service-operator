@@ -147,6 +147,41 @@ var _ = Describe("ServiceBinding controller", func() {
 		return createdInstance
 	}
 
+	createInstanceWithBTPName := func(ctx context.Context, name, namespace, btpName string) *v1.ServiceInstance {
+		instance := &v1.ServiceInstance{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "services.cloud.sap.com/v1",
+				Kind:       "ServiceInstance",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: namespace,
+			},
+			Spec: v1.ServiceInstanceSpec{
+				BTPInstanceName:     btpName,
+				ServicePlanName:     "a-plan-name",
+				ServiceOfferingName: "an-offering-name",
+				CustomTags:          []string{"custom-tag"},
+			},
+		}
+		Expect(k8sClient.Create(ctx, instance)).Should(Succeed())
+
+		instanceLookupKey := types.NamespacedName{Name: name, Namespace: namespace}
+		createdInstance := &v1.ServiceInstance{}
+
+		Eventually(func() bool {
+			err := k8sClient.Get(ctx, instanceLookupKey, createdInstance)
+			if err != nil {
+				return false
+			}
+			return isReady(createdInstance)
+		}, timeout, interval).Should(BeTrue())
+		Expect(createdInstance.Status.InstanceID).ToNot(BeEmpty())
+		Expect(createdInstance.Spec.ExternalName).To(BeEmpty())
+		Expect(createdInstance.Spec.BTPInstanceName).To(Equal(btpName))
+		return createdInstance
+	}
+
 	JustBeforeEach(func() {
 		createdInstance = createInstance(context.Background(), instanceName, bindingTestNamespace, instanceName+"-external")
 	})
@@ -653,6 +688,15 @@ var _ = Describe("ServiceBinding controller", func() {
 						err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "my-special-secret", Namespace: bindingTestNamespace}, secret)
 						return err == nil
 					}, timeout, interval).Should(BeTrue())
+				})
+			})
+
+			When("btpName is provided", func() {
+				It("succeeds and use btpName as instance_name", func() {
+					createInstanceWithBTPName(context.Background(), "instancename", bindingTestNamespace, "btp")
+					createdBinding = createBinding(context.Background(), bindingName, bindingTestNamespace, "instancename", "")
+					secret := getSecret(context.Background(), createdBinding.Spec.SecretName, bindingTestNamespace, true)
+					validateSecretData(secret, "instance_name", "btp")
 				})
 			})
 

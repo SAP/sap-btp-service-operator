@@ -31,8 +31,8 @@ func (s *ServiceInstanceDefaulter) Handle(_ context.Context, req admission.Reque
 	}
 
 	// mutate the fields
-	if len(instance.Spec.ExternalName) == 0 {
-		instancelog.Info("externalName not provided, defaulting to k8s name", "name", instance.Name)
+	if len(instance.Spec.ExternalName) == 0 && len(instance.Spec.BTPInstanceName) == 0 {
+		instancelog.Info("externalName and btpName not provided, defaulting externalName to k8s name", "name", instance.Name)
 		instance.Spec.ExternalName = instance.Name
 	}
 

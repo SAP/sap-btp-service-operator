@@ -699,7 +699,7 @@ func (r *ServiceBindingReconciler) addInstanceInfo(ctx context.Context, binding 
 		return nil, err
 	}
 
-	credentialsMap["instance_name"] = getInstanceName(instance)
+	credentialsMap["instance_name"] = getInstanceName(instance, binding)
 	credentialsMap["instance_external_name"] = []byte(instance.Spec.ExternalName)
 	credentialsMap["instance_guid"] = []byte(instance.Status.InstanceID)
 	credentialsMap["plan"] = []byte(instance.Spec.ServicePlanName)
@@ -742,11 +742,11 @@ func (r *ServiceBindingReconciler) addInstanceInfo(ctx context.Context, binding 
 	return metadata, nil
 }
 
-func getInstanceName(instance *servicesv1.ServiceInstance) []byte {
+func getInstanceName(instance *servicesv1.ServiceInstance, binding *servicesv1.ServiceBinding) []byte {
 	if len(instance.Spec.BTPInstanceName) > 0 {
 		return []byte(instance.Spec.BTPInstanceName)
 	}
-
+	return []byte(binding.Spec.ServiceInstanceName)
 }
 
 func (r *ServiceBindingReconciler) singleKeyMap(credentialsMap map[string][]byte, key string) (map[string][]byte, error) {
