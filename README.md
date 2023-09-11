@@ -577,8 +577,8 @@ Done by adding to the spec -> secretRootKey: YourSecretValue
   plan: lite
   type: feature-flags
   password: aa_hM7glY8ARNF8hGWb5OjRIt1PPgo=
-  uri:	https://feature-flags.cfapps.stagingaws.hanavlab.ondemand.com
-  username:	sbss_spppeulvmgm55dceicb1rbubummqwwoqzqs4jlb1syygrvb6/at7vkfv1rml9esl4ce=
+  uri: https://feature-flags.cfapps.stagingaws.hanavlab.ondemand.com
+  username: sbss_spppeulvmgm55dceicb1rbubummqwwoqzqs4jlb1syygrvb6/at7vkfv1rml9esl4ce=
   x509:
     apiurl: https://api.authentication.stagingaws.hanavlab.ondemand.com
     certificate: <cert>
