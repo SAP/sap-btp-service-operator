@@ -39,7 +39,11 @@ type ServiceBindingSpec struct {
 
 	// The name of the binding in Service Manager
 	// +optional
-	ExternalName string `json:"externalName"`
+	ExternalName string `json:"externalName,omitempty"`
+
+	// The name of the binding in Service Manager
+	// +optional
+	BTPName string `json:"btpName,omitempty"`
 
 	// SecretName is the name of the secret where credentials will be stored
 	// +optional
