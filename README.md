@@ -538,26 +538,11 @@ Done by adding to the spec -> secretKey: YourSecretValue
 ```bash
 #Credentials section
 <YourSecretValue>:
-  password: aa_hM7glY8ARNF8hGWb5OjRIt1PPgo=
-  uri:	https://feature-flags.cfapps.stagingaws.hanavlab.ondemand.com
-  username:	<user_name>
-  x509:
-    apiurl: https://api.authentication.stagingaws.hanavlab.ondemand.com
-    certificate: <cert>
-    certurl: <cert_url>
-    clientid: <client_id>
-    clientx509enabled: false
-    credential-type: x509
-    identityzone: <zone>
-    identityzoneid: <zone_id>
-    key: <key>
-    subaccountid: <sa_id>
-    tenantid: <tenant_id>
-    uaadomain: <uaa_domain>
-    url: <url field from operator instance>
-    verificationkey: <verification_key>
-    xsappname: <app_name>
-    zoneid: <zone_id>
+  {
+    password: aa_hM7glY8ARNF8hGWb5OjRIt1PPgo=
+    uri: https://feature-flags.cfapps.stagingaws.hanavlab.ondemand.com
+    username: <user_name>
+  }
 
 #Additional data added by the operator
 instance_guid: bd9bda65-1405-4ea0-a716-5afeb13eca5b
@@ -570,30 +555,15 @@ type: feature-flags // The service offering name
 Done by adding to the spec -> secretRootKey: YourSecretValue
 ```bash
 <YourSecretValue>:
-  instance_guid: bd9bda65-1405-4ea0-a716-5afeb13eca5b
-  instance_name: sample-instance  
-  plan: lite
-  type: feature-flags
-  password: aa_hM7glY8ARNF8hGWb5OjRIt1PPgo=
-  uri: https://feature-flags.cfapps.stagingaws.hanavlab.ondemand.com
-  username: <user_name>
-  x509:
-    apiurl: https://api.authentication.stagingaws.hanavlab.ondemand.com
-    certificate: <cert>
-    certurl: <cert_url>
-    clientid: <client_id>
-    clientx509enabled: false
-    credential-type: x509
-    identityzone: <zone>
-    identityzoneid: <zone_id>
-    key: <key>
-    subaccountid: <sa_id>
-    tenantid: <tenant_id>
-    uaadomain: <uaa_domain>
-    url	: <url field from operator instance>
-    verificationkey: <verification_key>
-    xsappname: <app_name>
-    zoneid: <zone_id>
+  {
+    instance_guid: bd9bda65-1405-4ea0-a716-5afeb13eca5b
+    instance_name: sample-instance  
+    plan: lite
+    type: feature-flags
+    password: aa_hM7glY8ARNF8hGWb5OjRIt1PPgo=
+    uri: https://feature-flags.cfapps.stagingaws.hanavlab.ondemand.com
+    username: <user_name>
+  }
 ```
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
