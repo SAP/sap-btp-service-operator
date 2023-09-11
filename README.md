@@ -550,7 +550,7 @@ Done by adding to the spec -> secretKey: YourSecretValue
     clientx509enabled: false
     credential-type: x509
     identityzone: <zone>
-    identityzoneid: e995da20-4157-49e4-b7af-01f526425496
+    identityzoneid: <zone_id>
     key: <key>
     subaccountid: <sa_id>
     tenantid: <tenant_id>
@@ -582,19 +582,19 @@ Done by adding to the spec -> secretRootKey: YourSecretValue
   x509:
     apiurl: https://api.authentication.stagingaws.hanavlab.ondemand.com
     certificate: <cert>
-    certificate-pinning	:	true
+    certificate-pinning	: true
     certurl: <cert_url>
     clientid: <client_id>
     clientx509enabled: false
     credential-type: x509
     identityzone: <zone>
-    identityzoneid: e995da20-4157-49e4-b7af-01f526425496
+    identityzoneid: <zone_id>
     key: <key>
-    subaccountid:	<sa_id>
+    subaccountid: <sa_id>
     tenantid: <tenant_id>
     tenantmode: shared
     uaadomain: <uaa_domain>
-    url	:	<url field from operator instance>
+    url	: <url field from operator instance>
     verificationkey: <verification_key>
     xsappname: <app_name>
     zoneid: <zone_id>
