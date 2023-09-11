@@ -544,7 +544,6 @@ Done by adding to the spec -> secretKey: YourSecretValue
   x509:
     apiurl: https://api.authentication.stagingaws.hanavlab.ondemand.com
     certificate: <cert>
-    certificate-pinning: true
     certurl: <cert_url>
     clientid: <client_id>
     clientx509enabled: false
@@ -581,7 +580,6 @@ Done by adding to the spec -> secretRootKey: YourSecretValue
   x509:
     apiurl: https://api.authentication.stagingaws.hanavlab.ondemand.com
     certificate: <cert>
-    certificate-pinning	: true
     certurl: <cert_url>
     clientid: <client_id>
     clientx509enabled: false
