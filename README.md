@@ -540,7 +540,7 @@ Done by adding to the spec -> secretKey: YourSecretValue
 <YourSecretValue>:
   password: aa_hM7glY8ARNF8hGWb5OjRIt1PPgo=
   uri:	https://feature-flags.cfapps.stagingaws.hanavlab.ondemand.com
-  username:	sbss_spppeulvmgm55dceicb1rbubummqwwoqzqs4jlb1syygrvb6/at7vkfv1rml9esl4ce=
+  username:	<user_name>
   x509:
     apiurl: https://api.authentication.stagingaws.hanavlab.ondemand.com
     certificate: <cert>
@@ -576,7 +576,7 @@ Done by adding to the spec -> secretRootKey: YourSecretValue
   type: feature-flags
   password: aa_hM7glY8ARNF8hGWb5OjRIt1PPgo=
   uri: https://feature-flags.cfapps.stagingaws.hanavlab.ondemand.com
-  username: sbss_spppeulvmgm55dceicb1rbubummqwwoqzqs4jlb1syygrvb6/at7vkfv1rml9esl4ce=
+  username: <user_name>
   x509:
     apiurl: https://api.authentication.stagingaws.hanavlab.ondemand.com
     certificate: <cert>
