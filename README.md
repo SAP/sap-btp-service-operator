@@ -533,6 +533,7 @@ instance_name: sample-instance
 plan: lite                        
 type: feature feature-flags  // The service offering name
 ```
+
 ### SecretKey
 Done by adding to the spec -> secretKey: YourSecretValue
 ```bash
