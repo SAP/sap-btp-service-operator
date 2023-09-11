@@ -566,7 +566,7 @@ Done by adding to the spec -> secretRootKey: YourSecretValue
     instance_guid: bd9bda65-1405-4ea0-a716-5afeb13eca5b
     instance_name: sample-instance  
     plan: lite
-    type: feature-flags
+    type: feature-flags // The service offering name
   }
 ```
 
