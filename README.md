@@ -567,6 +567,38 @@ instance_name: sample-instance
 plan: lite
 type: feature-flags // The service offering name
 ```
+
+### SecretRootKey
+Done by adding to the spec: secretRootKey: <secretValue>
+```bash
+<secretValue>:
+instance_guid: bd9bda65-1405-4ea0-a716-5afeb13eca5b
+instance_name: sample-instance  
+plan: lite
+type: feature-flags
+  password: aa_hM7glY8ARNF8hGWb5OjRIt1PPgo=
+  uri:	https://feature-flags.cfapps.stagingaws.hanavlab.ondemand.com
+  username:	sbss_spppeulvmgm55dceicb1rbubummqwwoqzqs4jlb1syygrvb6/at7vkfv1rml9esl4ce=
+  x509:
+    apiurl: https://api.authentication.stagingaws.hanavlab.ondemand.com
+    certificate: <cert>
+    certificate-pinning	:	true
+    certurl: <cert_url>
+    clientid: <client_id>
+    clientx509enabled: false
+    credential-type: x509
+    identityzone: <zone>
+    identityzoneid: e995da20-4157-49e4-b7af-01f526425496
+    key: <key>
+    subaccountid:	<sa_id>
+    tenantid: <tenant_id>
+    tenantmode: shared
+    uaadomain: <uaa_domain>
+    url	:	<url field from operator instance>
+    verificationkey: <verification_key>
+    xsappname: <app_name>
+    zoneid: <zone_id>
+```
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
 ## Uninstalling the Operator
