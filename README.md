@@ -531,7 +531,7 @@ password: YWFfeXZZdjY4WWwxYnNyZ1VqUGNEMWk3anZWNWpNPQ==
 instance_guid: bd9bda65-1405-4ea0-a716-5afeb13eca5b
 instance_name: sample-instance    
 plan: lite                        
-type: feature feature-flags  // The service offering name
+type: feature-flags  // The service offering name
 ```
 
 ### SecretKey
@@ -557,13 +557,16 @@ Done by adding to the spec -> secretRootKey: YourSecretValue
 ```bash
 <YourSecretValue>:
   {
+    #Credentials section
+    password: aa_hM7glY8ARNF8hGWb5OjRIt1PPgo=
+    uri: https://feature-flags.cfapps.stagingaws.hanavlab.ondemand.com
+    username: <user_name>
+    
+    #Additional data added by the operator
     instance_guid: bd9bda65-1405-4ea0-a716-5afeb13eca5b
     instance_name: sample-instance  
     plan: lite
     type: feature-flags
-    password: aa_hM7glY8ARNF8hGWb5OjRIt1PPgo=
-    uri: https://feature-flags.cfapps.stagingaws.hanavlab.ondemand.com
-    username: <user_name>
   }
 ```
 
