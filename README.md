@@ -534,16 +534,17 @@ plan: lite
 type: feature feature-flags  // The service offering name
 ```
 ### SecretKey
-Done by adding to the spec: secretKey: secretValue
+Done by adding to the spec: secretKey: <secretValue>
 ```bash
-secretValue:
+#Credentials section
+<secretValue>:
   password: aa_hM7glY8ARNF8hGWb5OjRIt1PPgo=
   uri:	https://feature-flags.cfapps.stagingaws.hanavlab.ondemand.com
   username:	sbss_spppeulvmgm55dceicb1rbubummqwwoqzqs4jlb1syygrvb6/at7vkfv1rml9esl4ce=
   x509:
     apiurl: https://api.authentication.stagingaws.hanavlab.ondemand.com
     certificate: <cert>
-    certificate-pinning	:	true
+    certificate-pinning: true
     certurl: <cert_url>
     clientid: <client_id>
     clientx509enabled: false
@@ -551,11 +552,11 @@ secretValue:
     identityzone: <zone>
     identityzoneid: e995da20-4157-49e4-b7af-01f526425496
     key: <key>
-    subaccountid:	<sa_id>
+    subaccountid: <sa_id>
     tenantid: <tenant_id>
     tenantmode: shared
     uaadomain: <uaa_domain>
-    url	:	<url field from operator instance>
+    url: <url field from operator instance>
     verificationkey: <verification_key>
     xsappname: <app_name>
     zoneid: <zone_id>
