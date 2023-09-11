@@ -565,7 +565,7 @@ Done by adding to the spec: secretKey: <secretValue>
 instance_guid: bd9bda65-1405-4ea0-a716-5afeb13eca5b
 instance_name: sample-instance  
 plan: lite
-type: feature-flags
+type: feature-flags // The service offering name
 ```
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
