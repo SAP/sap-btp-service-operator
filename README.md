@@ -554,7 +554,6 @@ Done by adding to the spec -> secretKey: YourSecretValue
     key: <key>
     subaccountid: <sa_id>
     tenantid: <tenant_id>
-    tenantmode: shared
     uaadomain: <uaa_domain>
     url: <url field from operator instance>
     verificationkey: <verification_key>
@@ -592,7 +591,6 @@ Done by adding to the spec -> secretRootKey: YourSecretValue
     key: <key>
     subaccountid: <sa_id>
     tenantid: <tenant_id>
-    tenantmode: shared
     uaadomain: <uaa_domain>
     url	: <url field from operator instance>
     verificationkey: <verification_key>
