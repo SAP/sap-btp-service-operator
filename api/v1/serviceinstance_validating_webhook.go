@@ -39,10 +39,16 @@ func (si *ServiceInstance) SetupWebhookWithManager(mgr ctrl.Manager) error {
 var _ webhook.Validator = &ServiceInstance{}
 
 func (si *ServiceInstance) ValidateCreate() (warnings admission.Warnings, err error) {
+	if err := si.validateSpecBTPAndExternalNames(); err != nil {
+		return nil, err
+	}
 	return nil, nil
 }
 
 func (si *ServiceInstance) ValidateUpdate(old runtime.Object) (warnings admission.Warnings, err error) {
+	if err := si.validateSpecBTPAndExternalNames(); err != nil {
+		return nil, err
+	}
 	return nil, nil
 }
 
@@ -54,4 +60,11 @@ func (si *ServiceInstance) ValidateDelete() (warnings admission.Warnings, err er
 		}
 	}
 	return nil, nil
+}
+
+func (si *ServiceInstance) validateSpecBTPAndExternalNames() error {
+	if si.Spec.BTPInstanceName != "" && si.Spec.ExternalName != "" {
+		return fmt.Errorf("can't set both BTPInstanceName and ExternalName in spec")
+	}
+	return nil
 }
