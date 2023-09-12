@@ -73,6 +73,9 @@ spec:
               externalName:
                 description: The name of the binding in Service Manager
                 type: string
+              btpBindingName:
+                description: The name of the binding in Service Manager
+                type: string
               parameters:
                 description: "Parameters for the binding. \n The Parameters field
                   is NOT secret or secured in any way and should NEVER be used to
@@ -323,6 +326,9 @@ spec:
                 - enabled
                 type: object
               externalName:
+                description: The name of the binding in Service Manager
+                type: string
+              btpBindingName:
                 description: The name of the binding in Service Manager
                 type: string
               parameters:
@@ -595,6 +601,9 @@ spec:
               externalName:
                 description: The name of the instance in Service Manager
                 type: string
+              btpInstanceName:
+                description: The name of the instance in Service Manager - will also be used in the secret instance_name
+                type: string
               parameters:
                 description: "Provisioning parameters for the instance. \n The Parameters
                   field is NOT secret or secured in any way and should NEVER be used
@@ -841,6 +850,9 @@ spec:
                 type: array
               externalName:
                 description: The name of the instance in Service Manager
+                type: string
+              btpInstanceName:
+                description: The name of the instance in Service Manager - will also be used in the secret instance_name
                 type: string
               parameters:
                 description: "Provisioning parameters for the instance. \n The Parameters

@@ -49,6 +49,11 @@ var _ webhook.Validator = &ServiceBinding{}
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (sb *ServiceBinding) ValidateCreate() (admission.Warnings, error) {
 	servicebindinglog.Info("validate create", "name", sb.Name)
+
+	if err := sb.validateBTPNameAndExternalName(); err != nil {
+		return nil, err
+	}
+
 	if sb.Spec.CredRotationPolicy != nil {
 		if err := sb.validateCredRotatingConfig(); err != nil {
 			return nil, err
@@ -60,6 +65,11 @@ func (sb *ServiceBinding) ValidateCreate() (admission.Warnings, error) {
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (sb *ServiceBinding) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 	servicebindinglog.Info("validate update", "name", sb.Name)
+
+	if err := sb.validateBTPNameAndExternalName(); err != nil {
+		return nil, err
+	}
+
 	if sb.Spec.CredRotationPolicy != nil {
 		if err := sb.validateCredRotatingConfig(); err != nil {
 			return nil, err
@@ -122,5 +132,12 @@ func (sb *ServiceBinding) validateCredRotatingConfig() error {
 		return err
 	}
 
+	return nil
+}
+
+func (sb *ServiceBinding) validateBTPNameAndExternalName() error {
+	if sb.Spec.BTPBindingName != "" && sb.Spec.ExternalName != "" {
+		return fmt.Errorf("can't set both btpBindingName and ExternalName in spec")
+	}
 	return nil
 }

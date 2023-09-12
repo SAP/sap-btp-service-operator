@@ -18,6 +18,7 @@ package v1
 
 import (
 	"fmt"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -34,15 +35,28 @@ func (si *ServiceInstance) SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
+// log is for logging in this package.
+var serviceInstanceLog = logf.Log.WithName("serviceinstance-resource")
+
 // +kubebuilder:webhook:verbs=delete,path=/validate-services-cloud-sap-com-v1-serviceinstance,mutating=false,failurePolicy=fail,groups=services.cloud.sap.com,resources=serviceinstances,versions=v1,name=vserviceinstance.kb.io,sideEffects=None,admissionReviewVersions=v1beta1;v1
 
 var _ webhook.Validator = &ServiceInstance{}
 
 func (si *ServiceInstance) ValidateCreate() (warnings admission.Warnings, err error) {
+	serviceInstanceLog.Info("validate create", "name", si.Name)
+
+	if err := si.validateBTPNameAndExternalName(); err != nil {
+		return nil, err
+	}
 	return nil, nil
 }
 
 func (si *ServiceInstance) ValidateUpdate(old runtime.Object) (warnings admission.Warnings, err error) {
+	serviceInstanceLog.Info("validate update", "name", si.Name)
+
+	if err := si.validateBTPNameAndExternalName(); err != nil {
+		return nil, err
+	}
 	return nil, nil
 }
 
@@ -54,4 +68,11 @@ func (si *ServiceInstance) ValidateDelete() (warnings admission.Warnings, err er
 		}
 	}
 	return nil, nil
+}
+
+func (si *ServiceInstance) validateBTPNameAndExternalName() error {
+	if si.Spec.BTPInstanceName != "" && si.Spec.ExternalName != "" {
+		return fmt.Errorf("can't set both BTPInstanceName and ExternalName in spec")
+	}
+	return nil
 }

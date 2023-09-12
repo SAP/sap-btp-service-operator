@@ -223,7 +223,7 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 	}
 
 	smBinding, operationURL, bindErr := smClient.Bind(&smClientTypes.ServiceBinding{
-		Name: serviceBinding.Spec.ExternalName,
+		Name: getBTPBindingName(serviceBinding),
 		Labels: smClientTypes.Labels{
 			namespaceLabel: []string{serviceBinding.Namespace},
 			k8sNameLabel:   []string{serviceBinding.Name},
@@ -595,7 +595,7 @@ func (r *ServiceBindingReconciler) deleteBindingSecret(ctx context.Context, bind
 
 func (r *ServiceBindingReconciler) getBindingForRecovery(ctx context.Context, smClient sm.Client, serviceBinding *servicesv1.ServiceBinding) (*smClientTypes.ServiceBinding, error) {
 	log := GetLogger(ctx)
-	nameQuery := fmt.Sprintf("name eq '%s'", serviceBinding.Spec.ExternalName)
+	nameQuery := fmt.Sprintf("name eq '%s'", getBTPBindingName(serviceBinding))
 	clusterIDQuery := fmt.Sprintf("context/clusterid eq '%s'", r.Config.ClusterID)
 	namespaceQuery := fmt.Sprintf("context/namespace eq '%s'", serviceBinding.Namespace)
 	k8sNameQuery := fmt.Sprintf("%s eq '%s'", k8sNameLabel, serviceBinding.Name)
@@ -717,8 +717,8 @@ func (r *ServiceBindingReconciler) addInstanceInfo(ctx context.Context, binding 
 		return nil, err
 	}
 
-	credentialsMap["instance_name"] = []byte(binding.Spec.ServiceInstanceName)
-	credentialsMap["instance_external_name"] = []byte(instance.Spec.ExternalName)
+	credentialsMap["instance_name"] = getInstanceName(instance, binding)
+	credentialsMap["instance_external_name"] = GetInstanceExternalName(instance)
 	credentialsMap["instance_guid"] = []byte(instance.Status.InstanceID)
 	credentialsMap["plan"] = []byte(instance.Spec.ServicePlanName)
 	credentialsMap["label"] = []byte(instance.Spec.ServiceOfferingName)
@@ -818,9 +818,9 @@ func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, smClie
 
 	if len(bindings.Items) == 0 {
 		// rename current binding
-		log.Info("Credentials rotation - renaming binding to old in SM", "current", binding.Spec.ExternalName)
-		if _, errRenaming := smClient.RenameBinding(binding.Status.BindingID, binding.Spec.ExternalName+suffix, binding.Name+suffix); errRenaming != nil {
-			log.Error(errRenaming, "Credentials rotation - failed renaming binding to old in SM", "binding", binding.Spec.ExternalName)
+		log.Info("Credentials rotation - renaming binding to old in SM", "current", getBTPBindingName(binding))
+		if _, errRenaming := smClient.RenameBinding(binding.Status.BindingID, getBTPBindingName(binding)+suffix, binding.Name+suffix); errRenaming != nil {
+			log.Error(errRenaming, "Credentials rotation - failed renaming binding to old in SM", "binding", getBTPBindingName(binding))
 			setCredRotationInProgressConditions(CredPreparing, errRenaming.Error(), binding)
 			if errStatus := r.updateStatus(ctx, binding); errStatus != nil {
 				return errStatus
@@ -892,7 +892,11 @@ func (r *ServiceBindingReconciler) createOldBinding(ctx context.Context, suffix 
 	spec := binding.Spec.DeepCopy()
 	spec.CredRotationPolicy.Enabled = false
 	spec.SecretName = spec.SecretName + suffix
-	spec.ExternalName = spec.ExternalName + suffix
+	if spec.BTPBindingName != "" {
+		spec.BTPBindingName = spec.BTPBindingName + suffix
+	} else {
+		spec.ExternalName = spec.ExternalName + suffix
+	}
 	oldBinding.Spec = *spec
 	return r.Create(ctx, oldBinding)
 }
@@ -1001,4 +1005,25 @@ func newBindingObject(name, namespace string) *servicesv1.ServiceBinding {
 			Namespace: namespace,
 		},
 	}
+}
+
+func getBTPBindingName(binding *servicesv1.ServiceBinding) string {
+	if binding.Spec.BTPBindingName != "" {
+		return binding.Spec.BTPBindingName
+	}
+	return binding.Spec.ExternalName
+}
+
+func GetInstanceExternalName(instance *servicesv1.ServiceInstance) []byte {
+	if instance.Spec.BTPInstanceName != "" {
+		return []byte(instance.Spec.BTPInstanceName)
+	}
+	return []byte(instance.Spec.ExternalName)
+}
+
+func getInstanceName(instance *servicesv1.ServiceInstance, binding *servicesv1.ServiceBinding) []byte {
+	if len(instance.Spec.BTPInstanceName) > 0 {
+		return []byte(instance.Spec.BTPInstanceName)
+	}
+	return []byte(binding.Spec.ServiceInstanceName)
 }

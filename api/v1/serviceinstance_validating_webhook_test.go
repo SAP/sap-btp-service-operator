@@ -40,4 +40,28 @@ var _ = Describe("Service Instance Webhook Test", func() {
 			})
 		})
 	})
+
+	Context("Validate Create", func() {
+		When("both btpInstanceName and externalName are set", func() {
+			It("should return error", func() {
+				instance.Spec.BTPInstanceName = "btp"
+				instance.Spec.ExternalName = "external"
+				_, err := instance.ValidateCreate()
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("can't set both BTPInstanceName and ExternalName in spec"))
+			})
+		})
+	})
+
+	Context("Validate Update", func() {
+		When("both BTPInstanceName and externalName are set", func() {
+			It("should return error", func() {
+				instance.Spec.BTPInstanceName = "btp"
+				instance.Spec.ExternalName = "external"
+				_, err := instance.ValidateUpdate(instance)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("can't set both BTPInstanceName and ExternalName in spec"))
+			})
+		})
+	})
 })
