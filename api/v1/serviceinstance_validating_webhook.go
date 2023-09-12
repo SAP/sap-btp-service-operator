@@ -18,6 +18,7 @@ package v1
 
 import (
 	"fmt"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -27,6 +28,9 @@ import (
 
 	"github.com/SAP/sap-btp-service-operator/api"
 )
+
+// log is for logging in this package.
+var serviceInstanceLog = logf.Log.WithName("serviceinstance-resource")
 
 func (si *ServiceInstance) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
@@ -39,6 +43,8 @@ func (si *ServiceInstance) SetupWebhookWithManager(mgr ctrl.Manager) error {
 var _ webhook.Validator = &ServiceInstance{}
 
 func (si *ServiceInstance) ValidateCreate() (warnings admission.Warnings, err error) {
+	serviceInstanceLog.Info("validate create", "name", si.Name)
+
 	if err := si.validateSpecBTPAndExternalNames(); err != nil {
 		return nil, err
 	}
@@ -46,6 +52,8 @@ func (si *ServiceInstance) ValidateCreate() (warnings admission.Warnings, err er
 }
 
 func (si *ServiceInstance) ValidateUpdate(old runtime.Object) (warnings admission.Warnings, err error) {
+	serviceInstanceLog.Info("validate update", "name", si.Name)
+
 	if err := si.validateSpecBTPAndExternalNames(); err != nil {
 		return nil, err
 	}
@@ -53,6 +61,8 @@ func (si *ServiceInstance) ValidateUpdate(old runtime.Object) (warnings admissio
 }
 
 func (si *ServiceInstance) ValidateDelete() (warnings admission.Warnings, err error) {
+	serviceInstanceLog.Info("validate delete", "name", si.Name)
+
 	if si.Annotations != nil {
 		preventDeletion, ok := si.Annotations[api.PreventDeletion]
 		if ok && strings.ToLower(preventDeletion) == "true" {

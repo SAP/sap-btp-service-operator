@@ -434,6 +434,14 @@ var _ = Describe("ServiceInstance controller", func() {
 			Expect(serviceInstance.Spec.ExternalName).To(Equal(fakeInstanceExternalName))
 		})
 
+		Context("when setting both BTPInstanceName and externalName", func() {
+			It("should fail on update webhook validation", func() {
+				serviceInstance.Spec.BTPInstanceName = "btp"
+				err := k8sClient.Update(ctx, serviceInstance)
+				Expect(err.Error()).To(ContainSubstring("can't set both BTPInstanceName and ExternalName in spec"))
+			})
+		})
+
 		Context("When update call to SM succeed", func() {
 			Context("Sync", func() {
 				When("spec is changed", func() {
