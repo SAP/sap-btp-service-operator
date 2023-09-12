@@ -48,6 +48,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
+const (
+	secretNameTakenErrorFormat    = "the specified secret name '%s' is already taken. Choose another name and try again"
+	secretAlreadyOwnedErrorFormat = "secret %s belongs to another binding %s, choose a different name"
+)
+
 // ServiceBindingReconciler reconciles a ServiceBinding object
 type ServiceBindingReconciler struct {
 	*BaseReconciler
@@ -76,6 +81,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	serviceBinding = serviceBinding.DeepCopy()
+	serviceBinding.SetObservedGeneration(serviceBinding.Generation)
 
 	if len(serviceBinding.GetConditions()) == 0 {
 		if err := r.init(ctx, serviceBinding); err != nil {
@@ -161,7 +167,8 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	//set owner instance only for original bindings (not rotated)
 	if serviceBinding.Labels == nil || len(serviceBinding.Labels[api.StaleBindingIDLabel]) == 0 {
-		if !bindingAlreadyOwnedByInstance(serviceInstance, serviceBinding) {
+		if !bindingAlreadyOwnedByInstance(serviceInstance, serviceBinding) &&
+			serviceInstance.Namespace == serviceBinding.Namespace { //cross namespace reference not allowed
 			return ctrl.Result{}, r.SetOwner(ctx, serviceInstance, serviceBinding)
 		}
 	}
@@ -218,7 +225,7 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 	smBinding, operationURL, bindErr := smClient.Bind(&smClientTypes.ServiceBinding{
 		Name: getBTPBindingName(serviceBinding),
 		Labels: smClientTypes.Labels{
-			namespaceLabel: []string{serviceInstance.Namespace},
+			namespaceLabel: []string{serviceBinding.Namespace},
 			k8sNameLabel:   []string{serviceBinding.Name},
 			clusterIDLabel: []string{r.Config.ClusterID},
 		},
@@ -349,10 +356,17 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, smClient sm.Client,
 	case smClientTypes.INPROGRESS:
 		fallthrough
 	case smClientTypes.PENDING:
+		if len(status.Description) != 0 {
+			setInProgressConditions(status.Type, status.Description, serviceBinding)
+			if err := r.updateStatus(ctx, serviceBinding); err != nil {
+				log.Error(err, "unable to update ServiceBinding polling description")
+				return ctrl.Result{}, err
+			}
+		}
 		return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, nil
 	case smClientTypes.FAILED:
 		// non transient error - should not retry
-		setFailureConditions(smClientTypes.OperationCategory(status.Type), status.Description, serviceBinding)
+		setFailureConditions(status.Type, status.Description, serviceBinding)
 		if serviceBinding.Status.OperationType == smClientTypes.DELETE {
 			serviceBinding.Status.OperationURL = ""
 			serviceBinding.Status.OperationType = ""
@@ -435,7 +449,11 @@ func serviceNotUsable(instance *servicesv1.ServiceInstance) bool {
 
 func (r *ServiceBindingReconciler) getServiceInstanceForBinding(ctx context.Context, binding *servicesv1.ServiceBinding) (*servicesv1.ServiceInstance, error) {
 	serviceInstance := &servicesv1.ServiceInstance{}
-	if err := r.Get(ctx, types.NamespacedName{Name: binding.Spec.ServiceInstanceName, Namespace: binding.Namespace}, serviceInstance); err != nil {
+	namespace := binding.Namespace
+	if len(binding.Spec.ServiceInstanceNamespace) > 0 {
+		namespace = binding.Spec.ServiceInstanceNamespace
+	}
+	if err := r.Get(ctx, types.NamespacedName{Name: binding.Spec.ServiceInstanceName, Namespace: namespace}, serviceInstance); err != nil {
 		return nil, err
 	}
 
@@ -654,11 +672,11 @@ func (r *ServiceBindingReconciler) validateSecretNameIsAvailable(ctx context.Con
 		}
 
 		if owner.Group == binding.GroupVersionKind().Group && ownerRef.Kind == binding.Kind {
-			return fmt.Errorf("secret %s belongs to another binding %s, choose a different name", binding.Spec.SecretName, ownerRef.Name)
+			return fmt.Errorf(secretAlreadyOwnedErrorFormat, binding.Spec.SecretName, ownerRef.Name)
 		}
 	}
 
-	return fmt.Errorf("the specified secret name '%s' is already taken. Choose another name and try again", binding.Spec.SecretName)
+	return fmt.Errorf(secretNameTakenErrorFormat, binding.Spec.SecretName)
 }
 
 func (r *ServiceBindingReconciler) maintain(ctx context.Context, binding *servicesv1.ServiceBinding) (ctrl.Result, error) {
