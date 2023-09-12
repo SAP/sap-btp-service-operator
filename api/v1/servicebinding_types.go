@@ -37,6 +37,10 @@ type ServiceBindingSpec struct {
 	// +kubebuilder:validation:MinLength=1
 	ServiceInstanceName string `json:"serviceInstanceName"`
 
+	// The namespace of the referenced instance, if empty Binding's namespace will be used
+	// +optional
+	ServiceInstanceNamespace string `json:"serviceInstanceNamespace,omitempty"`
+
 	// The name of the binding in Service Manager
 	// +optional
 	ExternalName string `json:"externalName,omitempty"`

@@ -198,6 +198,6 @@ func init() {
 
 func (si *ServiceInstance) Hub() {}
 
-func (si *ServiceInstance) IsSharedDesired() bool {
+func (si *ServiceInstance) ShouldBeShared() bool {
 	return si.Spec.Shared != nil && *si.Spec.Shared
 }
