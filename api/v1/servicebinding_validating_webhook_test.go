@@ -26,7 +26,7 @@ var _ = Describe("Service Binding Webhook Test", func() {
 					binding.Spec.ExternalName = "external"
 					_, err := binding.ValidateCreate()
 					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("can't set both btpBindingName and ExternalName in spec"))
+					Expect(err.Error()).To(ContainSubstring("can't set both BTPInstanceName and ExternalName in spec"))
 				})
 			})
 		})
