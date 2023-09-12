@@ -691,8 +691,8 @@ var _ = Describe("ServiceBinding controller", func() {
 				})
 			})
 
-			When("btpBindingName is provided", func() {
-				It("succeeds and use btpBindingName as instance_name", func() {
+			When("btpInstanceName is provided", func() {
+				It("succeeds and use btpInstanceName as instance_name in secret", func() {
 					createInstanceWithbtpBindingName(context.Background(), "instancename", bindingTestNamespace, "btp")
 					createdBinding = createBinding(context.Background(), bindingName, bindingTestNamespace, "instancename", "")
 					secret := getSecret(context.Background(), createdBinding.Spec.SecretName, bindingTestNamespace, true)
