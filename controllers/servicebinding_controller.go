@@ -707,7 +707,7 @@ func (r *ServiceBindingReconciler) addInstanceInfo(ctx context.Context, binding 
 	}
 
 	credentialsMap["instance_name"] = getInstanceName(instance, binding)
-	credentialsMap["instance_external_name"] = getInstanceExternalName(instance)
+	credentialsMap["instance_external_name"] = GetInstanceExternalName(instance)
 	credentialsMap["instance_guid"] = []byte(instance.Status.InstanceID)
 	credentialsMap["plan"] = []byte(instance.Spec.ServicePlanName)
 	credentialsMap["label"] = []byte(instance.Spec.ServiceOfferingName)
@@ -749,7 +749,7 @@ func (r *ServiceBindingReconciler) addInstanceInfo(ctx context.Context, binding 
 	return metadata, nil
 }
 
-func getInstanceExternalName(instance *servicesv1.ServiceInstance) []byte {
+func GetInstanceExternalName(instance *servicesv1.ServiceInstance) []byte {
 	if instance.Spec.BTPInstanceName != "" {
 		return []byte(instance.Spec.BTPInstanceName)
 	}
