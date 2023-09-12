@@ -264,8 +264,8 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 }
 
 func getBTPBindingName(binding *servicesv1.ServiceBinding) string {
-	if binding.Spec.BTPName != "" {
-		return binding.Spec.BTPName
+	if binding.Spec.BTPBindingName != "" {
+		return binding.Spec.BTPBindingName
 	}
 	return binding.Spec.ExternalName
 }
@@ -895,8 +895,8 @@ func (r *ServiceBindingReconciler) createOldBinding(ctx context.Context, suffix 
 	spec := binding.Spec.DeepCopy()
 	spec.CredRotationPolicy.Enabled = false
 	spec.SecretName = spec.SecretName + suffix
-	if spec.BTPName != "" {
-		spec.BTPName = spec.BTPName + suffix
+	if spec.BTPBindingName != "" {
+		spec.BTPBindingName = spec.BTPBindingName + suffix
 	} else {
 		spec.ExternalName = spec.ExternalName + suffix
 	}

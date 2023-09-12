@@ -136,8 +136,8 @@ func (sb *ServiceBinding) validateCredRotatingConfig() error {
 }
 
 func (sb *ServiceBinding) validateSpecBTPAndExternalNames() error {
-	if sb.Spec.BTPName != "" && sb.Spec.ExternalName != "" {
-		return fmt.Errorf("can't set both BTPName and ExternalName in spec")
+	if sb.Spec.BTPBindingName != "" && sb.Spec.ExternalName != "" {
+		return fmt.Errorf("can't set both btpBindingName and ExternalName in spec")
 	}
 	return nil
 }

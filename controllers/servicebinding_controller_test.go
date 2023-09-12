@@ -147,7 +147,7 @@ var _ = Describe("ServiceBinding controller", func() {
 		return createdInstance
 	}
 
-	createInstanceWithBTPName := func(ctx context.Context, name, namespace, btpName string) *v1.ServiceInstance {
+	createInstanceWithbtpBindingName := func(ctx context.Context, name, namespace, btpBindingName string) *v1.ServiceInstance {
 		instance := &v1.ServiceInstance{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "services.cloud.sap.com/v1",
@@ -158,7 +158,7 @@ var _ = Describe("ServiceBinding controller", func() {
 				Namespace: namespace,
 			},
 			Spec: v1.ServiceInstanceSpec{
-				BTPInstanceName:     btpName,
+				BTPInstanceName:     btpBindingName,
 				ServicePlanName:     "a-plan-name",
 				ServiceOfferingName: "an-offering-name",
 				CustomTags:          []string{"custom-tag"},
@@ -178,7 +178,7 @@ var _ = Describe("ServiceBinding controller", func() {
 		}, timeout, interval).Should(BeTrue())
 		Expect(createdInstance.Status.InstanceID).ToNot(BeEmpty())
 		Expect(createdInstance.Spec.ExternalName).To(BeEmpty())
-		Expect(createdInstance.Spec.BTPInstanceName).To(Equal(btpName))
+		Expect(createdInstance.Spec.BTPInstanceName).To(Equal(btpBindingName))
 		return createdInstance
 	}
 
@@ -691,9 +691,9 @@ var _ = Describe("ServiceBinding controller", func() {
 				})
 			})
 
-			When("btpName is provided", func() {
-				It("succeeds and use btpName as instance_name", func() {
-					createInstanceWithBTPName(context.Background(), "instancename", bindingTestNamespace, "btp")
+			When("btpBindingName is provided", func() {
+				It("succeeds and use btpBindingName as instance_name", func() {
+					createInstanceWithbtpBindingName(context.Background(), "instancename", bindingTestNamespace, "btp")
 					createdBinding = createBinding(context.Background(), bindingName, bindingTestNamespace, "instancename", "")
 					secret := getSecret(context.Background(), createdBinding.Spec.SecretName, bindingTestNamespace, true)
 					validateSecretData(secret, "instance_name", "btp")

@@ -29,8 +29,8 @@ func (s *ServiceBindingDefaulter) Handle(_ context.Context, req admission.Reques
 	}
 
 	// mutate the fields
-	if len(binding.Spec.BTPName) == 0 && len(binding.Spec.ExternalName) == 0 {
-		bindinglog.Info("externalName and btpName not provided, defaulting externalName to k8s name", "name", binding.Name)
+	if len(binding.Spec.BTPBindingName) == 0 && len(binding.Spec.ExternalName) == 0 {
+		bindinglog.Info("externalName and btpBindingName not provided, defaulting externalName to k8s name", "name", binding.Name)
 		binding.Spec.ExternalName = binding.Name
 	}
 

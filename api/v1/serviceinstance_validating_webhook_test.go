@@ -42,7 +42,7 @@ var _ = Describe("Service Instance Webhook Test", func() {
 	})
 
 	Context("Validate Create", func() {
-		When("both btpName and externalName are set", func() {
+		When("both btpBindingName and externalName are set", func() {
 			It("should return error", func() {
 				instance.Spec.BTPInstanceName = "btp"
 				instance.Spec.ExternalName = "external"
@@ -54,7 +54,7 @@ var _ = Describe("Service Instance Webhook Test", func() {
 	})
 
 	Context("Validate Update", func() {
-		When("both btpName and externalName are set", func() {
+		When("both btpBindingName and externalName are set", func() {
 			It("should return error", func() {
 				instance.Spec.BTPInstanceName = "btp"
 				instance.Spec.ExternalName = "external"

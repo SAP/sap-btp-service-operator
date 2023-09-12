@@ -328,7 +328,7 @@ spec:
               externalName:
                 description: The name of the binding in Service Manager
                 type: string
-              btpName:
+              btpBindingName:
                 description: The name of the binding in Service Manager
                 type: string
               parameters:
