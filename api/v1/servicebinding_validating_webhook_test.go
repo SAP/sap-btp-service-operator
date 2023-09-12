@@ -22,7 +22,7 @@ var _ = Describe("Service Binding Webhook Test", func() {
 
 			When("both btpBindingName and externalName are set", func() {
 				It("should return error", func() {
-					binding.Spec.btpBindingName = "btp"
+					binding.Spec.BTPBindingName = "btp"
 					binding.Spec.ExternalName = "external"
 					_, err := binding.ValidateCreate()
 					Expect(err).To(HaveOccurred())
@@ -249,7 +249,7 @@ var _ = Describe("Service Binding Webhook Test", func() {
 
 			When("both btpBindingName and externalName are set", func() {
 				It("should return error", func() {
-					binding.Spec.btpBindingName = "btp"
+					binding.Spec.BTPBindingName = "btp"
 					binding.Spec.ExternalName = "external"
 					_, err := binding.ValidateUpdate(binding)
 					Expect(err).To(HaveOccurred())
