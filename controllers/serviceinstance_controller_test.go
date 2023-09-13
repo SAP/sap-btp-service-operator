@@ -404,8 +404,8 @@ var _ = Describe("ServiceInstance controller", func() {
 			It("should fail on update webhook validation", func() {
 				serviceInstance.Spec.BTPInstanceName = "btp"
 				err := k8sClient.Update(ctx, serviceInstance)
+				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("can't set both BTPInstanceName and ExternalName in spec"))
-				deleteInstance(ctx, serviceInstance, true)
 			})
 		})
 
