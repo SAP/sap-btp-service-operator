@@ -554,8 +554,8 @@ var _ = Describe("ServiceInstance controller", func() {
 					})
 					It("should recover", func() {
 						serviceInstance.Spec = updateSpec()
-						updateInstance(ctx, serviceInstance)
-						waitForResourceToBeReady(ctx, serviceInstance)
+						ui := updateInstance(ctx, serviceInstance)
+						waitForResourceToBeReady(ctx, ui)
 					})
 				})
 			})
