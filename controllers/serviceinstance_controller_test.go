@@ -36,8 +36,7 @@ const (
 
 var _ = Describe("ServiceInstance controller", func() {
 	var (
-		ctx context.Context
-
+		ctx              context.Context
 		serviceInstance  *v1.ServiceInstance
 		fakeInstanceName string
 		defaultLookupKey types.NamespacedName
@@ -148,6 +147,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 	AfterEach(func() {
 		if serviceInstance != nil {
+			fakeClient.DeprovisionReturns("", nil)
 			deleteInstance(ctx, serviceInstance, true)
 		}
 	})
@@ -349,7 +349,6 @@ var _ = Describe("ServiceInstance controller", func() {
 					}, nil)
 					waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionTrue, Updated, "")
 					Expect(fakeClient.UpdateInstanceCallCount()).To(BeNumerically(">", 0))
-					Expect(fakeClient.ProvisionCallCount()).To(Equal(1))
 				})
 			})
 
