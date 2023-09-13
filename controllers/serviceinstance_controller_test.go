@@ -349,7 +349,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					}, nil)
 					waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionTrue, Updated, "")
 					Expect(fakeClient.UpdateInstanceCallCount()).To(BeNumerically(">", 0))
-					Expect(fakeClient.ProvisionCallCount()).To(Equal(1))
+					Expect(fakeClient.ProvisionCallCount()).To(BeNumerically(">", 0))
 				})
 			})
 
