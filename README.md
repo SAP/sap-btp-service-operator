@@ -544,6 +544,7 @@ type:                    15 bytes
 xsappname:               62 bytes
 .metadata:               406 bytes
 ```
+
 ### SecretKey
 Done by adding in the binding spec:  **secretKey: my-secret-key**
 ```bash
