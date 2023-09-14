@@ -760,7 +760,7 @@ func (r *ServiceBindingReconciler) addInstanceInfo(ctx context.Context, binding 
 }
 
 func getInstanceNameForSecretCredentials(instance *servicesv1.ServiceInstance) []byte {
-	if useMetaName, ok := instance.Annotations[api.UseInstanceMetaNameInSecret]; ok && useMetaName == "true" {
+	if useMetaName, ok := instance.Annotations[api.UseInstanceMetadataNameInSecret]; ok && useMetaName == "true" {
 		return []byte(instance.Name)
 	}
 	return []byte(instance.Spec.ExternalName)

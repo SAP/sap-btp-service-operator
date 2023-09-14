@@ -521,7 +521,7 @@ var _ = Describe("ServiceBinding controller", func() {
 		Context("useMetaName annotation is provided", func() {
 			It("should put in the secret.instance_name the instance meta.name", func() {
 				createdInstance.Annotations = map[string]string{
-					api.UseInstanceMetaNameInSecret: "true",
+					api.UseInstanceMetadataNameInSecret: "true",
 				}
 				updateInstance(ctx, createdInstance)
 				createdBinding = createBinding(ctx, bindingName, bindingTestNamespace, instanceName, "", "")
