@@ -145,18 +145,18 @@ Review the supported Kubernetes API versions for the following SAP BTP Service O
 1.  To create an instance of a service offered by SAP BTP, first create a `ServiceInstance` custom-resource file:
 
 ```yaml
-    apiVersion: services.cloud.sap.com/v1
-    kind: ServiceInstance
-    metadata:
-        name: my-service-instance
-    spec:
-        serviceOfferingName: sample-service
-        servicePlanName: sample-plan
-        externalName: my-service-instance-external
-        parameters:
-          key1: val1
-          key2: val2
-   ```
+apiVersion: services.cloud.sap.com/v1
+kind: ServiceInstance
+metadata:
+  name: my-service-instance
+spec:
+  serviceOfferingName: sample-service
+  servicePlanName: sample-plan
+  externalName: my-service-instance-external
+  parameters:
+    key1: val1
+    key2: val2
+```
 
    *   `<offering>` - The name of the SAP BTP service that you want to create. 
        To learn more about viewing and managing the available services for your subaccount in the SAP BTP cockpit, see [Service Marketplace](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/affcc245c332433ba71917ff715b9971.html). 
@@ -185,19 +185,19 @@ Review the supported Kubernetes API versions for the following SAP BTP Service O
 
     The credentials are stored in a secret created in your cluster.
 
-  ```yaml
-    apiVersion: services.cloud.sap.com/v1
-    kind: ServiceBinding
-    metadata:
-        name: my-binding
-    spec:
-        serviceInstanceName: my-service-instance
-        externalName: my-binding-external
-        secretName: my-secret
-        parameters:
-          key1: val1
-          key2: val2      
-  ```
+```yaml
+apiVersion: services.cloud.sap.com/v1
+kind: ServiceBinding
+metadata:
+  name: my-binding
+spec:
+  serviceInstanceName: my-service-instance
+  externalName: my-binding-external
+  secretName: my-secret
+  parameters:
+    key1: val1
+    key2: val2      
+```
 
 2.  Apply the custom resource file in your cluster to create the binding.
 
@@ -358,12 +358,12 @@ The final JSON payload to send to the broker:
 
 You can list multiple parameters in the `secret`. To do so, separate "key": "value" pairs with commas as in this example:
 ```yaml
-  secret-parameter:
-    '{
-      "password": "letmein",
-      "key2": "value2",
-      "key3": "value3"
-    }'
+secret-parameter:
+  '{
+    "password": "letmein",
+    "key2": "value2",
+    "key3": "value3"
+  }'
 ```
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes).
 
@@ -395,9 +395,9 @@ The list of available releases: [sapbtp-operator releases](https://github.com/SA
 
 ### Usage
 ```
-  kubectl sapbtp marketplace -n <namespace>
-  kubectl sapbtp plans -n <namespace>
-  kubectl sapbtp services -n <namespace>
+kubectl sapbtp marketplace -n <namespace>
+kubectl sapbtp plans -n <namespace>
+kubectl sapbtp services -n <namespace>
 ```
 
 Use the `namespace` parameter to specify the location of the secret containing the SAP BTP access credentials.  
