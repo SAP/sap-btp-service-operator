@@ -18,6 +18,7 @@ const (
 	StaleBindingRotationOfLabel string         = "services.cloud.sap.com/rotationOf"
 	ForceRotateAnnotation       string         = "services.cloud.sap.com/forceRotate"
 	PreventDeletion             string         = "services.cloud.sap.com/preventDeletion"
+	UseInstanceMetaNameInSecret string         = "services.cloud.sap.com/useMeteName"
 )
 
 type HTTPStatusCodeError struct {
