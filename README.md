@@ -264,8 +264,8 @@ Review the supported Kubernetes API versions for the following SAP BTP Service O
 | serviceInstanceName`*`   | `string`   | The Kubernetes name of the service instance to bind, should be in the namespace of the binding.                                                                                                                                                                                                                                          |
 | externalName       | `string`   | The name for the service binding in SAP BTP, defaults to the binding `metadata.name` if not specified.                                                                                                                                                                                                                                   |
 | secretName       | `string`   | The name of the secret where the credentials are stored, defaults to the binding `metadata.name` if not specified.                                                                                                                                                                                                                       |
-| secretKey | `string`  | Property of the Secret object that stores service binding data (credentials) returned from the broker. It is encoded as a JSON object to support complex data structures. [Example](#secret-formats)                                                                                                                                     |
-| secretRootKey | `string`  | The root key is a part of the Secret object, which stores service binding data (credentials) received from the broker, as well as additional information. When the root key is used, all data is stored under a single key. This makes it a convenient way to store data in one file when using volumeMounts. [Example](#secret-formats) |
+| secretKey | `string`  | Property of the Secret object that stores service binding data (credentials) returned from the broker. It is encoded as a JSON object to support complex data structures. [Example](#formats-of-secret-objects)                                                                                                                                     |
+| secretRootKey | `string`  | The root key is a part of the Secret object, which stores service binding data (credentials) received from the broker, as well as additional information. When the root key is used, all data is stored under a single key. This makes it a convenient way to store data in one file when using volumeMounts. [Example](#formats-of-secret-objects) |
 | parameters       |  `[]object`  | Some services support the provisioning of additional configuration parameters during the bind request.<br/>For the list of supported parameters, check the documentation of the particular service offering.                                                                                                                             |
 | parametersFrom | `[]object` | List of sources to populate parameters.                                                                                                                                                                                                                                                                                                  |
 | userInfo | `object`  | Contains information about the user that last modified this service binding.                                                                                                                                                                                                                                                             |
@@ -535,6 +535,7 @@ type: sample-service  // The service offering name
 ```
 
 ### Credentials as json object
+Credentials are returned from the broker as a JSON object.
 To use SecretKey, add 'secretKey: your-secret-value' to the spec.
 ```bash
 #Credentials
@@ -552,7 +553,8 @@ plan: sample-plan // The service plan name
 type: sample-service // The service offering name
 ```
 
-### All service binding info as json object
+## Credentials and Binding Info as One JSON Object
+Credentials and binding info are returned from the broker as a JSON object.
 To use SecretRootKey, add 'secretRootKey: your-secret-value' to the spec.
 ```bash
 your-secret-value:
