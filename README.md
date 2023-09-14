@@ -520,7 +520,8 @@ The SAP BTP service operator project maintainers will respond to the best of the
 
 ## Formats of Secret Objects
 
-### Default
+### Credentials as Key-Value Pairs (default)
+Credentials are returned from the broker as key-value pairs.
 ```bash
 #Credentials section
 uri: https://feature-flags.cfapps.stagingaws.hanavlab.ondemand.com
@@ -534,7 +535,8 @@ plan: lite
 type: feature-flags  // The service offering name
 ```
 
-### SecretKey
+### Credentials as a JSON Object 
+Credentials are returned from the broker as a JSON object.
 To use SecretKey, add 'secretKey: your-secret-value' to the spec.
 ```bash
 #Credentials section
@@ -552,7 +554,8 @@ plan: lite
 type: feature-flags // The service offering name
 ```
 
-### SecretRootKey
+### Credentials and Binding Info as One JSON Object 
+Credentials and binding info are returned from the broker as a JSON object.
 To use SecretRootKey, add 'secretRootKey: your-secret-value' to the spec.
 ```bash
 your-secret-value:
