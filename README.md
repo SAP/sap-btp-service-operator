@@ -568,7 +568,7 @@ your-secret-value:
     username: admin
     password: ********
     
-    #Service info
+    #Service Instance info
     instance_guid: <instance_guid> // The service instance id
     instance_name: my-service-btp-name // Taken from the service instance external_name field if set. Otherwise from metadata.name 
     plan: sample-plan // The service plan name
