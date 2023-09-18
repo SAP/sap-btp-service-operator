@@ -520,7 +520,7 @@ The SAP BTP service operator project maintainers will respond to the best of the
 
 ## Formats of Secret Objects
 
-### Key- Value Pairs (default)
+### Key- Value Pairs (Default)
 The binding object includes credentials returned from the broker and service instance info presented as key-value pairs.
 ```bash
 #Credentials
@@ -530,7 +530,7 @@ password: ********
 
 #Service instance info
 instance_guid: <instance_guid> // The service instance ID
-instance_name: my-service-btp-name // Taken from the service instance external_name field if set or metadata.name else
+instance_name: my-service-btp-name // Taken from the service instance external_name field if set. Otherwise from metadata.name
 plan: sample-plan // The service plan name                
 type: sample-service  // The service offering name
 ```
@@ -538,7 +538,7 @@ type: sample-service  // The service offering name
 ### Credentials as JSON Object
 To show credentials returned from the broker as a JSON object, add 'secretKey: your-secret-value' to the binding spec. 
 
-your-secret-vaue will become a JSON object that contains credentials and service instance info remains presented as key-value pairs.
+your-secret-vaue will be a key for a value in JSON format that contains credentials while service instance info remains presented in key-value pairs.
 ```bash
 #Credentials
 your-secret-value:
@@ -550,7 +550,7 @@ your-secret-value:
 
 #Service Instance info
 instance_guid: <instance_guid> // The service instance ID
-instance_name: my-service-btp-name // Taken from the service instance external_name field if set or metadata.name else
+instance_name: my-service-btp-name // Taken from the service instance external_name field if set. Otherwise from metadata.name 
 plan: sample-plan // The service plan name
 type: sample-service // The service offering name
 ```
@@ -558,7 +558,7 @@ type: sample-service // The service offering name
 ## Credentials and Binding Info as One JSON Object
 To show both credentials returned from the broker and service instance info as a JSON object, add 'secretRootKey: your-secret-value' to the binding spec.
 
-your-secret-value becomes a JSON object that contains all the info.
+your-secret-value becomes a key that contains credentials and service instance info in a JSON format.
 
 ```bash
 your-secret-value:
@@ -570,7 +570,7 @@ your-secret-value:
     
     #Service info
     instance_guid: <instance_guid> // The service instance id
-    instance_name: my-service-btp-name // Taken from the service instance external_name field if set or metadata.name else
+    instance_name: my-service-btp-name // Taken from the service instance external_name field if set. Otherwise from metadata.name 
     plan: sample-plan // The service plan name
     type: sample-service // The service offering name
 }
