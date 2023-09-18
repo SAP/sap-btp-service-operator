@@ -11,13 +11,14 @@ import (
 type ControllerName string
 
 const (
-	ServiceInstanceController   ControllerName = "ServiceInstance"
-	ServiceBindingController    ControllerName = "ServiceBinding"
-	FinalizerName               string         = "services.cloud.sap.com/sap-btp-finalizer"
-	StaleBindingIDLabel         string         = "services.cloud.sap.com/stale"
-	StaleBindingRotationOfLabel string         = "services.cloud.sap.com/rotationOf"
-	ForceRotateAnnotation       string         = "services.cloud.sap.com/forceRotate"
-	PreventDeletion             string         = "services.cloud.sap.com/preventDeletion"
+	ServiceInstanceController       ControllerName = "ServiceInstance"
+	ServiceBindingController        ControllerName = "ServiceBinding"
+	FinalizerName                   string         = "services.cloud.sap.com/sap-btp-finalizer"
+	StaleBindingIDLabel             string         = "services.cloud.sap.com/stale"
+	StaleBindingRotationOfLabel     string         = "services.cloud.sap.com/rotationOf"
+	ForceRotateAnnotation           string         = "services.cloud.sap.com/forceRotate"
+	PreventDeletion                 string         = "services.cloud.sap.com/preventDeletion"
+	UseInstanceMetadataNameInSecret string         = "services.cloud.sap.com/useInstanceMetadataName"
 )
 
 type HTTPStatusCodeError struct {
