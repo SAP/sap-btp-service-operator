@@ -80,7 +80,7 @@ func (r *BaseReconciler) getSMClient(ctx context.Context, object api.SAPBTPResou
 	}
 	log := GetLogger(ctx)
 
-	secret, err := r.SecretResolver.GetSecretForResource(ctx, object.GetNamespace(), secrets.SAPBTPOperatorSecretName)
+	secret, err := r.SecretResolver.GetSecretForResource(ctx, object.GetNamespace(), secrets.SAPBTPOperatorSecretName, object.GetSubaccountID())
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +96,7 @@ func (r *BaseReconciler) getSMClient(ctx context.Context, object api.SAPBTPResou
 	}
 
 	if len(cfg.ClientSecret) == 0 {
-		tls, err := r.SecretResolver.GetSecretForResource(ctx, object.GetNamespace(), secrets.SAPBTPOperatorTLSSecretName)
+		tls, err := r.SecretResolver.GetSecretForResource(ctx, object.GetNamespace(), secrets.SAPBTPOperatorTLSSecretName, object.GetSubaccountID())
 		if client.IgnoreNotFound(err) != nil {
 			return nil, err
 		}

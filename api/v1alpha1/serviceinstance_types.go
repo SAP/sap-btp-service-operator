@@ -173,6 +173,10 @@ func (in *ServiceInstance) SetReady(ready metav1.ConditionStatus) {
 	in.Status.Ready = ready
 }
 
+func (si *ServiceInstance) GetSubaccountID() string {
+	return si.Spec.SubaccountID
+}
+
 // +kubebuilder:object:root=true
 
 // ServiceInstanceList contains a list of ServiceInstance

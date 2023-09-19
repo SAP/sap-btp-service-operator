@@ -67,14 +67,14 @@ var _ = Describe("Secrets Resolver", func() {
 	}
 
 	validateSecretResolved := func() {
-		resolvedSecret, err := resolver.GetSecretForResource(ctx, testNamespace, secrets.SAPBTPOperatorSecretName)
+		resolvedSecret, err := resolver.GetSecretForResource(ctx, testNamespace, secrets.SAPBTPOperatorSecretName, "")
 		Expect(err).ToNot(HaveOccurred())
 		Expect(resolvedSecret).ToNot(BeNil())
 		Expect(string(resolvedSecret.Data["clientid"])).To(Equal(expectedClientID))
 	}
 
 	validateSecretNotResolved := func() {
-		_, err := resolver.GetSecretForResource(ctx, testNamespace, secrets.SAPBTPOperatorSecretName)
+		_, err := resolver.GetSecretForResource(ctx, testNamespace, secrets.SAPBTPOperatorSecretName, "")
 		Expect(err).To(HaveOccurred())
 		Expect(err.Error()).To(ContainSubstring("not found"))
 	}
