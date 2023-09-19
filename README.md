@@ -437,7 +437,7 @@ There are two options to maintain namespace-specific credentials, and they diffe
 
 ### Default Access Credentials
 - Define a secret named `sap-btp-service-operator` in the namespace. `ServiceInstance` and `ServiceBinding` that are applied in the namespace will belong to the subaccount from which the credentials were issued.  
-- Define different secrets for different namespaces in a [centrally managed namespace](./sapbtp-operator-charts/templates/configmap.yml), following the secret naming convention: `sap-btp-service-operator-<namespace>`.
+- Define different secrets for different namespaces in a [centrally managed namespace](./sapbtp-operator-charts/templates/configmap.yml), following the secret naming convention: `<namespace>-sap-btp-service-operator`.
 #### Namespace Secret Structure
 ```yaml
 apiVersion: v1
