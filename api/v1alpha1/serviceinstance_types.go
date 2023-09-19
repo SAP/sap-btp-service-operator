@@ -78,6 +78,9 @@ type ServiceInstanceSpec struct {
 	// end-user. User-provided values for this field are not saved.
 	// +optional
 	UserInfo *v1.UserInfo `json:"userInfo,omitempty"`
+
+	// The subaccount id of the service instance
+	SubaccountID string `json:"subaccountID,omitempty"`
 }
 
 // ServiceInstanceStatus defines the observed state of ServiceInstance

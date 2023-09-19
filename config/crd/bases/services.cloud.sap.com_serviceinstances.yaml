@@ -78,6 +78,9 @@ spec:
               externalName:
                 description: The name of the instance in Service Manager
                 type: string
+              subaccountID:
+                description: The subaccount id of the service instance
+                type: string
               parameters:
                 description: "Provisioning parameters for the instance. \n The Parameters
                   field is NOT secret or secured in any way and should NEVER be used
@@ -321,6 +324,9 @@ spec:
                 type: array
               externalName:
                 description: The name of the instance in Service Manager
+                type: string
+              subaccountID:
+                description: The subaccount id of the service instance
                 type: string
               parameters:
                 description: "Provisioning parameters for the instance. \n The Parameters
