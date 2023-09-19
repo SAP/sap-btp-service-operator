@@ -33,13 +33,14 @@ func (sr *SecretResolver) GetSecretForResource(ctx context.Context, namespace, n
 	found := false
 
 	if subaccountID != "" {
-		sr.Log.Info(fmt.Sprintf("Searching for secret name %s, for subaccount id %s, in namespace %s",
-			name, subaccountID, namespace))
-		secretForResource, err = sr.getSubaccountSecret(ctx, namespace, name, subaccountID)
+		secretName := fmt.Sprintf("%s-%s-%s", subaccountID, namespace, name)
+		sr.Log.Info(fmt.Sprintf("Searching for secret name %s", secretName))
+		secretForResource, err = sr.getSubaccountSecret(ctx, secretName)
 		if err != nil {
 			sr.Log.Error(err, "Could not fetch subaccount secret")
 			return nil, err
 		}
+		return secretForResource, nil
 	}
 
 	if sr.EnableNamespaceSecrets {
@@ -96,8 +97,8 @@ func (sr *SecretResolver) getClusterSecret(ctx context.Context, name string) (*v
 	return secret, err
 }
 
-func (sr *SecretResolver) getSubaccountSecret(ctx context.Context, namespace, name, saID string) (*v1.Secret, error) {
+func (sr *SecretResolver) getSubaccountSecret(ctx context.Context, secretName string) (*v1.Secret, error) {
 	secret := &v1.Secret{}
-	err := sr.Client.Get(ctx, types.NamespacedName{Namespace: sr.ReleaseNamespace, Name: fmt.Sprintf("%s-%s-%s", saID, namespace, name)}, secret)
+	err := sr.Client.Get(ctx, types.NamespacedName{Namespace: sr.ReleaseNamespace, Name: secretName}, secret)
 	return secret, err
 }
