@@ -538,7 +538,7 @@ type: sample-service  // The service offering name
 ### Credentials as JSON Object
 To show credentials returned from the broker as a JSON object, use the 'secretKey' attribute in the service binding spec. 
 
-The value of 'secretKey' will be the name of the key that stores the credentials in a JSON format.
+The value of 'secretKey' is the name of the key that stores the credentials in JSON format.
 
 ```bash
 #Credentials
@@ -559,7 +559,7 @@ type: sample-service // The service offering name
 ### Credentials and Service Info as One JSON Object
 To show both credentials returned from the broker and service instance info as a JSON object, use the 'secretRootKey' attribute in the service binding spec.
 
-The value of 'secretRootKey' will be the name of the key that stores both credentials and serivce instance info in a JSON format.
+The value of 'secretRootKey' is the name of the key that stores both credentials and serivce instance info in JSON format.
 
 ```bash
 your-secretRootKey-value:
