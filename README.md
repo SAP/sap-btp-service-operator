@@ -537,12 +537,13 @@ type: sample-service  // The service offering name
 ```
 
 ### Credentials as JSON Object
-To show credentials returned from the broker as a JSON object, add 'secretKey: my-key-value' to the binding spec. 
+To show credentials returned from the broker as a JSON object, use the 'secretKey' attribute in the service binding spec. 
 
-my-key-value will be a key for a value in JSON format that contains credentials while service instance info remains presented in key-value pairs.
+The value of 'secretKey' will be the name of the key that stores the credentials in a JSON format.
+
 ```bash
 #Credentials
-my-key-value:
+your-secretKey-value:
 {
   uri: https://my-service.authentication.eu10.hana.ondemand.com
   username: admin
@@ -556,13 +557,13 @@ plan: sample-plan // The service plan name
 type: sample-service // The service offering name
 ```
 
-## Credentials and service info as One JSON Object
-To show both credentials returned from the broker and service instance info as a JSON object, add 'secretRootKey: my-key-value' to the binding spec.
+### Credentials and Service Info as One JSON Object
+To show both credentials returned from the broker and service instance info as a JSON object, use the 'secretRootKey' attribute in the service binding spec.
 
-my-key-value becomes a key that contains credentials and service instance info in a JSON format.
+The value of 'secretRootKey' will be the name of the key that stores both credentials and serivce instance info in a JSON format.
 
 ```bash
-my-key-value:
+your-secretRootKey-value:
 {
     #Credentials
     uri: https://my-service.authentication.eu10.hana.ondemand.com
