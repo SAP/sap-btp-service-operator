@@ -192,7 +192,6 @@ kind: ServiceBinding
 metadata:
   name: my-binding
 spec:
-  secretKey: my-key-value
   serviceInstanceName: my-service-instance
   externalName: my-binding-external
   secretName: my-secret
