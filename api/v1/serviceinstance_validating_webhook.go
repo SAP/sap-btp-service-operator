@@ -43,6 +43,10 @@ func (si *ServiceInstance) ValidateCreate() (warnings admission.Warnings, err er
 }
 
 func (si *ServiceInstance) ValidateUpdate(old runtime.Object) (warnings admission.Warnings, err error) {
+	oldInstance := old.(*ServiceInstance)
+	if oldInstance.Spec.SubaccountID != si.Spec.SubaccountID {
+		return nil, fmt.Errorf("subaccountID spec field can not be changed")
+	}
 	return nil, nil
 }
 

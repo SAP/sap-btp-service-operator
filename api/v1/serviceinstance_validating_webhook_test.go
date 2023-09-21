@@ -40,4 +40,17 @@ var _ = Describe("Service Instance Webhook Test", func() {
 			})
 		})
 	})
+
+	Context("Validate Update", func() {
+		When("service instance subaccountID changed", func() {
+			It("should return error from webhook", func() {
+				instance := getInstanceWithSubaccountID()
+				newInstance := getInstanceWithSubaccountID()
+				newInstance.Spec.SubaccountID = "12345"
+				_, err := newInstance.ValidateUpdate(instance)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("subaccountID spec field can not be changed"))
+			})
+		})
+	})
 })

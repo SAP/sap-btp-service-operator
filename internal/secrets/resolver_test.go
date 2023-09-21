@@ -188,7 +188,7 @@ var _ = Describe("Secrets Resolver", func() {
 	Context("Subaccount secret in management namespace", func() {
 		subaccountID := "12345"
 		BeforeEach(func() {
-			secret = createSecret(fmt.Sprintf("%s-%s", subaccountID, testNamespace), managementNamespace)
+			secret = createSecret(subaccountID, managementNamespace)
 		})
 
 		It("should resolve the secret", func() {

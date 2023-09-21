@@ -561,6 +561,15 @@ var _ = Describe("ServiceInstance controller", func() {
 				})
 			})
 		})
+
+		Context("When subaccountID changes", func() {
+			It("should fail", func() {
+				serviceInstance.Spec.SubaccountID = "12345"
+				err := k8sClient.Update(ctx, serviceInstance)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("subaccountID spec field can not be changed"))
+			})
+		})
 	})
 
 	Describe("Delete", func() {

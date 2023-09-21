@@ -84,9 +84,6 @@ type ServiceBindingSpec struct {
 	// CredentialsRotationPolicy holds automatic credentials rotation configuration.
 	// +optional
 	CredRotationPolicy *CredentialsRotationPolicy `json:"credentialsRotationPolicy,omitempty"`
-
-	// The subaccount id of the service binding
-	SubaccountID string `json:"subaccountID,omitempty"`
 }
 
 // ServiceBindingStatus defines the observed state of ServiceBinding
@@ -181,10 +178,6 @@ func (sb *ServiceBinding) GetReady() metav1.ConditionStatus {
 
 func (sb *ServiceBinding) SetReady(ready metav1.ConditionStatus) {
 	sb.Status.Ready = ready
-}
-
-func (sb *ServiceBinding) GetSubaccountID() string {
-	return sb.Spec.SubaccountID
 }
 
 // +kubebuilder:object:root=true

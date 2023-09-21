@@ -239,6 +239,9 @@ spec:
               hashedSpec:
                 description: HashedSpec is the hashed spec without the shared property
                 type: string
+              subaccountID:
+                description: SubaccountID is the service instance subaccount id
+                type: string
               instanceID:
                 description: The generated ID of the instance, will be automatically
                   filled once the instance is created

@@ -89,7 +89,25 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 	}
 
-	smClient, err := r.getSMClient(ctx, serviceBinding)
+	log.Info("service instance name " + serviceBinding.Spec.ServiceInstanceName + " binding namespace " + serviceBinding.Namespace)
+	serviceInstance, err := r.getServiceInstanceForBinding(ctx, serviceBinding)
+	if err != nil || serviceNotUsable(serviceInstance) {
+		var instanceErr error
+		if err != nil {
+			instanceErr = fmt.Errorf("couldn't find the service instance '%s'. Error: %v", serviceBinding.Spec.ServiceInstanceName, err.Error())
+		} else {
+			instanceErr = fmt.Errorf("service instance '%s' is not usable", serviceBinding.Spec.ServiceInstanceName)
+		}
+
+		setBlockedCondition(instanceErr.Error(), serviceBinding)
+		if err := r.updateStatus(ctx, serviceBinding); err != nil {
+			return ctrl.Result{}, err
+		}
+
+		return ctrl.Result{}, instanceErr
+	}
+
+	smClient, err := r.getSMClient(ctx, serviceBinding, serviceInstance.Spec.SubaccountID)
 	if err != nil {
 		return r.markAsTransientError(ctx, Unknown, err.Error(), serviceBinding)
 	}
@@ -134,24 +152,6 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	log.Info(fmt.Sprintf("Current generation is %v and observed is %v", serviceBinding.Generation, serviceBinding.GetObservedGeneration()))
 	serviceBinding.SetObservedGeneration(serviceBinding.Generation)
-
-	log.Info("service instance name " + serviceBinding.Spec.ServiceInstanceName + " binding namespace " + serviceBinding.Namespace)
-	serviceInstance, err := r.getServiceInstanceForBinding(ctx, serviceBinding)
-	if err != nil || serviceNotUsable(serviceInstance) {
-		var instanceErr error
-		if err != nil {
-			instanceErr = fmt.Errorf("couldn't find the service instance '%s'. Error: %v", serviceBinding.Spec.ServiceInstanceName, err.Error())
-		} else {
-			instanceErr = fmt.Errorf("service instance '%s' is not usable", serviceBinding.Spec.ServiceInstanceName)
-		}
-
-		setBlockedCondition(instanceErr.Error(), serviceBinding)
-		if err := r.updateStatus(ctx, serviceBinding); err != nil {
-			return ctrl.Result{}, err
-		}
-
-		return ctrl.Result{}, instanceErr
-	}
 
 	if isInProgress(serviceInstance) {
 		log.Info(fmt.Sprintf("Service instance with k8s name %s is not ready for binding yet", serviceInstance.Name))

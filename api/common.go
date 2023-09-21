@@ -78,5 +78,4 @@ type SAPBTPResource interface {
 	DeepClone() SAPBTPResource
 	SetReady(metav1.ConditionStatus)
 	GetReady() metav1.ConditionStatus
-	GetSubaccountID() string
 }

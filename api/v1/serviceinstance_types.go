@@ -116,6 +116,9 @@ type ServiceInstanceStatus struct {
 
 	// HashedSpec is the hashed spec without the shared property
 	HashedSpec string `json:"hashedSpec,omitempty"`
+
+	// The subaccount id of the service binding
+	SubaccountID string `json:"subaccountID,omitempty"`
 }
 
 // +kubebuilder:object:root=true

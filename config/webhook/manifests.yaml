@@ -90,6 +90,7 @@ webhooks:
     - v1
     operations:
     - DELETE
+    - UPDATE
     resources:
     - serviceinstances
   sideEffects: None
