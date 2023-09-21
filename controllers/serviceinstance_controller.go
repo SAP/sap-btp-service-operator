@@ -309,6 +309,9 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	}
 	log.Info("Instance provisioned successfully")
 	serviceInstance.Status.InstanceID = provision.InstanceID
+	if serviceInstance.Spec.SubaccountID != "" {
+		serviceInstance.Status.SubaccountID = serviceInstance.Spec.SubaccountID
+	}
 
 	if len(provision.Tags) > 0 {
 		tags, err := getTags(provision.Tags)

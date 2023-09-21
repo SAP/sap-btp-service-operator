@@ -32,6 +32,7 @@ const (
 	testNamespace            = "ic-test-namespace"
 	fakeOfferingName         = "offering-a"
 	fakePlanName             = "plan-a"
+	testSubaccountID         = "subaccountID"
 )
 
 var _ = Describe("ServiceInstance controller", func() {
@@ -54,6 +55,24 @@ var _ = Describe("ServiceInstance controller", func() {
 
 	instanceSpec := v1.ServiceInstanceSpec{
 		ExternalName:        fakeInstanceExternalName,
+		ServicePlanName:     fakePlanName,
+		ServiceOfferingName: fakeOfferingName,
+		Parameters: &runtime.RawExtension{
+			Raw: []byte(`{"key": "value"}`),
+		},
+		ParametersFrom: []v1.ParametersFromSource{
+			{
+				SecretKeyRef: &v1.SecretKeyReference{
+					Name: "param-secret",
+					Key:  "secret-parameter",
+				},
+			},
+		},
+	}
+
+	subaccountInstanceSpec := v1.ServiceInstanceSpec{
+		ExternalName:        fakeInstanceExternalName,
+		SubaccountID:        testSubaccountID,
 		ServicePlanName:     fakePlanName,
 		ServiceOfferingName: fakeOfferingName,
 		Parameters: &runtime.RawExtension{
@@ -225,6 +244,13 @@ var _ = Describe("ServiceInstance controller", func() {
 					params := smInstance.Parameters
 					Expect(params).To(ContainSubstring("\"key\":\"value\""))
 					Expect(params).To(ContainSubstring("\"secret-key\":\"secret-value\""))
+				})
+			})
+
+			When("subaccountID provided", func() {
+				It("should add the subaccountID also to the status", func() {
+					serviceInstance = createInstance(ctx, subaccountInstanceSpec, true)
+					Expect(serviceInstance.Status.SubaccountID).To(Equal(testSubaccountID))
 				})
 			})
 
