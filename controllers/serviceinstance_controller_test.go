@@ -589,7 +589,7 @@ var _ = Describe("ServiceInstance controller", func() {
 		})
 
 		Context("When subaccountID changes", func() {
-			It("should fail", func() {
+			It("should fail in the update webhook", func() {
 				serviceInstance.Spec.SubaccountID = "12345"
 				err := k8sClient.Update(ctx, serviceInstance)
 				Expect(err).To(HaveOccurred())
