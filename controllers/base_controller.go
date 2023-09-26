@@ -74,13 +74,13 @@ func GetLogger(ctx context.Context) logr.Logger {
 	return ctx.Value(LogKey{}).(logr.Logger)
 }
 
-func (r *BaseReconciler) getSMClient(ctx context.Context, object api.SAPBTPResource, subaccountId string) (sm.Client, error) {
+func (r *BaseReconciler) getSMClient(ctx context.Context, object api.SAPBTPResource, subaccountID string) (sm.Client, error) {
 	if r.SMClient != nil {
 		return r.SMClient(), nil
 	}
 	log := GetLogger(ctx)
 
-	secret, err := r.SecretResolver.GetSecretForResource(ctx, object.GetNamespace(), secrets.SAPBTPOperatorSecretName, subaccountId)
+	secret, err := r.SecretResolver.GetSecretForResource(ctx, object.GetNamespace(), secrets.SAPBTPOperatorSecretName, subaccountID)
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +96,7 @@ func (r *BaseReconciler) getSMClient(ctx context.Context, object api.SAPBTPResou
 	}
 
 	if len(cfg.ClientSecret) == 0 {
-		tls, err := r.SecretResolver.GetSecretForResource(ctx, object.GetNamespace(), secrets.SAPBTPOperatorTLSSecretName, subaccountId)
+		tls, err := r.SecretResolver.GetSecretForResource(ctx, object.GetNamespace(), secrets.SAPBTPOperatorTLSSecretName, subaccountID)
 		if client.IgnoreNotFound(err) != nil {
 			return nil, err
 		}
