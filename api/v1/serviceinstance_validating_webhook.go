@@ -18,6 +18,7 @@ package v1
 
 import (
 	"fmt"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -38,11 +39,15 @@ func (si *ServiceInstance) SetupWebhookWithManager(mgr ctrl.Manager) error {
 
 var _ webhook.Validator = &ServiceInstance{}
 
+// log is for logging in this package.
+var serviceinstancelog = logf.Log.WithName("serviceinstance-resource")
+
 func (si *ServiceInstance) ValidateCreate() (warnings admission.Warnings, err error) {
 	return nil, nil
 }
 
 func (si *ServiceInstance) ValidateUpdate(old runtime.Object) (warnings admission.Warnings, err error) {
+	serviceinstancelog.Info("validate update", "name", si.Name)
 	oldInstance := old.(*ServiceInstance)
 	if oldInstance.Spec.SubaccountID != si.Spec.SubaccountID {
 		return nil, fmt.Errorf("subaccountID spec field can not be changed")
@@ -51,6 +56,7 @@ func (si *ServiceInstance) ValidateUpdate(old runtime.Object) (warnings admissio
 }
 
 func (si *ServiceInstance) ValidateDelete() (warnings admission.Warnings, err error) {
+	serviceinstancelog.Info("validate delete", "name", si.Name)
 	if si.Annotations != nil {
 		preventDeletion, ok := si.Annotations[api.PreventDeletion]
 		if ok && strings.ToLower(preventDeletion) == "true" {
