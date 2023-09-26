@@ -588,7 +588,7 @@ var _ = Describe("ServiceInstance controller", func() {
 			})
 		})
 
-		FContext("When subaccountID changes", func() {
+		Context("When subaccountID changes", func() {
 			When("it changes from one value to other value", func() {
 				It("should fail in the update webhook", func() {
 					deleteInstance(ctx, serviceInstance, true)
