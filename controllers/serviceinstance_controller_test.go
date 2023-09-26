@@ -588,12 +588,36 @@ var _ = Describe("ServiceInstance controller", func() {
 			})
 		})
 
-		Context("When subaccountID changes", func() {
-			It("should fail in the update webhook", func() {
-				serviceInstance.Spec.SubaccountID = "12345"
-				err := k8sClient.Update(ctx, serviceInstance)
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("subaccountID spec field can not be changed"))
+		FContext("When subaccountID changes", func() {
+			When("it changes from one value to other value", func() {
+				It("should fail in the update webhook", func() {
+					deleteInstance(ctx, serviceInstance, true)
+					serviceInstance = createInstance(ctx, subaccountInstanceSpec, true)
+					serviceInstance.Spec.SubaccountID = "12345"
+					err := k8sClient.Update(ctx, serviceInstance)
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("subaccountID spec field can not be changed"))
+				})
+			})
+
+			When("it changes from nil to other value", func() {
+				It("should fail in the update webhook", func() {
+					serviceInstance.Spec.SubaccountID = "12345"
+					err := k8sClient.Update(ctx, serviceInstance)
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("subaccountID spec field can not be changed"))
+				})
+			})
+
+			When("it changes from one value to nil", func() {
+				It("should fail in the update webhook", func() {
+					deleteInstance(ctx, serviceInstance, true)
+					serviceInstance = createInstance(ctx, subaccountInstanceSpec, true)
+					serviceInstance.Spec.SubaccountID = ""
+					err := k8sClient.Update(ctx, serviceInstance)
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("subaccountID spec field can not be changed"))
+				})
 			})
 		})
 	})
