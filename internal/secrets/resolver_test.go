@@ -37,7 +37,7 @@ var _ = Describe("Secrets Resolver", func() {
 		} else {
 			name = fmt.Sprintf("%s-%s", namePrefix, secrets.SAPBTPOperatorSecretName)
 		}
-		fmt.Println(fmt.Sprintf("Creating secret with name %s", name))
+		By(fmt.Sprintf("Creating secret with name %s", name))
 
 		expectedClientID = uuid.New().String()
 		newSecret := &corev1.Secret{
@@ -69,13 +69,6 @@ var _ = Describe("Secrets Resolver", func() {
 
 	validateSecretResolved := func() {
 		resolvedSecret, err := resolver.GetSecretForResource(ctx, testNamespace, secrets.SAPBTPOperatorSecretName, "")
-		Expect(err).ToNot(HaveOccurred())
-		Expect(resolvedSecret).ToNot(BeNil())
-		Expect(string(resolvedSecret.Data["clientid"])).To(Equal(expectedClientID))
-	}
-
-	validateSubaccountSecretResolved := func(subaccountID string) {
-		resolvedSecret, err := resolver.GetSecretForResource(ctx, testNamespace, secrets.SAPBTPOperatorSecretName, subaccountID)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(resolvedSecret).ToNot(BeNil())
 		Expect(string(resolvedSecret.Data["clientid"])).To(Equal(expectedClientID))
@@ -192,7 +185,10 @@ var _ = Describe("Secrets Resolver", func() {
 		})
 
 		It("should resolve the secret", func() {
-			validateSubaccountSecretResolved(subaccountID)
+			resolvedSecret, err := resolver.GetSecretForResource(ctx, testNamespace, secrets.SAPBTPOperatorSecretName, subaccountID)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(resolvedSecret).ToNot(BeNil())
+			Expect(string(resolvedSecret.Data["clientid"])).To(Equal(expectedClientID))
 		})
 	})
 
