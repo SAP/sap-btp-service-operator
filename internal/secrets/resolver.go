@@ -20,17 +20,25 @@ const (
 )
 
 type SecretResolver struct {
-	ManagementNamespace    string
-	ReleaseNamespace       string
-	EnableNamespaceSecrets bool
-	Client                 client.Client
-	Log                    logr.Logger
+	EnableMultipleSubaccounts string
+	ManagementNamespace       string
+	ReleaseNamespace          string
+	EnableNamespaceSecrets    bool
+	Client                    client.Client
+	Log                       logr.Logger
 }
 
 func (sr *SecretResolver) GetSecretForResource(ctx context.Context, namespace, name, subaccountID string) (*v1.Secret, error) {
 	var secretForResource *v1.Secret
 	var err error
 	found := false
+
+	if sr.EnableMultipleSubaccounts == "false" {
+		if secretForResource, err = sr.getDefaultSecret(ctx, name); err != nil {
+			return nil, err
+		}
+		return secretForResource, nil
+	}
 
 	if subaccountID != "" {
 		secretName := fmt.Sprintf("%s-%s", subaccountID, name)
@@ -68,14 +76,21 @@ func (sr *SecretResolver) GetSecretForResource(ctx context.Context, namespace, n
 
 	if !found {
 		// namespace-specific secret not found in management namespace, fallback to central cluster secret
-		sr.Log.Info("Searching for cluster secret", "releaseNamespace", sr.ReleaseNamespace, "name", name)
-		secretForResource, err = sr.getClusterSecret(ctx, name)
-		if err != nil {
-			sr.Log.Error(err, "Could not fetch cluster secret")
+		if secretForResource, err = sr.getDefaultSecret(ctx, name); err != nil {
 			return nil, err
 		}
 	}
 
+	return secretForResource, nil
+}
+
+func (sr *SecretResolver) getDefaultSecret(ctx context.Context, name string) (*v1.Secret, error) {
+	sr.Log.Info("Searching for cluster secret", "releaseNamespace", sr.ReleaseNamespace, "name", name)
+	secretForResource, err := sr.getClusterSecret(ctx, name)
+	if err != nil {
+		sr.Log.Error(err, "Could not fetch cluster secret")
+		return nil, err
+	}
 	return secretForResource, nil
 }
 

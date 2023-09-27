@@ -98,11 +98,12 @@ func main() {
 	}
 
 	secretResolver := &secrets.SecretResolver{
-		ManagementNamespace:    config.Get().ManagementNamespace,
-		ReleaseNamespace:       config.Get().ReleaseNamespace,
-		EnableNamespaceSecrets: config.Get().EnableNamespaceSecrets,
-		Client:                 mgr.GetClient(),
-		Log:                    logf.Log.WithName("secret-resolver"),
+		EnableMultipleSubaccounts: config.Get().EnableMultipleSubaccounts,
+		ManagementNamespace:       config.Get().ManagementNamespace,
+		ReleaseNamespace:          config.Get().ReleaseNamespace,
+		EnableNamespaceSecrets:    config.Get().EnableNamespaceSecrets,
+		Client:                    mgr.GetClient(),
+		Log:                       logf.Log.WithName("secret-resolver"),
 	}
 
 	if err = (&controllers.ServiceInstanceReconciler{
