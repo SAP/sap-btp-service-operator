@@ -19,6 +19,9 @@ data:
   ALLOW_CLUSTER_ACCESS: {{ .Values.manager.allow_cluster_access | quote }}
   {{- if not .Values.manager.allow_cluster_access }}
   {{- if gt (len .Values.manager.allowed_namespaces) 0 }}
+  ENABLE_MULTIPLE_SUBACCOUNTS: {{ .Values.manager.enable_multiple_subaccounts | quote }}
+  {{- if not .Values.manager.enable_multiple_subaccounts }}
+  {{- if gt (len .Values.manager.enable_multiple_subaccounts) 0 }}
   ALLOWED_NAMESPACES: {{ join "," .Values.manager.allowed_namespaces }}
   {{- end }}
   {{- end }}
