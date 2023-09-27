@@ -17,7 +17,7 @@ type Config struct {
 	PollInterval              time.Duration `envconfig:"poll_interval"`
 	LongPollInterval          time.Duration `envconfig:"long_poll_interval"`
 	ManagementNamespace       string        `envconfig:"management_namespace"`
-	EnableMultipleSubaccounts string        `envconfig:"enable_multiple_subaccounts"`
+	EnableMultipleSubaccounts bool          `envconfig:"enable_multiple_subaccounts"`
 	ReleaseNamespace          string        `envconfig:"release_namespace"`
 	AllowClusterAccess        bool          `envconfig:"allow_cluster_access"`
 	AllowedNamespaces         []string      `envconfig:"allowed_namespaces"`
@@ -30,14 +30,15 @@ type Config struct {
 func Get() Config {
 	loadOnce.Do(func() {
 		config = Config{ // default values
-			SyncPeriod:             60 * time.Second,
-			PollInterval:           10 * time.Second,
-			LongPollInterval:       5 * time.Minute,
-			EnableNamespaceSecrets: true,
-			AllowedNamespaces:      []string{},
-			AllowClusterAccess:     true,
-			RetryBaseDelay:         10 * time.Second,
-			RetryMaxDelay:          time.Hour,
+			SyncPeriod:                60 * time.Second,
+			PollInterval:              10 * time.Second,
+			LongPollInterval:          5 * time.Minute,
+			EnableNamespaceSecrets:    true,
+			EnableMultipleSubaccounts: true,
+			AllowedNamespaces:         []string{},
+			AllowClusterAccess:        true,
+			RetryBaseDelay:            10 * time.Second,
+			RetryMaxDelay:             time.Hour,
 		}
 		envconfig.MustProcess("", &config)
 	})

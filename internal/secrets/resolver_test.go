@@ -192,10 +192,10 @@ var _ = Describe("Secrets Resolver", func() {
 		})
 
 		It("should not resolve the secret if EnableMultipleSubaccount is false", func() {
-			resolver.EnableMultipleSubaccounts = "false"
+			resolver.EnableMultipleSubaccounts = false
 			_, err := resolver.GetSecretForResource(ctx, testNamespace, secrets.SAPBTPOperatorSecretName, subaccountID)
 			Expect(err).To(HaveOccurred())
-			resolver.EnableMultipleSubaccounts = "true"
+			resolver.EnableMultipleSubaccounts = true
 		})
 	})
 

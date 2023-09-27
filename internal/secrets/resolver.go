@@ -20,7 +20,7 @@ const (
 )
 
 type SecretResolver struct {
-	EnableMultipleSubaccounts string
+	EnableMultipleSubaccounts bool
 	ManagementNamespace       string
 	ReleaseNamespace          string
 	EnableNamespaceSecrets    bool
@@ -33,7 +33,7 @@ func (sr *SecretResolver) GetSecretForResource(ctx context.Context, namespace, n
 	var err error
 	found := false
 
-	if sr.EnableMultipleSubaccounts == "false" {
+	if !sr.EnableMultipleSubaccounts {
 		return sr.getDefaultSecret(ctx, name)
 	}
 
