@@ -34,10 +34,7 @@ func (sr *SecretResolver) GetSecretForResource(ctx context.Context, namespace, n
 	found := false
 
 	if sr.EnableMultipleSubaccounts == "false" {
-		if secretForResource, err = sr.getDefaultSecret(ctx, name); err != nil {
-			return nil, err
-		}
-		return secretForResource, nil
+		return sr.getDefaultSecret(ctx, name)
 	}
 
 	if subaccountID != "" {
