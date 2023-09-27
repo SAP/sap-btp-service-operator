@@ -127,7 +127,27 @@ It is implemented using a [CRDs-based](https://kubernetes.io/docs/concepts/exten
         --set manager.secret.tokenurl=<certurl>
     ```
 **Note:**<br> In order to rotate the credentials between the BTP service operator and Service Manager, you have to create a new binding for the service-operator-access service instance, and then to execute the setup script again, with the new set of credentials. Afterwards you can delete the old binding.
-        
+
+## Helm Managed CRDs vs manualy installed
+
+By default, the operator will install it's CRDs during a helm install. This behaviour can be changed by overriding chart values.
+
+```bash
+helm upgrade --install <release-name> sap-btp-operator/sap-btp-operator \
+  --create-namespace \
+  --namespace=sap-btp-operator \
+  --set manager.secret.clientid=<clientid> \
+  --set manager.secret.tls.crt="$(cat /path/to/cert)" \
+  --set manager.secret.tls.key="$(cat /path/to/key)" \
+  --set manager.secret.sm_url=<sm_url> \
+  --set manager.secret.tokenurl=<certurl> \
+  --set installCRDs=false
+```
+
+If you opt in for this behaviour then you can apply the crd, at your discretion.
+```
+kubectl apply -f https://github.com/SAP/sap-btp-service-operator/releases/download/v<TAG>/crd.yml
+```
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes).
 

@@ -2,6 +2,9 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
+# If chart should manage the CRDs or you will install them separately
+installCRDs: true
+
 manager:
   memory_limit: 200Mi
   cpu_limit: 250m

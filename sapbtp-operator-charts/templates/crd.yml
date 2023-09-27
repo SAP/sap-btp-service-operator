@@ -1,3 +1,4 @@
+{{- if .Values.installCRDs }}
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -129,6 +130,10 @@ spec:
                   be in the namespace of the binding
                 minLength: 1
                 type: string
+              serviceInstanceNamespace:
+                description: The namespace of the referenced instance, if empty Binding's
+                  namespace will be used
+                type: string
               userInfo:
                 description: UserInfo contains information about the user that last
                   modified this instance. This field is set by the API server and
@@ -174,8 +179,8 @@ spec:
                   description: "Condition contains details for one aspect of the current
                     state of this API Resource. --- This struct is intended for direct
                     use as an array at the field path .status.conditions.  For example,
-                    type FooStatus struct{ // Represents the observations of a foo's
-                    current state. // Known .status.conditions.type are: \"Available\",
+                    \n type FooStatus struct{ // Represents the observations of a
+                    foo's current state. // Known .status.conditions.type are: \"Available\",
                     \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge
                     // +listType=map // +listMapKey=type Conditions []metav1.Condition
                     `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
@@ -426,8 +431,8 @@ spec:
                   description: "Condition contains details for one aspect of the current
                     state of this API Resource. --- This struct is intended for direct
                     use as an array at the field path .status.conditions.  For example,
-                    type FooStatus struct{ // Represents the observations of a foo's
-                    current state. // Known .status.conditions.type are: \"Available\",
+                    \n type FooStatus struct{ // Represents the observations of a
+                    foo's current state. // Known .status.conditions.type are: \"Available\",
                     \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge
                     // +listType=map // +listMapKey=type Conditions []metav1.Condition
                     `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
@@ -542,6 +547,9 @@ spec:
     - jsonPath: .spec.servicePlanName
       name: Plan
       type: string
+    - jsonPath: .spec.shared
+      name: shared
+      type: boolean
     - jsonPath: .spec.dataCenter
       name: dataCenter
       type: string
@@ -643,7 +651,7 @@ spec:
                 minLength: 1
                 type: string
               shared:
-                description: Indicates if the instance aim to be shared, default is false
+                description: Indicates the desired shared state
                 type: boolean
               userInfo:
                 description: UserInfo contains information about the user that last
@@ -687,8 +695,8 @@ spec:
                   description: "Condition contains details for one aspect of the current
                     state of this API Resource. --- This struct is intended for direct
                     use as an array at the field path .status.conditions.  For example,
-                    type FooStatus struct{ // Represents the observations of a foo's
-                    current state. // Known .status.conditions.type are: \"Available\",
+                    \n type FooStatus struct{ // Represents the observations of a
+                    foo's current state. // Known .status.conditions.type are: \"Available\",
                     \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge
                     // +listType=map // +listMapKey=type Conditions []metav1.Condition
                     `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
@@ -750,6 +758,9 @@ spec:
                   - type
                   type: object
                 type: array
+              hashedSpec:
+                description: HashedSpec is the hashed spec without the shared property
+                type: string
               instanceID:
                 description: The generated ID of the instance, will be automatically
                   filled once the instance is created
@@ -767,9 +778,6 @@ spec:
                 type: string
               ready:
                 description: Indicates whether instance is ready for usage
-                type: string
-              hashedSpec:
-                description: hashed spec
                 type: string
               tags:
                 description: Tags describing the ServiceInstance as provided in service
@@ -798,9 +806,6 @@ spec:
       type: string
     - jsonPath: .status.ready
       name: Ready
-      type: string
-    - jsonPath: .status.shared
-      name: Shared
       type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
@@ -890,7 +895,7 @@ spec:
                 minLength: 1
                 type: string
               shared:
-                description: Indicates if the instance aim to be shared, default is false
+                description: Indicates the desired shared state
                 type: boolean
               userInfo:
                 description: UserInfo contains information about the user that last
@@ -934,8 +939,8 @@ spec:
                   description: "Condition contains details for one aspect of the current
                     state of this API Resource. --- This struct is intended for direct
                     use as an array at the field path .status.conditions.  For example,
-                    type FooStatus struct{ // Represents the observations of a foo's
-                    current state. // Known .status.conditions.type are: \"Available\",
+                    \n type FooStatus struct{ // Represents the observations of a
+                    foo's current state. // Known .status.conditions.type are: \"Available\",
                     \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge
                     // +listType=map // +listMapKey=type Conditions []metav1.Condition
                     `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
@@ -1015,9 +1020,6 @@ spec:
               ready:
                 description: Indicates whether instance is ready for usage
                 type: string
-              hashedSpec:
-                description: hashed spec
-                type: string
               tags:
                 description: Tags describing the ServiceInstance as provided in service
                   catalog, will be copied to `ServiceBinding` secret in the key called
@@ -1033,3 +1035,4 @@ spec:
     storage: false
     subresources:
       status: {}
+{{- end }}

@@ -1,10 +1,19 @@
-
 # Image URL to use all building/pushing image targets
 IMG ?= controller:latest
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:crdVersions=v1"
 TEST_PROFILE ?= $(CURDIR)/profile.cov
 LINT_VERSION = 1.47.3
+
+HELM_EXPORT_CRD_PATH ?= './sapbtp-operator-charts/templates/crd.yml'
+
+# Whether to wrap produced helm CRD charts with a value check or not
+HELM_WRAPPED_CRDS ?= true
+ifeq ($(HELM_WRAPPED_CRDS),true)
+HELM_WRAP_PREFIX = {{- if .Values.installCRDs }}\n
+HELM_WRAP_SUFFIX = {{- end }}\n
+endif
+
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
@@ -107,4 +116,9 @@ lint-deps:
 	fi
 
 helm-charts:
-	kustomize build config/default > ./sapbtp-operator-charts/templates/crd.yml
+	@{\
+  	  set -e ;\
+      printf '$(HELM_WRAP_PREFIX)';\
+      kustomize build './config/default';\
+      printf '$(HELM_WRAP_SUFFIX)';\
+    } > '$(HELM_EXPORT_CRD_PATH)';

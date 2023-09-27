@@ -13,10 +13,10 @@ jobs:
     steps:
       - name: Check out the repo
         uses: actions/checkout@v2
-      
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
-        
+
       - name: Login to Docker Hub
         uses: docker/login-action@v2
         with:
@@ -24,7 +24,7 @@ jobs:
           repository: sap/sap-btp-service-operator/controller
           username: ${{ secrets.OPERATOR_USER }}
           password: ${{ secrets.OPERATOR_PAT }}
-          
+
       - name: Build and push
         uses: docker/build-push-action@v4
         with:
@@ -55,6 +55,7 @@ jobs:
           helm repo index ./out --merge index.yaml
           sed -i "s|${CHART_TGZ_NAME}|${CHART_URL}|g" ./out/index.yaml | sh
           mv ./hack/kubectl-sapbtp ./out/kubectl-sapbtp
+          make HELM_WRAPPED_CRDS=false HELM_EXPORT_CRD_PATH='./out/crd.yml' helm-charts
 
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
