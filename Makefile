@@ -117,8 +117,8 @@ lint-deps:
 
 helm-charts:
 	@{\
-  	  set -e ;\
-      printf '$(HELM_WRAP_PREFIX)';\
-      kustomize build './config/default';\
-      printf '$(HELM_WRAP_SUFFIX)';\
-    } > '$(HELM_EXPORT_CRD_PATH)';
+	  set -e ;\
+	  printf '$(HELM_WRAP_PREFIX)';\
+	  kustomize build './config/default';\
+	  printf '$(HELM_WRAP_SUFFIX)';\
+	} > '$(HELM_EXPORT_CRD_PATH)';
