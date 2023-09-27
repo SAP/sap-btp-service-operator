@@ -83,10 +83,11 @@ var _ = Describe("Secrets Resolver", func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 		resolver = &secrets.SecretResolver{
-			ManagementNamespace: managementNamespace,
-			ReleaseNamespace:    managementNamespace,
-			Log:                 logf.Log.WithName("SecretResolver"),
-			Client:              k8sClient,
+			EnableMultipleSubaccounts: true,
+			ManagementNamespace:       managementNamespace,
+			ReleaseNamespace:          managementNamespace,
+			Log:                       logf.Log.WithName("SecretResolver"),
+			Client:                    k8sClient,
 		}
 	})
 
