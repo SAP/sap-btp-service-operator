@@ -78,9 +78,6 @@ spec:
               externalName:
                 description: The name of the instance in Service Manager
                 type: string
-              subaccountID:
-                description: The subaccount id of the service instance
-                type: string
               parameters:
                 description: "Provisioning parameters for the instance. \n The Parameters
                   field is NOT secret or secured in any way and should NEVER be used
@@ -131,6 +128,9 @@ spec:
               shared:
                 description: Indicates the desired shared state
                 type: boolean
+              subaccountID:
+                description: The subaccount id of the service instance
+                type: string
               userInfo:
                 description: UserInfo contains information about the user that last
                   modified this instance. This field is set by the API server and
@@ -239,9 +239,6 @@ spec:
               hashedSpec:
                 description: HashedSpec is the hashed spec without the shared property
                 type: string
-              subaccountID:
-                description: SubaccountID is the service instance subaccount id
-                type: string
               instanceID:
                 description: The generated ID of the instance, will be automatically
                   filled once the instance is created
@@ -259,6 +256,9 @@ spec:
                 type: string
               ready:
                 description: Indicates whether instance is ready for usage
+                type: string
+              subaccountID:
+                description: The subaccount id of the service binding
                 type: string
               tags:
                 description: Tags describing the ServiceInstance as provided in service
@@ -327,9 +327,6 @@ spec:
                 type: array
               externalName:
                 description: The name of the instance in Service Manager
-                type: string
-              subaccountID:
-                description: The subaccount id of the service instance
                 type: string
               parameters:
                 description: "Provisioning parameters for the instance. \n The Parameters

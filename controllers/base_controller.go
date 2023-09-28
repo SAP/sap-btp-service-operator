@@ -323,7 +323,8 @@ func isTransientStatusCode(StatusCode int) bool {
 	return StatusCode == http.StatusTooManyRequests ||
 		StatusCode == http.StatusServiceUnavailable ||
 		StatusCode == http.StatusGatewayTimeout ||
-		StatusCode == http.StatusBadGateway
+		StatusCode == http.StatusBadGateway ||
+		StatusCode == http.StatusNotFound
 }
 
 func (r *BaseReconciler) handleError(ctx context.Context, operationType smClientTypes.OperationCategory, err error, resource api.SAPBTPResource) (ctrl.Result, error) {

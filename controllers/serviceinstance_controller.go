@@ -80,7 +80,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	smClient, err := r.getSMClient(ctx, serviceInstance, serviceInstance.Spec.SubaccountID)
 	if err != nil {
-		fmt.Println(err)
+		log.Error(err, "failed to get sm client")
 		return r.markAsTransientError(ctx, Unknown, err.Error(), serviceInstance)
 	}
 
@@ -309,6 +309,7 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	}
 	log.Info("Instance provisioned successfully")
 	serviceInstance.Status.InstanceID = provision.InstanceID
+
 	if serviceInstance.Spec.SubaccountID != "" {
 		serviceInstance.Status.SubaccountID = serviceInstance.Spec.SubaccountID
 	}

@@ -1024,9 +1024,6 @@ spec:
               hashedSpec:
                 description: hashed spec
                 type: string
-              subaccountID:
-                description: SubaccountID is the service instance subaccount id
-                type: string
               tags:
                 description: Tags describing the ServiceInstance as provided in service
                   catalog, will be copied to `ServiceBinding` secret in the key called
