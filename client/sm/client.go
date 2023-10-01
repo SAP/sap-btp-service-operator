@@ -164,23 +164,23 @@ func (client *serviceManagerClient) Provision(instance *types.ServiceInstance, s
 	}
 
 	res := &ProvisionResponse{
-		InstanceID: instanceID,
-		Location:   location,
-		PlanID:     planInfo.planID,
+		InstanceID:   instanceID,
+		Location:     location,
+		PlanID:       planInfo.planID,
+		SubaccountID: getSubaccountIDFromContext(newInstance),
 	}
 
 	if planInfo.serviceOffering != nil {
 		res.Tags = planInfo.serviceOffering.Tags
 	}
 
-	res.SubaccountID = getSubaccountIDFromContext(newInstance)
-
 	return res, nil
 }
 
 func getSubaccountIDFromContext(instance *types.ServiceInstance) string {
-	if instance == nil || instance.Context == nil {
-		return ""
+	subaccountID := ""
+	if instance == nil || len(instance.Context) == 0 {
+		return subaccountID
 	}
 
 	var contextMap map[string]interface{}
@@ -189,11 +189,9 @@ func getSubaccountIDFromContext(instance *types.ServiceInstance) string {
 	}
 
 	if saID, ok := contextMap["subaccount_id"]; ok {
-		if saIDStr, isString := saID.(string); isString {
-			return saIDStr
-		}
+		subaccountID, _ = saID.(string)
 	}
-	return ""
+	return subaccountID
 }
 
 // Bind creates binding to an instance in service manager

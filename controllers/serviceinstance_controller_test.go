@@ -55,23 +55,6 @@ var _ = Describe("ServiceInstance controller", func() {
 
 	instanceSpec := v1.ServiceInstanceSpec{
 		ExternalName:        fakeInstanceExternalName,
-		ServicePlanName:     fakePlanName,
-		ServiceOfferingName: fakeOfferingName,
-		Parameters: &runtime.RawExtension{
-			Raw: []byte(`{"key": "value"}`),
-		},
-		ParametersFrom: []v1.ParametersFromSource{
-			{
-				SecretKeyRef: &v1.SecretKeyReference{
-					Name: "param-secret",
-					Key:  "secret-parameter",
-				},
-			},
-		},
-	}
-
-	subaccountInstanceSpec := v1.ServiceInstanceSpec{
-		ExternalName:        fakeInstanceExternalName,
 		SubaccountID:        testSubaccountID,
 		ServicePlanName:     fakePlanName,
 		ServiceOfferingName: fakeOfferingName,
@@ -581,16 +564,14 @@ var _ = Describe("ServiceInstance controller", func() {
 			})
 		})
 
-		Context("When subaccountID changes", func() {
-			When("it changes from one value to other value", func() {
-				It("should fail in the update webhook", func() {
-					deleteInstance(ctx, serviceInstance, true)
-					serviceInstance = createInstance(ctx, subaccountInstanceSpec, true)
-					serviceInstance.Spec.SubaccountID = "12345"
-					err := k8sClient.Update(ctx, serviceInstance)
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("subaccountID spec field can not be changed"))
-				})
+		When("subaccount id changed", func() {
+			It("should fail", func() {
+				deleteInstance(ctx, serviceInstance, true)
+				serviceInstance = createInstance(ctx, instanceSpec, true)
+				serviceInstance.Spec.SubaccountID = "12345"
+				err := k8sClient.Update(ctx, serviceInstance)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("subaccountID spec field can not be changed"))
 			})
 		})
 	})
