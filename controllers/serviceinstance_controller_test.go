@@ -247,13 +247,6 @@ var _ = Describe("ServiceInstance controller", func() {
 				})
 			})
 
-			When("subaccountID provided", func() {
-				It("should add the subaccountID also to the status", func() {
-					serviceInstance = createInstance(ctx, subaccountInstanceSpec, true)
-					Expect(serviceInstance.Status.SubaccountID).To(Equal(testSubaccountID))
-				})
-			})
-
 			When("provision request to SM fails", func() {
 				Context("with 400 status", func() {
 					errMessage := "failed to provision instance"

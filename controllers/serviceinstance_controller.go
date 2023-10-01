@@ -287,6 +287,7 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 
 	if provision.Location != "" {
 		serviceInstance.Status.InstanceID = provision.InstanceID
+		serviceInstance.Status.SubaccountID = provision.SubaccountID
 		if len(provision.Tags) > 0 {
 			tags, err := getTags(provision.Tags)
 			if err != nil {
@@ -307,12 +308,11 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 
 		return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, nil
 	}
-	log.Info("Instance provisioned successfully")
-	serviceInstance.Status.InstanceID = provision.InstanceID
 
-	if serviceInstance.Spec.SubaccountID != "" {
-		serviceInstance.Status.SubaccountID = serviceInstance.Spec.SubaccountID
-	}
+	serviceInstance.Status.InstanceID = provision.InstanceID
+	serviceInstance.Status.SubaccountID = provision.SubaccountID
+	log.Info(fmt.Sprintf("Instance provisioned successfully, instanceID: %s, subaccountID: %s", serviceInstance.Status.InstanceID,
+		serviceInstance.Status.SubaccountID))
 
 	if len(provision.Tags) > 0 {
 		tags, err := getTags(provision.Tags)

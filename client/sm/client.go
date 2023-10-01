@@ -103,10 +103,11 @@ type planInfo struct {
 }
 
 type ProvisionResponse struct {
-	InstanceID string
-	PlanID     string
-	Location   string
-	Tags       json.RawMessage
+	InstanceID   string
+	PlanID       string
+	Location     string
+	SubaccountID string
+	Tags         json.RawMessage
 }
 
 // NewClient NewClientWithAuth returns new SM Client configured with the provided configuration
@@ -167,11 +168,28 @@ func (client *serviceManagerClient) Provision(instance *types.ServiceInstance, s
 		Location:   location,
 		PlanID:     planInfo.planID,
 	}
+
 	if planInfo.serviceOffering != nil {
 		res.Tags = planInfo.serviceOffering.Tags
 	}
-	return res, nil
 
+	res.SubaccountID = getSubaccountIdFromContext(newInstance.Context)
+
+	return res, nil
+}
+
+func getSubaccountIdFromContext(ctx json.RawMessage) string {
+	var contextMap map[string]interface{}
+	if err := json.Unmarshal(ctx, &contextMap); err != nil {
+		return ""
+	}
+
+	if saID, ok := contextMap["subaccount_id"]; ok {
+		if saIDStr, isString := saID.(string); isString {
+			return saIDStr
+		}
+	}
+	return ""
 }
 
 // Bind creates binding to an instance in service manager
