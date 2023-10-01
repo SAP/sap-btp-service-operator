@@ -25,7 +25,7 @@ The SAP BTP service operator is based on the [Kubernetes Operator pattern](https
     * [Managing access](#managing-access)
 * [SAP BTP kubectl Extension](#sap-btp-kubectl-plugin-experimental) 
 * [Credentials Rotation](#credentials-rotation)
-* [Multitenancy](#multitenancy)
+* [Working with multiple subaccounts](#working-with-multiple-subaccounts)
 * [Troubleshooting and Support](#troubleshooting-and-support)
 * [Formats of Secret Objects](#formats-of-secret-objects)
 * [Uninstalling the Operator](#uninstalling-the-operator)
@@ -426,18 +426,22 @@ You can also choose the `services.cloud.sap.com/forceRotate` annotation (value d
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
-## Multitenancy
-You can configure the SAP BTP service operator to work with more than one subaccount in the same Kubernetes cluster. This means that different namespaces can be connected to different subaccounts.
-The association between a namespace and a subaccount is based on a different set of credentials configured for different namespaces.
 
-To connect the namespace to a subaccount, you first have to obtain the [access credentials](#setup) for the SAP BTP service operator and then maintain them in a secret that is specific for that namespace.
+## Working with multiple subaccounts
+You can configure the SAP BTP service operator to work with more than one subaccount in the same Kubernetes cluster.
+To work with different subaccounts, you first have to obtain the subaccount credentials for the SAP BTP service operator and then maintain them in a secret. [access credentials](#setup)
 
-There are two options to maintain namespace-specific credentials, and they differ between default and TLS-based access credentials types:
+There are three options to maintain those credentials, and you can either work with default or TLS-based access credentials types.
 
 ### Default Access Credentials
-- Define a secret named `sap-btp-service-operator` in the namespace. `ServiceInstance` and `ServiceBinding` that are applied in the namespace will belong to the subaccount from which the credentials were issued.  
-- Define different secrets for different namespaces in a [centrally managed namespace](./sapbtp-operator-charts/templates/configmap.yml), following the secret naming convention: `<namespace>-sap-btp-service-operator`.
-#### Namespace Secret Structure
+#####  Specific namespace for each subaccount
+1 - Define a secret named `sap-btp-service-operator` in the namespace. `ServiceInstance` and `ServiceBinding` that are applied in the namespace will belong to the subaccount from which the credentials were issued.  
+2 - Define different secrets for different namespaces in a [centrally managed namespace](./sapbtp-operator-charts/templates/configmap.yml), following the secret naming convention: `<namespace>-sap-btp-service-operator`.
+#####  Multiple subaccounts in the same namespace
+3 - Define different secrets for different subaccounts in a [centrally managed namespace](./sapbtp-operator-charts/templates/configmap.yml), following the secret naming convention: `<subaccountID>-sap-btp-service-operator`, when service instance will be created with subaccountID field in spec - those credentials will be used.
+
+#### Secret Structure
+Create in the specific namespace
 ```yaml
 apiVersion: v1
 kind: Secret
@@ -448,15 +452,43 @@ type: Opaque
 data:
   clientid: "<clientid>"
   clientsecret: "<clientsecret>"
-  sm_url: "<sm_url>"
-  tokenurl: "<auth_url>"
-  tokenurlsuffix: "/oauth/token"
+```
+
+Create in the management namespace:
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: <namespace>-sap-btp-service-operator
+  namespace: <management_namespace>
+type: Opaque
+data:
+  clientid: "<clientid>"
+  clientsecret: "<clientsecret>"
+```
+
+Create in the management namespace:
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: <subaccountID>-sap-btp-service-operator
+  namespace: <management_namespace>
+type: Opaque
+data:
+  clientid: "<clientid>"
+  clientsecret: "<clientsecret>"
 ```
 
 ### TLS-Based Access Credentials
-- Define a secret pair named `sap-btp-service-operator` and `sap-btp-service-operator-tls`  in the namespace. `ServiceInstance` and `ServiceBinding` that are applied in the namespace will belong to the subaccount from which the credentials were issued.  
-- Define different secrets for different namespaces in a [centrally managed namespace](./sapbtp-operator-charts/templates/configmap.yml), following the secret naming convention: `<namespace>-sap-btp-service-operator` and `<namespace>-sap-btp-service-operator-tls`. For more information, see [tls secret](./sapbtp-operator-charts/templates/secret-tls.yml).
-#### Namespace Secrets Structure
+#####  Specific namespace for each subaccount
+1 - Define a secret pair named `sap-btp-service-operator` and `sap-btp-service-operator-tls`  in the namespace. `ServiceInstance` and `ServiceBinding` that are applied in the namespace will belong to the subaccount from which the credentials were issued.  
+2 - Define different secrets for different namespaces in a [centrally managed namespace](./sapbtp-operator-charts/templates/configmap.yml), following the secret naming convention: `<namespace>-sap-btp-service-operator` and `<namespace>-sap-btp-service-operator-tls`. For more information, see [tls secret](./sapbtp-operator-charts/templates/secret-tls.yml).
+#####  Multiple subaccounts in the same namespace
+3 - Define different secrets for different subaccounts in a [centrally managed namespace](./sapbtp-operator-charts/templates/configmap.yml), following the secret naming convention: `<subaccountID>-sap-btp-service-operator`, and `<subaccountID>-sap-btp-service-operator-tls`. when service instance will be created with subaccountID field in spec - those credentials will be used. For more information, see [tls secret](./sapbtp-operator-charts/templates/secret-tls.yml).
+
+#### Secrets Structure
+Create in the specific namespace
 ```yaml
 apiVersion: v1
 kind: Secret
@@ -466,9 +498,7 @@ metadata:
 type: Opaque
 data:
   clientid: "<clientid>"
-  sm_url: "<sm_url>"
-  tokenurl: "<auth_url>"
-  tokenurlsuffix: "/oauth/token"
+  clientsecret: "<clientsecret>"
 ```
 ```yaml
 apiVersion: v1
@@ -476,6 +506,55 @@ kind: Secret
 metadata:
   name: sap-btp-service-operator-tls
   namespace: <namespace>
+type: kubernetes.io/tls
+data:
+  tls.crt: <crt> #base64 encoded
+  tls.key: <key> #base64 encoded
+```
+
+
+Create in the management namespace:
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: <namespace>-sap-btp-service-operator
+  namespace: <management_namespace>
+type: Opaque
+data:
+  clientid: "<clientid>"
+  clientsecret: "<clientsecret>"
+```
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: <namespace>-sap-btp-service-operator-tls
+  namespace: <management_namespace>
+type: kubernetes.io/tls
+data:
+  tls.crt: <crt> #base64 encoded
+  tls.key: <key> #base64 encoded
+```
+
+Create in the management namespace:
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: <subaccountID>-sap-btp-service-operator
+  namespace: <management_namespace>
+type: Opaque
+data:
+  clientid: "<clientid>"
+  clientsecret: "<clientsecret>"
+```
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: <subaccountID>sap-btp-service-operator-tls
+  namespace: <management_namespace>
 type: kubernetes.io/tls
 data:
   tls.crt: <crt> #base64 encoded
