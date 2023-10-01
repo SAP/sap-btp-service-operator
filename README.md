@@ -27,6 +27,7 @@ The SAP BTP service operator is based on the [Kubernetes Operator pattern](https
 * [Credentials Rotation](#credentials-rotation)
 * [Multitenancy](#multitenancy)
 * [Troubleshooting and Support](#troubleshooting-and-support)
+* [Formats of Secret Objects](#formats-of-secret-objects)
 * [Uninstalling the Operator](#uninstalling-the-operator)
 
 ## Architecture
@@ -152,7 +153,7 @@ Review the supported Kubernetes API versions for the following SAP BTP Service O
     spec:
         serviceOfferingName: sample-service
         servicePlanName: sample-plan
-        externalName: my-service-instance-external
+        externalName: my-service-btp-name
         parameters:
           key1: val1
           key2: val2
@@ -185,19 +186,19 @@ Review the supported Kubernetes API versions for the following SAP BTP Service O
 
     The credentials are stored in a secret created in your cluster.
 
-  ```yaml
-    apiVersion: services.cloud.sap.com/v1
-    kind: ServiceBinding
-    metadata:
-        name: my-binding
-    spec:
-        serviceInstanceName: my-service-instance
-        externalName: my-binding-external
-        secretName: my-secret
-        parameters:
-          key1: val1
-          key2: val2      
-  ```
+```yaml
+apiVersion: services.cloud.sap.com/v1
+kind: ServiceBinding
+metadata:
+  name: my-binding
+spec:
+  serviceInstanceName: my-service-instance
+  externalName: my-binding-external
+  secretName: my-secret
+  parameters:
+    key1: val1
+    key2: val2      
+```
 
 2.  Apply the custom resource file in your cluster to create the binding.
 
@@ -258,20 +259,20 @@ Review the supported Kubernetes API versions for the following SAP BTP Service O
 
 ### Service Binding 
 #### Spec
-| Parameter             | Type       | Description                                                                                                   |
-|:-----------------|:---------|:-----------------------------------------------------------------------------------------------------------|
-| serviceInstanceName`*`   | `string`   |  The Kubernetes name of the service instance to bind, should be in the namespace of the binding. |
-| externalName       | `string`   |  The name for the service binding in SAP BTP, defaults to the binding `metadata.name` if not specified. |
-| secretName       | `string`   |  The name of the secret where the credentials are stored, defaults to the binding `metadata.name` if not specified. |
-| secretKey | `string`  | The key inside the binding secret to store the credentials returned by the broker encoded as json to support complex data structures. |
-| secretRootKey | `string`  | The key inside the secret to store all binding data including credentials returned by the broker and additional info under single key.<br/>Convenient way to store whole binding data in single file when using `volumeMounts`. |
-| parameters       |  `[]object`  |  Some services support the provisioning of additional configuration parameters during the bind request.<br/>For the list of supported parameters, check the documentation of the particular service offering.|
-| parametersFrom | `[]object` | List of sources to populate parameters. |
-| userInfo | `object`  | Contains information about the user that last modified this service binding. |
-| credentialsRotationPolicy | `object`  | Holds automatic credentials rotation configuration. |
-| credentialsRotationPolicy.enabled | `boolean`  | Indicates whether automatic credentials rotation are enabled. |
-| credentialsRotationPolicy.rotationFrequency | `duration`  | Specifies the frequency at which the binding rotation is performed. |
-| credentialsRotationPolicy.rotatedBindingTTL | `duration`  | Specifies the time period for which to keep the rotated binding. |
+| Parameter             | Type       | Description                                                                                                                                                                                                                                                                                                                              |
+|:-----------------|:---------|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| serviceInstanceName`*`   | `string`   | The Kubernetes name of the service instance to bind, should be in the namespace of the binding.                                                                                                                                                                                                                                          |
+| externalName       | `string`   | The name for the service binding in SAP BTP, defaults to the binding `metadata.name` if not specified.                                                                                                                                                                                                                                   |
+| secretName       | `string`   | The name of the secret where the credentials are stored, defaults to the binding `metadata.name` if not specified.                                                                                                                                                                                                                       |
+| secretKey | `string`  | The secret key is a part of the Secret object, which stores service binding data (credentials) received from the broker. When the secret key is used, all the credentials are stored under a single key. This makes it a convenient way to store credentials data in one file when using volumeMounts. [Example](#formats-of-secret-objects)                                                                                                                                    |
+| secretRootKey | `string`  | The root key is a part of the Secret object, which stores service binding data (credentials) received from the broker, as well as additional service instance information. When the root key is used, all data is stored under a single key. This makes it a convenient way to store data in one file when using volumeMounts. [Example](#formats-of-secret-objects) |
+| parameters       |  `[]object`  | Some services support the provisioning of additional configuration parameters during the bind request.<br/>For the list of supported parameters, check the documentation of the particular service offering.                                                                                                                             |
+| parametersFrom | `[]object` | List of sources to populate parameters.                                                                                                                                                                                                                                                                                                  |
+| userInfo | `object`  | Contains information about the user that last modified this service binding.                                                                                                                                                                                                                                                             |
+| credentialsRotationPolicy | `object`  | Holds automatic credentials rotation configuration.                                                                                                                                                                                                                                                                                      |
+| credentialsRotationPolicy.enabled | `boolean`  | Indicates whether automatic credentials rotation are enabled.                                                                                                                                                                                                                                                                            |
+| credentialsRotationPolicy.rotationFrequency | `duration`  | Specifies the frequency at which the binding rotation is performed.                                                                                                                                                                                                                                                                      |
+| credentialsRotationPolicy.rotatedBindingTTL | `duration`  | Specifies the time period for which to keep the rotated binding.                                                                                                                                                                                                                                                                         |
 
 
 
@@ -358,12 +359,12 @@ The final JSON payload to send to the broker:
 
 You can list multiple parameters in the `secret`. To do so, separate "key": "value" pairs with commas as in this example:
 ```yaml
-  secret-parameter:
-    '{
-      "password": "letmein",
-      "key2": "value2",
-      "key3": "value3"
-    }'
+secret-parameter:
+  '{
+    "password": "letmein",
+    "key2": "value2",
+    "key3": "value3"
+  }'
 ```
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes).
 
@@ -395,9 +396,9 @@ The list of available releases: [sapbtp-operator releases](https://github.com/SA
 
 ### Usage
 ```
-  kubectl sapbtp marketplace -n <namespace>
-  kubectl sapbtp plans -n <namespace>
-  kubectl sapbtp services -n <namespace>
+kubectl sapbtp marketplace -n <namespace>
+kubectl sapbtp plans -n <namespace>
+kubectl sapbtp services -n <namespace>
 ```
 
 Use the `namespace` parameter to specify the location of the secret containing the SAP BTP access credentials.  
@@ -435,7 +436,7 @@ There are two options to maintain namespace-specific credentials, and they diffe
 
 ### Default Access Credentials
 - Define a secret named `sap-btp-service-operator` in the namespace. `ServiceInstance` and `ServiceBinding` that are applied in the namespace will belong to the subaccount from which the credentials were issued.  
-- Define different secrets for different namespaces in a [centrally managed namespace](./sapbtp-operator-charts/templates/configmap.yml), following the secret naming convention: `sap-btp-service-operator-<namespace>`.
+- Define different secrets for different namespaces in a [centrally managed namespace](./sapbtp-operator-charts/templates/configmap.yml), following the secret naming convention: `<namespace>-sap-btp-service-operator`.
 #### Namespace Secret Structure
 ```yaml
 apiVersion: v1
@@ -454,7 +455,7 @@ data:
 
 ### TLS-Based Access Credentials
 - Define a secret pair named `sap-btp-service-operator` and `sap-btp-service-operator-tls`  in the namespace. `ServiceInstance` and `ServiceBinding` that are applied in the namespace will belong to the subaccount from which the credentials were issued.  
-- Define different secrets for different namespaces in a [centrally managed namespace](./sapbtp-operator-charts/templates/configmap.yml), following the secret naming convention: `sap-btp-service-operator-<namespace>` and `sap-btp-service-operator-tls-<namespace>` . For more information, see [tls secret](./sapbtp-operator-charts/templates/secret-tls.yml).
+- Define different secrets for different namespaces in a [centrally managed namespace](./sapbtp-operator-charts/templates/configmap.yml), following the secret naming convention: `<namespace>-sap-btp-service-operator` and `<namespace>-sap-btp-service-operator-tls`. For more information, see [tls secret](./sapbtp-operator-charts/templates/secret-tls.yml).
 #### Namespace Secrets Structure
 ```yaml
 apiVersion: v1
@@ -514,6 +515,67 @@ data:
 
 You're welcome to raise issues related to feature requests, bugs, or give us general feedback on this project's GitHub Issues page. 
 The SAP BTP service operator project maintainers will respond to the best of their abilities. 
+
+[Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
+
+## Formats of Secret Objects
+
+### Key- Value Pairs (Default)
+The binding object includes credentials returned from the broker and service instance info presented as key-value pairs.
+```bash
+#Credentials
+uri: https://my-service.authentication.eu10.hana.ondemand.com
+username: admin
+password: ********
+
+#Service instance info
+instance_guid: <instance_guid> // The service instance ID
+instance_name: my-service-btp-name // Taken from the service instance external_name field if set. Otherwise from metadata.name
+plan: sample-plan // The service plan name                
+type: sample-service  // The service offering name
+```
+
+### Credentials as JSON Object
+To show credentials returned from the broker as a JSON object, use the 'secretKey' attribute in the service binding spec. 
+
+The value of 'secretKey' is the name of the key that stores the credentials in JSON format.
+
+```bash
+#Credentials
+your-secretKey-value:
+{
+  uri: https://my-service.authentication.eu10.hana.ondemand.com
+  username: admin
+  password: ********
+}
+
+#Service Instance info
+instance_guid: <instance_guid> // The service instance ID
+instance_name: my-service-btp-name // Taken from the service instance external_name field if set. Otherwise from metadata.name 
+plan: sample-plan // The service plan name
+type: sample-service // The service offering name
+```
+
+### Credentials and Service Info as One JSON Object
+To show both credentials returned from the broker and service instance info as a JSON object, use the 'secretRootKey' attribute in the service binding spec.
+
+The value of 'secretRootKey' is the name of the key that stores both credentials and serivce instance info in JSON format.
+
+```bash
+your-secretRootKey-value:
+{
+    #Credentials
+    uri: https://my-service.authentication.eu10.hana.ondemand.com
+    username: admin
+    password: ********
+    
+    #Service Instance info
+    instance_guid: <instance_guid> // The service instance id
+    instance_name: my-service-btp-name // Taken from the service instance external_name field if set. Otherwise from metadata.name 
+    plan: sample-plan // The service plan name
+    type: sample-service // The service offering name
+}
+```
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
