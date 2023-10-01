@@ -429,15 +429,14 @@ You can also choose the `services.cloud.sap.com/forceRotate` annotation (value d
 
 ## Working with multiple subaccounts
 You can configure the SAP BTP service operator to work with more than one subaccount in the same Kubernetes cluster.
-To work with different subaccounts, you first have to obtain the subaccount credentials for the SAP BTP service operator and then maintain them in a secret. [access credentials](#setup)
+To work with different subaccounts, you first have to obtain the [access credentials](#setup) for the SAP BTP service operator and then maintain them in a secret that is specific for that namespace or subaccount.
 
-There are three options to maintain those credentials, and you can either work with default or TLS-based access credentials types.
+There are two options to maintain those credentials, and they differ between default and TLS-based access credentials types.
+For each type you have three options to maintain subaccount specific credentials:
 
 ### Default Access Credentials
-#####  Specific namespace for each subaccount
 1 - Define a secret named `sap-btp-service-operator` in the namespace. `ServiceInstance` and `ServiceBinding` that are applied in the namespace will belong to the subaccount from which the credentials were issued.  
 2 - Define different secrets for different namespaces in a [centrally managed namespace](./sapbtp-operator-charts/templates/configmap.yml), following the secret naming convention: `<namespace>-sap-btp-service-operator`.
-#####  Multiple subaccounts in the same namespace
 3 - Define different secrets for different subaccounts in a [centrally managed namespace](./sapbtp-operator-charts/templates/configmap.yml), following the secret naming convention: `<subaccountID>-sap-btp-service-operator`, when service instance will be created with subaccountID field in spec - those credentials will be used.
 
 #### Secret Structure
@@ -481,10 +480,8 @@ data:
 ```
 
 ### TLS-Based Access Credentials
-#####  Specific namespace for each subaccount
 1 - Define a secret pair named `sap-btp-service-operator` and `sap-btp-service-operator-tls`  in the namespace. `ServiceInstance` and `ServiceBinding` that are applied in the namespace will belong to the subaccount from which the credentials were issued.  
 2 - Define different secrets for different namespaces in a [centrally managed namespace](./sapbtp-operator-charts/templates/configmap.yml), following the secret naming convention: `<namespace>-sap-btp-service-operator` and `<namespace>-sap-btp-service-operator-tls`. For more information, see [tls secret](./sapbtp-operator-charts/templates/secret-tls.yml).
-#####  Multiple subaccounts in the same namespace
 3 - Define different secrets for different subaccounts in a [centrally managed namespace](./sapbtp-operator-charts/templates/configmap.yml), following the secret naming convention: `<subaccountID>-sap-btp-service-operator`, and `<subaccountID>-sap-btp-service-operator-tls`. when service instance will be created with subaccountID field in spec - those credentials will be used. For more information, see [tls secret](./sapbtp-operator-charts/templates/secret-tls.yml).
 
 #### Secrets Structure
