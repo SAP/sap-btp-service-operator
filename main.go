@@ -139,7 +139,7 @@ func main() {
 			setupLog.Error(err, "unable to create webhook", "webhook", "ServiceBinding")
 			os.Exit(1)
 		}
-		if err = (&servicesv1.ServiceInstance{}).SetupWebhookWithManager(mgr); err != nil {
+		if err = (&servicesv1.ServiceInstance{}).SetupWebhookWithManager(mgr, secretResolver); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "ServiceInstance")
 			os.Exit(1)
 		}

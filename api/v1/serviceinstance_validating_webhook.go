@@ -18,6 +18,7 @@ package v1
 
 import (
 	"fmt"
+	"github.com/SAP/sap-btp-service-operator/internal/secrets"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -29,20 +30,30 @@ import (
 	"github.com/SAP/sap-btp-service-operator/api"
 )
 
-func (si *ServiceInstance) SetupWebhookWithManager(mgr ctrl.Manager) error {
+func (si *ServiceInstance) SetupWebhookWithManager(mgr ctrl.Manager, secretResolver *secrets.SecretResolver) error {
+	enableMultipleSubaccounts = secretResolver.EnableMultipleSubaccounts
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(si).
 		Complete()
 }
 
-// +kubebuilder:webhook:verbs=delete;update,path=/validate-services-cloud-sap-com-v1-serviceinstance,mutating=false,failurePolicy=fail,groups=services.cloud.sap.com,resources=serviceinstances,versions=v1,name=vserviceinstance.kb.io,sideEffects=None,admissionReviewVersions=v1beta1;v1
+func (si *ServiceInstance) SetEnableMUltipleSubaccounts(e bool) {
+	enableMultipleSubaccounts = e
+}
+
+// +kubebuilder:webhook:verbs=delete;update;create,path=/validate-services-cloud-sap-com-v1-serviceinstance,mutating=false,failurePolicy=fail,groups=services.cloud.sap.com,resources=serviceinstances,versions=v1,name=vserviceinstance.kb.io,sideEffects=None,admissionReviewVersions=v1beta1;v1
 
 var _ webhook.Validator = &ServiceInstance{}
+var enableMultipleSubaccounts = false
 
 // log is for logging in this package.
 var serviceinstancelog = logf.Log.WithName("serviceinstance-resource")
 
 func (si *ServiceInstance) ValidateCreate() (warnings admission.Warnings, err error) {
+	serviceinstancelog.Info("validate create", "name", si.Name)
+	if !enableMultipleSubaccounts && si.Spec.SubaccountID != "" {
+		return nil, fmt.Errorf("using multiple subaccounts is disabled")
+	}
 	return nil, nil
 }
 

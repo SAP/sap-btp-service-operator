@@ -53,4 +53,16 @@ var _ = Describe("Service Instance Webhook Test", func() {
 			})
 		})
 	})
+
+	Context("Validate Create", func() {
+		When("service instance subaccountID changed", func() {
+			It("should return error from webhook", func() {
+				instance := getInstanceWithSubaccountID()
+				instance.SetEnableMUltipleSubaccounts(false)
+				_, err := instance.ValidateCreate()
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("using multiple subaccounts is disabled"))
+			})
+		})
+	})
 })

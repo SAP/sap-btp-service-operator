@@ -91,6 +91,7 @@ webhooks:
     operations:
     - DELETE
     - UPDATE
+    - CREATE
     resources:
     - serviceinstances
   sideEffects: None
