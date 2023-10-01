@@ -18,7 +18,6 @@ package v1
 
 import (
 	"fmt"
-	"github.com/SAP/sap-btp-service-operator/internal/secrets"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -28,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/SAP/sap-btp-service-operator/api"
+	"github.com/SAP/sap-btp-service-operator/internal/secrets"
 )
 
 func (si *ServiceInstance) SetupWebhookWithManager(mgr ctrl.Manager, secretResolver *secrets.SecretResolver) error {
