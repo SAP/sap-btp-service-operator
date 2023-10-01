@@ -429,7 +429,7 @@ You can also choose the `services.cloud.sap.com/forceRotate` annotation (value d
 
 ## Working with multiple subaccounts
 You can configure the SAP BTP service operator to work with more than one subaccount in the same Kubernetes cluster.
-To work with different subaccounts, you first have to obtain the [access credentials](#setup) for the SAP BTP service operator and then maintain them in a secret that is specific for that namespace or subaccount.
+To work with different subaccounts, you first have to obtain the [access credentials](#setup) for the SAP BTP service operator and then maintain them in a secret that is specific for that subaccount.
 
 There are two options to maintain those credentials, and they differ between default and TLS-based access credentials types.
 For each type you have three options to maintain subaccount specific credentials:
