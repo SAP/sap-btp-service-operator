@@ -173,14 +173,18 @@ func (client *serviceManagerClient) Provision(instance *types.ServiceInstance, s
 		res.Tags = planInfo.serviceOffering.Tags
 	}
 
-	res.SubaccountID = getSubaccountIdFromContext(newInstance.Context)
+	res.SubaccountID = getSubaccountIdFromContext(newInstance)
 
 	return res, nil
 }
 
-func getSubaccountIdFromContext(ctx json.RawMessage) string {
+func getSubaccountIdFromContext(instance *types.ServiceInstance) string {
+	if instance == nil || instance.Context == nil {
+		return ""
+	}
+
 	var contextMap map[string]interface{}
-	if err := json.Unmarshal(ctx, &contextMap); err != nil {
+	if err := json.Unmarshal(instance.Context, &contextMap); err != nil {
 		return ""
 	}
 
