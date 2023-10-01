@@ -173,12 +173,12 @@ func (client *serviceManagerClient) Provision(instance *types.ServiceInstance, s
 		res.Tags = planInfo.serviceOffering.Tags
 	}
 
-	res.SubaccountID = getSubaccountIdFromContext(newInstance)
+	res.SubaccountID = getSubaccountIDFromContext(newInstance)
 
 	return res, nil
 }
 
-func getSubaccountIdFromContext(instance *types.ServiceInstance) string {
+func getSubaccountIDFromContext(instance *types.ServiceInstance) string {
 	if instance == nil || instance.Context == nil {
 		return ""
 	}
