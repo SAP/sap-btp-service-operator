@@ -435,8 +435,10 @@ There are two options to maintain those credentials, and they differ between def
 For each type you have three options to maintain subaccount specific credentials:
 
 ### Default Access Credentials
+##### Specific namespace for each subaccount
 1 - Define a secret named `sap-btp-service-operator` in the namespace. `ServiceInstance` and `ServiceBinding` that are applied in the namespace will belong to the subaccount from which the credentials were issued.  
 2 - Define different secrets for different namespaces in a [centrally managed namespace](./sapbtp-operator-charts/templates/configmap.yml), following the secret naming convention: `<namespace>-sap-btp-service-operator`.
+##### Multiple subaccounts in the same namespace
 3 - Define different secrets for different subaccounts in a [centrally managed namespace](./sapbtp-operator-charts/templates/configmap.yml), following the secret naming convention: `<subaccountID>-sap-btp-service-operator`, when service instance will be created with subaccountID field in spec - those credentials will be used.
 
 #### Secret Structure
@@ -480,8 +482,10 @@ data:
 ```
 
 ### TLS-Based Access Credentials
+##### Specific namespace for each subaccount
 1 - Define a secret pair named `sap-btp-service-operator` and `sap-btp-service-operator-tls`  in the namespace. `ServiceInstance` and `ServiceBinding` that are applied in the namespace will belong to the subaccount from which the credentials were issued.  
 2 - Define different secrets for different namespaces in a [centrally managed namespace](./sapbtp-operator-charts/templates/configmap.yml), following the secret naming convention: `<namespace>-sap-btp-service-operator` and `<namespace>-sap-btp-service-operator-tls`. For more information, see [tls secret](./sapbtp-operator-charts/templates/secret-tls.yml).
+##### Multiple subaccounts in the same namespace
 3 - Define different secrets for different subaccounts in a [centrally managed namespace](./sapbtp-operator-charts/templates/configmap.yml), following the secret naming convention: `<subaccountID>-sap-btp-service-operator`, and `<subaccountID>-sap-btp-service-operator-tls`. when service instance will be created with subaccountID field in spec - those credentials will be used. For more information, see [tls secret](./sapbtp-operator-charts/templates/secret-tls.yml).
 
 #### Secrets Structure
