@@ -38,9 +38,10 @@ var _ = Describe("ServiceBinding controller", func() {
 
 		defaultLookupKey types.NamespacedName
 
-		testUUID     string
-		bindingName  string
-		instanceName string
+		testUUID             string
+		bindingName          string
+		instanceName         string
+		instanceExternalName string
 	)
 
 	createBindingWithoutAssertionsAndWait := func(ctx context.Context, name, namespace, instanceName, instanceNamespace, externalName string, wait bool) (*v1.ServiceBinding, error) {
@@ -128,11 +129,35 @@ var _ = Describe("ServiceBinding controller", func() {
 		return instance
 	}
 
+	validateInstanceInfo := func(bindingSecret *corev1.Secret, instanceName string) {
+		validateSecretData(bindingSecret, "plan", `a-plan-name`)
+		validateSecretData(bindingSecret, "label", `an-offering-name`)
+		validateSecretData(bindingSecret, "type", `an-offering-name`)
+		validateSecretData(bindingSecret, "tags", "[\"test\",\"custom-tag\"]")
+		validateSecretData(bindingSecret, "instance_name", instanceName)
+		Expect(bindingSecret.Data).To(HaveKey("instance_guid"))
+	}
+
+	validateSecretMetadata := func(bindingSecret *corev1.Secret, credentialProperties []SecretMetadataProperty) {
+		metadata := make(map[string][]SecretMetadataProperty)
+		Expect(json.Unmarshal(bindingSecret.Data[".metadata"], &metadata)).To(Succeed())
+		if credentialProperties != nil {
+			Expect(metadata["credentialProperties"]).To(ContainElements(credentialProperties))
+		}
+		Expect(metadata["metaDataProperties"]).To(ContainElement(SecretMetadataProperty{Name: "instance_name", Format: string(TEXT)}))
+		Expect(metadata["metaDataProperties"]).To(ContainElement(SecretMetadataProperty{Name: "instance_guid", Format: string(TEXT)}))
+		Expect(metadata["metaDataProperties"]).To(ContainElement(SecretMetadataProperty{Name: "plan", Format: string(TEXT)}))
+		Expect(metadata["metaDataProperties"]).To(ContainElement(SecretMetadataProperty{Name: "label", Format: string(TEXT)}))
+		Expect(metadata["metaDataProperties"]).To(ContainElement(SecretMetadataProperty{Name: "type", Format: string(TEXT)}))
+		Expect(metadata["metaDataProperties"]).To(ContainElement(SecretMetadataProperty{Name: "tags", Format: string(JSON)}))
+	}
+
 	BeforeEach(func() {
 		ctx = context.Background()
 		testUUID = uuid.New().String()
 		instanceName = "test-instance-" + testUUID
 		bindingName = "test-binding-" + testUUID
+		instanceExternalName = instanceName + "-external"
 
 		fakeClient = &smfakes.FakeClient{}
 		fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: "12345678", Tags: []byte("[\"test\"]")}, nil)
@@ -149,7 +174,7 @@ var _ = Describe("ServiceBinding controller", func() {
 			Expect(err).ToNot(HaveOccurred())
 		}
 
-		createdInstance = createInstance(ctx, instanceName, bindingTestNamespace, instanceName+"-external")
+		createdInstance = createInstance(ctx, instanceName, bindingTestNamespace, instanceExternalName)
 	})
 
 	AfterEach(func() {
@@ -243,27 +268,6 @@ var _ = Describe("ServiceBinding controller", func() {
 		})
 
 		Context("sync", func() {
-			validateInstanceInfo := func(bindingSecret *corev1.Secret) {
-				validateSecretData(bindingSecret, "plan", `a-plan-name`)
-				validateSecretData(bindingSecret, "label", `an-offering-name`)
-				validateSecretData(bindingSecret, "type", `an-offering-name`)
-				validateSecretData(bindingSecret, "tags", "[\"test\",\"custom-tag\"]")
-				validateSecretData(bindingSecret, "instance_name", instanceName)
-				Expect(bindingSecret.Data).To(HaveKey("instance_guid"))
-			}
-
-			validateSecretMetadata := func(bindingSecret *corev1.Secret, credentialProperties []SecretMetadataProperty) {
-				metadata := make(map[string][]SecretMetadataProperty)
-				Expect(json.Unmarshal(bindingSecret.Data[".metadata"], &metadata)).To(Succeed())
-				Expect(metadata["credentialProperties"]).To(ContainElements(credentialProperties))
-				Expect(metadata["metaDataProperties"]).To(ContainElement(SecretMetadataProperty{Name: "instance_name", Format: string(TEXT)}))
-				Expect(metadata["metaDataProperties"]).To(ContainElement(SecretMetadataProperty{Name: "instance_guid", Format: string(TEXT)}))
-				Expect(metadata["metaDataProperties"]).To(ContainElement(SecretMetadataProperty{Name: "plan", Format: string(TEXT)}))
-				Expect(metadata["metaDataProperties"]).To(ContainElement(SecretMetadataProperty{Name: "label", Format: string(TEXT)}))
-				Expect(metadata["metaDataProperties"]).To(ContainElement(SecretMetadataProperty{Name: "type", Format: string(TEXT)}))
-				Expect(metadata["metaDataProperties"]).To(ContainElement(SecretMetadataProperty{Name: "tags", Format: string(JSON)}))
-			}
-
 			It("Should create binding and store the binding credentials in a secret", func() {
 				createdBinding = createBinding(ctx, bindingName, bindingTestNamespace, instanceName, "", "binding-external-name")
 				Expect(createdBinding.Spec.ExternalName).To(Equal("binding-external-name"))
@@ -300,7 +304,7 @@ var _ = Describe("ServiceBinding controller", func() {
 
 				bindingSecret := getSecret(ctx, binding.Spec.SecretName, bindingTestNamespace, true)
 				validateSecretData(bindingSecret, secretKey, `{"secret_key": "secret_value", "escaped": "{\"escaped_key\":\"escaped_val\"}"}`)
-				validateInstanceInfo(bindingSecret)
+				validateInstanceInfo(bindingSecret, instanceExternalName)
 				credentialProperties := []SecretMetadataProperty{
 					{
 						Name:      "mycredentials",
@@ -512,6 +516,19 @@ var _ = Describe("ServiceBinding controller", func() {
 					waitForResourceToBeReady(ctx, binding)
 					Expect(binding.Status.BindingID).To(Equal(fakeBindingID))
 				})
+			})
+		})
+
+		Context("useMetaName annotation is provided", func() {
+			It("should put in the secret.instance_name the instance meta.name", func() {
+				createdInstance.Annotations = map[string]string{
+					api.UseInstanceMetadataNameInSecret: "true",
+				}
+				updateInstance(ctx, createdInstance)
+				createdBinding = createBinding(ctx, bindingName, bindingTestNamespace, instanceName, "", "")
+				bindingSecret := getSecret(ctx, createdBinding.Spec.SecretName, createdBinding.Namespace, true)
+				validateInstanceInfo(bindingSecret, instanceName)
+				validateSecretMetadata(bindingSecret, nil)
 			})
 		})
 
