@@ -46,7 +46,6 @@ var _ = Describe("ServiceInstance controller", func() {
 
 	instanceSpec := v1.ServiceInstanceSpec{
 		ExternalName:        fakeInstanceExternalName,
-		SubaccountID:        testSubaccountID,
 		ServicePlanName:     fakePlanName,
 		ServiceOfferingName: fakeOfferingName,
 		Parameters: &runtime.RawExtension{
