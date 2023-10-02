@@ -27,32 +27,30 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/SAP/sap-btp-service-operator/api"
-	"github.com/SAP/sap-btp-service-operator/internal/secrets"
 )
 
-func (si *ServiceInstance) SetupWebhookWithManager(mgr ctrl.Manager, secretResolver *secrets.SecretResolver) error {
-	enableMultipleSubaccounts = secretResolver.EnableMultipleSubaccounts
+func (si *ServiceInstance) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(si).
 		Complete()
 }
 
-func (si *ServiceInstance) SetEnableMUltipleSubaccounts(e bool) {
-	enableMultipleSubaccounts = e
-}
-
 // +kubebuilder:webhook:verbs=delete;update;create,path=/validate-services-cloud-sap-com-v1-serviceinstance,mutating=false,failurePolicy=fail,groups=services.cloud.sap.com,resources=serviceinstances,versions=v1,name=vserviceinstance.kb.io,sideEffects=None,admissionReviewVersions=v1beta1;v1
 
 var _ webhook.Validator = &ServiceInstance{}
-var enableMultipleSubaccounts = false
 
 // log is for logging in this package.
 var serviceinstancelog = logf.Log.WithName("serviceinstance-resource")
+var allowMultipleTenants bool
+
+func SetAllowMultipleTenants(isAllowed bool) {
+	allowMultipleTenants = isAllowed
+}
 
 func (si *ServiceInstance) ValidateCreate() (warnings admission.Warnings, err error) {
 	serviceinstancelog.Info("validate create", "name", si.Name)
-	if !enableMultipleSubaccounts && si.Spec.SubaccountID != "" {
-		return nil, fmt.Errorf("using multiple subaccounts is disabled")
+	if !allowMultipleTenants && si.Spec.SubaccountID != "" {
+		return nil, fmt.Errorf("using multiple subaccounts is not allowed")
 	}
 	return nil, nil
 }
@@ -61,7 +59,7 @@ func (si *ServiceInstance) ValidateUpdate(old runtime.Object) (warnings admissio
 	serviceinstancelog.Info("validate update", "name", si.Name)
 	oldInstance := old.(*ServiceInstance)
 	if oldInstance.Spec.SubaccountID != si.Spec.SubaccountID {
-		return nil, fmt.Errorf("subaccountID spec field can not be changed")
+		return nil, fmt.Errorf("subaccountID can not be changed")
 	}
 	return nil, nil
 }

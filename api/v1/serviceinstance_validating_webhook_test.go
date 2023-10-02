@@ -12,6 +12,31 @@ var _ = Describe("Service Instance Webhook Test", func() {
 		instance = getInstance()
 	})
 
+	Context("Validate Create", func() {
+		When("multiple subaccounts is not allowed and subaccountID exists", func() {
+			It("should fail", func() {
+				instance := getInstanceWithSubaccountID()
+				SetAllowMultipleTenants(false)
+				_, err := instance.ValidateCreate()
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("using multiple subaccounts is not allowed"))
+			})
+		})
+	})
+
+	Context("Validate Update", func() {
+		When("multiple subaccounts is not allowed and subaccountID changed", func() {
+			It("should fail", func() {
+				instance := getInstanceWithSubaccountID()
+				newInstance := getInstanceWithSubaccountID()
+				newInstance.Spec.SubaccountID = "12345"
+				_, err := newInstance.ValidateUpdate(instance)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("subaccountID can not be changed"))
+			})
+		})
+	})
+
 	Context("Validate Delete", func() {
 		When("service instance is marked as prevent deletion", func() {
 			It("should return error from webhook", func() {
@@ -37,31 +62,6 @@ var _ = Describe("Service Instance Webhook Test", func() {
 				}
 				_, err := instance.ValidateDelete()
 				Expect(err).ToNot(HaveOccurred())
-			})
-		})
-	})
-
-	Context("Validate Update", func() {
-		When("service instance subaccountID changed", func() {
-			It("should return error from webhook", func() {
-				instance := getInstanceWithSubaccountID()
-				newInstance := getInstanceWithSubaccountID()
-				newInstance.Spec.SubaccountID = "12345"
-				_, err := newInstance.ValidateUpdate(instance)
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("subaccountID spec field can not be changed"))
-			})
-		})
-	})
-
-	Context("Validate Create", func() {
-		When("service instance subaccountID changed", func() {
-			It("should return error from webhook", func() {
-				instance := getInstanceWithSubaccountID()
-				instance.SetEnableMUltipleSubaccounts(false)
-				_, err := instance.ValidateCreate()
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("using multiple subaccounts is disabled"))
 			})
 		})
 	})

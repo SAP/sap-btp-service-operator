@@ -21,7 +21,6 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"github.com/SAP/sap-btp-service-operator/internal/secrets"
 	"net"
 	"net/http"
 	"path/filepath"
@@ -82,7 +81,7 @@ var (
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
-	ginkgo_config.DefaultReporterConfig.Verbose = true
+	ginkgo_config.DefaultReporterConfig.Verbose = false
 	RunSpecs(t, "Controllers Suite")
 }
 
@@ -134,14 +133,11 @@ var _ = BeforeSuite(func(done Done) {
 	k8sManager.GetWebhookServer().Register("/mutate-services-cloud-sap-com-v1-serviceinstance", &webhook.Admission{Handler: &webhooks.ServiceInstanceDefaulter{Decoder: admission.NewDecoder(k8sManager.GetScheme())}})
 	k8sManager.GetWebhookServer().Register("/mutate-services-cloud-sap-com-v1-servicebinding", &webhook.Admission{Handler: &webhooks.ServiceBindingDefaulter{Decoder: admission.NewDecoder(k8sManager.GetScheme())}})
 
-	secretResolver := &secrets.SecretResolver{
-		EnableMultipleSubaccounts: true,
-	}
-
 	err = (&v1.ServiceBinding{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&v1.ServiceInstance{}).SetupWebhookWithManager(k8sManager, secretResolver)
+	v1.SetAllowMultipleTenants(true)
+	err = (&v1.ServiceInstance{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	By("registering controllers")

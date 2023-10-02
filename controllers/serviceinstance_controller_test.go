@@ -28,6 +28,7 @@ import (
 
 const (
 	fakeInstanceID           = "ic-fake-instance-id"
+	fakeSubaccountID         = "fake-subaccount-id"
 	fakeInstanceExternalName = "ic-test-instance-external-name"
 	testNamespace            = "ic-test-namespace"
 	fakeOfferingName         = "offering-a"
@@ -126,7 +127,7 @@ var _ = Describe("ServiceInstance controller", func() {
 		defaultLookupKey = types.NamespacedName{Name: fakeInstanceName, Namespace: testNamespace}
 
 		fakeClient = &smfakes.FakeClient{}
-		fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
+		fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: fakeInstanceID, SubaccountID: fakeSubaccountID}, nil)
 		fakeClient.DeprovisionReturns("", nil)
 		fakeClient.GetInstanceByIDReturns(&smclientTypes.ServiceInstance{ID: fakeInstanceID, Ready: true, LastOperation: &smClientTypes.Operation{State: smClientTypes.SUCCEEDED, Type: smClientTypes.CREATE}}, nil)
 
@@ -201,6 +202,24 @@ var _ = Describe("ServiceInstance controller", func() {
 					})
 				})
 			})
+
+			When("multiple subaccounts is disabled", func() {
+				BeforeEach(func() {
+					v1.SetAllowMultipleTenants(false)
+				})
+				AfterEach(func() {
+					v1.SetAllowMultipleTenants(true)
+				})
+				It("should fail if instance contains subaccount id", func() {
+					instance := &v1.ServiceInstance{Spec: instanceSpec}
+					instance.Name = fakeInstanceName
+					instance.Namespace = testNamespace
+					instance.Spec.SubaccountID = "someID"
+					err := k8sClient.Create(ctx, instance)
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("using multiple subaccounts is not allowed"))
+				})
+			})
 		})
 
 		Context("Sync", func() {
@@ -208,6 +227,7 @@ var _ = Describe("ServiceInstance controller", func() {
 				It("should provision instance of the provided offering and plan name successfully", func() {
 					serviceInstance = createInstance(ctx, instanceSpec, true)
 					Expect(serviceInstance.Status.InstanceID).To(Equal(fakeInstanceID))
+					Expect(serviceInstance.Status.SubaccountID).To(Equal(fakeSubaccountID))
 					Expect(serviceInstance.Spec.ExternalName).To(Equal(fakeInstanceExternalName))
 					Expect(serviceInstance.Name).To(Equal(fakeInstanceName))
 					Expect(serviceInstance.Status.HashedSpec).To(Not(BeNil()))
@@ -565,7 +585,7 @@ var _ = Describe("ServiceInstance controller", func() {
 				serviceInstance.Spec.SubaccountID = "12345"
 				err := k8sClient.Update(ctx, serviceInstance)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("subaccountID spec field can not be changed"))
+				Expect(err.Error()).To(ContainSubstring("subaccountID can not be changed"))
 			})
 		})
 	})
