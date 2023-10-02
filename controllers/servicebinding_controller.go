@@ -71,7 +71,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	ctx = context.WithValue(ctx, LogKey{}, log)
 
 	serviceBinding := &servicesv1.ServiceBinding{}
-	if err := r.Get(ctx, req.NamespacedName, serviceBinding); err != nil {
+	if err := r.Client.Get(ctx, req.NamespacedName, serviceBinding); err != nil {
 		if !apierrors.IsNotFound(err) {
 			log.Error(err, "unable to fetch ServiceBinding")
 		}
@@ -124,7 +124,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	if !controllerutil.ContainsFinalizer(serviceBinding, api.FinalizerName) {
 		controllerutil.AddFinalizer(serviceBinding, api.FinalizerName)
 		log.Info(fmt.Sprintf("added finalizer '%s' to service binding", api.FinalizerName))
-		if err := r.Update(ctx, serviceBinding); err != nil {
+		if err := r.Client.Update(ctx, serviceBinding); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
@@ -406,7 +406,7 @@ func (r *ServiceBindingReconciler) SetOwner(ctx context.Context, serviceInstance
 		log.Error(err, fmt.Sprintf("Could not update the smBinding %s owner instance reference", serviceBinding.Name))
 		return err
 	}
-	if err := r.Update(ctx, serviceBinding); err != nil {
+	if err := r.Client.Update(ctx, serviceBinding); err != nil {
 		log.Error(err, "Failed to set controller reference", "bindingName", serviceBinding.Name)
 		return err
 	}
@@ -446,7 +446,7 @@ func (r *ServiceBindingReconciler) getServiceInstanceForBinding(ctx context.Cont
 	if len(binding.Spec.ServiceInstanceNamespace) > 0 {
 		namespace = binding.Spec.ServiceInstanceNamespace
 	}
-	if err := r.Get(ctx, types.NamespacedName{Name: binding.Spec.ServiceInstanceName, Namespace: namespace}, serviceInstance); err != nil {
+	if err := r.Client.Get(ctx, types.NamespacedName{Name: binding.Spec.ServiceInstanceName, Namespace: namespace}, serviceInstance); err != nil {
 		return nil, err
 	}
 
@@ -569,7 +569,7 @@ func (r *ServiceBindingReconciler) deleteBindingSecret(ctx context.Context, bind
 	log := GetLogger(ctx)
 	log.Info("Deleting binding secret")
 	bindingSecret := &corev1.Secret{}
-	if err := r.Get(ctx, types.NamespacedName{
+	if err := r.Client.Get(ctx, types.NamespacedName{
 		Namespace: binding.Namespace,
 		Name:      binding.Spec.SecretName,
 	}, bindingSecret); err != nil {
@@ -584,7 +584,7 @@ func (r *ServiceBindingReconciler) deleteBindingSecret(ctx context.Context, bind
 	}
 	bindingSecret = bindingSecret.DeepCopy()
 
-	if err := r.Delete(ctx, bindingSecret); err != nil {
+	if err := r.Client.Delete(ctx, bindingSecret); err != nil {
 		log.Error(err, "Failed to delete binding secret")
 		return err
 	}
@@ -789,7 +789,7 @@ func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, smClie
 		if _, ok := binding.Annotations[api.ForceRotateAnnotation]; ok {
 			log.Info("Credentials rotation - deleting force rotate annotation")
 			delete(binding.Annotations, api.ForceRotateAnnotation)
-			if err := r.Update(ctx, binding); err != nil {
+			if err := r.Client.Update(ctx, binding); err != nil {
 				log.Info("Credentials rotation - failed to delete force rotate annotation")
 				return err
 			}
@@ -817,7 +817,7 @@ func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, smClie
 	}
 
 	bindings := &servicesv1.ServiceBindingList{}
-	err := r.List(ctx, bindings, client.MatchingLabels{api.StaleBindingIDLabel: binding.Status.BindingID}, client.InNamespace(binding.Namespace))
+	err := r.Client.List(ctx, bindings, client.MatchingLabels{api.StaleBindingIDLabel: binding.Status.BindingID}, client.InNamespace(binding.Namespace))
 	if err != nil {
 		return err
 	}
@@ -900,14 +900,14 @@ func (r *ServiceBindingReconciler) createOldBinding(ctx context.Context, suffix 
 	spec.SecretName = spec.SecretName + suffix
 	spec.ExternalName = spec.ExternalName + suffix
 	oldBinding.Spec = *spec
-	return r.Create(ctx, oldBinding)
+	return r.Client.Create(ctx, oldBinding)
 }
 
 func (r *ServiceBindingReconciler) recoverSecret(ctx context.Context, binding *servicesv1.ServiceBinding, secret *corev1.Secret) error {
 	log := GetLogger(ctx)
 	dbSecret := &corev1.Secret{}
 	create := false
-	if err := r.Get(ctx, types.NamespacedName{Name: binding.Spec.SecretName, Namespace: binding.Namespace}, dbSecret); err != nil {
+	if err := r.Client.Get(ctx, types.NamespacedName{Name: binding.Spec.SecretName, Namespace: binding.Namespace}, dbSecret); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return err
 		}
@@ -916,7 +916,7 @@ func (r *ServiceBindingReconciler) recoverSecret(ctx context.Context, binding *s
 
 	if create {
 		log.Info("Creating binding secret", "name", secret.Name)
-		if err := r.Create(ctx, secret); err != nil {
+		if err := r.Client.Create(ctx, secret); err != nil {
 			if !apierrors.IsAlreadyExists(err) {
 				return err
 			}
@@ -929,7 +929,7 @@ func (r *ServiceBindingReconciler) recoverSecret(ctx context.Context, binding *s
 	log.Info("Updating existing binding secret", "name", secret.Name)
 	dbSecret.Data = secret.Data
 	dbSecret.StringData = secret.StringData
-	return r.Update(ctx, dbSecret)
+	return r.Client.Update(ctx, dbSecret)
 }
 
 func (r *ServiceBindingReconciler) isStaleServiceBinding(binding *servicesv1.ServiceBinding) bool {
@@ -956,18 +956,18 @@ func (r *ServiceBindingReconciler) handleStaleServiceBinding(ctx context.Context
 	if !ok {
 		//if the user removed the "rotationOf" label the stale binding should be deleted otherwise it will remain forever
 		log.Info("missing rotationOf label, unable to fetch original binding, deleting stale")
-		return ctrl.Result{}, r.Delete(ctx, serviceBinding)
+		return ctrl.Result{}, r.Client.Delete(ctx, serviceBinding)
 	}
 	origBinding := &servicesv1.ServiceBinding{}
-	if err := r.Get(ctx, types.NamespacedName{Namespace: serviceBinding.Namespace, Name: originalBindingName}, origBinding); err != nil {
+	if err := r.Client.Get(ctx, types.NamespacedName{Namespace: serviceBinding.Namespace, Name: originalBindingName}, origBinding); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Info("original binding not found, deleting stale binding")
-			return ctrl.Result{}, r.Delete(ctx, serviceBinding)
+			return ctrl.Result{}, r.Client.Delete(ctx, serviceBinding)
 		}
 		return ctrl.Result{}, err
 	}
 	if meta.IsStatusConditionTrue(origBinding.Status.Conditions, api.ConditionReady) {
-		return ctrl.Result{}, r.Delete(ctx, serviceBinding)
+		return ctrl.Result{}, r.Client.Delete(ctx, serviceBinding)
 	}
 
 	log.Info("not deleting stale binding since original binding is not ready")

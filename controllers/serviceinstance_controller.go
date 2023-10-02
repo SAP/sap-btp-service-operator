@@ -59,7 +59,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	ctx = context.WithValue(ctx, LogKey{}, log)
 
 	serviceInstance := &servicesv1.ServiceInstance{}
-	if err := r.Get(ctx, req.NamespacedName, serviceInstance); err != nil {
+	if err := r.Client.Get(ctx, req.NamespacedName, serviceInstance); err != nil {
 		if !apierrors.IsNotFound(err) {
 			log.Error(err, "unable to fetch ServiceInstance")
 		}
@@ -96,7 +96,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	if !controllerutil.ContainsFinalizer(serviceInstance, api.FinalizerName) {
 		controllerutil.AddFinalizer(serviceInstance, api.FinalizerName)
 		log.Info(fmt.Sprintf("added finalizer '%s' to service instance", api.FinalizerName))
-		if err := r.Update(ctx, serviceInstance); err != nil {
+		if err := r.Client.Update(ctx, serviceInstance); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
@@ -105,7 +105,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		log.Info(fmt.Sprintf("Final state, spec did not change, and we are not in progress - ignoring... Generation is - %v", serviceInstance.Generation))
 		if len(serviceInstance.Status.HashedSpec) == 0 {
 			updateHashedSpecValue(serviceInstance)
-			return ctrl.Result{}, r.Status().Update(ctx, serviceInstance)
+			return ctrl.Result{}, r.Client.Status().Update(ctx, serviceInstance)
 		}
 		return ctrl.Result{}, nil
 	}
