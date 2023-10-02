@@ -559,8 +559,8 @@ spec:
         name: Ready
         type: string
       - jsonPath: .metadata.creationTimestamp
-      name: Age
-      type: date
+        name: Age
+        type: date
     - jsonPath: .status.instanceID
       name: ID
       priority: 1
