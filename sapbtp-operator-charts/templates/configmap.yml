@@ -23,10 +23,6 @@ data:
   {{- end }}
   {{- end }}
   ENABLE_MULTIPLE_SUBACCOUNTS: {{ .Values.manager.enable_multiple_subaccounts | quote }}
-  {{- if not .Values.manager.enable_multiple_subaccounts }}
-  {{- if gt (len .Values.manager.enable_multiple_subaccounts) 0 }}
-  {{- end }}
-  {{- end }}
 kind: ConfigMap
 metadata:
   name: sap-btp-operator-config
