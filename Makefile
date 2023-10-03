@@ -107,4 +107,10 @@ lint-deps:
 	fi
 
 helm-charts:
-	kustomize build config/default > ./sapbtp-operator-charts/templates/crd.yml
+	@{\
+	  set -e ;\
+	  printf '{{- if .Values.installCRDs }}\n';\
+	  kustomize build './config/default';\
+	  printf '{{- end }}\n';\
+	} > ./sapbtp-operator-charts/templates/crd.yml
+
