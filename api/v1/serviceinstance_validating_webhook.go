@@ -53,7 +53,6 @@ func (si *ServiceInstance) ValidateCreate() (warnings admission.Warnings, err er
 		serviceinstancelog.Error(fmt.Errorf("invalid subaccountID property"), "the operator installation does not allow multiple subaccunts")
 		return nil, fmt.Errorf("setting the subaccountID property is not allowed")
 	}
-	serviceinstancelog.Info(fmt.Sprintf("validate create passed - %s", allowMultipleTenants))
 	return nil, nil
 }
 
