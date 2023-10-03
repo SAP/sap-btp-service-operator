@@ -22,6 +22,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
@@ -34,19 +35,38 @@ func (si *ServiceInstance) SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-// +kubebuilder:webhook:verbs=delete,path=/validate-services-cloud-sap-com-v1-serviceinstance,mutating=false,failurePolicy=fail,groups=services.cloud.sap.com,resources=serviceinstances,versions=v1,name=vserviceinstance.kb.io,sideEffects=None,admissionReviewVersions=v1beta1;v1
+// +kubebuilder:webhook:verbs=delete;update;create,path=/validate-services-cloud-sap-com-v1-serviceinstance,mutating=false,failurePolicy=fail,groups=services.cloud.sap.com,resources=serviceinstances,versions=v1,name=vserviceinstance.kb.io,sideEffects=None,admissionReviewVersions=v1beta1;v1
 
 var _ webhook.Validator = &ServiceInstance{}
 
+// log is for logging in this package.
+var serviceinstancelog = logf.Log.WithName("serviceinstance-resource")
+var allowMultipleTenants bool
+
+func SetAllowMultipleTenants(isAllowed bool) {
+	allowMultipleTenants = isAllowed
+}
+
 func (si *ServiceInstance) ValidateCreate() (warnings admission.Warnings, err error) {
+	serviceinstancelog.Info("validate create", "name", si.Name)
+	if !allowMultipleTenants && len(si.Spec.SubaccountID) > 0 {
+		serviceinstancelog.Error(fmt.Errorf("invalid subaccountID property"), "the operator installation does not allow multiple subaccunts")
+		return nil, fmt.Errorf("setting the subaccountID property is not allowed")
+	}
 	return nil, nil
 }
 
 func (si *ServiceInstance) ValidateUpdate(old runtime.Object) (warnings admission.Warnings, err error) {
+	serviceinstancelog.Info("validate update", "name", si.Name)
+	oldInstance := old.(*ServiceInstance)
+	if oldInstance.Spec.SubaccountID != si.Spec.SubaccountID {
+		return nil, fmt.Errorf("changing the subaccountID for an existing instance is not allowed")
+	}
 	return nil, nil
 }
 
 func (si *ServiceInstance) ValidateDelete() (warnings admission.Warnings, err error) {
+	serviceinstancelog.Info("validate delete", "name", si.Name)
 	if si.Annotations != nil {
 		preventDeletion, ok := si.Annotations[api.PreventDeletion]
 		if ok && strings.ToLower(preventDeletion) == "true" {

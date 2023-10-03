@@ -88,3 +88,9 @@ func getInstance() *ServiceInstance {
 		Status: ServiceInstanceStatus{},
 	}
 }
+
+func getInstanceWithSubaccountID() *ServiceInstance {
+	si := getInstance()
+	si.Spec.SubaccountID = "testsubaccountid"
+	return si
+}

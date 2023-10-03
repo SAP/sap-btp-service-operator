@@ -81,7 +81,7 @@ var (
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
-	ginkgo_config.DefaultReporterConfig.Verbose = true
+	ginkgo_config.DefaultReporterConfig.Verbose = false
 	RunSpecs(t, "Controllers Suite")
 }
 
@@ -136,6 +136,7 @@ var _ = BeforeSuite(func(done Done) {
 	err = (&v1.ServiceBinding{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
+	v1.SetAllowMultipleTenants(true)
 	err = (&v1.ServiceInstance{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 

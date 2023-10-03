@@ -121,6 +121,8 @@ webhooks:
           - v1
         operations:
           - DELETE
+          - UPDATE
+          - CREATE
         resources:
           - serviceinstances
     sideEffects: None

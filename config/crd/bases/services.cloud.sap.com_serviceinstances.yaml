@@ -128,6 +128,9 @@ spec:
               shared:
                 description: Indicates the desired shared state
                 type: boolean
+              subaccountID:
+                description: The subaccount id of the service instance
+                type: string
               userInfo:
                 description: UserInfo contains information about the user that last
                   modified this instance. This field is set by the API server and
@@ -253,6 +256,9 @@ spec:
                 type: string
               ready:
                 description: Indicates whether instance is ready for usage
+                type: string
+              subaccountID:
+                description: The subaccount id of the service instance
                 type: string
               tags:
                 description: Tags describing the ServiceInstance as provided in service

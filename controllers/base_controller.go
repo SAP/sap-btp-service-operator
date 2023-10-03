@@ -74,13 +74,13 @@ func GetLogger(ctx context.Context) logr.Logger {
 	return ctx.Value(LogKey{}).(logr.Logger)
 }
 
-func (r *BaseReconciler) getSMClient(ctx context.Context, object api.SAPBTPResource) (sm.Client, error) {
+func (r *BaseReconciler) getSMClient(ctx context.Context, object api.SAPBTPResource, subaccountID string) (sm.Client, error) {
 	if r.SMClient != nil {
 		return r.SMClient(), nil
 	}
 	log := GetLogger(ctx)
 
-	secret, err := r.SecretResolver.GetSecretForResource(ctx, object.GetNamespace(), secrets.SAPBTPOperatorSecretName)
+	secret, err := r.SecretResolver.GetSecretForResource(ctx, object.GetNamespace(), secrets.SAPBTPOperatorSecretName, subaccountID)
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +96,7 @@ func (r *BaseReconciler) getSMClient(ctx context.Context, object api.SAPBTPResou
 	}
 
 	if len(cfg.ClientSecret) == 0 {
-		tls, err := r.SecretResolver.GetSecretForResource(ctx, object.GetNamespace(), secrets.SAPBTPOperatorTLSSecretName)
+		tls, err := r.SecretResolver.GetSecretForResource(ctx, object.GetNamespace(), secrets.SAPBTPOperatorTLSSecretName, subaccountID)
 		if client.IgnoreNotFound(err) != nil {
 			return nil, err
 		}
@@ -116,12 +116,12 @@ func (r *BaseReconciler) removeFinalizer(ctx context.Context, object api.SAPBTPR
 	log := GetLogger(ctx)
 	if controllerutil.ContainsFinalizer(object, finalizerName) {
 		controllerutil.RemoveFinalizer(object, finalizerName)
-		if err := r.Update(ctx, object); err != nil {
-			if err := r.Get(ctx, apimachinerytypes.NamespacedName{Name: object.GetName(), Namespace: object.GetNamespace()}, object); err != nil {
+		if err := r.Client.Update(ctx, object); err != nil {
+			if err := r.Client.Get(ctx, apimachinerytypes.NamespacedName{Name: object.GetName(), Namespace: object.GetNamespace()}, object); err != nil {
 				return client.IgnoreNotFound(err)
 			}
 			controllerutil.RemoveFinalizer(object, finalizerName)
-			if err := r.Update(ctx, object); err != nil {
+			if err := r.Client.Update(ctx, object); err != nil {
 				return fmt.Errorf("failed to remove the finalizer '%s'. Error: %v", finalizerName, err)
 			}
 		}
@@ -132,7 +132,7 @@ func (r *BaseReconciler) removeFinalizer(ctx context.Context, object api.SAPBTPR
 }
 
 func (r *BaseReconciler) updateStatus(ctx context.Context, object api.SAPBTPResource) error {
-	return r.Status().Update(ctx, object)
+	return r.Client.Status().Update(ctx, object)
 }
 
 func (r *BaseReconciler) init(ctx context.Context, obj api.SAPBTPResource) error {
