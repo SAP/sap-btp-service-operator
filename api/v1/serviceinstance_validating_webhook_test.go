@@ -19,7 +19,7 @@ var _ = Describe("Service Instance Webhook Test", func() {
 				SetAllowMultipleTenants(false)
 				_, err := instance.ValidateCreate()
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("using multiple subaccounts is not allowed"))
+				Expect(err.Error()).To(ContainSubstring("setting the subaccountID property is not allowed"))
 			})
 		})
 	})
