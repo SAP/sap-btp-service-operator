@@ -22,6 +22,7 @@ data:
   ALLOWED_NAMESPACES: {{ join "," .Values.manager.allowed_namespaces }}
   {{- end }}
   {{- end }}
+  ENABLE_MULTIPLE_SUBACCOUNTS: {{ .Values.manager.enable_multiple_subaccounts | quote }}
 kind: ConfigMap
 metadata:
   name: sap-btp-operator-config

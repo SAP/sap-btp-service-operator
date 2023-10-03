@@ -28,10 +28,12 @@ import (
 
 const (
 	fakeInstanceID           = "ic-fake-instance-id"
+	fakeSubaccountID         = "fake-subaccount-id"
 	fakeInstanceExternalName = "ic-test-instance-external-name"
 	testNamespace            = "ic-test-namespace"
 	fakeOfferingName         = "offering-a"
 	fakePlanName             = "plan-a"
+	testSubaccountID         = "subaccountID"
 )
 
 var _ = Describe("ServiceInstance controller", func() {
@@ -42,15 +44,6 @@ var _ = Describe("ServiceInstance controller", func() {
 		fakeInstanceName string
 		defaultLookupKey types.NamespacedName
 	)
-
-	updateSpec := func() v1.ServiceInstanceSpec {
-		newExternalName := "my-new-external-name" + uuid.New().String()
-		return v1.ServiceInstanceSpec{
-			ExternalName:        newExternalName,
-			ServicePlanName:     fakePlanName,
-			ServiceOfferingName: fakeOfferingName,
-		}
-	}
 
 	instanceSpec := v1.ServiceInstanceSpec{
 		ExternalName:        fakeInstanceExternalName,
@@ -134,7 +127,7 @@ var _ = Describe("ServiceInstance controller", func() {
 		defaultLookupKey = types.NamespacedName{Name: fakeInstanceName, Namespace: testNamespace}
 
 		fakeClient = &smfakes.FakeClient{}
-		fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
+		fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: fakeInstanceID, SubaccountID: fakeSubaccountID}, nil)
 		fakeClient.DeprovisionReturns("", nil)
 		fakeClient.GetInstanceByIDReturns(&smclientTypes.ServiceInstance{ID: fakeInstanceID, Ready: true, LastOperation: &smClientTypes.Operation{State: smClientTypes.SUCCEEDED, Type: smClientTypes.CREATE}}, nil)
 
@@ -209,6 +202,24 @@ var _ = Describe("ServiceInstance controller", func() {
 					})
 				})
 			})
+
+			When("multiple subaccounts is disabled", func() {
+				BeforeEach(func() {
+					v1.SetAllowMultipleTenants(false)
+				})
+				AfterEach(func() {
+					v1.SetAllowMultipleTenants(true)
+				})
+				It("should fail if instance contains subaccount id", func() {
+					instance := &v1.ServiceInstance{Spec: instanceSpec}
+					instance.Name = fakeInstanceName
+					instance.Namespace = testNamespace
+					instance.Spec.SubaccountID = "someID"
+					err := k8sClient.Create(ctx, instance)
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("setting the subaccountID property is not allowed"))
+				})
+			})
 		})
 
 		Context("Sync", func() {
@@ -216,6 +227,7 @@ var _ = Describe("ServiceInstance controller", func() {
 				It("should provision instance of the provided offering and plan name successfully", func() {
 					serviceInstance = createInstance(ctx, instanceSpec, true)
 					Expect(serviceInstance.Status.InstanceID).To(Equal(fakeInstanceID))
+					Expect(serviceInstance.Status.SubaccountID).To(Equal(fakeSubaccountID))
 					Expect(serviceInstance.Spec.ExternalName).To(Equal(fakeInstanceExternalName))
 					Expect(serviceInstance.Name).To(Equal(fakeInstanceName))
 					Expect(serviceInstance.Status.HashedSpec).To(Not(BeNil()))
@@ -408,10 +420,10 @@ var _ = Describe("ServiceInstance controller", func() {
 						fakeClient.UpdateInstanceReturns(nil, "", nil)
 					})
 					It("condition should be Updated", func() {
-						newSpec := updateSpec()
-						serviceInstance.Spec = newSpec
+						newExternalName := "my-new-external-name" + uuid.New().String()
+						serviceInstance.Spec.ExternalName = newExternalName
 						serviceInstance = updateInstance(ctx, serviceInstance)
-						Expect(serviceInstance.Spec.ExternalName).To(Equal(newSpec.ExternalName))
+						Expect(serviceInstance.Spec.ExternalName).To(Equal(newExternalName))
 						Expect(serviceInstance.Spec.UserInfo).NotTo(BeNil())
 						waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionTrue, Updated, "")
 					})
@@ -430,8 +442,8 @@ var _ = Describe("ServiceInstance controller", func() {
 					})
 
 					It("condition should be updated from in progress to Updated", func() {
-						newSpec := updateSpec()
-						serviceInstance.Spec = newSpec
+						newExternalName := "my-new-external-name" + uuid.New().String()
+						serviceInstance.Spec.ExternalName = newExternalName
 						updateInstance(ctx, serviceInstance)
 						waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionFalse, UpdateInProgress, "")
 						fakeClient.StatusReturns(&smclientTypes.Operation{
@@ -441,16 +453,16 @@ var _ = Describe("ServiceInstance controller", func() {
 						}, nil)
 						waitForResourceToBeReady(ctx, serviceInstance)
 						Expect(serviceInstance.Status.InstanceID).ToNot(BeEmpty())
-						Expect(serviceInstance.Spec.ExternalName).To(Equal(newSpec.ExternalName))
+						Expect(serviceInstance.Spec.ExternalName).To(Equal(newExternalName))
 					})
 
 					When("updating during update", func() {
 						It("should save the latest spec", func() {
-							serviceInstance.Spec = updateSpec()
+							newExternalName := "my-new-external-name" + uuid.New().String()
+							serviceInstance.Spec.ExternalName = newExternalName
 							updatedInstance := updateInstance(ctx, serviceInstance)
 
-							lastSpec := updateSpec()
-							updatedInstance.Spec = lastSpec
+							updatedInstance.Spec.ExternalName = newExternalName + "-new"
 							updateInstance(ctx, updatedInstance)
 
 							fakeClient.StatusReturns(&smclientTypes.Operation{
@@ -461,14 +473,15 @@ var _ = Describe("ServiceInstance controller", func() {
 
 							Eventually(func() bool {
 								_ = k8sClient.Get(ctx, defaultLookupKey, serviceInstance)
-								return isResourceReady(serviceInstance) && serviceInstance.Spec.ExternalName == lastSpec.ExternalName
+								return isResourceReady(serviceInstance) && serviceInstance.Spec.ExternalName == newExternalName+"-new"
 							}, timeout, interval).Should(BeTrue())
 						})
 					})
 
 					When("deleting during update", func() {
 						It("should be deleted", func() {
-							serviceInstance.Spec = updateSpec()
+							newExternalName := "my-new-external-name" + uuid.New().String()
+							serviceInstance.Spec.ExternalName = newExternalName
 							updatedInstance := updateInstance(ctx, serviceInstance)
 							deleteInstance(ctx, updatedInstance, false)
 
@@ -493,8 +506,8 @@ var _ = Describe("ServiceInstance controller", func() {
 					})
 
 					It("condition should be Updated", func() {
-						newSpec := updateSpec()
-						serviceInstance.Spec = newSpec
+						newExternalName := "my-new-external-name" + uuid.New().String()
+						serviceInstance.Spec.ExternalName = newExternalName
 						updateInstance(ctx, serviceInstance)
 						waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionFalse, UpdateFailed, "")
 					})
@@ -508,7 +521,8 @@ var _ = Describe("ServiceInstance controller", func() {
 				})
 
 				It("recognize the error as transient and eventually succeed", func() {
-					serviceInstance.Spec = updateSpec()
+					newExternalName := "my-new-external-name" + uuid.New().String()
+					serviceInstance.Spec.ExternalName = newExternalName
 					updateInstance(ctx, serviceInstance)
 					waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionFalse, UpdateInProgress, "")
 					fakeClient.UpdateInstanceReturns(nil, "", nil)
@@ -529,7 +543,8 @@ var _ = Describe("ServiceInstance controller", func() {
 					})
 
 					It("condition should be updated from in progress to Updated", func() {
-						serviceInstance.Spec = updateSpec()
+						newExternalName := "my-new-external-name" + uuid.New().String()
+						serviceInstance.Spec.ExternalName = newExternalName
 						updateInstance(ctx, serviceInstance)
 						waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionFalse, UpdateInProgress, "")
 						fakeClient.StatusReturns(&smclientTypes.Operation{
@@ -554,11 +569,23 @@ var _ = Describe("ServiceInstance controller", func() {
 						}, nil)
 					})
 					It("should recover", func() {
-						serviceInstance.Spec = updateSpec()
+						newExternalName := "my-new-external-name" + uuid.New().String()
+						serviceInstance.Spec.ExternalName = newExternalName
 						ui := updateInstance(ctx, serviceInstance)
 						waitForResourceToBeReady(ctx, ui)
 					})
 				})
+			})
+		})
+
+		When("subaccount id changed", func() {
+			It("should fail", func() {
+				deleteInstance(ctx, serviceInstance, true)
+				serviceInstance = createInstance(ctx, instanceSpec, true)
+				serviceInstance.Spec.SubaccountID = "12345"
+				err := k8sClient.Update(ctx, serviceInstance)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("changing the subaccountID for an existing instance is not allowed"))
 			})
 		})
 	})
@@ -1197,7 +1224,8 @@ func updateInstance(ctx context.Context, serviceInstance *v1.ServiceInstance) *v
 		si.Spec = serviceInstance.Spec
 		si.Labels = serviceInstance.Labels
 		si.Annotations = serviceInstance.Annotations
-		return k8sClient.Update(ctx, si) == nil
+		err := k8sClient.Update(ctx, si)
+		return err == nil
 	}, timeout, interval).Should(BeTrue())
 
 	return si
