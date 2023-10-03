@@ -83,7 +83,7 @@ type ServiceInstanceSpec struct {
 	// +optional
 	UserInfo *v1.UserInfo `json:"userInfo,omitempty"`
 
-	// The subaccount id of the service instance
+	// The desired subaccount id for the service instance
 	SubaccountID string `json:"subaccountID,omitempty"`
 }
 
@@ -117,7 +117,7 @@ type ServiceInstanceStatus struct {
 	// HashedSpec is the hashed spec without the shared property
 	HashedSpec string `json:"hashedSpec,omitempty"`
 
-	// The subaccount id of the service binding
+	// The subaccount id of the service instance
 	SubaccountID string `json:"subaccountID,omitempty"`
 }
 

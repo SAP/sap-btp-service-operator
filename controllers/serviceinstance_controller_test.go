@@ -217,7 +217,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					instance.Spec.SubaccountID = "someID"
 					err := k8sClient.Create(ctx, instance)
 					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("using multiple subaccounts is not allowed"))
+					Expect(err.Error()).To(ContainSubstring("setting the subaccountID property is not allowed"))
 				})
 			})
 		})
@@ -585,7 +585,7 @@ var _ = Describe("ServiceInstance controller", func() {
 				serviceInstance.Spec.SubaccountID = "12345"
 				err := k8sClient.Update(ctx, serviceInstance)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("subaccountID can not be changed"))
+				Expect(err.Error()).To(ContainSubstring("changing the subaccountID for an existing instance is not allowed"))
 			})
 		})
 	})

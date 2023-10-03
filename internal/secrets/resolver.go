@@ -31,13 +31,15 @@ func (sr *SecretResolver) GetSecretForResource(ctx context.Context, namespace, n
 	secretForResource := &v1.Secret{}
 
 	if !sr.EnableMultipleSubaccounts {
+		sr.Log.Info("enableMultipleSubaccounts set to false - using default cluster secret")
 		return sr.getDefaultSecret(ctx, name)
 	}
 
 	// search subaccount secret
-	if subaccountID != "" {
+	if len(subaccountID) > 0 {
 		secretName := fmt.Sprintf("%s-%s", subaccountID, name)
-		sr.Log.Info(fmt.Sprintf("Searching for secret name %s in namespace %s", secretName, sr.ManagementNamespace))
+		sr.Log.Info(fmt.Sprintf("Searching for secret name %s in namespace %s for subaccountID %s",
+			secretName, sr.ManagementNamespace, subaccountID))
 		err := sr.Client.Get(ctx, types.NamespacedName{Name: secretName, Namespace: sr.ManagementNamespace}, secretForResource)
 		if err != nil {
 			sr.Log.Error(err, "Could not fetch subaccount secret")

@@ -32,7 +32,7 @@ var _ = Describe("Service Instance Webhook Test", func() {
 				newInstance.Spec.SubaccountID = "12345"
 				_, err := newInstance.ValidateUpdate(instance)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("subaccountID can not be changed"))
+				Expect(err.Error()).To(ContainSubstring("changing the subaccountID for an existing instance is not allowed"))
 			})
 		})
 	})

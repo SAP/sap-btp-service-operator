@@ -89,7 +89,6 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 	}
 
-	log.Info("service instance name " + serviceBinding.Spec.ServiceInstanceName + " binding namespace " + serviceBinding.Namespace)
 	serviceInstance, err := r.getServiceInstanceForBinding(ctx, serviceBinding)
 	if err != nil || serviceNotUsable(serviceInstance) {
 		var instanceErr error

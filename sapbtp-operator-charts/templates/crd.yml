@@ -782,7 +782,7 @@ spec:
                 description: Indicates whether instance is ready for usage
                 type: string
               subaccountID:
-                description: The subaccount id of the service binding
+                description: The subaccount id of the service instance
                 type: string
               tags:
                 description: Tags describing the ServiceInstance as provided in service
