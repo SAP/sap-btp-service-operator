@@ -94,3 +94,4 @@ externalImages:
       repository: bitnami/kubectl
       sha: ""
       tag: latest
+installCRDs: true
