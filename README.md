@@ -24,7 +24,7 @@ The SAP BTP service operator is based on the [Kubernetes Operator pattern](https
     * [Passing parameters](#passing-parameters)
     * [Managing access](#managing-access)
 * [SAP BTP kubectl Extension](#sap-btp-kubectl-plugin-experimental) 
-* [Credentials Rotation](#credentials-rotation)]
+* [Credentials Rotation](#credentials-rotation)
 * [Multitenancy](#multitenancy)
 * [Working with multiple subaccounts](#working-with-multiple-subaccounts)
 * [Troubleshooting and Support](#troubleshooting-and-support)
@@ -276,7 +276,6 @@ spec:
 | credentialsRotationPolicy.rotatedBindingTTL | `duration`  | Specifies the time period for which to keep the rotated binding.                                                                                                                                                                                                                                                                         |
 
 
-
 #### Status
 | Parameter         | Type     | Description                                                                                                   |
 |:-----------------|:---------|:-----------------------------------------------------------------------------------------------------------|
@@ -432,11 +431,12 @@ You can configure the SAP BTP service operator to work with more than one subacc
 This means that different namespaces can be connected to different subaccounts.
 The association between a namespace and a subaccount is based on a different set of credentials configured for different namespaces.
 To connect the namespace to a subaccount, you first have to obtain the [access credentials](#setup) for the SAP BTP service operator and then maintain them in a secret that is specific for that namespace.
-There are two options to maintain namespace-specific credentials, and they differ between default and TLS-based access credentials types, for each option there are Two ways to maintain the secret:
+There are two options to work with namespace-specific credentials, and they differ between default and TLS-based access credentials types, for each option there are Two ways to maintain the secret:
 
 1 - Define a secret named `sap-btp-service-operator` in the namespace. `ServiceInstance` and `ServiceBinding` that are applied in the namespace will belong to the subaccount from which the credentials were issued.  
 2 - Define different secrets for different namespaces in a [centrally managed namespace](./sapbtp-operator-charts/templates/configmap.yml), following the secret naming convention: `<namespace>-sap-btp-service-operator`.
 
+In case both options are applied, the secret within the namespace will be used.
 To work with TLS based you should add to the secret names "-tls". 
 
 #### Secret Structure
@@ -451,6 +451,9 @@ type: Opaque
 data:
   clientid: "<clientid>"
   clientsecret: "<clientsecret>"
+  sm_url: "<sm_url>"
+  tokenurl: "<auth_url>"
+  tokenurlsuffix: "/oauth/token"
 ```
 
 Create in the management namespace:
@@ -464,6 +467,9 @@ type: Opaque
 data:
   clientid: "<clientid>"
   clientsecret: "<clientsecret>"
+  sm_url: "<sm_url>"
+  tokenurl: "<auth_url>"
+  tokenurlsuffix: "/oauth/token"
 ```
 
 ## Working with multiple subaccounts
@@ -485,6 +491,9 @@ type: Opaque
 data:
   clientid: "<clientid>"
   clientsecret: "<clientsecret>"
+  sm_url: "<sm_url>"
+  tokenurl: "<auth_url>"
+  tokenurlsuffix: "/oauth/token"
 ```
 
 **Notes:**
