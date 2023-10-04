@@ -89,8 +89,8 @@ func getInstance() *ServiceInstance {
 	}
 }
 
-func getInstanceWithSubaccountID() *ServiceInstance {
+func getInstanceWithBTPAccess() *ServiceInstance {
 	si := getInstance()
-	si.Spec.SubaccountID = "testsubaccountid"
+	si.Spec.BTPAccess = "test"
 	return si
 }

@@ -150,6 +150,7 @@ var _ = Describe("ServiceBinding controller", func() {
 		Expect(metadata["metaDataProperties"]).To(ContainElement(SecretMetadataProperty{Name: "label", Format: string(TEXT)}))
 		Expect(metadata["metaDataProperties"]).To(ContainElement(SecretMetadataProperty{Name: "type", Format: string(TEXT)}))
 		Expect(metadata["metaDataProperties"]).To(ContainElement(SecretMetadataProperty{Name: "tags", Format: string(JSON)}))
+		Expect(metadata["metaDataProperties"]).To(ContainElement(SecretMetadataProperty{Name: "subaccount_id", Format: string(TEXT)}))
 	}
 
 	BeforeEach(func() {
@@ -160,7 +161,7 @@ var _ = Describe("ServiceBinding controller", func() {
 		instanceExternalName = instanceName + "-external"
 
 		fakeClient = &smfakes.FakeClient{}
-		fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: "12345678", Tags: []byte("[\"test\"]")}, nil)
+		fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: "12345678", SubaccountID: "1234", Tags: []byte("[\"test\"]")}, nil)
 		fakeClient.BindReturns(&smClientTypes.ServiceBinding{ID: fakeBindingID, Credentials: json.RawMessage(`{"secret_key": "secret_value", "escaped": "{\"escaped_key\":\"escaped_val\"}"}`)}, "", nil)
 
 		smInstance := &smClientTypes.ServiceInstance{ID: fakeInstanceID, Ready: true, LastOperation: &smClientTypes.Operation{State: smClientTypes.SUCCEEDED, Type: smClientTypes.UPDATE}}

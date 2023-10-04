@@ -33,7 +33,6 @@ const (
 	testNamespace            = "ic-test-namespace"
 	fakeOfferingName         = "offering-a"
 	fakePlanName             = "plan-a"
-	testSubaccountID         = "subaccountID"
 )
 
 var _ = Describe("ServiceInstance controller", func() {
@@ -210,14 +209,14 @@ var _ = Describe("ServiceInstance controller", func() {
 				AfterEach(func() {
 					v1.SetAllowMultipleTenants(true)
 				})
-				It("should fail if instance contains subaccount id", func() {
+				It("should fail if instance contains btpAccess property", func() {
 					instance := &v1.ServiceInstance{Spec: instanceSpec}
 					instance.Name = fakeInstanceName
 					instance.Namespace = testNamespace
-					instance.Spec.SubaccountID = "someID"
+					instance.Spec.BTPAccess = "someName"
 					err := k8sClient.Create(ctx, instance)
 					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("setting the subaccountID property is not allowed"))
+					Expect(err.Error()).To(ContainSubstring("setting the BTPAccess property is not allowed"))
 				})
 			})
 		})
@@ -578,14 +577,14 @@ var _ = Describe("ServiceInstance controller", func() {
 			})
 		})
 
-		When("subaccount id changed", func() {
+		When("BTPAccess id changed", func() {
 			It("should fail", func() {
 				deleteInstance(ctx, serviceInstance, true)
 				serviceInstance = createInstance(ctx, instanceSpec, true)
-				serviceInstance.Spec.SubaccountID = "12345"
+				serviceInstance.Spec.BTPAccess = "12345"
 				err := k8sClient.Update(ctx, serviceInstance)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("changing the subaccountID for an existing instance is not allowed"))
+				Expect(err.Error()).To(ContainSubstring("changing the BTPAccess for an existing instance is not allowed"))
 			})
 		})
 	})

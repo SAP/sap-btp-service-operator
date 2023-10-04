@@ -78,7 +78,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 	}
 
-	smClient, err := r.getSMClient(ctx, serviceInstance, serviceInstance.Spec.SubaccountID)
+	smClient, err := r.getSMClient(ctx, serviceInstance, serviceInstance.Spec.BTPAccess)
 	if err != nil {
 		log.Error(err, "failed to get sm client")
 		return r.markAsTransientError(ctx, Unknown, err.Error(), serviceInstance)

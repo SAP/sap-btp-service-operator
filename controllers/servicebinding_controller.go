@@ -106,7 +106,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, instanceErr
 	}
 
-	smClient, err := r.getSMClient(ctx, serviceBinding, serviceInstance.Spec.SubaccountID)
+	smClient, err := r.getSMClient(ctx, serviceBinding, serviceInstance.Spec.BTPAccess)
 	if err != nil {
 		return r.markAsTransientError(ctx, Unknown, err.Error(), serviceBinding)
 	}
@@ -721,6 +721,7 @@ func (r *ServiceBindingReconciler) addInstanceInfo(ctx context.Context, binding 
 	credentialsMap["plan"] = []byte(instance.Spec.ServicePlanName)
 	credentialsMap["label"] = []byte(instance.Spec.ServiceOfferingName)
 	credentialsMap["type"] = []byte(instance.Spec.ServiceOfferingName)
+	credentialsMap["subaccount_id"] = []byte(instance.Status.SubaccountID)
 	if len(instance.Status.Tags) > 0 || len(instance.Spec.CustomTags) > 0 {
 		tagsBytes, err := json.Marshal(mergeInstanceTags(instance.Status.Tags, instance.Spec.CustomTags))
 		if err != nil {
@@ -748,6 +749,10 @@ func (r *ServiceBindingReconciler) addInstanceInfo(ctx context.Context, binding 
 		},
 		{
 			Name:   "type",
+			Format: string(TEXT),
+		},
+		{
+			Name:   "subaccount_id",
 			Format: string(TEXT),
 		},
 	}

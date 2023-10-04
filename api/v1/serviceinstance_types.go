@@ -83,8 +83,8 @@ type ServiceInstanceSpec struct {
 	// +optional
 	UserInfo *v1.UserInfo `json:"userInfo,omitempty"`
 
-	// The desired subaccount id for the service instance
-	SubaccountID string `json:"subaccountID,omitempty"`
+	// The desired secret name to use for the service instance creation
+	BTPAccess string `json:"btpAccess,omitempty"`
 }
 
 // ServiceInstanceStatus defines the observed state of ServiceInstance

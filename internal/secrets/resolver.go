@@ -27,7 +27,7 @@ type SecretResolver struct {
 	Log                       logr.Logger
 }
 
-func (sr *SecretResolver) GetSecretForResource(ctx context.Context, namespace, name, subaccountID string) (*v1.Secret, error) {
+func (sr *SecretResolver) GetSecretForResource(ctx context.Context, namespace, name, BTPAccess string) (*v1.Secret, error) {
 	secretForResource := &v1.Secret{}
 
 	if !sr.EnableMultipleSubaccounts {
@@ -36,10 +36,10 @@ func (sr *SecretResolver) GetSecretForResource(ctx context.Context, namespace, n
 	}
 
 	// search subaccount secret
-	if len(subaccountID) > 0 {
-		secretName := fmt.Sprintf("%s-%s", subaccountID, name)
+	if len(BTPAccess) > 0 {
+		secretName := fmt.Sprintf("%s-%s", BTPAccess, name)
 		sr.Log.Info(fmt.Sprintf("Searching for secret name %s in namespace %s for subaccountID %s",
-			secretName, sr.ManagementNamespace, subaccountID))
+			secretName, sr.ManagementNamespace, BTPAccess))
 		err := sr.Client.Get(ctx, types.NamespacedName{Name: secretName, Namespace: sr.ManagementNamespace}, secretForResource)
 		if err != nil {
 			sr.Log.Error(err, "Could not fetch subaccount secret")

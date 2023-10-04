@@ -128,8 +128,8 @@ spec:
               shared:
                 description: Indicates the desired shared state
                 type: boolean
-              subaccountID:
-                description: The subaccount id of the service instance
+              btpAccess:
+                description: The desired secret name to use for the service instance creation
                 type: string
               userInfo:
                 description: UserInfo contains information about the user that last

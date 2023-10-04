@@ -1,7 +1,24 @@
+
 apiVersion: services.cloud.sap.com/v1
 kind: ServiceInstance
 metadata:
-  name: sample-instance-1
+  name: saas-registry-app
 spec:
-  serviceOfferingName: service-manager
-  servicePlanName: subaccount-admin
+  externalName: saas-registry-app
+  parameters:
+    appId: provider-xsuaa-broker!b13821
+    appName: irm-dfo-stage-eu-stage
+    appPlans: null
+    appUrls:
+      callbackTimeoutMillis: 1800000
+      getDependencies: https://api.staging.sourcing-availability.cloud.sap/btp/dependencies/omsa-stage
+      onSubscription: https://api.staging.sourcing-availability.cloud.sap/btp/callback/async/v1.0/tenants/{tenantId}
+      onSubscriptionAsync: true
+      onUnSubscriptionAsync: true
+      onUpdateDependenciesAsync: true
+    category: MMP
+    description: SAP Order Management for Sourcing and Availability
+    displayName: SAP Order Management for Sourcing and Availability
+    provider: 7f3c43a5-fbcf-46e7-bbf3-ceb0de730829
+  serviceOfferingName: business-logging
+  servicePlanName: default
