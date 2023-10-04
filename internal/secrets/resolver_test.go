@@ -30,6 +30,37 @@ var _ = Describe("Secrets Resolver", func() {
 	var expectedClientID string
 	var secret *corev1.Secret
 
+	createSecretWithNoPrefix := func(name, namespace string) *corev1.Secret {
+		By(fmt.Sprintf("Creating secret with name %s", name))
+
+		expectedClientID = uuid.New().String()
+		newSecret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: namespace,
+			},
+			Data: map[string][]byte{
+				"clientid":     []byte(expectedClientID),
+				"clientsecret": []byte("client-secret"),
+				"url":          []byte("https://some.url"),
+				"tokenurl":     []byte("https://token.url"),
+			},
+		}
+
+		err := k8sClient.Create(ctx, newSecret)
+		Expect(err).ToNot(HaveOccurred())
+
+		Eventually(func() bool {
+			err := k8sClient.Get(ctx, types.NamespacedName{Name: newSecret.Name, Namespace: newSecret.Namespace}, newSecret)
+			if err != nil {
+				return false
+			}
+			return len(newSecret.Data) > 0
+		}, timeout, interval).Should(BeTrue())
+
+		return newSecret
+	}
+
 	createSecret := func(namePrefix string, namespace string) *corev1.Secret {
 		var name string
 		if namePrefix == "" {
@@ -179,14 +210,14 @@ var _ = Describe("Secrets Resolver", func() {
 		})
 	})
 
-	Context("Subaccount secret in management namespace", func() {
-		subaccountID := "12345"
+	Context("BTPAccess secret in management namespace", func() {
+		BTPAccess := "12345"
 		BeforeEach(func() {
-			secret = createSecret(subaccountID, managementNamespace)
+			secret = createSecretWithNoPrefix(BTPAccess, managementNamespace)
 		})
 
 		It("should resolve the secret", func() {
-			resolvedSecret, err := resolver.GetSecretForResource(ctx, testNamespace, secrets.SAPBTPOperatorSecretName, subaccountID)
+			resolvedSecret, err := resolver.GetSecretForResource(ctx, testNamespace, secrets.SAPBTPOperatorSecretName, BTPAccess)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(resolvedSecret).ToNot(BeNil())
 			Expect(string(resolvedSecret.Data["clientid"])).To(Equal(expectedClientID))
@@ -194,7 +225,7 @@ var _ = Describe("Secrets Resolver", func() {
 
 		It("should not resolve the secret if EnableMultipleSubaccount is false", func() {
 			resolver.EnableMultipleSubaccounts = false
-			_, err := resolver.GetSecretForResource(ctx, testNamespace, secrets.SAPBTPOperatorSecretName, subaccountID)
+			_, err := resolver.GetSecretForResource(ctx, testNamespace, secrets.SAPBTPOperatorSecretName, BTPAccess)
 			Expect(err).To(HaveOccurred())
 			resolver.EnableMultipleSubaccounts = true
 		})
