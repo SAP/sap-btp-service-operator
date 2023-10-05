@@ -263,6 +263,9 @@ spec:
               ready:
                 description: Indicates whether binding is ready for usage
                 type: string
+              subaccountID:
+                description: The subaccount id of the service instance
+                type: string
             required:
             - conditions
             type: object

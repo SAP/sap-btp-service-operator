@@ -120,6 +120,9 @@ type ServiceBindingStatus struct {
 
 	// Indicates when binding secret was rotated
 	LastCredentialsRotationTime *metav1.Time `json:"lastCredentialsRotationTime,omitempty"`
+
+	// The subaccount id of the service instance
+	SubaccountID string `json:"subaccountID,omitempty"`
 }
 
 // +kubebuilder:object:root=true
