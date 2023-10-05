@@ -358,6 +358,10 @@ var _ = Describe("ServiceBinding controller", func() {
 					}, nil)
 					Expect(k8sClient.Delete(ctx, bindingSecret)).To(Succeed())
 
+					//tickle the binding
+					createdBinding.Annotations = map[string]string{"tickle": "true"}
+					Expect(k8sClient.Update(ctx, createdBinding)).To(Succeed())
+
 					newSecret := &corev1.Secret{}
 					Eventually(func() bool {
 						err := k8sClient.Get(ctx, secretLookupKey, newSecret)
