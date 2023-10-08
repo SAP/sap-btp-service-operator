@@ -238,6 +238,8 @@ func setSuccessConditions(operationType smClientTypes.OperationCategory, object 
 	meta.SetStatusCondition(&conditions, readyCondition)
 
 	object.SetConditions(conditions)
+	object.SetReady(metav1.ConditionTrue)
+
 }
 
 func setCredRotationInProgressConditions(reason, message string, object api.SAPBTPResource) {

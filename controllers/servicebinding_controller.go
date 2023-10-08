@@ -75,9 +75,6 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		if !apierrors.IsNotFound(err) {
 			log.Error(err, "unable to fetch ServiceBinding")
 		}
-		// we'll ignore not-found errors, since they can't be fixed by an immediate
-		// requeue (we'll need to wait for a new notification), and we can get them
-		// on deleted requests.
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	serviceBinding = serviceBinding.DeepCopy()
@@ -106,10 +103,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 		errMsg := fmt.Sprintf("couldn't find the service instance '%s' in namespace '%s'", serviceBinding.Spec.ServiceInstanceName, instanceNamespace)
 		setBlockedCondition(errMsg, serviceBinding)
-		if err := r.updateStatus(ctx, serviceBinding); err != nil {
-			return ctrl.Result{}, err
-		}
-		return ctrl.Result{}, err
+		return ctrl.Result{}, r.updateStatus(ctx, serviceBinding)
 	}
 
 	if len(serviceBinding.Status.OperationURL) > 0 {
@@ -164,24 +158,23 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		log.Info(fmt.Sprintf("Service instance with k8s name %s is not ready for binding yet", serviceInstance.Name))
 		setInProgressConditions(smClientTypes.CREATE, fmt.Sprintf("creation in progress, waiting for service instance '%s' to be ready", serviceBinding.Spec.ServiceInstanceName),
 			serviceBinding)
-		if err := r.updateStatus(ctx, serviceBinding); err != nil {
-			return ctrl.Result{}, err
-		}
 
-		return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, nil
+		return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, r.updateStatus(ctx, serviceBinding)
 	}
 
 	//set owner instance only for original bindings (not rotated)
 	if serviceBinding.Labels == nil || len(serviceBinding.Labels[api.StaleBindingIDLabel]) == 0 {
 		if !bindingAlreadyOwnedByInstance(serviceInstance, serviceBinding) &&
 			serviceInstance.Namespace == serviceBinding.Namespace { //cross namespace reference not allowed
-			return ctrl.Result{}, r.setOwner(ctx, serviceInstance, serviceBinding)
+			if err := r.setOwner(ctx, serviceInstance, serviceBinding); err != nil {
+				log.Error(err, "failed to set owner reference for binding")
+				return ctrl.Result{}, err
+			}
 		}
 	}
 
 	if serviceBinding.Status.BindingID == "" {
-		err := r.validateSecretNameIsAvailable(ctx, serviceBinding)
-		if err != nil {
+		if err := r.validateSecretNameIsAvailable(ctx, serviceBinding); err != nil {
 			setBlockedCondition(err.Error(), serviceBinding)
 			return ctrl.Result{}, r.updateStatus(ctx, serviceBinding)
 		}
@@ -191,32 +184,16 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			return r.markAsTransientError(ctx, Unknown, err.Error(), serviceBinding)
 		}
 
-		binding, err := r.getBindingForRecovery(ctx, smClient, serviceBinding)
+		smBinding, err := r.getBindingForRecovery(ctx, smClient, serviceBinding)
 		if err != nil {
 			log.Error(err, "failed to check binding recovery")
 			return r.markAsTransientError(ctx, smClientTypes.CREATE, err.Error(), serviceBinding)
 		}
-		if binding != nil {
-			// Recovery - restore binding from SM
-			log.Info(fmt.Sprintf("found existing smBinding in SM with id %s, updating status", binding.ID))
-
-			if binding.Credentials != nil {
-				if err := r.storeBindingSecret(ctx, serviceBinding, binding); err != nil {
-					operationType := smClientTypes.CREATE
-					if binding.LastOperation != nil {
-						operationType = binding.LastOperation.Type
-					}
-					return r.handleSecretError(ctx, operationType, err, serviceBinding)
-				}
-			}
-			r.resyncBindingStatus(serviceBinding, binding, serviceInstance.Status.InstanceID)
-
-			return ctrl.Result{}, r.updateStatus(ctx, serviceBinding)
+		if smBinding != nil {
+			return r.recover(ctx, serviceBinding, smBinding)
 		}
-		if serviceBinding.Status.Ready != metav1.ConditionTrue {
-			return r.createBinding(ctx, smClient, serviceInstance, serviceBinding)
-		}
-		return ctrl.Result{}, nil
+
+		return r.createBinding(ctx, smClient, serviceInstance, serviceBinding)
 	}
 
 	log.Error(fmt.Errorf("update binding is not allowed, this line should not be reached"), "")
@@ -426,8 +403,7 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, serviceBinding *ser
 			if err := r.storeBindingSecret(ctx, serviceBinding, smBinding); err != nil {
 				return r.handleSecretError(ctx, smClientTypes.CREATE, err, serviceBinding)
 			}
-			serviceBinding.Status.Ready = metav1.ConditionTrue
-			setSuccessConditions(smClientTypes.OperationCategory(status.Type), serviceBinding)
+			setSuccessConditions(status.Type, serviceBinding)
 		case smClientTypes.DELETE:
 			return r.deleteSecretAndRemoveFinalizer(ctx, serviceBinding)
 		}
@@ -526,13 +502,13 @@ func (r *ServiceBindingReconciler) setOwner(ctx context.Context, serviceInstance
 	return nil
 }
 
-func (r *ServiceBindingReconciler) resyncBindingStatus(k8sBinding *servicesv1.ServiceBinding, smBinding *smClientTypes.ServiceBinding, serviceInstanceID string) {
+func (r *ServiceBindingReconciler) resyncBindingStatus(k8sBinding *servicesv1.ServiceBinding, smBinding *smClientTypes.ServiceBinding) {
 	if smBinding.Ready {
 		k8sBinding.Status.Ready = metav1.ConditionTrue
 	}
 	k8sBinding.Status.ObservedGeneration = k8sBinding.Generation
 	k8sBinding.Status.BindingID = smBinding.ID
-	k8sBinding.Status.InstanceID = serviceInstanceID
+	k8sBinding.Status.InstanceID = smBinding.ServiceInstanceID
 	k8sBinding.Status.OperationURL = ""
 	k8sBinding.Status.OperationType = ""
 
@@ -931,6 +907,24 @@ func (r *ServiceBindingReconciler) handleStaleServiceBinding(ctx context.Context
 		return ctrl.Result{}, r.updateStatus(ctx, serviceBinding)
 	}
 	return ctrl.Result{}, nil
+}
+
+func (r *ServiceBindingReconciler) recover(ctx context.Context, serviceBinding *servicesv1.ServiceBinding, smBinding *smClientTypes.ServiceBinding) (ctrl.Result, error) {
+	log := GetLogger(ctx)
+	log.Info(fmt.Sprintf("found existing smBinding in SM with id %s, updating status", smBinding.ID))
+
+	if smBinding.Credentials != nil {
+		if err := r.storeBindingSecret(ctx, serviceBinding, smBinding); err != nil {
+			operationType := smClientTypes.CREATE
+			if smBinding.LastOperation != nil {
+				operationType = smBinding.LastOperation.Type
+			}
+			return r.handleSecretError(ctx, operationType, err, serviceBinding)
+		}
+	}
+	r.resyncBindingStatus(serviceBinding, smBinding)
+
+	return ctrl.Result{}, r.updateStatus(ctx, serviceBinding)
 }
 
 func isStaleServiceBinding(binding *servicesv1.ServiceBinding) bool {

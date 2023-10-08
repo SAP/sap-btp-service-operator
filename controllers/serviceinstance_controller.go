@@ -111,17 +111,14 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	if serviceInstance.Status.InstanceID == "" {
-		// Recovery
 		log.Info("Instance ID is empty, checking if instance exist in SM")
-		instance, err := r.getInstanceForRecovery(ctx, smClient, serviceInstance)
+		smInstance, err := r.getInstanceForRecovery(ctx, smClient, serviceInstance)
 		if err != nil {
 			log.Error(err, "failed to check instance recovery")
 			return r.markAsTransientError(ctx, Unknown, err.Error(), serviceInstance)
 		}
-		if instance != nil {
-			log.Info(fmt.Sprintf("found existing instance in SM with id %s, updating status", instance.ID))
-			r.resyncInstanceStatus(ctx, smClient, serviceInstance, instance)
-			return ctrl.Result{}, r.updateStatus(ctx, serviceInstance)
+		if smInstance != nil {
+			return r.recover(ctx, smClient, serviceInstance, smInstance)
 		}
 
 		// if instance was not recovered then create new instance
@@ -181,35 +178,8 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 		return r.handleError(ctx, smClientTypes.CREATE, provisionErr, serviceInstance)
 	}
 
-	if provision.Location != "" {
-		serviceInstance.Status.InstanceID = provision.InstanceID
-		serviceInstance.Status.SubaccountID = provision.SubaccountID
-		if len(provision.Tags) > 0 {
-			tags, err := getTags(provision.Tags)
-			if err != nil {
-				log.Error(err, "failed to unmarshal tags")
-			} else {
-				serviceInstance.Status.Tags = tags
-			}
-		}
-
-		log.Info("Provision request is in progress")
-		serviceInstance.Status.OperationURL = provision.Location
-		serviceInstance.Status.OperationType = smClientTypes.CREATE
-		setInProgressConditions(smClientTypes.CREATE, "", serviceInstance)
-
-		if err := r.updateStatus(ctx, serviceInstance); err != nil {
-			return ctrl.Result{}, err
-		}
-
-		return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, nil
-	}
-
 	serviceInstance.Status.InstanceID = provision.InstanceID
 	serviceInstance.Status.SubaccountID = provision.SubaccountID
-	log.Info(fmt.Sprintf("Instance provisioned successfully, instanceID: %s, subaccountID: %s", serviceInstance.Status.InstanceID,
-		serviceInstance.Status.SubaccountID))
-
 	if len(provision.Tags) > 0 {
 		tags, err := getTags(provision.Tags)
 		if err != nil {
@@ -219,7 +189,17 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 		}
 	}
 
-	serviceInstance.Status.Ready = metav1.ConditionTrue
+	if provision.Location != "" {
+		log.Info("Provision request is in progress (async)")
+		serviceInstance.Status.OperationURL = provision.Location
+		serviceInstance.Status.OperationType = smClientTypes.CREATE
+		setInProgressConditions(smClientTypes.CREATE, "", serviceInstance)
+
+		return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, r.updateStatus(ctx, serviceInstance)
+	}
+
+	log.Info(fmt.Sprintf("Instance provisioned successfully, instanceID: %s, subaccountID: %s", serviceInstance.Status.InstanceID,
+		serviceInstance.Status.SubaccountID))
 	setSuccessConditions(smClientTypes.CREATE, serviceInstance)
 	return ctrl.Result{}, r.updateStatus(ctx, serviceInstance)
 }
@@ -435,9 +415,35 @@ func (r *ServiceInstanceReconciler) handleAsyncDelete(ctx context.Context, servi
 	return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, nil
 }
 
-func (r *ServiceInstanceReconciler) resyncInstanceStatus(ctx context.Context, smClient sm.Client, k8sInstance *servicesv1.ServiceInstance, smInstance *smClientTypes.ServiceInstance) {
+func (r *ServiceInstanceReconciler) getInstanceForRecovery(ctx context.Context, smClient sm.Client, serviceInstance *servicesv1.ServiceInstance) (*smClientTypes.ServiceInstance, error) {
+	log := GetLogger(ctx)
+	parameters := sm.Parameters{
+		FieldQuery: []string{
+			fmt.Sprintf("name eq '%s'", serviceInstance.Spec.ExternalName),
+			fmt.Sprintf("context/clusterid eq '%s'", r.Config.ClusterID),
+			fmt.Sprintf("context/namespace eq '%s'", serviceInstance.Namespace)},
+		LabelQuery: []string{
+			fmt.Sprintf("%s eq '%s'", k8sNameLabel, serviceInstance.Name)},
+		GeneralParams: []string{"attach_last_operations=true"},
+	}
+
+	instances, err := smClient.ListInstances(&parameters)
+	if err != nil {
+		log.Error(err, "failed to list instances in SM")
+		return nil, err
+	}
+
+	if instances != nil && len(instances.ServiceInstances) > 0 {
+		return &instances.ServiceInstances[0], nil
+	}
+	log.Info("instance not found in SM")
+	return nil, nil
+}
+
+func (r *ServiceInstanceReconciler) recover(ctx context.Context, smClient sm.Client, k8sInstance *servicesv1.ServiceInstance, smInstance *smClientTypes.ServiceInstance) (ctrl.Result, error) {
 	log := GetLogger(ctx)
 
+	log.Info(fmt.Sprintf("found existing instance in SM with id %s, updating status", smInstance.ID))
 	updateHashedSpecValue(k8sInstance)
 	// set observed generation to 0 because we dont know which generation the current state in SM represents,
 	// unless the generation is 1 and SM is in the same state as operator
@@ -487,31 +493,8 @@ func (r *ServiceInstanceReconciler) resyncInstanceStatus(ctx context.Context, sm
 	case smClientTypes.FAILED:
 		setFailureConditions(operationType, description, k8sInstance)
 	}
-}
 
-func (r *ServiceInstanceReconciler) getInstanceForRecovery(ctx context.Context, smClient sm.Client, serviceInstance *servicesv1.ServiceInstance) (*smClientTypes.ServiceInstance, error) {
-	log := GetLogger(ctx)
-	parameters := sm.Parameters{
-		FieldQuery: []string{
-			fmt.Sprintf("name eq '%s'", serviceInstance.Spec.ExternalName),
-			fmt.Sprintf("context/clusterid eq '%s'", r.Config.ClusterID),
-			fmt.Sprintf("context/namespace eq '%s'", serviceInstance.Namespace)},
-		LabelQuery: []string{
-			fmt.Sprintf("%s eq '%s'", k8sNameLabel, serviceInstance.Name)},
-		GeneralParams: []string{"attach_last_operations=true"},
-	}
-
-	instances, err := smClient.ListInstances(&parameters)
-	if err != nil {
-		log.Error(err, "failed to list instances in SM")
-		return nil, err
-	}
-
-	if instances != nil && len(instances.ServiceInstances) > 0 {
-		return &instances.ServiceInstances[0], nil
-	}
-	log.Info("instance not found in SM")
-	return nil, nil
+	return ctrl.Result{}, r.updateStatus(ctx, k8sInstance)
 }
 
 func (r *ServiceInstanceReconciler) handleInstanceSharingError(ctx context.Context, object api.SAPBTPResource, status metav1.ConditionStatus, reason string, err error) (ctrl.Result, error) {
