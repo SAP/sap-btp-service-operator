@@ -129,7 +129,7 @@ spec:
                 description: Indicates the desired shared state
                 type: boolean
               subaccountID:
-                description: The subaccount id of the service instance
+                description: The desired subaccount id for the service instance
                 type: string
               userInfo:
                 description: UserInfo contains information about the user that last

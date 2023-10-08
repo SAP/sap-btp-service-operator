@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	"net/http"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"strings"
 )
 
@@ -123,6 +124,8 @@ var _ = Describe("ServiceInstance controller", func() {
 
 	BeforeEach(func() {
 		ctx = context.Background()
+		log := ctrl.Log.WithName("instanceTest")
+		ctx = context.WithValue(ctx, LogKey{}, log)
 		fakeInstanceName = "ic-test-" + uuid.New().String()
 		defaultLookupKey = types.NamespacedName{Name: fakeInstanceName, Namespace: testNamespace}
 

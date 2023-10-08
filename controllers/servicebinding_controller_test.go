@@ -6,6 +6,7 @@ import (
 	"errors"
 	"k8s.io/utils/pointer"
 	"net/http"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"strings"
 
 	"github.com/SAP/sap-btp-service-operator/api"
@@ -154,6 +155,8 @@ var _ = Describe("ServiceBinding controller", func() {
 
 	BeforeEach(func() {
 		ctx = context.Background()
+		log := ctrl.Log.WithName("bindingTest")
+		ctx = context.WithValue(ctx, LogKey{}, log)
 		testUUID = uuid.New().String()
 		instanceName = "test-instance-" + testUUID
 		bindingName = "test-binding-" + testUUID
@@ -358,6 +361,10 @@ var _ = Describe("ServiceBinding controller", func() {
 					}, nil)
 					Expect(k8sClient.Delete(ctx, bindingSecret)).To(Succeed())
 
+					//tickle the binding
+					createdBinding.Annotations = map[string]string{"tickle": "true"}
+					Expect(k8sClient.Update(ctx, createdBinding)).To(Succeed())
+
 					newSecret := &corev1.Secret{}
 					Eventually(func() bool {
 						err := k8sClient.Get(ctx, secretLookupKey, newSecret)
@@ -401,7 +408,7 @@ var _ = Describe("ServiceBinding controller", func() {
 				When("SM returned non transient error(400)", func() {
 					BeforeEach(func() {
 						errorMessage = "very bad request"
-						fakeClient.BindReturnsOnCall(0, nil, "", &sm.ServiceManagerError{
+						fakeClient.BindReturns(nil, "", &sm.ServiceManagerError{
 							StatusCode:  http.StatusBadRequest,
 							Description: errorMessage,
 						})
@@ -442,7 +449,7 @@ var _ = Describe("ServiceBinding controller", func() {
 				When("SM returned 502 and broker returned 400", func() {
 					BeforeEach(func() {
 						errorMessage = "very bad request"
-						fakeClient.BindReturnsOnCall(0, nil, "", getNonTransientBrokerError(errorMessage))
+						fakeClient.BindReturns(nil, "", getNonTransientBrokerError(errorMessage))
 					})
 
 					It("should detect the error as non-transient and fail", func() {
@@ -561,7 +568,7 @@ var _ = Describe("ServiceBinding controller", func() {
 		When("referenced service instance is not ready", func() {
 			It("should retry and succeed once the instance is ready", func() {
 				fakeClient.StatusReturns(&smClientTypes.Operation{ResourceID: fakeInstanceID, State: smClientTypes.INPROGRESS}, nil)
-				setInProgressConditions(smClientTypes.CREATE, "", createdInstance)
+				setInProgressConditions(ctx, smClientTypes.CREATE, "", createdInstance)
 				createdInstance.Status.OperationURL = "/1234"
 				createdInstance.Status.OperationType = smClientTypes.CREATE
 				updateInstanceStatus(ctx, createdInstance)
