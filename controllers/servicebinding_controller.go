@@ -67,7 +67,7 @@ type ServiceBindingReconciler struct {
 // +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;create;update
 
 func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("servicebinding", req.NamespacedName).WithValues("correlation_id", uuid.New().String())
+	log := r.Log.WithValues("servicebinding", req.NamespacedName).WithValues("correlation_id", uuid.New().String(), req.Name, req.Namespace)
 	ctx = context.WithValue(ctx, LogKey{}, log)
 
 	serviceBinding := &servicesv1.ServiceBinding{}
@@ -90,18 +90,26 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	serviceInstance, err := r.getServiceInstanceForBinding(ctx, serviceBinding)
-	if err != nil &&
-		(!isDelete(serviceBinding.ObjectMeta) && apierrors.IsNotFound(err)) { // binding is marked for deletion and instance does not exist
-		instanceErr := fmt.Errorf("couldn't find the service instance '%s'. Error: %v", serviceBinding.Spec.ServiceInstanceName, err.Error())
-		setBlockedCondition(instanceErr.Error(), serviceBinding)
-		if err := r.updateStatus(ctx, serviceBinding); err != nil {
-			return ctrl.Result{}, err
-		}
-		return ctrl.Result{}, instanceErr
+	if client.IgnoreNotFound(err) != nil {
+		log.Error(err, "failed to get service instance for binding")
+		return ctrl.Result{}, err
 	}
 
 	if isDelete(serviceBinding.ObjectMeta) {
 		return r.delete(ctx, serviceBinding, serviceInstance.Spec.SubaccountID)
+	}
+
+	if err != nil { // instance not found
+		instanceNamespace := serviceBinding.Namespace
+		if len(serviceBinding.Spec.ServiceInstanceNamespace) > 0 {
+			instanceNamespace = serviceBinding.Spec.ServiceInstanceNamespace
+		}
+		errMsg := fmt.Sprintf("couldn't find the service instance '%s' in namespace '%s'", serviceBinding.Spec.ServiceInstanceName, instanceNamespace)
+		setBlockedCondition(errMsg, serviceBinding)
+		if err := r.updateStatus(ctx, serviceBinding); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, err
 	}
 
 	if len(serviceBinding.Status.OperationURL) > 0 {
@@ -117,7 +125,8 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 	}
 
-	if serviceBinding.Status.Ready == metav1.ConditionTrue {
+	isBindingReady := meta.IsStatusConditionPresentAndEqual(serviceBinding.Status.Conditions, api.ConditionReady, metav1.ConditionTrue)
+	if isBindingReady {
 		if isStaleServiceBinding(serviceBinding) {
 			return r.handleStaleServiceBinding(ctx, serviceBinding)
 		}
@@ -133,7 +142,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 	}
 
-	if serviceBinding.GetObservedGeneration() > 0 && !isInProgress(serviceBinding) {
+	if isBindingReady {
 		log.Info("Binding in final state")
 		return r.maintain(ctx, serviceBinding)
 	}
@@ -143,7 +152,6 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	if serviceNotUsable(serviceInstance) {
 		instanceErr := fmt.Errorf("service instance '%s' is not usable", serviceBinding.Spec.ServiceInstanceName)
-
 		setBlockedCondition(instanceErr.Error(), serviceBinding)
 		if err := r.updateStatus(ctx, serviceBinding); err != nil {
 			return ctrl.Result{}, err
@@ -154,7 +162,6 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	if isInProgress(serviceInstance) {
 		log.Info(fmt.Sprintf("Service instance with k8s name %s is not ready for binding yet", serviceInstance.Name))
-
 		setInProgressConditions(smClientTypes.CREATE, fmt.Sprintf("creation in progress, waiting for service instance '%s' to be ready", serviceBinding.Spec.ServiceInstanceName),
 			serviceBinding)
 		if err := r.updateStatus(ctx, serviceBinding); err != nil {
@@ -472,6 +479,7 @@ func (r *ServiceBindingReconciler) maintain(ctx context.Context, binding *servic
 			if apierrors.IsNotFound(err) && !isDelete(binding.ObjectMeta) {
 				log.Info(fmt.Sprintf("secret not found recovering binding %s", binding.Name))
 				binding.Status.BindingID = ""
+				binding.Status.Ready = metav1.ConditionFalse
 				setInProgressConditions(smClientTypes.CREATE, "recreating deleted secret", binding)
 				shouldUpdateStatus = true
 				r.Recorder.Event(binding, corev1.EventTypeWarning, "SecretDeleted", "SecretDeleted")
