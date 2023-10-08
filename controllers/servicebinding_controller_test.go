@@ -408,7 +408,7 @@ var _ = Describe("ServiceBinding controller", func() {
 				When("SM returned non transient error(400)", func() {
 					BeforeEach(func() {
 						errorMessage = "very bad request"
-						fakeClient.BindReturnsOnCall(0, nil, "", &sm.ServiceManagerError{
+						fakeClient.BindReturns(nil, "", &sm.ServiceManagerError{
 							StatusCode:  http.StatusBadRequest,
 							Description: errorMessage,
 						})
@@ -449,7 +449,7 @@ var _ = Describe("ServiceBinding controller", func() {
 				When("SM returned 502 and broker returned 400", func() {
 					BeforeEach(func() {
 						errorMessage = "very bad request"
-						fakeClient.BindReturnsOnCall(0, nil, "", getNonTransientBrokerError(errorMessage))
+						fakeClient.BindReturns(nil, "", getNonTransientBrokerError(errorMessage))
 					})
 
 					It("should detect the error as non-transient and fail", func() {
