@@ -115,6 +115,7 @@ func (r *BaseReconciler) getSMClient(ctx context.Context, object api.SAPBTPResou
 func (r *BaseReconciler) removeFinalizer(ctx context.Context, object api.SAPBTPResource, finalizerName string) error {
 	log := GetLogger(ctx)
 	if controllerutil.ContainsFinalizer(object, finalizerName) {
+		log.Info(fmt.Sprintf("removing finalizer %s", finalizerName))
 		controllerutil.RemoveFinalizer(object, finalizerName)
 		if err := r.Client.Update(ctx, object); err != nil {
 			if err := r.Client.Get(ctx, apimachinerytypes.NamespacedName{Name: object.GetName(), Namespace: object.GetNamespace()}, object); err != nil {
@@ -132,12 +133,14 @@ func (r *BaseReconciler) removeFinalizer(ctx context.Context, object api.SAPBTPR
 }
 
 func (r *BaseReconciler) updateStatus(ctx context.Context, object api.SAPBTPResource) error {
+	log := GetLogger(ctx)
+	log.Info(fmt.Sprintf("updating %s status", object.GetObjectKind().GroupVersionKind().Kind))
 	return r.Client.Status().Update(ctx, object)
 }
 
 func (r *BaseReconciler) init(ctx context.Context, obj api.SAPBTPResource) error {
 	obj.SetReady(metav1.ConditionFalse)
-	setInProgressConditions(smClientTypes.CREATE, "Pending", obj)
+	setInProgressConditions(ctx, smClientTypes.CREATE, "Pending", obj)
 	return r.updateStatus(ctx, obj)
 }
 
@@ -178,7 +181,8 @@ func getConditionReason(opType smClientTypes.OperationCategory, state smClientTy
 	return Unknown
 }
 
-func setInProgressConditions(operationType smClientTypes.OperationCategory, message string, object api.SAPBTPResource) {
+func setInProgressConditions(ctx context.Context, operationType smClientTypes.OperationCategory, message string, object api.SAPBTPResource) {
+	log := GetLogger(ctx)
 	if len(message) == 0 {
 		if operationType == smClientTypes.CREATE {
 			message = fmt.Sprintf("%s is being created", object.GetControllerName())
@@ -204,6 +208,7 @@ func setInProgressConditions(operationType smClientTypes.OperationCategory, mess
 	meta.SetStatusCondition(&conditions, getReadyCondition(object))
 
 	object.SetConditions(conditions)
+	log.Info(fmt.Sprintf("setting inProgress conditions: reason: %s, message:%s, generation: %d", lastOpCondition.Reason, message, object.GetGeneration()))
 }
 
 func setSuccessConditions(operationType smClientTypes.OperationCategory, object api.SAPBTPResource) {
@@ -299,8 +304,8 @@ func setFailureConditions(operationType smClientTypes.OperationCategory, errorMe
 }
 
 // blocked condition marks to the user that action from his side is required, this is considered as in progress operation
-func setBlockedCondition(message string, object api.SAPBTPResource) {
-	setInProgressConditions(Unknown, message, object)
+func setBlockedCondition(ctx context.Context, message string, object api.SAPBTPResource) {
+	setInProgressConditions(ctx, Unknown, message, object)
 	lastOpCondition := meta.FindStatusCondition(object.GetConditions(), api.ConditionSucceeded)
 	lastOpCondition.Reason = Blocked
 }
@@ -362,7 +367,7 @@ func (r *BaseReconciler) markAsNonTransientError(ctx context.Context, operationT
 
 func (r *BaseReconciler) markAsTransientError(ctx context.Context, operationType smClientTypes.OperationCategory, errMsg string, object api.SAPBTPResource) (ctrl.Result, error) {
 	log := GetLogger(ctx)
-	setInProgressConditions(operationType, errMsg, object)
+	setInProgressConditions(ctx, operationType, errMsg, object)
 	log.Info(fmt.Sprintf("operation %s of %s encountered a transient error %s, retrying operation :)", operationType, object.GetControllerName(), errMsg))
 	if err := r.updateStatus(ctx, object); err != nil {
 		return ctrl.Result{}, err

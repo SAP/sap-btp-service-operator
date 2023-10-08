@@ -6,6 +6,7 @@ import (
 	"errors"
 	"k8s.io/utils/pointer"
 	"net/http"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"strings"
 
 	"github.com/SAP/sap-btp-service-operator/api"
@@ -154,6 +155,8 @@ var _ = Describe("ServiceBinding controller", func() {
 
 	BeforeEach(func() {
 		ctx = context.Background()
+		log := ctrl.Log.WithName("bindingTest")
+		ctx = context.WithValue(ctx, LogKey{}, log)
 		testUUID = uuid.New().String()
 		instanceName = "test-instance-" + testUUID
 		bindingName = "test-binding-" + testUUID
@@ -565,7 +568,7 @@ var _ = Describe("ServiceBinding controller", func() {
 		When("referenced service instance is not ready", func() {
 			It("should retry and succeed once the instance is ready", func() {
 				fakeClient.StatusReturns(&smClientTypes.Operation{ResourceID: fakeInstanceID, State: smClientTypes.INPROGRESS}, nil)
-				setInProgressConditions(smClientTypes.CREATE, "", createdInstance)
+				setInProgressConditions(ctx, smClientTypes.CREATE, "", createdInstance)
 				createdInstance.Status.OperationURL = "/1234"
 				createdInstance.Status.OperationType = smClientTypes.CREATE
 				updateInstanceStatus(ctx, createdInstance)

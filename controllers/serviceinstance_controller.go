@@ -193,7 +193,7 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 		log.Info("Provision request is in progress (async)")
 		serviceInstance.Status.OperationURL = provision.Location
 		serviceInstance.Status.OperationType = smClientTypes.CREATE
-		setInProgressConditions(smClientTypes.CREATE, "", serviceInstance)
+		setInProgressConditions(ctx, smClientTypes.CREATE, "", serviceInstance)
 
 		return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, r.updateStatus(ctx, serviceInstance)
 	}
@@ -231,7 +231,7 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 		log.Info(fmt.Sprintf("Update request accepted, operation URL: %s", operationURL))
 		serviceInstance.Status.OperationURL = operationURL
 		serviceInstance.Status.OperationType = smClientTypes.UPDATE
-		setInProgressConditions(smClientTypes.UPDATE, "", serviceInstance)
+		setInProgressConditions(ctx, smClientTypes.UPDATE, "", serviceInstance)
 
 		if err := r.updateStatus(ctx, serviceInstance); err != nil {
 			return ctrl.Result{}, err
@@ -262,7 +262,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, serviceI
 			if smInstance != nil {
 				log.Info("instance exists in SM continue with deletion")
 				serviceInstance.Status.InstanceID = smInstance.ID
-				setInProgressConditions(smClientTypes.DELETE, "delete after recovery", serviceInstance)
+				setInProgressConditions(ctx, smClientTypes.DELETE, "delete after recovery", serviceInstance)
 				return ctrl.Result{}, r.updateStatus(ctx, serviceInstance)
 			}
 			log.Info("instance does not exists in SM, removing finalizer")
@@ -286,21 +286,9 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, serviceI
 			return r.handleAsyncDelete(ctx, serviceInstance, operationURL)
 		}
 
+		log.Info("Instance was deleted successfully, removing finalizer")
 		// remove our finalizer from the list and update it.
-		if err := r.removeFinalizer(ctx, serviceInstance, api.FinalizerName); err != nil {
-			return ctrl.Result{}, err
-		}
-
-		log.Info("Instance was deleted successfully")
-		serviceInstance.Status.InstanceID = ""
-		setSuccessConditions(smClientTypes.DELETE, serviceInstance)
-		if err := r.updateStatus(ctx, serviceInstance); err != nil {
-			return ctrl.Result{}, err
-		}
-
-		// Stop reconciliation as the item is being deleted
-		return ctrl.Result{}, nil
-
+		return ctrl.Result{}, r.removeFinalizer(ctx, serviceInstance, api.FinalizerName)
 	}
 	return ctrl.Result{}, nil
 }
@@ -351,7 +339,7 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, serviceInstance *s
 	status, statusErr := smClient.Status(serviceInstance.Status.OperationURL, nil)
 	if statusErr != nil {
 		log.Info(fmt.Sprintf("failed to fetch operation, got error from SM: %s", statusErr.Error()), "operationURL", serviceInstance.Status.OperationURL)
-		setInProgressConditions(serviceInstance.Status.OperationType, statusErr.Error(), serviceInstance)
+		setInProgressConditions(ctx, serviceInstance.Status.OperationType, statusErr.Error(), serviceInstance)
 		// if failed to read operation status we cleanup the status to trigger re-sync from SM
 		freshStatus := servicesv1.ServiceInstanceStatus{Conditions: serviceInstance.GetConditions(), ObservedGeneration: serviceInstance.Generation}
 		if isDelete(serviceInstance.ObjectMeta) {
@@ -406,7 +394,7 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, serviceInstance *s
 func (r *ServiceInstanceReconciler) handleAsyncDelete(ctx context.Context, serviceInstance *servicesv1.ServiceInstance, opURL string) (ctrl.Result, error) {
 	serviceInstance.Status.OperationURL = opURL
 	serviceInstance.Status.OperationType = smClientTypes.DELETE
-	setInProgressConditions(smClientTypes.DELETE, "", serviceInstance)
+	setInProgressConditions(ctx, smClientTypes.DELETE, "", serviceInstance)
 
 	if err := r.updateStatus(ctx, serviceInstance); err != nil {
 		return ctrl.Result{}, err
@@ -487,7 +475,7 @@ func (r *ServiceInstanceReconciler) recover(ctx context.Context, smClient sm.Cli
 	case smClientTypes.INPROGRESS:
 		k8sInstance.Status.OperationURL = sm.BuildOperationURL(smInstance.LastOperation.ID, smInstance.ID, smClientTypes.ServiceInstancesURL)
 		k8sInstance.Status.OperationType = smInstance.LastOperation.Type
-		setInProgressConditions(smInstance.LastOperation.Type, smInstance.LastOperation.Description, k8sInstance)
+		setInProgressConditions(ctx, smInstance.LastOperation.Type, smInstance.LastOperation.Description, k8sInstance)
 	case smClientTypes.SUCCEEDED:
 		setSuccessConditions(operationType, k8sInstance)
 	case smClientTypes.FAILED:
