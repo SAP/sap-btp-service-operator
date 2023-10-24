@@ -69,7 +69,6 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	serviceInstance = serviceInstance.DeepCopy()
-	serviceInstance.SetObservedGeneration(serviceInstance.Generation)
 
 	if len(serviceInstance.GetConditions()) == 0 {
 		err := r.init(ctx, serviceInstance)
@@ -103,6 +102,9 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 		return ctrl.Result{}, nil
 	}
+
+	log.Info(fmt.Sprintf("instance is not in final state, handling... (generation: %d, observedGen: %d", serviceInstance.Generation, serviceInstance.Status.ObservedGeneration))
+	serviceInstance.SetObservedGeneration(serviceInstance.Generation)
 
 	smClient, err := r.getSMClient(ctx, serviceInstance, serviceInstance.Spec.SubaccountID)
 	if err != nil {
@@ -525,7 +527,8 @@ func isFinalState(serviceInstance *servicesv1.ServiceInstance) bool {
 	}
 
 	// for cases of instance update while polling for create/update
-	if getSpecHash(serviceInstance) != serviceInstance.Status.HashedSpec {
+	// temp solution, hashed spec should not be checked here
+	if len(serviceInstance.Status.HashedSpec) > 0 && getSpecHash(serviceInstance) != serviceInstance.Status.HashedSpec {
 		return false
 	}
 
