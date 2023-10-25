@@ -20,7 +20,7 @@ var _ = Describe("Service Instance Webhook Test", func() {
 				newInstance.Spec.BTPAccessCredentialsSecret = "12345"
 				_, err := newInstance.ValidateUpdate(instance)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("changing the subaccountID for an existing instance is not allowed"))
+				Expect(err.Error()).To(ContainSubstring("changing the BTPAccessCredentialsSecret for an existing instance is not allowed"))
 			})
 		})
 	})
