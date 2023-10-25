@@ -538,6 +538,9 @@ func isFinalState(ctx context.Context, serviceInstance *servicesv1.ServiceInstan
 
 	if sharingUpdateRequired(serviceInstance) {
 		log.Info("instance is not in final state, need to sync sharing status")
+		if len(serviceInstance.Status.HashedSpec) == 0 {
+			updateHashedSpecValue(serviceInstance)
+		}
 		return false
 	}
 
