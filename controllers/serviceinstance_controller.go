@@ -78,6 +78,8 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	if isDelete(serviceInstance.ObjectMeta) {
+		// delete updates the generation
+		serviceInstance.SetObservedGeneration(serviceInstance.Generation)
 		return r.deleteInstance(ctx, serviceInstance)
 	}
 
