@@ -377,15 +377,23 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, serviceInstance *s
 			return ctrl.Result{}, fmt.Errorf(errMsg)
 		}
 	case smClientTypes.SUCCEEDED:
-		setSuccessConditions(status.Type, serviceInstance)
-		if serviceInstance.Status.OperationType == smClientTypes.DELETE {
+		if serviceInstance.Status.OperationType == smClientTypes.CREATE {
+			smInstance, err := smClient.GetInstanceByID(serviceInstance.Status.InstanceID, nil)
+			if err != nil {
+				log.Error(err, fmt.Sprintf("instance %s succeeded but could not fetch it from SM", serviceInstance.Status.InstanceID))
+				return ctrl.Result{}, err
+			}
+			if len(smInstance.Labels["subaccount_id"]) > 0 {
+				serviceInstance.Status.SubaccountID = smInstance.Labels["subaccount_id"][0]
+			}
+			serviceInstance.Status.Ready = metav1.ConditionTrue
+		} else if serviceInstance.Status.OperationType == smClientTypes.DELETE {
 			// delete was successful - remove our finalizer from the list and update it.
 			if err := r.removeFinalizer(ctx, serviceInstance, api.FinalizerName); err != nil {
 				return ctrl.Result{}, err
 			}
-		} else if serviceInstance.Status.OperationType == smClientTypes.CREATE {
-			serviceInstance.Status.Ready = metav1.ConditionTrue
 		}
+		setSuccessConditions(status.Type, serviceInstance)
 	}
 
 	serviceInstance.Status.OperationURL = ""

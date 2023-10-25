@@ -390,13 +390,16 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, serviceBinding *ser
 			return ctrl.Result{}, fmt.Errorf(errMsg)
 		}
 	case smClientTypes.SUCCEEDED:
-		setSuccessConditions(smClientTypes.OperationCategory(status.Type), serviceBinding)
+		setSuccessConditions(status.Type, serviceBinding)
 		switch serviceBinding.Status.OperationType {
 		case smClientTypes.CREATE:
 			smBinding, err := smClient.GetBindingByID(serviceBinding.Status.BindingID, nil)
 			if err != nil {
 				log.Error(err, fmt.Sprintf("binding %s succeeded but could not fetch it from SM", serviceBinding.Status.BindingID))
 				return ctrl.Result{}, err
+			}
+			if len(smBinding.Labels["subaccount_id"]) > 0 {
+				serviceBinding.Status.SubaccountID = smBinding.Labels["subaccount_id"][0]
 			}
 
 			if err := r.storeBindingSecret(ctx, serviceBinding, smBinding); err != nil {

@@ -139,6 +139,8 @@ func NewClient(ctx context.Context, config *ClientConfig, httpClient auth.HTTPCl
 func (client *serviceManagerClient) Provision(instance *types.ServiceInstance, serviceName string, planName string, q *Parameters, user string, dataCenter string) (*ProvisionResponse, error) {
 	var newInstance *types.ServiceInstance
 	var instanceID string
+	var subaccountID string
+
 	if len(serviceName) == 0 || len(planName) == 0 {
 		return nil, fmt.Errorf("missing field values. Specify service name and plan name for the instance '%s'", instance.Name)
 	}
@@ -161,13 +163,14 @@ func (client *serviceManagerClient) Provision(instance *types.ServiceInstance, s
 		}
 	} else if newInstance != nil {
 		instanceID = newInstance.ID
+		subaccountID = getSubaccountID(newInstance)
 	}
 
 	res := &ProvisionResponse{
 		InstanceID:   instanceID,
 		Location:     location,
 		PlanID:       planInfo.planID,
-		SubaccountID: getSubaccountID(newInstance),
+		SubaccountID: subaccountID,
 	}
 
 	if planInfo.serviceOffering != nil {
@@ -175,26 +178,6 @@ func (client *serviceManagerClient) Provision(instance *types.ServiceInstance, s
 	}
 
 	return res, nil
-}
-
-func getSubaccountID(instance *types.ServiceInstance) string {
-	if len(instance.Labels["subaccount_id"]) > 0 {
-		return instance.Labels["subaccount_id"][0]
-	}
-	subaccountID := ""
-	if instance == nil || len(instance.Context) == 0 {
-		return subaccountID
-	}
-
-	var contextMap map[string]interface{}
-	if err := json.Unmarshal(instance.Context, &contextMap); err != nil {
-		return ""
-	}
-
-	if saID, ok := contextMap["subaccount_id"]; ok {
-		subaccountID, _ = saID.(string)
-	}
-	return subaccountID
 }
 
 // Bind creates binding to an instance in service manager
@@ -564,6 +547,26 @@ func ExtractInstanceID(operationURL string) string {
 		return matches[1]
 	}
 	return ""
+}
+
+func getSubaccountID(instance *types.ServiceInstance) string {
+	if len(instance.Labels["subaccount_id"]) > 0 {
+		return instance.Labels["subaccount_id"][0]
+	}
+	subaccountID := ""
+	if instance == nil || len(instance.Context) == 0 {
+		return subaccountID
+	}
+
+	var contextMap map[string]interface{}
+	if err := json.Unmarshal(instance.Context, &contextMap); err != nil {
+		return ""
+	}
+
+	if saID, ok := contextMap["subaccount_id"]; ok {
+		subaccountID, _ = saID.(string)
+	}
+	return subaccountID
 }
 
 func ExtractBindingID(operationURL string) string {
