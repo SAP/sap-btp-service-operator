@@ -107,7 +107,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	log.Info(fmt.Sprintf("instance is not in final state, handling... (generation: %d, observedGen: %d", serviceInstance.Generation, serviceInstance.Status.ObservedGeneration))
 	serviceInstance.SetObservedGeneration(serviceInstance.Generation)
 
-	smClient, err := r.getSMClient(ctx, serviceInstance, serviceInstance.Spec.SubaccountID)
+	smClient, err := r.getSMClient(ctx, serviceInstance, serviceInstance.Spec.BTPAccessCredentialsSecret)
 	if err != nil {
 		log.Error(err, "failed to get sm client")
 		return r.markAsTransientError(ctx, Unknown, err.Error(), serviceInstance)
@@ -251,7 +251,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, serviceI
 	log := GetLogger(ctx)
 
 	if controllerutil.ContainsFinalizer(serviceInstance, api.FinalizerName) {
-		smClient, err := r.getSMClient(ctx, serviceInstance, serviceInstance.Spec.SubaccountID)
+		smClient, err := r.getSMClient(ctx, serviceInstance, serviceInstance.Spec.BTPAccessCredentialsSecret)
 		if err != nil {
 			log.Error(err, "failed to get sm client")
 			return r.markAsTransientError(ctx, Unknown, err.Error(), serviceInstance)
@@ -333,7 +333,7 @@ func (r *ServiceInstanceReconciler) handleInstanceSharing(ctx context.Context, s
 func (r *ServiceInstanceReconciler) poll(ctx context.Context, serviceInstance *servicesv1.ServiceInstance) (ctrl.Result, error) {
 	log := GetLogger(ctx)
 	log.Info(fmt.Sprintf("resource is in progress, found operation url %s", serviceInstance.Status.OperationURL))
-	smClient, err := r.getSMClient(ctx, serviceInstance, serviceInstance.Spec.SubaccountID)
+	smClient, err := r.getSMClient(ctx, serviceInstance, serviceInstance.Spec.BTPAccessCredentialsSecret)
 	if err != nil {
 		log.Error(err, "failed to get sm client")
 		return r.markAsTransientError(ctx, Unknown, err.Error(), serviceInstance)

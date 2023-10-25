@@ -91,6 +91,6 @@ func getInstance() *ServiceInstance {
 
 func getInstanceWithSubaccountID() *ServiceInstance {
 	si := getInstance()
-	si.Spec.SubaccountID = "testsubaccountid"
+	si.Spec.BTPAccessCredentialsSecret = "testsubaccountid"
 	return si
 }

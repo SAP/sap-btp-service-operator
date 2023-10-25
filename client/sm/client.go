@@ -167,7 +167,7 @@ func (client *serviceManagerClient) Provision(instance *types.ServiceInstance, s
 		InstanceID:   instanceID,
 		Location:     location,
 		PlanID:       planInfo.planID,
-		SubaccountID: getSubaccountIDFromContext(newInstance),
+		SubaccountID: getSubaccountID(newInstance),
 	}
 
 	if planInfo.serviceOffering != nil {
@@ -177,7 +177,10 @@ func (client *serviceManagerClient) Provision(instance *types.ServiceInstance, s
 	return res, nil
 }
 
-func getSubaccountIDFromContext(instance *types.ServiceInstance) string {
+func getSubaccountID(instance *types.ServiceInstance) string {
+	if len(instance.Labels["subaccount_id"]) > 0 {
+		return instance.Labels["subaccount_id"][0]
+	}
 	subaccountID := ""
 	if instance == nil || len(instance.Context) == 0 {
 		return subaccountID

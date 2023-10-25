@@ -83,11 +83,10 @@ var _ = Describe("Secrets Resolver", func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 		resolver = &secrets.SecretResolver{
-			EnableMultipleSubaccounts: true,
-			ManagementNamespace:       managementNamespace,
-			ReleaseNamespace:          managementNamespace,
-			Log:                       logf.Log.WithName("SecretResolver"),
-			Client:                    k8sClient,
+			ManagementNamespace: managementNamespace,
+			ReleaseNamespace:    managementNamespace,
+			Log:                 logf.Log.WithName("SecretResolver"),
+			Client:              k8sClient,
 		}
 	})
 
@@ -191,13 +190,5 @@ var _ = Describe("Secrets Resolver", func() {
 			Expect(resolvedSecret).ToNot(BeNil())
 			Expect(string(resolvedSecret.Data["clientid"])).To(Equal(expectedClientID))
 		})
-
-		It("should not resolve the secret if EnableMultipleSubaccount is false", func() {
-			resolver.EnableMultipleSubaccounts = false
-			_, err := resolver.GetSecretForResource(ctx, testNamespace, secrets.SAPBTPOperatorSecretName, subaccountID)
-			Expect(err).To(HaveOccurred())
-			resolver.EnableMultipleSubaccounts = true
-		})
 	})
-
 })

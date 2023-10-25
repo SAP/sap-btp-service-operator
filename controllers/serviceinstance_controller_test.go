@@ -216,7 +216,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					instance := &v1.ServiceInstance{Spec: instanceSpec}
 					instance.Name = fakeInstanceName
 					instance.Namespace = testNamespace
-					instance.Spec.SubaccountID = "someID"
+					instance.Spec.BTPAccessCredentialsSecret = "someID"
 					err := k8sClient.Create(ctx, instance)
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("setting the subaccountID property is not allowed"))
@@ -584,7 +584,7 @@ var _ = Describe("ServiceInstance controller", func() {
 			It("should fail", func() {
 				deleteInstance(ctx, serviceInstance, true)
 				serviceInstance = createInstance(ctx, instanceSpec, true)
-				serviceInstance.Spec.SubaccountID = "12345"
+				serviceInstance.Spec.BTPAccessCredentialsSecret = "12345"
 				err := k8sClient.Update(ctx, serviceInstance)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("changing the subaccountID for an existing instance is not allowed"))

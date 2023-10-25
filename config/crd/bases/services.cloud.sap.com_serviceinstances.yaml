@@ -65,6 +65,9 @@ spec:
           spec:
             description: ServiceInstanceSpec defines the desired state of ServiceInstance
             properties:
+              BTPAccessCredentialsSecret:
+                description: The name of the btp access credentials secret
+                type: string
               customTags:
                 description: List of custom tags describing the ServiceInstance, will
                   be copied to `ServiceBinding` secret in the key called `tags`.
@@ -128,9 +131,6 @@ spec:
               shared:
                 description: Indicates the desired shared state
                 type: boolean
-              subaccountID:
-                description: The desired subaccount id for the service instance
-                type: string
               userInfo:
                 description: UserInfo contains information about the user that last
                   modified this instance. This field is set by the API server and
