@@ -50,7 +50,7 @@ func SetAllowMultipleTenants(isAllowed bool) {
 func (si *ServiceInstance) ValidateCreate() (warnings admission.Warnings, err error) {
 	serviceinstancelog.Info("validate create", "name", si.Name)
 	if !allowMultipleTenants && len(si.Spec.SubaccountID) > 0 {
-		serviceinstancelog.Error(fmt.Errorf("invalid subaccountID property"), "the operator installation does not allow multiple subaccunts")
+		serviceinstancelog.Error(fmt.Errorf("invalid subaccountID property"), "the operator installation does not allow multiple subaccounts")
 		return nil, fmt.Errorf("setting the subaccountID property is not allowed")
 	}
 	return nil, nil
@@ -58,6 +58,7 @@ func (si *ServiceInstance) ValidateCreate() (warnings admission.Warnings, err er
 
 func (si *ServiceInstance) ValidateUpdate(old runtime.Object) (warnings admission.Warnings, err error) {
 	serviceinstancelog.Info("validate update", "name", si.Name)
+
 	oldInstance := old.(*ServiceInstance)
 	if oldInstance.Spec.SubaccountID != si.Spec.SubaccountID {
 		return nil, fmt.Errorf("changing the subaccountID for an existing instance is not allowed")

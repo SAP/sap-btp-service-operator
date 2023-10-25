@@ -34,7 +34,6 @@ const (
 	testNamespace            = "ic-test-namespace"
 	fakeOfferingName         = "offering-a"
 	fakePlanName             = "plan-a"
-	testSubaccountID         = "subaccountID"
 )
 
 var _ = Describe("ServiceInstance controller", func() {
@@ -669,7 +668,6 @@ var _ = Describe("ServiceInstance controller", func() {
 				deleteInstance(ctx, serviceInstance, false)
 				waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionFalse, DeleteInProgress, "")
 			})
-
 			When("polling ends with success", func() {
 				BeforeEach(func() {
 					fakeClient.StatusReturns(&smclientTypes.Operation{
@@ -739,6 +737,28 @@ var _ = Describe("ServiceInstance controller", func() {
 				Entry("last operation is CREATE IN_PROGRESS", TestCase{lastOpType: smClientTypes.CREATE, lastOpState: smClientTypes.INPROGRESS}),
 				Entry("last operation is UPDATE IN_PROGRESS", TestCase{lastOpType: smClientTypes.UPDATE, lastOpState: smClientTypes.INPROGRESS}),
 				Entry("last operation is DELETE IN_PROGRESS", TestCase{lastOpType: smClientTypes.DELETE, lastOpState: smClientTypes.INPROGRESS}))
+		})
+	})
+
+	Describe("full reconcile", func() {
+		When("instance hashedSpec is not initialized", func() {
+			BeforeEach(func() {
+				serviceInstance = createInstance(ctx, instanceSpec, true)
+			})
+			It("should not send update request and update the hashed spec", func() {
+				hashed := serviceInstance.Status.HashedSpec
+				serviceInstance.Status.HashedSpec = ""
+				Expect(k8sClient.Status().Update(ctx, serviceInstance)).To(Succeed())
+
+				Eventually(func() bool {
+					err := k8sClient.Get(ctx, types.NamespacedName{Name: serviceInstance.Name, Namespace: serviceInstance.Namespace}, serviceInstance)
+					if err != nil {
+						return false
+					}
+					cond := meta.FindStatusCondition(serviceInstance.GetConditions(), api.ConditionSucceeded)
+					return serviceInstance.Status.HashedSpec == hashed && cond != nil && cond.Reason == Created
+				}, timeout, interval).Should(BeTrue())
+			})
 		})
 	})
 
@@ -1042,7 +1062,7 @@ var _ = Describe("ServiceInstance controller", func() {
 							ExternalName: "name",
 						}}
 					instance.SetGeneration(2)
-					Expect(isFinalState(instance)).To(BeFalse())
+					Expect(isFinalState(ctx, instance)).To(BeFalse())
 				})
 
 				When("Succeeded is false", func() {
@@ -1068,8 +1088,31 @@ var _ = Describe("ServiceInstance controller", func() {
 							},
 						}
 						instance.SetGeneration(1)
-						Expect(isFinalState(instance)).To(BeFalse())
+						Expect(isFinalState(ctx, instance)).To(BeFalse())
 					})
+				})
+			})
+
+			When("async operation in progress", func() {
+				It("should return false", func() {
+					var instance = &v1.ServiceInstance{
+						Status: v1.ServiceInstanceStatus{
+							Conditions: []metav1.Condition{
+								{
+									Type:               api.ConditionReady,
+									Status:             metav1.ConditionTrue,
+									ObservedGeneration: 1,
+								},
+							},
+							HashedSpec:         "929e78f4449f8036ce39da3cc3e7eaea",
+							OperationURL:       "/operations/somepollingurl",
+							ObservedGeneration: 2,
+						},
+						Spec: v1.ServiceInstanceSpec{
+							ExternalName: "name",
+						}}
+					instance.SetGeneration(2)
+					Expect(isFinalState(ctx, instance)).To(BeFalse())
 				})
 			})
 
@@ -1095,7 +1138,7 @@ var _ = Describe("ServiceInstance controller", func() {
 							ExternalName: "name",
 						}}
 					instance.SetGeneration(2)
-					Expect(isFinalState(instance)).To(BeFalse())
+					Expect(isFinalState(ctx, instance)).To(BeFalse())
 				})
 			})
 
@@ -1121,7 +1164,7 @@ var _ = Describe("ServiceInstance controller", func() {
 							ExternalName: "name",
 						}}
 					instance.SetGeneration(2)
-					Expect(isFinalState(instance)).To(BeFalse())
+					Expect(isFinalState(ctx, instance)).To(BeFalse())
 				})
 			})
 
@@ -1153,7 +1196,7 @@ var _ = Describe("ServiceInstance controller", func() {
 							Shared:       pointer.Bool(true),
 						}}
 					instance.SetGeneration(2)
-					Expect(isFinalState(instance)).To(BeFalse())
+					Expect(isFinalState(ctx, instance)).To(BeFalse())
 				})
 			})
 
@@ -1177,14 +1220,15 @@ var _ = Describe("ServiceInstance controller", func() {
 									Status: metav1.ConditionTrue,
 								},
 							},
-							HashedSpec: "929e78f4449f8036ce39da3cc3e7eaea",
+							HashedSpec:         "929e78f4449f8036ce39da3cc3e7eaea",
+							ObservedGeneration: 2,
 						},
 						Spec: v1.ServiceInstanceSpec{
 							ExternalName: "name",
 							Shared:       pointer.Bool(true),
 						}}
 					instance.SetGeneration(2)
-					Expect(isFinalState(instance)).To(BeTrue())
+					Expect(isFinalState(ctx, instance)).To(BeTrue())
 				})
 			})
 		})

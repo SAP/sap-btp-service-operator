@@ -69,7 +69,6 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	serviceInstance = serviceInstance.DeepCopy()
-	serviceInstance.SetObservedGeneration(serviceInstance.Generation)
 
 	if len(serviceInstance.GetConditions()) == 0 {
 		err := r.init(ctx, serviceInstance)
@@ -78,7 +77,17 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 	}
 
-	if isDelete(serviceInstance.ObjectMeta) {
+	if isFinalState(ctx, serviceInstance) {
+		if len(serviceInstance.Status.HashedSpec) == 0 {
+			updateHashedSpecValue(serviceInstance)
+			return ctrl.Result{}, r.Client.Status().Update(ctx, serviceInstance)
+		}
+		return ctrl.Result{}, nil
+	}
+
+	if isMarkedForDeletion(serviceInstance.ObjectMeta) {
+		// delete updates the generation
+		serviceInstance.SetObservedGeneration(serviceInstance.Generation)
 		return r.deleteInstance(ctx, serviceInstance)
 	}
 
@@ -95,14 +104,8 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 	}
 
-	if isFinalState(serviceInstance) {
-		log.Info(fmt.Sprintf("Final state, spec did not change, and we are not in progress - ignoring... Generation is - %v", serviceInstance.Generation))
-		if len(serviceInstance.Status.HashedSpec) == 0 {
-			updateHashedSpecValue(serviceInstance)
-			return ctrl.Result{}, r.Client.Status().Update(ctx, serviceInstance)
-		}
-		return ctrl.Result{}, nil
-	}
+	log.Info(fmt.Sprintf("instance is not in final state, handling... (generation: %d, observedGen: %d", serviceInstance.Generation, serviceInstance.Status.ObservedGeneration))
+	serviceInstance.SetObservedGeneration(serviceInstance.Generation)
 
 	smClient, err := r.getSMClient(ctx, serviceInstance, serviceInstance.Spec.SubaccountID)
 	if err != nil {
@@ -342,7 +345,7 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, serviceInstance *s
 		setInProgressConditions(ctx, serviceInstance.Status.OperationType, statusErr.Error(), serviceInstance)
 		// if failed to read operation status we cleanup the status to trigger re-sync from SM
 		freshStatus := servicesv1.ServiceInstanceStatus{Conditions: serviceInstance.GetConditions(), ObservedGeneration: serviceInstance.Generation}
-		if isDelete(serviceInstance.ObjectMeta) {
+		if isMarkedForDeletion(serviceInstance.ObjectMeta) {
 			freshStatus.InstanceID = serviceInstance.Status.InstanceID
 		}
 		serviceInstance.Status = freshStatus
@@ -512,24 +515,37 @@ func (r *ServiceInstanceReconciler) handleInstanceSharingError(ctx context.Conte
 	return ctrl.Result{Requeue: isTransient}, r.updateStatus(ctx, object)
 }
 
-func isFinalState(serviceInstance *servicesv1.ServiceInstance) bool {
-	// succeeded condition represents last operation, and it is constantly synced with generation
-	succeededCondition := meta.FindStatusCondition(serviceInstance.GetConditions(), api.ConditionSucceeded)
-	if succeededCondition == nil || succeededCondition.ObservedGeneration != serviceInstance.Generation {
+func isFinalState(ctx context.Context, serviceInstance *servicesv1.ServiceInstance) bool {
+	log := GetLogger(ctx)
+	if isMarkedForDeletion(serviceInstance.ObjectMeta) {
+		log.Info("instance is not in final state, it is marked for deletion")
+		return false
+	}
+	if len(serviceInstance.Status.OperationURL) > 0 {
+		log.Info(fmt.Sprintf("instance is not in final state, async operation is in progress (%s)", serviceInstance.Status.OperationURL))
+		return false
+	}
+	if serviceInstance.Generation != serviceInstance.GetObservedGeneration() {
+		log.Info(fmt.Sprintf("instance is not in final state, generation: %d, observedGen: %d", serviceInstance.Generation, serviceInstance.GetObservedGeneration()))
 		return false
 	}
 
 	// succeeded=false for current generation, and without failed=true --> transient error retry
 	if isInProgress(serviceInstance) {
+		log.Info("instance is not in final state, sync operation is in progress")
 		return false
 	}
 
-	// for cases of instance update while polling for create/update
-	if getSpecHash(serviceInstance) != serviceInstance.Status.HashedSpec {
+	if sharingUpdateRequired(serviceInstance) {
+		log.Info("instance is not in final state, need to sync sharing status")
+		if len(serviceInstance.Status.HashedSpec) == 0 {
+			updateHashedSpecValue(serviceInstance)
+		}
 		return false
 	}
 
-	return !sharingUpdateRequired(serviceInstance)
+	log.Info(fmt.Sprintf("instance is in final state (generation: %d)", serviceInstance.Generation))
+	return true
 }
 
 // TODO unit test

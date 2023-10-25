@@ -202,7 +202,7 @@ func setInProgressConditions(ctx context.Context, operationType smClientTypes.Op
 		Status:             metav1.ConditionFalse,
 		Reason:             getConditionReason(operationType, smClientTypes.INPROGRESS),
 		Message:            message,
-		ObservedGeneration: object.GetGeneration(),
+		ObservedGeneration: object.GetObservedGeneration(),
 	}
 	meta.SetStatusCondition(&conditions, lastOpCondition)
 	meta.SetStatusCondition(&conditions, getReadyCondition(object))
@@ -230,14 +230,14 @@ func setSuccessConditions(operationType smClientTypes.OperationCategory, object 
 		Status:             metav1.ConditionTrue,
 		Reason:             getConditionReason(operationType, smClientTypes.SUCCEEDED),
 		Message:            message,
-		ObservedGeneration: object.GetGeneration(),
+		ObservedGeneration: object.GetObservedGeneration(),
 	}
 	readyCondition := metav1.Condition{
 		Type:               api.ConditionReady,
 		Status:             metav1.ConditionTrue,
 		Reason:             Provisioned,
 		Message:            message,
-		ObservedGeneration: object.GetGeneration(),
+		ObservedGeneration: object.GetObservedGeneration(),
 	}
 	meta.SetStatusCondition(&conditions, lastOpCondition)
 	meta.SetStatusCondition(&conditions, readyCondition)
@@ -257,7 +257,7 @@ func setCredRotationInProgressConditions(reason, message string, object api.SAPB
 		Status:             metav1.ConditionTrue,
 		Reason:             reason,
 		Message:            message,
-		ObservedGeneration: object.GetGeneration(),
+		ObservedGeneration: object.GetObservedGeneration(),
 	}
 	meta.SetStatusCondition(&conditions, credRotCondition)
 	object.SetConditions(conditions)
@@ -286,7 +286,7 @@ func setFailureConditions(operationType smClientTypes.OperationCategory, errorMe
 		Status:             metav1.ConditionFalse,
 		Reason:             reason,
 		Message:            message,
-		ObservedGeneration: object.GetGeneration(),
+		ObservedGeneration: object.GetObservedGeneration(),
 	}
 	meta.SetStatusCondition(&conditions, lastOpCondition)
 
@@ -295,7 +295,7 @@ func setFailureConditions(operationType smClientTypes.OperationCategory, errorMe
 		Status:             metav1.ConditionTrue,
 		Reason:             reason,
 		Message:            message,
-		ObservedGeneration: object.GetGeneration(),
+		ObservedGeneration: object.GetObservedGeneration(),
 	}
 	meta.SetStatusCondition(&conditions, failedCondition)
 	meta.SetStatusCondition(&conditions, getReadyCondition(object))
@@ -310,7 +310,7 @@ func setBlockedCondition(ctx context.Context, message string, object api.SAPBTPR
 	lastOpCondition.Reason = Blocked
 }
 
-func isDelete(object metav1.ObjectMeta) bool {
+func isMarkedForDeletion(object metav1.ObjectMeta) bool {
 	return !object.DeletionTimestamp.IsZero()
 }
 
@@ -400,5 +400,5 @@ func getReadyCondition(object api.SAPBTPResource) metav1.Condition {
 		reason = Provisioned
 	}
 
-	return metav1.Condition{Type: api.ConditionReady, Status: status, Reason: reason, ObservedGeneration: object.GetGeneration()}
+	return metav1.Condition{Type: api.ConditionReady, Status: status, Reason: reason}
 }
