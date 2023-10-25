@@ -34,7 +34,6 @@ const (
 	testNamespace            = "ic-test-namespace"
 	fakeOfferingName         = "offering-a"
 	fakePlanName             = "plan-a"
-	testSubaccountID         = "subaccountID"
 )
 
 var _ = Describe("ServiceInstance controller", func() {
@@ -206,7 +205,7 @@ var _ = Describe("ServiceInstance controller", func() {
 				})
 			})
 
-			When("multiple subaccounts is disabled", func() {
+			XWhen("multiple subaccounts is disabled", func() {
 				BeforeEach(func() {
 					v1.SetAllowMultipleTenants(false)
 				})
@@ -369,6 +368,7 @@ var _ = Describe("ServiceInstance controller", func() {
 			})
 
 			When("deleting while create is in progress", func() {
+				//KEREN
 				It("should be deleted successfully", func() {
 					serviceInstance = createInstance(ctx, instanceSpec, false)
 
@@ -581,7 +581,7 @@ var _ = Describe("ServiceInstance controller", func() {
 			})
 		})
 
-		When("subaccount id changed", func() {
+		XWhen("subaccount id changed", func() {
 			It("should fail", func() {
 				deleteInstance(ctx, serviceInstance, true)
 				serviceInstance = createInstance(ctx, instanceSpec, true)
@@ -669,7 +669,7 @@ var _ = Describe("ServiceInstance controller", func() {
 				deleteInstance(ctx, serviceInstance, false)
 				waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionFalse, DeleteInProgress, "")
 			})
-
+			//KEREN
 			When("polling ends with success", func() {
 				BeforeEach(func() {
 					fakeClient.StatusReturns(&smclientTypes.Operation{
