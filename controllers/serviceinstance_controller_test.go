@@ -204,24 +204,6 @@ var _ = Describe("ServiceInstance controller", func() {
 					})
 				})
 			})
-
-			When("multiple subaccounts is disabled", func() {
-				BeforeEach(func() {
-					v1.SetAllowMultipleTenants(false)
-				})
-				AfterEach(func() {
-					v1.SetAllowMultipleTenants(true)
-				})
-				It("should fail if instance contains subaccount id", func() {
-					instance := &v1.ServiceInstance{Spec: instanceSpec}
-					instance.Name = fakeInstanceName
-					instance.Namespace = testNamespace
-					instance.Spec.BTPAccessCredentialsSecret = "someID"
-					err := k8sClient.Create(ctx, instance)
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("setting the subaccountID property is not allowed"))
-				})
-			})
 		})
 
 		Context("Sync", func() {

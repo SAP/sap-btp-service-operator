@@ -41,18 +41,8 @@ var _ webhook.Validator = &ServiceInstance{}
 
 // log is for logging in this package.
 var serviceinstancelog = logf.Log.WithName("serviceinstance-resource")
-var allowMultipleTenants bool
-
-func SetAllowMultipleTenants(isAllowed bool) {
-	allowMultipleTenants = isAllowed
-}
 
 func (si *ServiceInstance) ValidateCreate() (warnings admission.Warnings, err error) {
-	serviceinstancelog.Info("validate create", "name", si.Name)
-	if !allowMultipleTenants && len(si.Spec.BTPAccessCredentialsSecret) > 0 {
-		serviceinstancelog.Error(fmt.Errorf("invalid subaccountID property"), "the operator installation does not allow multiple subaccounts")
-		return nil, fmt.Errorf("setting the subaccountID property is not allowed")
-	}
 	return nil, nil
 }
 
