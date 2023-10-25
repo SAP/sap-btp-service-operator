@@ -742,6 +742,28 @@ var _ = Describe("ServiceInstance controller", func() {
 		})
 	})
 
+	Describe("full reconcile", func() {
+		When("instance hashedSpec is not initialized", func() {
+			BeforeEach(func() {
+				serviceInstance = createInstance(ctx, instanceSpec, true)
+			})
+			It("should not send update request and update the hashed spec", func() {
+				hashed := serviceInstance.Status.HashedSpec
+				serviceInstance.Status.HashedSpec = ""
+				Expect(k8sClient.Status().Update(ctx, serviceInstance)).To(Succeed())
+
+				Eventually(func() bool {
+					err := k8sClient.Get(ctx, types.NamespacedName{Name: serviceInstance.Name, Namespace: serviceInstance.Namespace}, serviceInstance)
+					if err != nil {
+						return false
+					}
+					cond := meta.FindStatusCondition(serviceInstance.GetConditions(), api.ConditionSucceeded)
+					return serviceInstance.Status.HashedSpec == hashed && cond != nil && cond.Reason == Created
+				}, timeout, interval).Should(BeTrue())
+			})
+		})
+	})
+
 	Context("Recovery", func() {
 		When("instance exists in SM", func() {
 			recoveredInstance := smclientTypes.ServiceInstance{
