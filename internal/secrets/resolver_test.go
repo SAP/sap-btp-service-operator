@@ -178,14 +178,14 @@ var _ = Describe("Secrets Resolver", func() {
 		})
 	})
 
-	Context("Subaccount secret in management namespace", func() {
+	Context("btp access secret in management namespace", func() {
 		subaccountID := "12345"
 		BeforeEach(func() {
 			secret = createSecret(subaccountID, managementNamespace)
 		})
 
 		It("should resolve the secret", func() {
-			resolvedSecret, err := resolver.GetSecretForResource(ctx, testNamespace, secrets.SAPBTPOperatorSecretName, subaccountID)
+			resolvedSecret, err := resolver.GetSecretForResource(ctx, testNamespace, secrets.SAPBTPOperatorSecretName, secret.Name)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(resolvedSecret).ToNot(BeNil())
 			Expect(string(resolvedSecret.Data["clientid"])).To(Equal(expectedClientID))
