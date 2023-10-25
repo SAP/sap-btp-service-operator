@@ -310,7 +310,7 @@ func setBlockedCondition(ctx context.Context, message string, object api.SAPBTPR
 	lastOpCondition.Reason = Blocked
 }
 
-func isDelete(object metav1.ObjectMeta) bool {
+func isMarkedForDeletion(object metav1.ObjectMeta) bool {
 	return !object.DeletionTimestamp.IsZero()
 }
 

@@ -92,7 +92,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, err
 	}
 
-	if isDelete(serviceBinding.ObjectMeta) {
+	if isMarkedForDeletion(serviceBinding.ObjectMeta) {
 		return r.delete(ctx, serviceBinding, serviceInstance.Spec.SubaccountID)
 	}
 
@@ -348,7 +348,7 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, serviceBinding *ser
 		freshStatus := servicesv1.ServiceBindingStatus{
 			Conditions: serviceBinding.GetConditions(),
 		}
-		if isDelete(serviceBinding.ObjectMeta) {
+		if isMarkedForDeletion(serviceBinding.ObjectMeta) {
 			freshStatus.BindingID = serviceBinding.Status.BindingID
 		}
 		serviceBinding.Status = freshStatus
@@ -451,7 +451,7 @@ func (r *ServiceBindingReconciler) maintain(ctx context.Context, binding *servic
 
 	if !isFailed(binding) {
 		if _, err := r.getSecret(ctx, binding.Namespace, binding.Spec.SecretName); err != nil {
-			if apierrors.IsNotFound(err) && !isDelete(binding.ObjectMeta) {
+			if apierrors.IsNotFound(err) && !isMarkedForDeletion(binding.ObjectMeta) {
 				log.Info(fmt.Sprintf("secret not found recovering binding %s", binding.Name))
 				binding.Status.BindingID = ""
 				binding.Status.Ready = metav1.ConditionFalse
@@ -911,7 +911,7 @@ func (r *ServiceBindingReconciler) recover(ctx context.Context, serviceBinding *
 }
 
 func isStaleServiceBinding(binding *servicesv1.ServiceBinding) bool {
-	if isDelete(binding.ObjectMeta) {
+	if isMarkedForDeletion(binding.ObjectMeta) {
 		return false
 	}
 
@@ -995,7 +995,7 @@ func bindingAlreadyOwnedByInstance(instance *servicesv1.ServiceInstance, binding
 }
 
 func serviceNotUsable(instance *servicesv1.ServiceInstance) bool {
-	if isDelete(instance.ObjectMeta) {
+	if isMarkedForDeletion(instance.ObjectMeta) {
 		return true
 	}
 	if len(instance.Status.Conditions) != 0 {
