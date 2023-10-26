@@ -136,7 +136,6 @@ var _ = BeforeSuite(func(done Done) {
 	err = (&v1.ServiceBinding{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	v1.SetAllowMultipleTenants(true)
 	err = (&v1.ServiceInstance{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 

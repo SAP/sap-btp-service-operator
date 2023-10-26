@@ -107,7 +107,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	log.Info(fmt.Sprintf("instance is not in final state, handling... (generation: %d, observedGen: %d", serviceInstance.Generation, serviceInstance.Status.ObservedGeneration))
 	serviceInstance.SetObservedGeneration(serviceInstance.Generation)
 
-	smClient, err := r.getSMClient(ctx, serviceInstance, serviceInstance.Spec.SubaccountID)
+	smClient, err := r.getSMClient(ctx, serviceInstance, serviceInstance.Spec.BTPAccessCredentialsSecret)
 	if err != nil {
 		log.Error(err, "failed to get sm client")
 		return r.markAsTransientError(ctx, Unknown, err.Error(), serviceInstance)
@@ -251,7 +251,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, serviceI
 	log := GetLogger(ctx)
 
 	if controllerutil.ContainsFinalizer(serviceInstance, api.FinalizerName) {
-		smClient, err := r.getSMClient(ctx, serviceInstance, serviceInstance.Spec.SubaccountID)
+		smClient, err := r.getSMClient(ctx, serviceInstance, serviceInstance.Spec.BTPAccessCredentialsSecret)
 		if err != nil {
 			log.Error(err, "failed to get sm client")
 			return r.markAsTransientError(ctx, Unknown, err.Error(), serviceInstance)
@@ -333,7 +333,7 @@ func (r *ServiceInstanceReconciler) handleInstanceSharing(ctx context.Context, s
 func (r *ServiceInstanceReconciler) poll(ctx context.Context, serviceInstance *servicesv1.ServiceInstance) (ctrl.Result, error) {
 	log := GetLogger(ctx)
 	log.Info(fmt.Sprintf("resource is in progress, found operation url %s", serviceInstance.Status.OperationURL))
-	smClient, err := r.getSMClient(ctx, serviceInstance, serviceInstance.Spec.SubaccountID)
+	smClient, err := r.getSMClient(ctx, serviceInstance, serviceInstance.Spec.BTPAccessCredentialsSecret)
 	if err != nil {
 		log.Error(err, "failed to get sm client")
 		return r.markAsTransientError(ctx, Unknown, err.Error(), serviceInstance)
@@ -377,15 +377,23 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, serviceInstance *s
 			return ctrl.Result{}, fmt.Errorf(errMsg)
 		}
 	case smClientTypes.SUCCEEDED:
-		setSuccessConditions(status.Type, serviceInstance)
-		if serviceInstance.Status.OperationType == smClientTypes.DELETE {
+		if serviceInstance.Status.OperationType == smClientTypes.CREATE {
+			smInstance, err := smClient.GetInstanceByID(serviceInstance.Status.InstanceID, nil)
+			if err != nil {
+				log.Error(err, fmt.Sprintf("instance %s succeeded but could not fetch it from SM", serviceInstance.Status.InstanceID))
+				return ctrl.Result{}, err
+			}
+			if len(smInstance.Labels["subaccount_id"]) > 0 {
+				serviceInstance.Status.SubaccountID = smInstance.Labels["subaccount_id"][0]
+			}
+			serviceInstance.Status.Ready = metav1.ConditionTrue
+		} else if serviceInstance.Status.OperationType == smClientTypes.DELETE {
 			// delete was successful - remove our finalizer from the list and update it.
 			if err := r.removeFinalizer(ctx, serviceInstance, api.FinalizerName); err != nil {
 				return ctrl.Result{}, err
 			}
-		} else if serviceInstance.Status.OperationType == smClientTypes.CREATE {
-			serviceInstance.Status.Ready = metav1.ConditionTrue
 		}
+		setSuccessConditions(status.Type, serviceInstance)
 	}
 
 	serviceInstance.Status.OperationURL = ""

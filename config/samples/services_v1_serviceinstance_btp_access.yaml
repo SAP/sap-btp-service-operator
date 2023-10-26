@@ -1,7 +1,8 @@
 apiVersion: services.cloud.sap.com/v1
 kind: ServiceInstance
 metadata:
-  name: sample-instance-2
+  name: sample-instance-1
 spec:
   serviceOfferingName: service-manager
-  servicePlanName: subaccount-admin
+  servicePlanName: subaccount-audit
+  btpAccessCredentialsSecret: mybtpsecret

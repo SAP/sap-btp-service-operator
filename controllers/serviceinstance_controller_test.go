@@ -204,24 +204,6 @@ var _ = Describe("ServiceInstance controller", func() {
 					})
 				})
 			})
-
-			When("multiple subaccounts is disabled", func() {
-				BeforeEach(func() {
-					v1.SetAllowMultipleTenants(false)
-				})
-				AfterEach(func() {
-					v1.SetAllowMultipleTenants(true)
-				})
-				It("should fail if instance contains subaccount id", func() {
-					instance := &v1.ServiceInstance{Spec: instanceSpec}
-					instance.Name = fakeInstanceName
-					instance.Namespace = testNamespace
-					instance.Spec.SubaccountID = "someID"
-					err := k8sClient.Create(ctx, instance)
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("setting the subaccountID property is not allowed"))
-				})
-			})
 		})
 
 		Context("Sync", func() {
@@ -315,6 +297,9 @@ var _ = Describe("ServiceInstance controller", func() {
 			})
 
 			When("polling ends with success", func() {
+				BeforeEach(func() {
+					fakeClient.GetInstanceByIDReturns(&smclientTypes.ServiceInstance{Labels: map[string][]string{"subaccount_id": []string{fakeSubaccountID}}}, nil)
+				})
 				It("should update in progress condition and provision the instance successfully", func() {
 					serviceInstance = createInstance(ctx, instanceSpec, false)
 					fakeClient.StatusReturns(&smclientTypes.Operation{
@@ -323,6 +308,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						State: smClientTypes.SUCCEEDED,
 					}, nil)
 					waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionTrue, Created, "")
+					Expect(serviceInstance.Status.SubaccountID).To(Equal(fakeSubaccountID))
 				})
 			})
 
@@ -584,10 +570,10 @@ var _ = Describe("ServiceInstance controller", func() {
 			It("should fail", func() {
 				deleteInstance(ctx, serviceInstance, true)
 				serviceInstance = createInstance(ctx, instanceSpec, true)
-				serviceInstance.Spec.SubaccountID = "12345"
+				serviceInstance.Spec.BTPAccessCredentialsSecret = "12345"
 				err := k8sClient.Update(ctx, serviceInstance)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("changing the subaccountID for an existing instance is not allowed"))
+				Expect(err.Error()).To(ContainSubstring("changing the btpAccessCredentialsSecret for an existing instance is not allowed"))
 			})
 		})
 	})

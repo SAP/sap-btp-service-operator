@@ -1,0 +1,10 @@
+apiVersion: services.cloud.sap.com/v1
+kind: ServiceBinding
+metadata:
+  name: sample-binding-rotate
+spec:
+  serviceInstanceName: sample-instance-1
+  credentialsRotationPolicy:
+    enabled: true
+    rotatedBindingTTL: 48h
+    rotationFrequency: 168h

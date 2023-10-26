@@ -93,7 +93,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	if isMarkedForDeletion(serviceBinding.ObjectMeta) {
-		return r.delete(ctx, serviceBinding, serviceInstance.Spec.SubaccountID)
+		return r.delete(ctx, serviceBinding, serviceInstance.Spec.BTPAccessCredentialsSecret)
 	}
 
 	if err != nil { // instance not found
@@ -108,7 +108,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	if len(serviceBinding.Status.OperationURL) > 0 {
 		// ongoing operation - poll status from SM
-		return r.poll(ctx, serviceBinding, serviceInstance.Spec.SubaccountID)
+		return r.poll(ctx, serviceBinding, serviceInstance.Spec.BTPAccessCredentialsSecret)
 	}
 
 	if !controllerutil.ContainsFinalizer(serviceBinding, api.FinalizerName) {
@@ -131,7 +131,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	if meta.IsStatusConditionTrue(serviceBinding.Status.Conditions, api.ConditionCredRotationInProgress) {
-		if err := r.rotateCredentials(ctx, serviceBinding, serviceInstance.Spec.SubaccountID); err != nil {
+		if err := r.rotateCredentials(ctx, serviceBinding, serviceInstance.Spec.BTPAccessCredentialsSecret); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
@@ -178,7 +178,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			return ctrl.Result{}, r.updateStatus(ctx, serviceBinding)
 		}
 
-		smClient, err := r.getSMClient(ctx, serviceBinding, serviceInstance.Spec.SubaccountID)
+		smClient, err := r.getSMClient(ctx, serviceBinding, serviceInstance.Spec.BTPAccessCredentialsSecret)
 		if err != nil {
 			return r.markAsTransientError(ctx, Unknown, err.Error(), serviceBinding)
 		}
@@ -270,10 +270,10 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 	return ctrl.Result{}, r.updateStatus(ctx, serviceBinding)
 }
 
-func (r *ServiceBindingReconciler) delete(ctx context.Context, serviceBinding *servicesv1.ServiceBinding, subaccountID string) (ctrl.Result, error) {
+func (r *ServiceBindingReconciler) delete(ctx context.Context, serviceBinding *servicesv1.ServiceBinding, btpAccessCredentialsSecret string) (ctrl.Result, error) {
 	log := GetLogger(ctx)
 	if controllerutil.ContainsFinalizer(serviceBinding, api.FinalizerName) {
-		smClient, err := r.getSMClient(ctx, serviceBinding, subaccountID)
+		smClient, err := r.getSMClient(ctx, serviceBinding, btpAccessCredentialsSecret)
 		if err != nil {
 			return r.markAsTransientError(ctx, Unknown, err.Error(), serviceBinding)
 		}
@@ -305,7 +305,7 @@ func (r *ServiceBindingReconciler) delete(ctx context.Context, serviceBinding *s
 
 		if len(serviceBinding.Status.OperationURL) > 0 && serviceBinding.Status.OperationType == smClientTypes.DELETE {
 			// ongoing delete operation - poll status from SM
-			return r.poll(ctx, serviceBinding, subaccountID)
+			return r.poll(ctx, serviceBinding, btpAccessCredentialsSecret)
 		}
 
 		log.Info(fmt.Sprintf("Deleting binding with id %v from SM", serviceBinding.Status.BindingID))
@@ -332,11 +332,11 @@ func (r *ServiceBindingReconciler) delete(ctx context.Context, serviceBinding *s
 	return ctrl.Result{}, nil
 }
 
-func (r *ServiceBindingReconciler) poll(ctx context.Context, serviceBinding *servicesv1.ServiceBinding, subaccountID string) (ctrl.Result, error) {
+func (r *ServiceBindingReconciler) poll(ctx context.Context, serviceBinding *servicesv1.ServiceBinding, btpAccessCredentialsSecret string) (ctrl.Result, error) {
 	log := GetLogger(ctx)
 	log.Info(fmt.Sprintf("resource is in progress, found operation url %s", serviceBinding.Status.OperationURL))
 
-	smClient, err := r.getSMClient(ctx, serviceBinding, subaccountID)
+	smClient, err := r.getSMClient(ctx, serviceBinding, btpAccessCredentialsSecret)
 	if err != nil {
 		return r.markAsTransientError(ctx, Unknown, err.Error(), serviceBinding)
 	}
@@ -390,13 +390,16 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, serviceBinding *ser
 			return ctrl.Result{}, fmt.Errorf(errMsg)
 		}
 	case smClientTypes.SUCCEEDED:
-		setSuccessConditions(smClientTypes.OperationCategory(status.Type), serviceBinding)
+		setSuccessConditions(status.Type, serviceBinding)
 		switch serviceBinding.Status.OperationType {
 		case smClientTypes.CREATE:
 			smBinding, err := smClient.GetBindingByID(serviceBinding.Status.BindingID, nil)
 			if err != nil {
 				log.Error(err, fmt.Sprintf("binding %s succeeded but could not fetch it from SM", serviceBinding.Status.BindingID))
 				return ctrl.Result{}, err
+			}
+			if len(smBinding.Labels["subaccount_id"]) > 0 {
+				serviceBinding.Status.SubaccountID = smBinding.Labels["subaccount_id"][0]
 			}
 
 			if err := r.storeBindingSecret(ctx, serviceBinding, smBinding); err != nil {
@@ -756,7 +759,7 @@ func (r *ServiceBindingReconciler) addInstanceInfo(ctx context.Context, binding 
 	return metadata, nil
 }
 
-func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, binding *servicesv1.ServiceBinding, subaccountID string) error {
+func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, binding *servicesv1.ServiceBinding, btpAccessCredentialsSecret string) error {
 	suffix := "-" + RandStringRunes(6)
 	log := GetLogger(ctx)
 	if binding.Annotations != nil {
@@ -797,7 +800,7 @@ func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, bindin
 	}
 
 	if len(bindings.Items) == 0 {
-		smClient, err := r.getSMClient(ctx, binding, subaccountID)
+		smClient, err := r.getSMClient(ctx, binding, btpAccessCredentialsSecret)
 		if err != nil {
 			return err
 		}

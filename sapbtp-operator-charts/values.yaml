@@ -8,7 +8,6 @@ manager:
   req_memory_limit: 20Mi
   req_cpu_limit: 100m
   allow_cluster_access: true
-  enable_multiple_subaccounts: true
   allowed_namespaces: []
   replica_count: 2
   enable_leader_election: true

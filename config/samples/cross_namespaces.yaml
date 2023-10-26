@@ -1,0 +1,20 @@
+---
+apiVersion: services.cloud.sap.com/v1
+kind: ServiceInstance
+metadata:
+  name: sample-instance-1
+  namespace: dev-instances
+spec:
+  serviceOfferingName: service-manager
+  servicePlanName: subaccount-audit
+
+---
+apiVersion: services.cloud.sap.com/v1
+kind: ServiceBinding
+metadata:
+  name: sample-binding-1
+  namespace: dev-bindings
+spec:
+  serviceInstanceName: sample-instance-1
+  serviceInstanceNamespace: dev-instances
+
