@@ -13,11 +13,12 @@ var _ = Describe("Service Instance Webhook Test", func() {
 	})
 
 	Context("Validate Update", func() {
-		When("multiple subaccounts is not allowed and subaccountID changed", func() {
+		When("BTPAccessCredentialsSecret changed", func() {
 			It("should fail", func() {
-				instance := getInstanceWithSubaccountID()
-				newInstance := getInstanceWithSubaccountID()
-				newInstance.Spec.BTPAccessCredentialsSecret = "12345"
+				instance := getInstance()
+				instance.Spec.BTPAccessCredentialsSecret = ""
+				newInstance := getInstance()
+				newInstance.Spec.BTPAccessCredentialsSecret = "new-secret"
 				_, err := newInstance.ValidateUpdate(instance)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("changing the BTPAccessCredentialsSecret for an existing instance is not allowed"))

@@ -297,6 +297,9 @@ var _ = Describe("ServiceInstance controller", func() {
 			})
 
 			When("polling ends with success", func() {
+				BeforeEach(func() {
+					fakeClient.GetInstanceByIDReturns(&smclientTypes.ServiceInstance{Labels: map[string][]string{"subaccount_id": []string{fakeSubaccountID}}}, nil)
+				})
 				It("should update in progress condition and provision the instance successfully", func() {
 					serviceInstance = createInstance(ctx, instanceSpec, false)
 					fakeClient.StatusReturns(&smclientTypes.Operation{
@@ -305,6 +308,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						State: smClientTypes.SUCCEEDED,
 					}, nil)
 					waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionTrue, Created, "")
+					Expect(serviceInstance.Status.SubaccountID).To(Equal(fakeSubaccountID))
 				})
 			})
 
