@@ -65,7 +65,7 @@ spec:
           spec:
             description: ServiceInstanceSpec defines the desired state of ServiceInstance
             properties:
-              BTPAccessCredentialsSecret:
+              btpAccessCredentialsSecret:
                 description: The name of the btp access credentials secret
                 type: string
               customTags:

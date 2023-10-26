@@ -51,7 +51,7 @@ func (si *ServiceInstance) ValidateUpdate(old runtime.Object) (warnings admissio
 
 	oldInstance := old.(*ServiceInstance)
 	if oldInstance.Spec.BTPAccessCredentialsSecret != si.Spec.BTPAccessCredentialsSecret {
-		return nil, fmt.Errorf("changing the BTPAccessCredentialsSecret for an existing instance is not allowed")
+		return nil, fmt.Errorf("changing the btpAccessCredentialsSecret for an existing instance is not allowed")
 	}
 	return nil, nil
 }

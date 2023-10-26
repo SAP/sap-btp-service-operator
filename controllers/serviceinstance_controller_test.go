@@ -573,7 +573,7 @@ var _ = Describe("ServiceInstance controller", func() {
 				serviceInstance.Spec.BTPAccessCredentialsSecret = "12345"
 				err := k8sClient.Update(ctx, serviceInstance)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("changing the BTPAccessCredentialsSecret for an existing instance is not allowed"))
+				Expect(err.Error()).To(ContainSubstring("changing the btpAccessCredentialsSecret for an existing instance is not allowed"))
 			})
 		})
 	})

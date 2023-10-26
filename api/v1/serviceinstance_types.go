@@ -84,7 +84,7 @@ type ServiceInstanceSpec struct {
 	UserInfo *v1.UserInfo `json:"userInfo,omitempty"`
 
 	// The name of the btp access credentials secret
-	BTPAccessCredentialsSecret string `json:"BTPAccessCredentialsSecret,omitempty"`
+	BTPAccessCredentialsSecret string `json:"btpAccessCredentialsSecret,omitempty"`
 }
 
 // ServiceInstanceStatus defines the observed state of ServiceInstance

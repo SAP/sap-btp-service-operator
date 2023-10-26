@@ -5,4 +5,4 @@ metadata:
 spec:
   serviceOfferingName: service-manager
   servicePlanName: subaccount-audit
-  BTPAccessCredentialsSecret: mybtpsecret
+  btpAccessCredentialsSecret: mybtpsecret
