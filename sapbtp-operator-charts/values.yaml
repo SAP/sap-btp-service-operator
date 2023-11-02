@@ -93,3 +93,6 @@ externalImages:
       repository: bitnami/kubectl
       sha: ""
       tag: latest
+
+networkPolicy:
+  enabled: false
