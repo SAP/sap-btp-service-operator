@@ -24,13 +24,8 @@ spec:
         port: 9443      # webhook service
       - protocol: TCP
         port: 8081     # readiness and liveness probe
-    - from:
-      - podSelector:
-          matchLabels:
-            app.kubernetes.io/name: prometheus
-      ports:
       - protocol: TCP
-        port: 8443      # prometheus metrics
+        port: 8443   
   policyTypes:
   - Ingress
   - Egress
