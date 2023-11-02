@@ -96,3 +96,23 @@ externalImages:
 
 networkPolicy:
   enabled: false
+  # Configure ingress and egress if network policy is needed
+  # for example:
+  # ingress:
+  #   - ports:
+  #     - protocol: TCP
+  #       port: 9443
+  #     - protocol: TCP
+  #       port: 8081
+  # egress:
+  #   - ports:
+  #     - protocol: TCP
+  #       port: 443
+  #     - protocol: TCP
+  #       port: 53
+  #     - protocol: UDP
+  #       port: 53
+  #     - protocol: TCP
+  #       port: 8053
+  #     - protocol: UDP
+  #       port: 8053
