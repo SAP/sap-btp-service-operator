@@ -4,4 +4,4 @@ metadata:
   name: sample-instance-1
 spec:
   serviceOfferingName: service-manager
-  servicePlanName: subaccount-admin
+  servicePlanName: subaccount-audit

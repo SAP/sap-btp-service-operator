@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	"net/http"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"strings"
 )
 
@@ -33,7 +34,6 @@ const (
 	testNamespace            = "ic-test-namespace"
 	fakeOfferingName         = "offering-a"
 	fakePlanName             = "plan-a"
-	testSubaccountID         = "subaccountID"
 )
 
 var _ = Describe("ServiceInstance controller", func() {
@@ -123,6 +123,8 @@ var _ = Describe("ServiceInstance controller", func() {
 
 	BeforeEach(func() {
 		ctx = context.Background()
+		log := ctrl.Log.WithName("instanceTest")
+		ctx = context.WithValue(ctx, LogKey{}, log)
 		fakeInstanceName = "ic-test-" + uuid.New().String()
 		defaultLookupKey = types.NamespacedName{Name: fakeInstanceName, Namespace: testNamespace}
 
@@ -200,24 +202,6 @@ var _ = Describe("ServiceInstance controller", func() {
 						serviceInstance = createInstance(ctx, instanceSpec, false)
 						waitForInstanceConditionAndMessage(ctx, defaultLookupKey, api.ConditionSucceeded, "provided plan id does not match")
 					})
-				})
-			})
-
-			When("multiple subaccounts is disabled", func() {
-				BeforeEach(func() {
-					v1.SetAllowMultipleTenants(false)
-				})
-				AfterEach(func() {
-					v1.SetAllowMultipleTenants(true)
-				})
-				It("should fail if instance contains subaccount id", func() {
-					instance := &v1.ServiceInstance{Spec: instanceSpec}
-					instance.Name = fakeInstanceName
-					instance.Namespace = testNamespace
-					instance.Spec.SubaccountID = "someID"
-					err := k8sClient.Create(ctx, instance)
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("setting the subaccountID property is not allowed"))
 				})
 			})
 		})
@@ -313,6 +297,9 @@ var _ = Describe("ServiceInstance controller", func() {
 			})
 
 			When("polling ends with success", func() {
+				BeforeEach(func() {
+					fakeClient.GetInstanceByIDReturns(&smclientTypes.ServiceInstance{Labels: map[string][]string{"subaccount_id": []string{fakeSubaccountID}}}, nil)
+				})
 				It("should update in progress condition and provision the instance successfully", func() {
 					serviceInstance = createInstance(ctx, instanceSpec, false)
 					fakeClient.StatusReturns(&smclientTypes.Operation{
@@ -321,6 +308,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						State: smClientTypes.SUCCEEDED,
 					}, nil)
 					waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionTrue, Created, "")
+					Expect(serviceInstance.Status.SubaccountID).To(Equal(fakeSubaccountID))
 				})
 			})
 
@@ -582,10 +570,10 @@ var _ = Describe("ServiceInstance controller", func() {
 			It("should fail", func() {
 				deleteInstance(ctx, serviceInstance, true)
 				serviceInstance = createInstance(ctx, instanceSpec, true)
-				serviceInstance.Spec.SubaccountID = "12345"
+				serviceInstance.Spec.BTPAccessCredentialsSecret = "12345"
 				err := k8sClient.Update(ctx, serviceInstance)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("changing the subaccountID for an existing instance is not allowed"))
+				Expect(err.Error()).To(ContainSubstring("changing the btpAccessCredentialsSecret for an existing instance is not allowed"))
 			})
 		})
 	})
@@ -666,7 +654,6 @@ var _ = Describe("ServiceInstance controller", func() {
 				deleteInstance(ctx, serviceInstance, false)
 				waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionFalse, DeleteInProgress, "")
 			})
-
 			When("polling ends with success", func() {
 				BeforeEach(func() {
 					fakeClient.StatusReturns(&smclientTypes.Operation{
@@ -736,6 +723,28 @@ var _ = Describe("ServiceInstance controller", func() {
 				Entry("last operation is CREATE IN_PROGRESS", TestCase{lastOpType: smClientTypes.CREATE, lastOpState: smClientTypes.INPROGRESS}),
 				Entry("last operation is UPDATE IN_PROGRESS", TestCase{lastOpType: smClientTypes.UPDATE, lastOpState: smClientTypes.INPROGRESS}),
 				Entry("last operation is DELETE IN_PROGRESS", TestCase{lastOpType: smClientTypes.DELETE, lastOpState: smClientTypes.INPROGRESS}))
+		})
+	})
+
+	Describe("full reconcile", func() {
+		When("instance hashedSpec is not initialized", func() {
+			BeforeEach(func() {
+				serviceInstance = createInstance(ctx, instanceSpec, true)
+			})
+			It("should not send update request and update the hashed spec", func() {
+				hashed := serviceInstance.Status.HashedSpec
+				serviceInstance.Status.HashedSpec = ""
+				Expect(k8sClient.Status().Update(ctx, serviceInstance)).To(Succeed())
+
+				Eventually(func() bool {
+					err := k8sClient.Get(ctx, types.NamespacedName{Name: serviceInstance.Name, Namespace: serviceInstance.Namespace}, serviceInstance)
+					if err != nil {
+						return false
+					}
+					cond := meta.FindStatusCondition(serviceInstance.GetConditions(), api.ConditionSucceeded)
+					return serviceInstance.Status.HashedSpec == hashed && cond != nil && cond.Reason == Created
+				}, timeout, interval).Should(BeTrue())
+			})
 		})
 	})
 
@@ -1039,7 +1048,7 @@ var _ = Describe("ServiceInstance controller", func() {
 							ExternalName: "name",
 						}}
 					instance.SetGeneration(2)
-					Expect(isFinalState(instance)).To(BeFalse())
+					Expect(isFinalState(ctx, instance)).To(BeFalse())
 				})
 
 				When("Succeeded is false", func() {
@@ -1065,8 +1074,31 @@ var _ = Describe("ServiceInstance controller", func() {
 							},
 						}
 						instance.SetGeneration(1)
-						Expect(isFinalState(instance)).To(BeFalse())
+						Expect(isFinalState(ctx, instance)).To(BeFalse())
 					})
+				})
+			})
+
+			When("async operation in progress", func() {
+				It("should return false", func() {
+					var instance = &v1.ServiceInstance{
+						Status: v1.ServiceInstanceStatus{
+							Conditions: []metav1.Condition{
+								{
+									Type:               api.ConditionReady,
+									Status:             metav1.ConditionTrue,
+									ObservedGeneration: 1,
+								},
+							},
+							HashedSpec:         "929e78f4449f8036ce39da3cc3e7eaea",
+							OperationURL:       "/operations/somepollingurl",
+							ObservedGeneration: 2,
+						},
+						Spec: v1.ServiceInstanceSpec{
+							ExternalName: "name",
+						}}
+					instance.SetGeneration(2)
+					Expect(isFinalState(ctx, instance)).To(BeFalse())
 				})
 			})
 
@@ -1092,7 +1124,7 @@ var _ = Describe("ServiceInstance controller", func() {
 							ExternalName: "name",
 						}}
 					instance.SetGeneration(2)
-					Expect(isFinalState(instance)).To(BeFalse())
+					Expect(isFinalState(ctx, instance)).To(BeFalse())
 				})
 			})
 
@@ -1118,7 +1150,7 @@ var _ = Describe("ServiceInstance controller", func() {
 							ExternalName: "name",
 						}}
 					instance.SetGeneration(2)
-					Expect(isFinalState(instance)).To(BeFalse())
+					Expect(isFinalState(ctx, instance)).To(BeFalse())
 				})
 			})
 
@@ -1150,7 +1182,7 @@ var _ = Describe("ServiceInstance controller", func() {
 							Shared:       pointer.Bool(true),
 						}}
 					instance.SetGeneration(2)
-					Expect(isFinalState(instance)).To(BeFalse())
+					Expect(isFinalState(ctx, instance)).To(BeFalse())
 				})
 			})
 
@@ -1174,14 +1206,15 @@ var _ = Describe("ServiceInstance controller", func() {
 									Status: metav1.ConditionTrue,
 								},
 							},
-							HashedSpec: "929e78f4449f8036ce39da3cc3e7eaea",
+							HashedSpec:         "929e78f4449f8036ce39da3cc3e7eaea",
+							ObservedGeneration: 2,
 						},
 						Spec: v1.ServiceInstanceSpec{
 							ExternalName: "name",
 							Shared:       pointer.Bool(true),
 						}}
 					instance.SetGeneration(2)
-					Expect(isFinalState(instance)).To(BeTrue())
+					Expect(isFinalState(ctx, instance)).To(BeTrue())
 				})
 			})
 		})

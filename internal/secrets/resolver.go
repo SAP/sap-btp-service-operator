@@ -19,30 +19,22 @@ const (
 )
 
 type SecretResolver struct {
-	EnableMultipleSubaccounts bool
-	ManagementNamespace       string
-	ReleaseNamespace          string
-	EnableNamespaceSecrets    bool
-	Client                    client.Client
-	Log                       logr.Logger
+	ManagementNamespace    string
+	ReleaseNamespace       string
+	EnableNamespaceSecrets bool
+	Client                 client.Client
+	Log                    logr.Logger
 }
 
-func (sr *SecretResolver) GetSecretForResource(ctx context.Context, namespace, name, subaccountID string) (*v1.Secret, error) {
+func (sr *SecretResolver) GetSecretForResource(ctx context.Context, namespace, name, btpAccessSecret string) (*v1.Secret, error) {
 	secretForResource := &v1.Secret{}
 
-	if !sr.EnableMultipleSubaccounts {
-		sr.Log.Info("enableMultipleSubaccounts set to false - using default cluster secret")
-		return sr.getDefaultSecret(ctx, name)
-	}
-
-	// search subaccount secret
-	if len(subaccountID) > 0 {
-		secretName := fmt.Sprintf("%s-%s", subaccountID, name)
-		sr.Log.Info(fmt.Sprintf("Searching for secret name %s in namespace %s for subaccountID %s",
-			secretName, sr.ManagementNamespace, subaccountID))
-		err := sr.Client.Get(ctx, types.NamespacedName{Name: secretName, Namespace: sr.ManagementNamespace}, secretForResource)
+	if len(btpAccessSecret) > 0 {
+		sr.Log.Info(fmt.Sprintf("Searching for secret name %s in namespace %s",
+			btpAccessSecret, sr.ManagementNamespace))
+		err := sr.Client.Get(ctx, types.NamespacedName{Name: btpAccessSecret, Namespace: sr.ManagementNamespace}, secretForResource)
 		if err != nil {
-			sr.Log.Error(err, "Could not fetch subaccount secret")
+			sr.Log.Error(err, fmt.Sprintf("Could not fetch secret named %s", btpAccessSecret))
 			return nil, err
 		}
 		return secretForResource, nil

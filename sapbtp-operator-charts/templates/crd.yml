@@ -262,6 +262,9 @@ spec:
               ready:
                 description: Indicates whether binding is ready for usage
                 type: string
+              subaccountID:
+                description: The subaccount id of the service binding
+                type: string
             required:
             - conditions
             type: object
@@ -589,6 +592,9 @@ spec:
           spec:
             description: ServiceInstanceSpec defines the desired state of ServiceInstance
             properties:
+              btpAccessCredentialsSecret:
+                description: The name of the btp access credentials secret
+                type: string
               customTags:
                 description: List of custom tags describing the ServiceInstance, will
                   be copied to `ServiceBinding` secret in the key called `tags`.
@@ -652,9 +658,6 @@ spec:
               shared:
                 description: Indicates the desired shared state
                 type: boolean
-              subaccountID:
-                description: The subaccount id of the service instance
-                type: string
               userInfo:
                 description: UserInfo contains information about the user that last
                   modified this instance. This field is set by the API server and
@@ -753,11 +756,11 @@ spec:
                       pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                       type: string
                   required:
-                    - lastTransitionTime
-                    - message
-                    - reason
-                    - status
-                    - type
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
                   type: object
                 type: array
               hashedSpec:

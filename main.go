@@ -98,12 +98,11 @@ func main() {
 	}
 
 	secretResolver := &secrets.SecretResolver{
-		EnableMultipleSubaccounts: config.Get().EnableMultipleSubaccounts,
-		ManagementNamespace:       config.Get().ManagementNamespace,
-		ReleaseNamespace:          config.Get().ReleaseNamespace,
-		EnableNamespaceSecrets:    config.Get().EnableNamespaceSecrets,
-		Client:                    mgr.GetClient(),
-		Log:                       logf.Log.WithName("secret-resolver"),
+		ManagementNamespace:    config.Get().ManagementNamespace,
+		ReleaseNamespace:       config.Get().ReleaseNamespace,
+		EnableNamespaceSecrets: config.Get().EnableNamespaceSecrets,
+		Client:                 mgr.GetClient(),
+		Log:                    logf.Log.WithName("secret-resolver"),
 	}
 
 	if err = (&controllers.ServiceInstanceReconciler{
@@ -139,7 +138,6 @@ func main() {
 			setupLog.Error(err, "unable to create webhook", "webhook", "ServiceBinding")
 			os.Exit(1)
 		}
-		servicesv1.SetAllowMultipleTenants(config.Get().EnableMultipleSubaccounts)
 		if err = (&servicesv1.ServiceInstance{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "ServiceInstance")
 			os.Exit(1)
