@@ -241,7 +241,9 @@ spec:
 | parametersFrom | `[]object` | List of sources to populate parameters.                                                                                                                                                                           |
 | customTags | `[]string` | List of custom tags describing the ServiceInstance, will be copied to `ServiceBinding` secret in the key called `tags`.                                                                                           |
 | userInfo | `object` | Contains information about the user that last modified this service instance.                                                                                                                                     |
-| shared |  `*bool`   | The shared state. Possible values: true, false, or nil (value was not specified, counts as "false").                                                                                                                                                                               |
+| shared |  `*bool`   | The shared state. Possible values: true, false, or nil (value was not specified, counts as "false").                                                                                                              |
+| btpAccessCredentialsSecret |  `string`   | Name of a secret which contain access credentials for the SAP BTP service operator. see [Working with Multiple Subaccounts](#Working-with-multiple-subaccounts)                                                                                 |
+
 
 #### Status
 | Parameter         | Type     | Description                                                                                                   |
@@ -426,17 +428,54 @@ You can also choose the `services.cloud.sap.com/forceRotate` annotation (value d
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
-## Working with multiple subaccounts
-You can configure the SAP BTP service operator to work with more than one subaccount in the same Kubernetes cluster. This means that different namespaces can be connected to different subaccounts.
-The association between a namespace and a subaccount is based on a different set of credentials configured for different namespaces.
+## Working with Multiple Subaccounts
+You can configure the SAP BTP service operator to work with more than one subaccount in the same Kubernetes cluster.
+The association between a resource and a subaccount is based on a different set of credentials configured for different resources.
+To connect a resource to a subaccount, you first have to obtain the [access credentials](#setup) for the SAP BTP service operator and then maintain them in a secret.
 
-To connect the namespace to a subaccount, you first have to obtain the [access credentials](#setup) for the SAP BTP service operator and then maintain them in a secret that is specific for that namespace.
-
-There are two options to maintain namespace-specific credentials, and they differ between default and TLS-based access credentials types:
-
-### Default Access Credentials
-- Define a secret named `sap-btp-service-operator` in the namespace. `ServiceInstance` and `ServiceBinding` that are applied in the namespace will belong to the subaccount from which the credentials were issued.  
-- Define different secrets for different namespaces in a [centrally managed namespace](./sapbtp-operator-charts/templates/configmap.yml), following the secret naming convention: `<namespace>-sap-btp-service-operator`.
+The determination of which secret to work with is based on the following order:
+### 1. explicit secret configuration
+Define a new secret
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mybtpsecret
+  namespace: <namespace>
+type: Opaque
+data:
+  clientid: "<clientid>"
+  clientsecret: "<clientsecret>"
+  sm_url: "<sm_url>"
+  tokenurl: "<auth_url>"
+  tokenurlsuffix: "/oauth/token"
+```
+with TLS configurations:
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mybtpsecret
+  namespace: <namespace>
+type: kubernetes.io/tls
+data:
+  tls.crt: <crt> #base64 encoded
+  tls.key: <key> #base64 encoded
+```
+Configure the secret name on the `ServiceInstance` within the property `btpAccessCredentialsSecret`:
+```yaml
+apiVersion: services.cloud.sap.com/v1
+kind: ServiceInstance
+metadata:
+name: sample-instance-1
+spec:
+serviceOfferingName: service-manager
+servicePlanName: subaccount-audit
+btpAccessCredentialsSecret: mybtpsecret
+```
+### 2. Namespace Secret
+Define a secret named `sap-btp-service-operator` in the namespace.
+`ServiceInstance` and `ServiceBinding` that are applied in the namespace will belong to the subaccount from which the credentials were issued.
 #### Namespace Secret Structure
 ```yaml
 apiVersion: v1
@@ -452,24 +491,7 @@ data:
   tokenurl: "<auth_url>"
   tokenurlsuffix: "/oauth/token"
 ```
-
-### TLS-Based Access Credentials
-- Define a secret pair named `sap-btp-service-operator` and `sap-btp-service-operator-tls`  in the namespace. `ServiceInstance` and `ServiceBinding` that are applied in the namespace will belong to the subaccount from which the credentials were issued.  
-- Define different secrets for different namespaces in a [centrally managed namespace](./sapbtp-operator-charts/templates/configmap.yml), following the secret naming convention: `<namespace>-sap-btp-service-operator` and `<namespace>-sap-btp-service-operator-tls`. For more information, see [tls secret](./sapbtp-operator-charts/templates/secret-tls.yml).
-#### Namespace Secrets Structure
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: sap-btp-service-operator
-  namespace: <namespace>
-type: Opaque
-data:
-  clientid: "<clientid>"
-  sm_url: "<sm_url>"
-  tokenurl: "<auth_url>"
-  tokenurlsuffix: "/oauth/token"
-```
+with TLS configurations:
 ```yaml
 apiVersion: v1
 kind: Secret
@@ -482,9 +504,11 @@ data:
   tls.key: <key> #base64 encoded
 ```
 
-**Notes:**
-- If none of the those mentioned above options are set, `sap-btp-service-operator` secret of a release namespace is used.<br>
-  See step 4 of the [Setup](#setup) section.
+### 3. centrally managed namespace
+Define different secrets for different namespaces in a [centrally managed namespace](./sapbtp-operator-charts/templates/configmap.yml), following the secret naming convention: `<namespace>-sap-btp-service-operator`.
+### 4. Default Access Credentials
+If none of the those mentioned above options are set, `sap-btp-service-operator` secret of a release namespace is used.<br>
+See step 4 of the [Setup](#setup) section.
   
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
