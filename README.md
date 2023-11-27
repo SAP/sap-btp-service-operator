@@ -426,7 +426,7 @@ You can also choose the `services.cloud.sap.com/forceRotate` annotation (value d
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
-## Multitenancy
+## Working with multiple subaccounts
 You can configure the SAP BTP service operator to work with more than one subaccount in the same Kubernetes cluster. This means that different namespaces can be connected to different subaccounts.
 The association between a namespace and a subaccount is based on a different set of credentials configured for different namespaces.
 
