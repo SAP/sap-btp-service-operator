@@ -473,9 +473,11 @@ serviceOfferingName: service-manager
 servicePlanName: subaccount-audit
 btpAccessCredentialsSecret: mybtpsecret
 ```
+
 ### 2. Namespace Secret
 Define a secret named `sap-btp-service-operator` in the namespace.
 `ServiceInstance` and `ServiceBinding` that are applied in the namespace will belong to the subaccount from which the credentials were issued.
+
 #### Namespace Secret Structure
 ```yaml
 apiVersion: v1
@@ -506,6 +508,7 @@ data:
 
 ### 3. centrally managed namespace
 Define different secrets for different namespaces in a [centrally managed namespace](./sapbtp-operator-charts/templates/configmap.yml), following the secret naming convention: `<namespace>-sap-btp-service-operator`.
+
 ### 4. Default Access Credentials
 If none of the those mentioned above options are set, `sap-btp-service-operator` secret of a release namespace is used.<br>
 See step 4 of the [Setup](#setup) section.
