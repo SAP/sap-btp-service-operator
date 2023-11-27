@@ -25,7 +25,7 @@ The SAP BTP service operator is based on the [Kubernetes Operator pattern](https
     * [Managing access](#managing-access)
 * [SAP BTP kubectl Extension](#sap-btp-kubectl-plugin-experimental) 
 * [Credentials Rotation](#credentials-rotation)
-* [Working with multiple subaccounts](#Working-with-multiple-subaccounts)
+* [Working with Multiple Subaccounts](#Working-with-multiple-subaccounts)
 * [Troubleshooting and Support](#troubleshooting-and-support)
 * [Formats of Secret Objects](#formats-of-secret-objects)
 * [Uninstalling the Operator](#uninstalling-the-operator)
