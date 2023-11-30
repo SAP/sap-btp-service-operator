@@ -21,6 +21,7 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -28,6 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/SAP/sap-btp-service-operator/api"
+	"github.com/SAP/sap-btp-service-operator/internal/secrets/template"
 )
 
 // log is for logging in this package.
@@ -52,6 +54,11 @@ func (sb *ServiceBinding) ValidateCreate() (admission.Warnings, error) {
 	if sb.Spec.CredRotationPolicy != nil {
 		if err := sb.validateCredRotatingConfig(); err != nil {
 			return nil, err
+		}
+	}
+	if sb.Spec.SecretTemplate != "" {
+		if err := sb.validateSecretTemplate(); err != nil {
+			return nil, errors.Wrap(err, "spec.secretTemplate is invalid")
 		}
 	}
 	return nil, nil
@@ -123,4 +130,11 @@ func (sb *ServiceBinding) validateCredRotatingConfig() error {
 	}
 
 	return nil
+}
+
+func (sb *ServiceBinding) validateSecretTemplate() error {
+	servicebindinglog.Info("validate specified secretTemplate")
+
+	_, err := template.ParseTemplate("", sb.Spec.SecretTemplate)
+	return err
 }
