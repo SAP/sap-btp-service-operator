@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -58,6 +59,9 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	log := r.Log.WithValues("serviceinstance", req.NamespacedName).WithValues("correlation_id", uuid.New().String())
 	ctx = context.WithValue(ctx, LogKey{}, log)
 
+	if !strings.HasPrefix(req.Name, "maya") {
+		return ctrl.Result{}, nil
+	}
 	serviceInstance := &servicesv1.ServiceInstance{}
 	if err := r.Client.Get(ctx, req.NamespacedName, serviceInstance); err != nil {
 		if !apierrors.IsNotFound(err) {
@@ -363,6 +367,14 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, serviceInstance *s
 	case smClientTypes.INPROGRESS:
 		fallthrough
 	case smClientTypes.PENDING:
+		if len(status.Description) > 0 {
+			log.Info("last operation description is '%s'", status.Description)
+			setInProgressConditions(ctx, status.Type, status.Description, serviceInstance)
+			if err := r.updateStatus(ctx, serviceInstance); err != nil {
+				log.Error(err, "unable to update ServiceInstance polling description")
+				return ctrl.Result{}, err
+			}
+		}
 		return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, nil
 	case smClientTypes.FAILED:
 		errMsg := getErrorMsgFromLastOperation(status)
