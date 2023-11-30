@@ -22,10 +22,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"net/http"
-	"strings"
-
 	"k8s.io/client-go/util/workqueue"
+	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 
 	servicesv1 "github.com/SAP/sap-btp-service-operator/api/v1"
@@ -59,9 +57,6 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	log := r.Log.WithValues("serviceinstance", req.NamespacedName).WithValues("correlation_id", uuid.New().String())
 	ctx = context.WithValue(ctx, LogKey{}, log)
 
-	if !strings.HasPrefix(req.Name, "maya") {
-		return ctrl.Result{}, nil
-	}
 	serviceInstance := &servicesv1.ServiceInstance{}
 	if err := r.Client.Get(ctx, req.NamespacedName, serviceInstance); err != nil {
 		if !apierrors.IsNotFound(err) {
