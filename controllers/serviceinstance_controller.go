@@ -364,7 +364,7 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, serviceInstance *s
 		fallthrough
 	case smClientTypes.PENDING:
 		if len(status.Description) > 0 {
-			log.Info("last operation description is '%s'", status.Description)
+			log.Info(fmt.Sprintf("last operation description is '%s'", status.Description))
 			setInProgressConditions(ctx, status.Type, status.Description, serviceInstance)
 			if err := r.updateStatus(ctx, serviceInstance); err != nil {
 				log.Error(err, "unable to update ServiceInstance polling description")
