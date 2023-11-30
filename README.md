@@ -507,7 +507,23 @@ data:
 ```
 
 ### 3. Centrally-Managed Namespace
-Define different secrets for different namespaces in a [centrally managed namespace](./sapbtp-operator-charts/templates/configmap.yml), following the naming convention: `<namespace>-sap-btp-service-operator`.
+Define a secret named <namespace>-sap-btp-service-operator in the Centrally Managed Namespace.
+Note: The centrally managed namespace is defined by the value specified in .Values.manager.management_namespace. If this value is not set, it defaults to the installation namespace.
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: <namespace>-sap-btp-service-operator
+  namespace: centrally managed namespace
+type: Opaque
+data:
+  clientid: "<clientid>"
+  clientsecret: "<clientsecret>"
+  sm_url: "<sm_url>"
+  tokenurl: "<auth_url>"
+  tokenurlsuffix: "/oauth/token"
+```
 
 ### 4. Default Access Credentials
 If none of the above-mentioned options are used, the `sap-btp-service-operator` secret of a release namespace is used.<br>
