@@ -3,8 +3,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"net/http"
-
 	"github.com/SAP/sap-btp-service-operator/api"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
 	smClientTypes "github.com/SAP/sap-btp-service-operator/client/sm/types"
@@ -17,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	apimachinerytypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
+	"net/http"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -135,7 +134,15 @@ func (r *BaseReconciler) removeFinalizer(ctx context.Context, object api.SAPBTPR
 func (r *BaseReconciler) updateStatus(ctx context.Context, object api.SAPBTPResource) error {
 	log := GetLogger(ctx)
 	log.Info(fmt.Sprintf("updating %s status", object.GetObjectKind().GroupVersionKind().Kind))
-	return r.Client.Status().Update(ctx, object)
+	if err := r.Client.Status().Update(ctx, object); err != nil {
+		return err
+	}
+	succeededCondition := meta.FindStatusCondition(object.GetConditions(), api.ConditionSucceeded)
+	if succeededCondition != nil &&
+		succeededCondition.Reason != InProgress && succeededCondition.Reason != CreateInProgress && succeededCondition.Reason != UpdateInProgress {
+		return r.removeIgnoreNonTransientErrorAnnotation(ctx, object)
+	}
+	return nil
 }
 
 func (r *BaseReconciler) init(ctx context.Context, obj api.SAPBTPResource) error {
@@ -244,7 +251,6 @@ func setSuccessConditions(operationType smClientTypes.OperationCategory, object 
 
 	object.SetConditions(conditions)
 	object.SetReady(metav1.ConditionTrue)
-
 }
 
 func setCredRotationInProgressConditions(reason, message string, object api.SAPBTPResource) {
@@ -314,10 +320,24 @@ func isMarkedForDeletion(object metav1.ObjectMeta) bool {
 	return !object.DeletionTimestamp.IsZero()
 }
 
-func isTransientError(smError *sm.ServiceManagerError, log logr.Logger) bool {
+func isTransientError(smError *sm.ServiceManagerError, log logr.Logger, resource api.SAPBTPResource) bool {
 	statusCode := smError.GetStatusCode()
 	log.Info(fmt.Sprintf("SM returned error with status code %d", statusCode))
-	return isTransientStatusCode(statusCode) || isConcurrentOperationError(smError)
+	isTransient := isTransientStatusCode(statusCode) || isConcurrentOperationError(smError)
+	annotations := resource.GetAnnotations()
+	if !isTransient && statusCode == http.StatusBadRequest && annotations != nil {
+		if _, ok := annotations[api.IgnoreNonTransientErrorAnnotation]; ok {
+			log.Info("ignoreNonTransientErrorAnnotation checking timeout")
+			timeoutReached := true
+			if !timeoutReached {
+				log.Info("ignoreNonTransientErrorAnnotation consider error to be transient")
+				return true
+			}
+			log.Info("ignoreNonTransientErrorAnnotation timeout reached")
+			return false
+		}
+	}
+	return isTransient
 }
 
 func isConcurrentOperationError(smError *sm.ServiceManagerError) bool {
@@ -341,8 +361,8 @@ func (r *BaseReconciler) handleError(ctx context.Context, operationType smClient
 		log.Info("unable to cast error to SM error, will be treated as non transient")
 		return r.markAsNonTransientError(ctx, operationType, err.Error(), resource)
 	}
-
-	if isTransient := isTransientError(smError, log); isTransient {
+	isTransient := isTransientError(smError, log, resource)
+	if isTransient {
 		return r.markAsTransientError(ctx, operationType, smError.Error(), resource)
 	}
 	return r.markAsNonTransientError(ctx, operationType, smError.Error(), resource)
@@ -359,10 +379,27 @@ func (r *BaseReconciler) markAsNonTransientError(ctx context.Context, operationT
 	if err != nil {
 		return ctrl.Result{}, err
 	}
+	err = r.removeIgnoreNonTransientErrorAnnotation(ctx, object)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 	if operationType == smClientTypes.DELETE {
 		return ctrl.Result{}, fmt.Errorf(errMsg)
 	}
 	return ctrl.Result{}, nil
+}
+
+func (r *BaseReconciler) removeIgnoreNonTransientErrorAnnotation(ctx context.Context, object api.SAPBTPResource) error {
+	log := GetLogger(ctx)
+	annotations := object.GetAnnotations()
+	if annotations != nil {
+		if _, ok := annotations[api.IgnoreNonTransientErrorAnnotation]; ok {
+			delete(annotations, api.IgnoreNonTransientErrorAnnotation)
+			log.Info("deleting ignoreNonTransientErrorAnnotation")
+			return r.Client.Update(ctx, object)
+		}
+	}
+	return nil
 }
 
 func (r *BaseReconciler) markAsTransientError(ctx context.Context, operationType smClientTypes.OperationCategory, errMsg string, object api.SAPBTPResource) (ctrl.Result, error) {
