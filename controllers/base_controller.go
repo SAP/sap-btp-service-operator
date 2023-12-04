@@ -325,7 +325,7 @@ func isTransientError(smError *sm.ServiceManagerError, log logr.Logger, resource
 	log.Info(fmt.Sprintf("SM returned error with status code %d", statusCode))
 	isTransient := isTransientStatusCode(statusCode) || isConcurrentOperationError(smError)
 	annotations := resource.GetAnnotations()
-	if !isTransient && statusCode == http.StatusBadRequest && annotations != nil {
+	if !isTransient && statusCode != http.StatusInternalServerError && annotations != nil {
 		if _, ok := annotations[api.IgnoreNonTransientErrorAnnotation]; ok {
 			log.Info("ignoreNonTransientErrorAnnotation checking timeout")
 			timeoutReached := true
@@ -376,10 +376,6 @@ func (r *BaseReconciler) markAsNonTransientError(ctx context.Context, operationT
 	}
 	object.SetObservedGeneration(object.GetGeneration())
 	err := r.updateStatus(ctx, object)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	err = r.removeIgnoreNonTransientErrorAnnotation(ctx, object)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
