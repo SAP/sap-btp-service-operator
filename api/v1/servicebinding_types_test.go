@@ -97,4 +97,13 @@ var _ = Describe("Service Binding Type Test", func() {
 		binding.SetStatus(status)
 		Expect(binding.GetStatus()).To(Equal(status))
 	})
+
+	It("should update annotation", func() {
+		annotation := map[string]string{
+			api.IgnoreNonTransientErrorAnnotation: "true",
+		}
+		binding.SetAnnotations(annotation)
+		Expect(binding.GetAnnotations()).To(Equal(annotation))
+	})
+
 })
