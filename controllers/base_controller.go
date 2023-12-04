@@ -361,8 +361,7 @@ func (r *BaseReconciler) handleError(ctx context.Context, operationType smClient
 		log.Info("unable to cast error to SM error, will be treated as non transient")
 		return r.markAsNonTransientError(ctx, operationType, err.Error(), resource)
 	}
-	isTransient := isTransientError(smError, log, resource)
-	if isTransient {
+	if isTransient := isTransientError(smError, log, resource); isTransient {
 		return r.markAsTransientError(ctx, operationType, smError.Error(), resource)
 	}
 	return r.markAsNonTransientError(ctx, operationType, smError.Error(), resource)
