@@ -82,7 +82,8 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			updateHashedSpecValue(serviceInstance)
 			return ctrl.Result{}, r.Client.Status().Update(ctx, serviceInstance)
 		}
-		return ctrl.Result{}, nil
+
+		return ctrl.Result{}, r.removeIgnoreNonTransientErrorAnnotation(ctx, serviceInstance)
 	}
 
 	if isMarkedForDeletion(serviceInstance.ObjectMeta) {

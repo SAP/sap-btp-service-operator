@@ -135,15 +135,7 @@ func (r *BaseReconciler) removeFinalizer(ctx context.Context, object api.SAPBTPR
 func (r *BaseReconciler) updateStatus(ctx context.Context, object api.SAPBTPResource) error {
 	log := GetLogger(ctx)
 	log.Info(fmt.Sprintf("updating %s status", object.GetObjectKind().GroupVersionKind().Kind))
-	if err := r.Client.Status().Update(ctx, object); err != nil {
-		return err
-	}
-	succeededCondition := meta.FindStatusCondition(object.GetConditions(), api.ConditionSucceeded)
-	if succeededCondition != nil &&
-		succeededCondition.Reason != InProgress && succeededCondition.Reason != CreateInProgress && succeededCondition.Reason != UpdateInProgress {
-		return r.removeIgnoreNonTransientErrorAnnotation(ctx, object)
-	}
-	return nil
+	return r.Client.Status().Update(ctx, object)
 }
 
 func (r *BaseReconciler) init(ctx context.Context, obj api.SAPBTPResource) error {
@@ -326,7 +318,7 @@ func isTransientError(smError *sm.ServiceManagerError, log logr.Logger, resource
 	log.Info(fmt.Sprintf("SM returned error with status code %d", statusCode))
 	isTransient := isTransientStatusCode(statusCode) || isConcurrentOperationError(smError)
 	annotations := resource.GetAnnotations()
-	if !isTransient && statusCode != http.StatusInternalServerError && annotations != nil {
+	if !isTransient && annotations != nil {
 		if _, ok := annotations[api.IgnoreNonTransientErrorAnnotation]; ok {
 			log.Info("ignoreNonTransientErrorAnnotation checking timeout")
 			timeoutReached := true

@@ -138,6 +138,8 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	if isBindingReady {
 		log.Info("Binding in final state")
+		r.removeIgnoreNonTransientErrorAnnotation(ctx, serviceInstance)
+
 		return r.maintain(ctx, serviceBinding)
 	}
 
@@ -472,7 +474,7 @@ func (r *ServiceBindingReconciler) maintain(ctx context.Context, binding *servic
 		return ctrl.Result{}, r.updateStatus(ctx, binding)
 	}
 
-	return ctrl.Result{}, nil
+	return ctrl.Result{}, r.removeIgnoreNonTransientErrorAnnotation(ctx, binding)
 }
 
 func (r *ServiceBindingReconciler) getServiceInstanceForBinding(ctx context.Context, binding *servicesv1.ServiceBinding) (*servicesv1.ServiceInstance, error) {
