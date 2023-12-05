@@ -196,6 +196,10 @@ func (sb *ServiceBinding) SetAnnotations(annotations map[string]string) {
 	sb.Annotations = annotations
 }
 
+func (si *ServiceBinding) SupportIgnoreNonTransientErrorAnnotation() bool {
+	return false
+}
+
 // +kubebuilder:object:root=true
 
 // ServiceBindingList contains a list of ServiceBinding

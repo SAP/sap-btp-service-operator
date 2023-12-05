@@ -82,4 +82,5 @@ type SAPBTPResource interface {
 	GetReady() metav1.ConditionStatus
 	GetAnnotations() map[string]string
 	SetAnnotations(map[string]string)
+	SupportIgnoreNonTransientErrorAnnotation() bool
 }

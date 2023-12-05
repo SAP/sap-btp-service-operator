@@ -138,8 +138,6 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	if isBindingReady {
 		log.Info("Binding in final state")
-		r.removeAnnotation(ctx, serviceInstance, api.IgnoreNonTransientErrorAnnotation)
-
 		return r.maintain(ctx, serviceBinding)
 	}
 

@@ -193,6 +193,10 @@ func (si *ServiceInstance) SetAnnotations(annotations map[string]string) {
 	si.Annotations = annotations
 }
 
+func (si *ServiceInstance) SupportIgnoreNonTransientErrorAnnotation() bool {
+	return true
+}
+
 // +kubebuilder:object:root=true
 
 // ServiceInstanceList contains a list of ServiceInstance

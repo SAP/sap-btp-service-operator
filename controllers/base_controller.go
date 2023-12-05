@@ -321,7 +321,7 @@ func isTransientError(smError *sm.ServiceManagerError, log logr.Logger, resource
 		return true
 	}
 	annotations := resource.GetAnnotations()
-	if annotations != nil {
+	if annotations != nil && resource.SupportIgnoreNonTransientErrorAnnotation() {
 		if _, ok := annotations[api.IgnoreNonTransientErrorAnnotation]; ok {
 			log.Info("ignoreNonTransientErrorAnnotation checking timeout")
 			if time.Since(resource.GetCreationTimestamp().Time) > config.Get().IgnoreNonTransientTimeout {
