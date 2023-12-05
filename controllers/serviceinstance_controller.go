@@ -83,7 +83,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			return ctrl.Result{}, r.Client.Status().Update(ctx, serviceInstance)
 		}
 
-		return ctrl.Result{}, r.removeIgnoreNonTransientErrorAnnotation(ctx, serviceInstance)
+		return ctrl.Result{}, r.removeAnnotation(ctx, serviceInstance, api.IgnoreNonTransientErrorAnnotation)
 	}
 
 	if isMarkedForDeletion(serviceInstance.ObjectMeta) {

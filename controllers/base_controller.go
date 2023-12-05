@@ -379,12 +379,12 @@ func (r *BaseReconciler) markAsNonTransientError(ctx context.Context, operationT
 	return ctrl.Result{}, nil
 }
 
-func (r *BaseReconciler) removeIgnoreNonTransientErrorAnnotation(ctx context.Context, object api.SAPBTPResource) error {
+func (r *BaseReconciler) removeAnnotation(ctx context.Context, object api.SAPBTPResource, key string) error {
 	log := GetLogger(ctx)
 	annotations := object.GetAnnotations()
 	if annotations != nil {
-		if _, ok := annotations[api.IgnoreNonTransientErrorAnnotation]; ok {
-			delete(annotations, api.IgnoreNonTransientErrorAnnotation)
+		if _, ok := annotations[key]; ok {
+			delete(annotations, key)
 			log.Info("deleting ignoreNonTransientErrorAnnotation")
 			object.SetAnnotations(annotations)
 			return r.Client.Update(ctx, object)
