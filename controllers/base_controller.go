@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/SAP/sap-btp-service-operator/api"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
@@ -316,21 +317,22 @@ func isMarkedForDeletion(object metav1.ObjectMeta) bool {
 func isTransientError(smError *sm.ServiceManagerError, log logr.Logger, resource api.SAPBTPResource) bool {
 	statusCode := smError.GetStatusCode()
 	log.Info(fmt.Sprintf("SM returned error with status code %d", statusCode))
-	isTransient := isTransientStatusCode(statusCode) || isConcurrentOperationError(smError)
+	if isTransientStatusCode(statusCode) || isConcurrentOperationError(smError) {
+		return true
+	}
 	annotations := resource.GetAnnotations()
-	if !isTransient && annotations != nil {
+	if annotations != nil {
 		if _, ok := annotations[api.IgnoreNonTransientErrorAnnotation]; ok {
 			log.Info("ignoreNonTransientErrorAnnotation checking timeout")
-			timeoutReached := true
-			if !timeoutReached {
-				log.Info("ignoreNonTransientErrorAnnotation consider error to be transient")
-				return true
+			if time.Since(resource.GetCreationTimestamp().Time) > config.Get().IgnoreNonTransientTimeout {
+				log.Info("ignoreNonTransientErrorAnnotation timeout reached")
+				return false
 			}
-			log.Info("ignoreNonTransientErrorAnnotation timeout reached")
-			return false
+			log.Info("ignoreNonTransientErrorAnnotation consider error to be transient")
+			return true
 		}
 	}
-	return isTransient
+	return false
 }
 
 func isConcurrentOperationError(smError *sm.ServiceManagerError) bool {
@@ -384,6 +386,7 @@ func (r *BaseReconciler) removeIgnoreNonTransientErrorAnnotation(ctx context.Con
 		if _, ok := annotations[api.IgnoreNonTransientErrorAnnotation]; ok {
 			delete(annotations, api.IgnoreNonTransientErrorAnnotation)
 			log.Info("deleting ignoreNonTransientErrorAnnotation")
+			object.SetAnnotations(annotations)
 			return r.Client.Update(ctx, object)
 		}
 	}
