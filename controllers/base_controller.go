@@ -379,6 +379,17 @@ func (r *BaseReconciler) markAsNonTransientError(ctx context.Context, operationT
 	return ctrl.Result{}, nil
 }
 
+func (r *BaseReconciler) markAsTransientError(ctx context.Context, operationType smClientTypes.OperationCategory, errMsg string, object api.SAPBTPResource) (ctrl.Result, error) {
+	log := GetLogger(ctx)
+	setInProgressConditions(ctx, operationType, errMsg, object)
+	log.Info(fmt.Sprintf("operation %s of %s encountered a transient error %s, retrying operation :)", operationType, object.GetControllerName(), errMsg))
+	if err := r.updateStatus(ctx, object); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	return ctrl.Result{}, fmt.Errorf(errMsg)
+}
+
 func (r *BaseReconciler) removeAnnotation(ctx context.Context, object api.SAPBTPResource, key string) error {
 	log := GetLogger(ctx)
 	annotations := object.GetAnnotations()
@@ -391,17 +402,6 @@ func (r *BaseReconciler) removeAnnotation(ctx context.Context, object api.SAPBTP
 		}
 	}
 	return nil
-}
-
-func (r *BaseReconciler) markAsTransientError(ctx context.Context, operationType smClientTypes.OperationCategory, errMsg string, object api.SAPBTPResource) (ctrl.Result, error) {
-	log := GetLogger(ctx)
-	setInProgressConditions(ctx, operationType, errMsg, object)
-	log.Info(fmt.Sprintf("operation %s of %s encountered a transient error %s, retrying operation :)", operationType, object.GetControllerName(), errMsg))
-	if err := r.updateStatus(ctx, object); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	return ctrl.Result{}, fmt.Errorf(errMsg)
 }
 
 func isInProgress(object api.SAPBTPResource) bool {
