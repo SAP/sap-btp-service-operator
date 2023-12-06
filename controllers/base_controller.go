@@ -395,8 +395,8 @@ func (r *BaseReconciler) removeAnnotation(ctx context.Context, object api.SAPBTP
 	annotations := object.GetAnnotations()
 	if annotations != nil {
 		if _, ok := annotations[key]; ok {
+			log.Info("deleting annotation with key %s", key)
 			delete(annotations, key)
-			log.Info("deleting ignoreNonTransientErrorAnnotation")
 			object.SetAnnotations(annotations)
 			return r.Client.Update(ctx, object)
 		}
