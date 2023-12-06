@@ -247,7 +247,7 @@ var _ = Describe("ServiceInstance controller", func() {
 			})
 
 			When("provision request to SM fails", func() {
-				Context("with 400 status", func() {
+				Context("first with 400 status then success", func() {
 					errMessage := "failed to provision instance"
 					BeforeEach(func() {
 						fakeClient.ProvisionReturns(nil, &sm.ServiceManagerError{
@@ -260,15 +260,35 @@ var _ = Describe("ServiceInstance controller", func() {
 					It("should have failure condition", func() {
 						serviceInstance = createInstance(ctx, instanceSpec, false)
 						waitForResourceCondition(ctx, serviceInstance, api.ConditionFailed, metav1.ConditionTrue, CreateFailed, errMessage)
-						Expect(fakeClient.ProvisionCallCount()).To(Equal(1))
 					})
 					It("ignoreNonTransientErrorAnnotation should have failure condition after timeout", func() {
 						serviceInstance = createInstanceWithAnnotation(ctx, instanceSpec, ignoreNonTransientErrorAnnotation, false)
 						waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionTrue, Created, "")
-						Expect(fakeClient.ProvisionCallCount()).To(BeNumerically(">", 1))
+						key := getResourceNamespacedName(serviceInstance)
+						err := k8sClient.Get(ctx, key, serviceInstance)
+						Expect(err).NotTo(HaveOccurred())
+						_, ok := serviceInstance.Annotations[api.IgnoreNonTransientErrorAnnotation]
+						Expect(ok).To(BeFalse())
 					})
 				})
-
+				Context("with 400 status", func() {
+					errMessage := "failed to provision instance"
+					BeforeEach(func() {
+						fakeClient.ProvisionReturns(nil, &sm.ServiceManagerError{
+							StatusCode:  http.StatusBadRequest,
+							Description: errMessage,
+						})
+					})
+					It("ignoreNonTransientErrorAnnotation should have failure condition after timeout", func() {
+						serviceInstance = createInstanceWithAnnotation(ctx, instanceSpec, ignoreNonTransientErrorAnnotation, false)
+						waitForResourceCondition(ctx, serviceInstance, api.ConditionFailed, metav1.ConditionTrue, CreateFailed, errMessage)
+						key := getResourceNamespacedName(serviceInstance)
+						err := k8sClient.Get(ctx, key, serviceInstance)
+						Expect(err).NotTo(HaveOccurred())
+						_, ok := serviceInstance.Annotations[api.IgnoreNonTransientErrorAnnotation]
+						Expect(ok).To(BeFalse())
+					})
+				})
 				Context("with 429 status eventually succeeds", func() {
 					BeforeEach(func() {
 						errMessage := "failed to provision instance"
