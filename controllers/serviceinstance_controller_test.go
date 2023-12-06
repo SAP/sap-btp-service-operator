@@ -101,6 +101,28 @@ var _ = Describe("ServiceInstance controller", func() {
 		return instance
 	}
 
+	createInstanceWithAnnotation := func(ctx context.Context, instanceSpec v1.ServiceInstanceSpec, annotation map[string]string, waitForReady bool) *v1.ServiceInstance {
+		instance := &v1.ServiceInstance{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "services.cloud.sap.com/v1",
+				Kind:       "ServiceInstance",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        fakeInstanceName,
+				Namespace:   testNamespace,
+				Annotations: annotation,
+			},
+			Spec: instanceSpec,
+		}
+		Expect(k8sClient.Create(ctx, instance)).Should(Succeed())
+
+		if !waitForReady {
+			return instance
+		}
+		waitForResourceToBeReady(ctx, instance)
+		return instance
+	}
+
 	deleteInstance := func(ctx context.Context, instanceToDelete *v1.ServiceInstance, wait bool) {
 		err := k8sClient.Get(ctx, types.NamespacedName{Name: instanceToDelete.Name, Namespace: instanceToDelete.Namespace}, &v1.ServiceInstance{})
 		if err != nil {
@@ -120,7 +142,7 @@ var _ = Describe("ServiceInstance controller", func() {
 			}, timeout, interval).Should(BeTrue())
 		}
 	}
-
+	ignoreNonTransientErrorAnnotation := map[string]string{api.IgnoreNonTransientErrorAnnotation: "true"}
 	BeforeEach(func() {
 		ctx = context.Background()
 		log := ctrl.Log.WithName("instanceTest")
@@ -238,6 +260,12 @@ var _ = Describe("ServiceInstance controller", func() {
 					It("should have failure condition", func() {
 						serviceInstance = createInstance(ctx, instanceSpec, false)
 						waitForResourceCondition(ctx, serviceInstance, api.ConditionFailed, metav1.ConditionTrue, CreateFailed, errMessage)
+						Expect(fakeClient.ProvisionCallCount()).To(Equal(1))
+					})
+					It("ignoreNonTransientErrorAnnotation should have failure condition after timeout", func() {
+						serviceInstance = createInstanceWithAnnotation(ctx, instanceSpec, ignoreNonTransientErrorAnnotation, false)
+						waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionTrue, Created, "")
+						Expect(fakeClient.ProvisionCallCount()).To(BeNumerically(">", 1))
 					})
 				})
 
@@ -281,6 +309,11 @@ var _ = Describe("ServiceInstance controller", func() {
 					It("should have failure condition - non transient error", func() {
 						serviceInstance = createInstance(ctx, instanceSpec, false)
 						waitForResourceCondition(ctx, serviceInstance, api.ConditionFailed, metav1.ConditionTrue, CreateFailed, errMessage)
+					})
+					It("ignoreNonTransientErrorAnnotation should have failure condition after timeout", func() {
+						serviceInstance = createInstanceWithAnnotation(ctx, instanceSpec, ignoreNonTransientErrorAnnotation, false)
+						waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionTrue, Created, "")
+						Expect(fakeClient.ProvisionCallCount()).To(BeNumerically(">", 1))
 					})
 				})
 			})

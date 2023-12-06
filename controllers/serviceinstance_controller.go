@@ -505,7 +505,7 @@ func (r *ServiceInstanceReconciler) handleInstanceSharingError(ctx context.Conte
 
 	if smError, ok := err.(*sm.ServiceManagerError); ok {
 		log.Info(fmt.Sprintf("SM returned error with status code %d", smError.StatusCode))
-		isTransient = isTransientError(smError, log, object)
+		isTransient = r.isTransientError(smError, log, object)
 		errMsg = smError.Error()
 
 		if smError.StatusCode == http.StatusTooManyRequests {
