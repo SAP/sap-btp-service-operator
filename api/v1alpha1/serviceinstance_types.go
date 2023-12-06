@@ -170,6 +170,10 @@ func (in *ServiceInstance) SetReady(ready metav1.ConditionStatus) {
 	in.Status.Ready = ready
 }
 
+func (in *ServiceInstance) SupportIgnoreNonTransientErrorAnnotation() bool {
+	return true
+}
+
 // +kubebuilder:object:root=true
 
 // ServiceInstanceList contains a list of ServiceInstance

@@ -180,6 +180,10 @@ func (sb *ServiceBinding) SetReady(ready metav1.ConditionStatus) {
 	sb.Status.Ready = ready
 }
 
+func (sb *ServiceBinding) SupportIgnoreNonTransientErrorAnnotation() bool {
+	return false
+}
+
 // +kubebuilder:object:root=true
 
 // ServiceBindingList contains a list of ServiceBinding

@@ -196,7 +196,7 @@ func (sb *ServiceBinding) SetAnnotations(annotations map[string]string) {
 	sb.Annotations = annotations
 }
 
-func (si *ServiceBinding) SupportIgnoreNonTransientErrorAnnotation() bool {
+func (sb *ServiceBinding) SupportIgnoreNonTransientErrorAnnotation() bool {
 	return false
 }
 
