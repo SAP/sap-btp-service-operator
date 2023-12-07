@@ -23,6 +23,7 @@ import (
 	"net/http"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"strings"
+	"time"
 )
 
 // +kubebuilder:docs-gen:collapse=Imports
@@ -287,6 +288,8 @@ var _ = Describe("ServiceInstance controller", func() {
 						Expect(err).NotTo(HaveOccurred())
 						_, ok := serviceInstance.Annotations[api.IgnoreNonTransientErrorAnnotation]
 						Expect(ok).To(BeFalse())
+						sinceCreate := time.Since(serviceInstance.GetCreationTimestamp().Time)
+						Expect(sinceCreate > ignoreNonTransientTimeout)
 					})
 				})
 				Context("with 429 status eventually succeeds", func() {
