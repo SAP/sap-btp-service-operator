@@ -574,6 +574,22 @@ var _ = Describe("ServiceInstance controller", func() {
 					waitForResourceToBeReady(ctx, serviceInstance)
 				})
 			})
+			Context("spec is changed,ignoreNonTransientErrorAnnotation and sm returns 502 and broker returns non transient error", func() {
+				errMessage := "broker too many requests"
+				BeforeEach(func() {
+					fakeClient.UpdateInstanceReturns(nil, "", getNonTransientBrokerError(errMessage))
+				})
+				It("recognize the error as transient and eventually succeed", func() {
+					newExternalName := "my-new-external-name" + uuid.New().String()
+					serviceInstance.Spec.ExternalName = newExternalName
+					serviceInstance.Annotations = ignoreNonTransientErrorAnnotation
+					updateInstance(ctx, serviceInstance)
+					waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionFalse, UpdateInProgress, "")
+					fakeClient.UpdateInstanceReturns(nil, "", nil)
+					updateInstance(ctx, serviceInstance)
+					waitForResourceToBeReady(ctx, serviceInstance)
+				})
+			})
 
 			Context("Async", func() {
 				When("spec is changed", func() {
