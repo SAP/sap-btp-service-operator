@@ -134,6 +134,7 @@ var _ = Describe("Service Instance Type Test", func() {
 	It("validate timestamp annotation- not date", func() {
 
 		annotation := map[string]string{
+			api.IgnoreNonTransientErrorAnnotation:          "true",
 			api.IgnoreNonTransientErrorTimestampAnnotation: "true",
 		}
 		instance.SetAnnotations(annotation)
@@ -144,6 +145,7 @@ var _ = Describe("Service Instance Type Test", func() {
 	It("validate timestamp annotation- future date", func() {
 
 		annotation := map[string]string{
+			api.IgnoreNonTransientErrorAnnotation:          "true",
 			api.IgnoreNonTransientErrorTimestampAnnotation: time.Now().Add(48 * time.Hour).Format(time.RFC3339),
 		}
 		instance.SetAnnotations(annotation)

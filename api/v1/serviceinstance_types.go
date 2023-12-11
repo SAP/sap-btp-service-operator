@@ -217,40 +217,43 @@ func (si *ServiceInstance) ShouldBeShared() bool {
 }
 
 func (si *ServiceInstance) ValidateNonTransientTimestampAnnotation(log logr.Logger) error {
-	if si.Annotations != nil {
-		if _, ok := si.Annotations[api.IgnoreNonTransientErrorTimestampAnnotation]; ok {
-			log.Info("ignoreNonTransientErrorAnnotation annotation exist- checking timeout")
-			annotationTime, err := time.Parse(time.RFC3339, si.Annotations[api.IgnoreNonTransientErrorTimestampAnnotation])
-			if err != nil {
-				return fmt.Errorf("annotation %s is not a valid timestamp", api.IgnoreNonTransientErrorTimestampAnnotation)
-			}
-			sinceAnnotation := time.Since(annotationTime)
-			if sinceAnnotation < 0 {
-				return fmt.Errorf("annotation %s cannot be a future timestamp", api.IgnoreNonTransientErrorTimestampAnnotation)
-			}
-		}
-	}
 
+	sinceAnnotation, exist, err := si.GetTimeSinceIgnoreNonTransientAnnotationTimestamp(log)
+	if err != nil {
+		return err
+	}
+	if exist && sinceAnnotation < 0 {
+		return fmt.Errorf("annotation %s cannot be a future timestamp", api.IgnoreNonTransientErrorTimestampAnnotation)
+	}
 	return nil
 }
 
 func (si *ServiceInstance) IsIgnoreNonTransientAnnotationExistAndValid(log logr.Logger, timeout time.Duration) bool {
+
+	sinceAnnotation, exist, _ := si.GetTimeSinceIgnoreNonTransientAnnotationTimestamp(log)
+	if !exist {
+		return false
+	}
+	if sinceAnnotation > timeout {
+		log.Info(fmt.Sprintf("timeout reached- consider error to be non transient. sinceCreate %s, IgnoreNonTransientTimeout %s", sinceAnnotation, timeout))
+		return false
+	}
+	log.Info("timeout didn't reached- consider error to be transient")
+	return true
+
+}
+
+func (si *ServiceInstance) GetTimeSinceIgnoreNonTransientAnnotationTimestamp(log logr.Logger) (time.Duration, bool, error) {
 	if si.Annotations != nil {
 		if _, ok := si.Annotations[api.IgnoreNonTransientErrorAnnotation]; ok {
 			log.Info("ignoreNonTransientErrorAnnotation annotation exist- checking timeout")
 			annotationTime, err := time.Parse(time.RFC3339, si.Annotations[api.IgnoreNonTransientErrorTimestampAnnotation])
 			if err != nil {
 				log.Error(err, fmt.Sprintf("failed to parse %s", api.IgnoreNonTransientErrorTimestampAnnotation))
-				return false
+				return time.Since(time.Now()), false, fmt.Errorf("annotation %s is not a valid timestamp", api.IgnoreNonTransientErrorTimestampAnnotation)
 			}
-			sinceAnnotation := time.Since(annotationTime)
-			if sinceAnnotation > timeout {
-				log.Info(fmt.Sprintf("timeout reached- consider error to be non transient. sinceCreate %s, IgnoreNonTransientTimeout %s", sinceAnnotation, timeout))
-				return false
-			}
-			log.Info("timeout didn't reached- consider error to be transient")
-			return true
+			return time.Since(annotationTime), true, nil
 		}
 	}
-	return false
+	return time.Since(time.Now()), false, nil
 }

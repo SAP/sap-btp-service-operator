@@ -28,6 +28,7 @@ var _ = Describe("Service Instance Webhook Test", func() {
 		When("service instance IgnoreNonTransientErrorTimestampAnnotation annotation is not set with not a date", func() {
 			It("should not return error from webhook", func() {
 				instance.Annotations = map[string]string{
+					api.IgnoreNonTransientErrorAnnotation:          "true",
 					api.IgnoreNonTransientErrorTimestampAnnotation: "true",
 				}
 				_, err := instance.ValidateUpdate(instance)
@@ -38,6 +39,7 @@ var _ = Describe("Service Instance Webhook Test", func() {
 		When("service instance IgnoreNonTransientErrorTimestampAnnotation annotation is not set with future date", func() {
 			It("should not return error from webhook", func() {
 				instance.Annotations = map[string]string{
+					api.IgnoreNonTransientErrorAnnotation:          "true",
 					api.IgnoreNonTransientErrorTimestampAnnotation: time.Now().Add(48 * time.Hour).Format(time.RFC3339),
 				}
 				_, err := instance.ValidateUpdate(instance)
@@ -77,6 +79,7 @@ var _ = Describe("Service Instance Webhook Test", func() {
 			When("service instance IgnoreNonTransientErrorTimestampAnnotation annotation is not set with not a date", func() {
 				It("should not return error from webhook", func() {
 					instance.Annotations = map[string]string{
+						api.IgnoreNonTransientErrorAnnotation:          "true",
 						api.IgnoreNonTransientErrorTimestampAnnotation: "true",
 					}
 					_, err := instance.ValidateCreate()
@@ -87,6 +90,7 @@ var _ = Describe("Service Instance Webhook Test", func() {
 			When("service instance IgnoreNonTransientErrorTimestampAnnotation annotation is not set with future date", func() {
 				It("should not return error from webhook", func() {
 					instance.Annotations = map[string]string{
+						api.IgnoreNonTransientErrorAnnotation:          "true",
 						api.IgnoreNonTransientErrorTimestampAnnotation: time.Now().Add(48 * time.Hour).Format(time.RFC3339),
 					}
 					_, err := instance.ValidateCreate()
