@@ -255,7 +255,7 @@ var _ = Describe("ServiceInstance controller", func() {
 							StatusCode:  http.StatusBadRequest,
 							Description: errMessage,
 						})
-						fakeClient.ProvisionReturnsOnCall(1, &sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
+						fakeClient.ProvisionReturnsOnCall(2, &sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
 					})
 
 					It("should have failure condition", func() {
@@ -265,11 +265,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					It("ignoreNonTransientErrorAnnotation should have failure condition after timeout", func() {
 						serviceInstance = createInstanceWithAnnotation(ctx, instanceSpec, ignoreNonTransientErrorAnnotation, false)
 						waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionTrue, Created, "")
-						key := getResourceNamespacedName(serviceInstance)
-						err := k8sClient.Get(ctx, key, serviceInstance)
-						Expect(err).NotTo(HaveOccurred())
-						_, ok := serviceInstance.Annotations[api.IgnoreNonTransientErrorAnnotation]
-						Expect(ok).To(BeFalse())
+						waitForResourceAnnotationRemove(ctx, serviceInstance, api.IgnoreNonTransientErrorAnnotation, api.IgnoreNonTransientErrorTimestampAnnotation)
 					})
 				})
 				Context("with 400 status", func() {
@@ -283,11 +279,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					It("ignoreNonTransientErrorAnnotation should have failure condition after timeout", func() {
 						serviceInstance = createInstanceWithAnnotation(ctx, instanceSpec, ignoreNonTransientErrorAnnotation, false)
 						waitForResourceCondition(ctx, serviceInstance, api.ConditionFailed, metav1.ConditionTrue, CreateFailed, errMessage)
-						key := getResourceNamespacedName(serviceInstance)
-						err := k8sClient.Get(ctx, key, serviceInstance)
-						Expect(err).NotTo(HaveOccurred())
-						_, ok := serviceInstance.Annotations[api.IgnoreNonTransientErrorAnnotation]
-						Expect(ok).To(BeFalse())
+						waitForResourceAnnotationRemove(ctx, serviceInstance, api.IgnoreNonTransientErrorAnnotation, api.IgnoreNonTransientErrorTimestampAnnotation)
 						sinceCreate := time.Since(serviceInstance.GetCreationTimestamp().Time)
 						Expect(sinceCreate > ignoreNonTransientTimeout)
 					})
@@ -326,7 +318,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					errMessage := "failed to provision instance"
 					BeforeEach(func() {
 						fakeClient.ProvisionReturns(nil, getNonTransientBrokerError(errMessage))
-						fakeClient.ProvisionReturnsOnCall(1, &sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
+						fakeClient.ProvisionReturnsOnCall(2, &sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
 					})
 
 					It("should have failure condition - non transient error", func() {
@@ -336,6 +328,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					It("ignoreNonTransientErrorAnnotation should have failure condition after timeout", func() {
 						serviceInstance = createInstanceWithAnnotation(ctx, instanceSpec, ignoreNonTransientErrorAnnotation, false)
 						waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionTrue, Created, "")
+						waitForResourceAnnotationRemove(ctx, serviceInstance, api.IgnoreNonTransientErrorAnnotation, api.IgnoreNonTransientErrorTimestampAnnotation)
 						Expect(fakeClient.ProvisionCallCount()).To(BeNumerically(">", 1))
 					})
 				})
@@ -582,12 +575,16 @@ var _ = Describe("ServiceInstance controller", func() {
 				It("recognize the error as transient and eventually succeed", func() {
 					newExternalName := "my-new-external-name" + uuid.New().String()
 					serviceInstance.Spec.ExternalName = newExternalName
+					updateInstance(ctx, serviceInstance)
+					waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionFalse, UpdateFailed, "")
 					serviceInstance.Annotations = ignoreNonTransientErrorAnnotation
 					updateInstance(ctx, serviceInstance)
 					waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionFalse, UpdateInProgress, "")
 					fakeClient.UpdateInstanceReturns(nil, "", nil)
-					updateInstance(ctx, serviceInstance)
+
 					waitForResourceToBeReady(ctx, serviceInstance)
+					waitForResourceAnnotationRemove(ctx, serviceInstance, api.IgnoreNonTransientErrorAnnotation, api.IgnoreNonTransientErrorTimestampAnnotation)
+
 				})
 			})
 
@@ -1120,7 +1117,7 @@ var _ = Describe("ServiceInstance controller", func() {
 							ExternalName: "name",
 						}}
 					instance.SetGeneration(2)
-					Expect(isFinalState(ctx, instance)).To(BeFalse())
+					Expect(isFinalState(ctx, instance, ignoreNonTransientTimeout)).To(BeFalse())
 				})
 
 				When("Succeeded is false", func() {
@@ -1146,7 +1143,7 @@ var _ = Describe("ServiceInstance controller", func() {
 							},
 						}
 						instance.SetGeneration(1)
-						Expect(isFinalState(ctx, instance)).To(BeFalse())
+						Expect(isFinalState(ctx, instance, ignoreNonTransientTimeout)).To(BeFalse())
 					})
 				})
 			})
@@ -1170,7 +1167,7 @@ var _ = Describe("ServiceInstance controller", func() {
 							ExternalName: "name",
 						}}
 					instance.SetGeneration(2)
-					Expect(isFinalState(ctx, instance)).To(BeFalse())
+					Expect(isFinalState(ctx, instance, ignoreNonTransientTimeout)).To(BeFalse())
 				})
 			})
 
@@ -1196,7 +1193,7 @@ var _ = Describe("ServiceInstance controller", func() {
 							ExternalName: "name",
 						}}
 					instance.SetGeneration(2)
-					Expect(isFinalState(ctx, instance)).To(BeFalse())
+					Expect(isFinalState(ctx, instance, ignoreNonTransientTimeout)).To(BeFalse())
 				})
 			})
 
@@ -1222,7 +1219,7 @@ var _ = Describe("ServiceInstance controller", func() {
 							ExternalName: "name",
 						}}
 					instance.SetGeneration(2)
-					Expect(isFinalState(ctx, instance)).To(BeFalse())
+					Expect(isFinalState(ctx, instance, ignoreNonTransientTimeout)).To(BeFalse())
 				})
 			})
 
@@ -1254,7 +1251,7 @@ var _ = Describe("ServiceInstance controller", func() {
 							Shared:       pointer.Bool(true),
 						}}
 					instance.SetGeneration(2)
-					Expect(isFinalState(ctx, instance)).To(BeFalse())
+					Expect(isFinalState(ctx, instance, ignoreNonTransientTimeout)).To(BeFalse())
 				})
 			})
 
@@ -1286,7 +1283,7 @@ var _ = Describe("ServiceInstance controller", func() {
 							Shared:       pointer.Bool(true),
 						}}
 					instance.SetGeneration(2)
-					Expect(isFinalState(ctx, instance)).To(BeTrue())
+					Expect(isFinalState(ctx, instance, ignoreNonTransientTimeout)).To(BeTrue())
 				})
 			})
 		})

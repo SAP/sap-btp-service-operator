@@ -3,8 +3,10 @@ package webhooks
 import (
 	"context"
 	"encoding/json"
+	"github.com/SAP/sap-btp-service-operator/api"
 	"net/http"
 	"reflect"
+	"time"
 
 	v1admission "k8s.io/api/admission/v1"
 	v1 "k8s.io/api/authentication/v1"
@@ -55,6 +57,15 @@ func (s *ServiceInstanceDefaulter) setServiceInstanceUserInfo(req admission.Requ
 		Groups:   req.UserInfo.Groups,
 		Extra:    req.UserInfo.Extra,
 	}
+
+	if instance.Annotations != nil {
+		if _, ok := instance.Annotations[api.IgnoreNonTransientErrorAnnotation]; ok {
+			if _, exist := instance.Annotations[api.IgnoreNonTransientErrorTimestampAnnotation]; !exist {
+				instance.Annotations[api.IgnoreNonTransientErrorTimestampAnnotation] = time.Now().Format(time.RFC3339)
+			}
+		}
+	}
+
 	if req.Operation == v1admission.Create || req.Operation == v1admission.Delete {
 		instance.Spec.UserInfo = userInfo
 	} else if req.Operation == v1admission.Update {

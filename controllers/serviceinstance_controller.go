@@ -22,7 +22,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/go-logr/logr"
 	"net/http"
+	"time"
 
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -77,13 +79,13 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 	}
 
-	if isFinalState(ctx, serviceInstance) {
+	if isFinalState(ctx, serviceInstance, r.Config.IgnoreNonTransientTimeout) {
 		if len(serviceInstance.Status.HashedSpec) == 0 {
 			updateHashedSpecValue(serviceInstance)
 			return ctrl.Result{}, r.Client.Status().Update(ctx, serviceInstance)
 		}
 
-		return ctrl.Result{}, r.removeAnnotation(ctx, serviceInstance, api.IgnoreNonTransientErrorAnnotation)
+		return ctrl.Result{}, r.removeAnnotation(ctx, serviceInstance, api.IgnoreNonTransientErrorAnnotation, api.IgnoreNonTransientErrorTimestampAnnotation)
 	}
 
 	if isMarkedForDeletion(serviceInstance.ObjectMeta) {
@@ -130,7 +132,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	// Update
-	if updateRequired(serviceInstance) {
+	if updateRequired(serviceInstance, log, r.Config.IgnoreNonTransientTimeout) {
 		if res, err := r.updateInstance(ctx, smClient, serviceInstance); err != nil {
 			log.Info("got error while trying to update instance")
 			return ctrl.Result{}, err
@@ -524,7 +526,7 @@ func (r *ServiceInstanceReconciler) handleInstanceSharingError(ctx context.Conte
 	return ctrl.Result{Requeue: isTransient}, r.updateStatus(ctx, object)
 }
 
-func isFinalState(ctx context.Context, serviceInstance *servicesv1.ServiceInstance) bool {
+func isFinalState(ctx context.Context, serviceInstance *servicesv1.ServiceInstance, nonTransientTimeout time.Duration) bool {
 	log := GetLogger(ctx)
 	if isMarkedForDeletion(serviceInstance.ObjectMeta) {
 		log.Info("instance is not in final state, it is marked for deletion")
@@ -544,7 +546,10 @@ func isFinalState(ctx context.Context, serviceInstance *servicesv1.ServiceInstan
 		log.Info("instance is not in final state, sync operation is in progress")
 		return false
 	}
-
+	if isInRetry(serviceInstance, log, nonTransientTimeout) {
+		log.Info("instance is not in final state, IgnoreNonTransientErrorAnnotation exist")
+		return false
+	}
 	if sharingUpdateRequired(serviceInstance) {
 		log.Info("instance is not in final state, need to sync sharing status")
 		if len(serviceInstance.Status.HashedSpec) == 0 {
@@ -557,8 +562,16 @@ func isFinalState(ctx context.Context, serviceInstance *servicesv1.ServiceInstan
 	return true
 }
 
+func isInRetry(serviceInstance *servicesv1.ServiceInstance, log logr.Logger, nonTransientTimeout time.Duration) bool {
+	conditions := serviceInstance.GetConditions()
+	if meta.IsStatusConditionPresentAndEqual(conditions, api.ConditionSucceeded, metav1.ConditionFalse) {
+		return serviceInstance.IsIgnoreNonTransientAnnotationExistAndValid(log, nonTransientTimeout)
+	}
+	return false
+}
+
 // TODO unit test
-func updateRequired(serviceInstance *servicesv1.ServiceInstance) bool {
+func updateRequired(serviceInstance *servicesv1.ServiceInstance, log logr.Logger, nonTransientTimeout time.Duration) bool {
 	//update is not supported for failed instances (this can occur when instance creation was asynchronously)
 	if serviceInstance.Status.Ready != metav1.ConditionTrue {
 		return false
@@ -568,7 +581,9 @@ func updateRequired(serviceInstance *servicesv1.ServiceInstance) bool {
 	if cond != nil && cond.Reason == UpdateInProgress { //in case of transient error occurred
 		return true
 	}
-
+	if serviceInstance.IsIgnoreNonTransientAnnotationExistAndValid(log, nonTransientTimeout) {
+		return true
+	}
 	return getSpecHash(serviceInstance) != serviceInstance.Status.HashedSpec
 }
 

@@ -2,6 +2,8 @@ package api
 
 import (
 	"fmt"
+	"github.com/go-logr/logr"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -11,15 +13,16 @@ import (
 type ControllerName string
 
 const (
-	ServiceInstanceController         ControllerName = "ServiceInstance"
-	ServiceBindingController          ControllerName = "ServiceBinding"
-	FinalizerName                     string         = "services.cloud.sap.com/sap-btp-finalizer"
-	StaleBindingIDLabel               string         = "services.cloud.sap.com/stale"
-	StaleBindingRotationOfLabel       string         = "services.cloud.sap.com/rotationOf"
-	ForceRotateAnnotation             string         = "services.cloud.sap.com/forceRotate"
-	PreventDeletion                   string         = "services.cloud.sap.com/preventDeletion"
-	UseInstanceMetadataNameInSecret   string         = "services.cloud.sap.com/useInstanceMetadataName"
-	IgnoreNonTransientErrorAnnotation string         = "services.cloud.sap.com/ignoreNonTransientError"
+	ServiceInstanceController                  ControllerName = "ServiceInstance"
+	ServiceBindingController                   ControllerName = "ServiceBinding"
+	FinalizerName                              string         = "services.cloud.sap.com/sap-btp-finalizer"
+	StaleBindingIDLabel                        string         = "services.cloud.sap.com/stale"
+	StaleBindingRotationOfLabel                string         = "services.cloud.sap.com/rotationOf"
+	ForceRotateAnnotation                      string         = "services.cloud.sap.com/forceRotate"
+	PreventDeletion                            string         = "services.cloud.sap.com/preventDeletion"
+	UseInstanceMetadataNameInSecret            string         = "services.cloud.sap.com/useInstanceMetadataName"
+	IgnoreNonTransientErrorAnnotation          string         = "services.cloud.sap.com/ignoreNonTransientError"
+	IgnoreNonTransientErrorTimestampAnnotation string         = "services.cloud.sap.com/ignoreNonTransientTimestampError"
 )
 
 type HTTPStatusCodeError struct {
@@ -82,5 +85,5 @@ type SAPBTPResource interface {
 	GetReady() metav1.ConditionStatus
 	GetAnnotations() map[string]string
 	SetAnnotations(map[string]string)
-	SupportIgnoreNonTransientErrorAnnotation() bool
+	IsIgnoreNonTransientAnnotationExistAndValid(log logr.Logger, timeout time.Duration) bool
 }

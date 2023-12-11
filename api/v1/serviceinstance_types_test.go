@@ -7,6 +7,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"time"
 )
 
 var _ = Describe("Service Instance Type Test", func() {
@@ -128,5 +129,26 @@ var _ = Describe("Service Instance Type Test", func() {
 		}
 		instance.SetAnnotations(annotation)
 		Expect(instance.GetAnnotations()).To(Equal(annotation))
+	})
+
+	It("validate timestamp annotation- not date", func() {
+
+		annotation := map[string]string{
+			api.IgnoreNonTransientErrorTimestampAnnotation: "true",
+		}
+		instance.SetAnnotations(annotation)
+		err := instance.ValidateNonTransientTimestampAnnotation(serviceinstancelog)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("is not a valid timestamp"))
+	})
+	It("validate timestamp annotation- future date", func() {
+
+		annotation := map[string]string{
+			api.IgnoreNonTransientErrorTimestampAnnotation: time.Now().Add(48 * time.Hour).Format(time.RFC3339),
+		}
+		instance.SetAnnotations(annotation)
+		err := instance.ValidateNonTransientTimestampAnnotation(serviceinstancelog)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("cannot be a future timestamp"))
 	})
 })
