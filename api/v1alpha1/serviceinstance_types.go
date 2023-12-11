@@ -18,13 +18,14 @@ package v1alpha1
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/SAP/sap-btp-service-operator/api"
 	smClientTypes "github.com/SAP/sap-btp-service-operator/client/sm/types"
 	"github.com/go-logr/logr"
 	v1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"time"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -173,11 +174,11 @@ func (in *ServiceInstance) SetReady(ready metav1.ConditionStatus) {
 	in.Status.Ready = ready
 }
 
-func (si *ServiceInstance) IsIgnoreNonTransientAnnotationExistAndValid(log logr.Logger, timeout time.Duration) bool {
-	if si.Annotations != nil {
-		if _, ok := si.Annotations[api.IgnoreNonTransientErrorAnnotation]; ok {
+func (in *ServiceInstance) IsIgnoreNonTransientAnnotationExistAndValid(log logr.Logger, timeout time.Duration) bool {
+	if in.Annotations != nil {
+		if _, ok := in.Annotations[api.IgnoreNonTransientErrorAnnotation]; ok {
 			log.Info("ignoreNonTransientErrorAnnotation annotation exist- checking timeout")
-			annotationTime, err := time.Parse(time.RFC3339, si.Annotations[api.IgnoreNonTransientErrorTimestampAnnotation])
+			annotationTime, err := time.Parse(time.RFC3339, in.Annotations[api.IgnoreNonTransientErrorTimestampAnnotation])
 			if err != nil {
 				log.Error(err, fmt.Sprintf("failed to parse %s", api.IgnoreNonTransientErrorTimestampAnnotation))
 				return false

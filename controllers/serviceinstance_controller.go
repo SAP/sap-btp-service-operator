@@ -22,9 +22,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/go-logr/logr"
 	"net/http"
 	"time"
+
+	"github.com/go-logr/logr"
 
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
