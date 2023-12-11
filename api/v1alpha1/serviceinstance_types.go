@@ -17,11 +17,14 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"fmt"
 	"github.com/SAP/sap-btp-service-operator/api"
 	smClientTypes "github.com/SAP/sap-btp-service-operator/client/sm/types"
+	"github.com/go-logr/logr"
 	v1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"time"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -170,8 +173,25 @@ func (in *ServiceInstance) SetReady(ready metav1.ConditionStatus) {
 	in.Status.Ready = ready
 }
 
-func (in *ServiceInstance) SupportIgnoreNonTransientErrorAnnotation() bool {
-	return true
+func (si *ServiceInstance) IsIgnoreNonTransientAnnotationExistAndValid(log logr.Logger, timeout time.Duration) bool {
+	if si.Annotations != nil {
+		if _, ok := si.Annotations[api.IgnoreNonTransientErrorAnnotation]; ok {
+			log.Info("ignoreNonTransientErrorAnnotation annotation exist- checking timeout")
+			annotationTime, err := time.Parse(time.RFC3339, si.Annotations[api.IgnoreNonTransientErrorTimestampAnnotation])
+			if err != nil {
+				log.Error(err, fmt.Sprintf("failed to parse %s", api.IgnoreNonTransientErrorTimestampAnnotation))
+				return false
+			}
+			sinceAnnotation := time.Since(annotationTime)
+			if sinceAnnotation > timeout {
+				log.Info(fmt.Sprintf("timeout reached- consider error to be non transient. sinceCreate %s, IgnoreNonTransientTimeout %s", sinceAnnotation, timeout))
+				return false
+			}
+			log.Info("timeout didn't reached- consider error to be transient")
+			return true
+		}
+	}
+	return false
 }
 
 // +kubebuilder:object:root=true
