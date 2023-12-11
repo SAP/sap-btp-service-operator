@@ -7,10 +7,14 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"time"
 )
 
 var _ = Describe("Service Instance Type Test", func() {
 	var instance *ServiceInstance
+	var serviceinstancelog = logf.Log.WithName("serviceinstance-resource")
+
 	BeforeEach(func() {
 		instance = getInstance()
 		conditions := instance.GetConditions()
@@ -120,5 +124,34 @@ var _ = Describe("Service Instance Type Test", func() {
 		status := ServiceInstanceStatus{InstanceID: "1234"}
 		instance.SetStatus(status)
 		Expect(instance.GetStatus()).To(Equal(status))
+	})
+
+	It("should update annotation", func() {
+		annotation := map[string]string{
+			api.IgnoreNonTransientErrorAnnotation: "true",
+		}
+		instance.SetAnnotations(annotation)
+		Expect(instance.GetAnnotations()).To(Equal(annotation))
+	})
+
+	It("validate timestamp annotation- not date", func() {
+
+		annotation := map[string]string{
+			api.IgnoreNonTransientErrorAnnotation:          "true",
+			api.IgnoreNonTransientErrorTimestampAnnotation: "true",
+		}
+		instance.SetAnnotations(annotation)
+		exist := instance.IsIgnoreNonTransientAnnotationExistAndValid(serviceinstancelog, time.Hour)
+		Expect(exist).To(BeFalse())
+	})
+	It("validate annotation exist and valid", func() {
+
+		annotation := map[string]string{
+			api.IgnoreNonTransientErrorAnnotation:          "true",
+			api.IgnoreNonTransientErrorTimestampAnnotation: time.Now().Format(time.RFC3339),
+		}
+		instance.SetAnnotations(annotation)
+		exist := instance.IsIgnoreNonTransientAnnotationExistAndValid(serviceinstancelog, time.Hour)
+		Expect(exist).To(BeTrue())
 	})
 })

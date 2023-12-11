@@ -153,4 +153,14 @@ var _ = Describe("Service Instance Type Test", func() {
 		Expect(err).To(HaveOccurred())
 		Expect(err.Error()).To(ContainSubstring("cannot be a future timestamp"))
 	})
+	It("validate annotation exist and valid", func() {
+
+		annotation := map[string]string{
+			api.IgnoreNonTransientErrorAnnotation:          "true",
+			api.IgnoreNonTransientErrorTimestampAnnotation: time.Now().Format(time.RFC3339),
+		}
+		instance.SetAnnotations(annotation)
+		exist := instance.IsIgnoreNonTransientAnnotationExistAndValid(serviceinstancelog, time.Hour)
+		Expect(exist).To(BeTrue())
+	})
 })
