@@ -163,4 +163,33 @@ var _ = Describe("Service Instance Type Test", func() {
 		exist := instance.IsIgnoreNonTransientAnnotationExistAndValid(serviceinstancelog, time.Hour)
 		Expect(exist).To(BeTrue())
 	})
+	It("validate annotation exist and valid", func() {
+
+		annotation := map[string]string{
+			api.IgnoreNonTransientErrorAnnotation:          "true",
+			api.IgnoreNonTransientErrorTimestampAnnotation: time.Now().Format(time.RFC3339),
+		}
+		instance.SetAnnotations(annotation)
+		err := instance.ValidateNonTransientTimestampAnnotation(serviceinstancelog)
+		Expect(err).NotTo(HaveOccurred())
+	})
+	It("validate timeout for Ignore Non Transient Error Annotation", func() {
+
+		annotation := map[string]string{
+			api.IgnoreNonTransientErrorAnnotation:          "true",
+			api.IgnoreNonTransientErrorTimestampAnnotation: time.Now().Truncate(48 * time.Hour).Format(time.RFC3339),
+		}
+		instance.SetAnnotations(annotation)
+		exist := instance.IsIgnoreNonTransientAnnotationExistAndValid(serviceinstancelog, time.Hour)
+		Expect(exist).To(BeFalse())
+	})
+	It("validate annotation not exist", func() {
+
+		annotation := map[string]string{
+			api.IgnoreNonTransientErrorTimestampAnnotation: time.Now().Format(time.RFC3339),
+		}
+		instance.SetAnnotations(annotation)
+		exist := instance.IsIgnoreNonTransientAnnotationExistAndValid(serviceinstancelog, time.Hour)
+		Expect(exist).To(BeFalse())
+	})
 })

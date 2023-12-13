@@ -24,7 +24,7 @@ type Config struct {
 	ClusterID                 string        `envconfig:"cluster_id"`
 	RetryBaseDelay            time.Duration `envconfig:"retry_base_delay"`
 	RetryMaxDelay             time.Duration `envconfig:"retry_max_delay"`
-	IgnoreNonTransientTimeout time.Duration `envconfig:"ignore_non_transient_timeout"`
+	IgnoreNonTransientTimeout time.Duration
 }
 
 func Get() Config {

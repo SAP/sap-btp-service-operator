@@ -7,6 +7,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"time"
 )
 
 var _ = Describe("Service Binding Type Test", func() {
@@ -105,5 +106,14 @@ var _ = Describe("Service Binding Type Test", func() {
 		binding.SetAnnotations(annotation)
 		Expect(binding.GetAnnotations()).To(Equal(annotation))
 	})
+	It("validate IsIgnoreNonTransientAnnotationExistAndValid return false", func() {
 
+		annotation := map[string]string{
+			api.IgnoreNonTransientErrorAnnotation:          "true",
+			api.IgnoreNonTransientErrorTimestampAnnotation: time.Now().Truncate(48 * time.Hour).Format(time.RFC3339),
+		}
+		binding.SetAnnotations(annotation)
+		exist := binding.IsIgnoreNonTransientAnnotationExistAndValid(serviceinstancelog, time.Hour)
+		Expect(exist).To(BeFalse())
+	})
 })
