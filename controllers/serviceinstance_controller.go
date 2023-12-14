@@ -83,7 +83,10 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	if isFinalState(ctx, serviceInstance, r.Config.IgnoreNonTransientTimeout) {
 		if len(serviceInstance.Status.HashedSpec) == 0 {
 			updateHashedSpecValue(serviceInstance)
-			return ctrl.Result{}, r.Client.Status().Update(ctx, serviceInstance)
+			err := r.Client.Status().Update(ctx, serviceInstance)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
 		}
 
 		return ctrl.Result{}, r.removeAnnotation(ctx, serviceInstance, api.IgnoreNonTransientErrorAnnotation, api.IgnoreNonTransientErrorTimestampAnnotation)

@@ -235,10 +235,10 @@ func (si *ServiceInstance) IsIgnoreNonTransientAnnotationExistAndValid(log logr.
 		return false
 	}
 	if sinceAnnotation > timeout {
-		log.Info(fmt.Sprintf("timeout reached- consider error to be non transient. sinceCreate %s, IgnoreNonTransientTimeout %s", sinceAnnotation, timeout))
+		log.Info(fmt.Sprintf("timeout reached- consider error to be non transient. since annotation timestamp %s, IgnoreNonTransientTimeout %s", sinceAnnotation, timeout))
 		return false
 	}
-	log.Info("timeout didn't reached- consider error to be transient")
+	log.Info(fmt.Sprintf("timeout didn't reached- consider error to be transient. since annotation timestamp %s, IgnoreNonTransientTimeout %s", sinceAnnotation, timeout))
 	return true
 
 }
