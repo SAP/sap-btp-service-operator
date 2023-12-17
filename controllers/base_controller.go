@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/SAP/sap-btp-service-operator/api"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
@@ -320,20 +319,7 @@ func (r *BaseReconciler) isTransientError(smError *sm.ServiceManagerError, log l
 	if isTransientStatusCode(statusCode) || isConcurrentOperationError(smError) {
 		return true
 	}
-	annotations := resource.GetAnnotations()
-	if annotations != nil && resource.SupportIgnoreNonTransientErrorAnnotation() {
-		if _, ok := annotations[api.IgnoreNonTransientErrorAnnotation]; ok {
-			log.Info("ignoreNonTransientErrorAnnotation annotation exist- checking timeout")
-			sinceCreate := time.Since(resource.GetCreationTimestamp().Time)
-			if sinceCreate > r.Config.IgnoreNonTransientTimeout {
-				log.Info(fmt.Sprintf("timeout reached- consider error to be non transient. sinceCreate %s, IgnoreNonTransientTimeout %s", sinceCreate, r.Config.IgnoreNonTransientTimeout))
-				return false
-			}
-			log.Info("timeout didn't reached- consider error to be transient")
-			return true
-		}
-	}
-	return false
+	return resource.IsIgnoreNonTransientAnnotationExistAndValid(log, r.Config.IgnoreNonTransientTimeout)
 }
 
 func isConcurrentOperationError(smError *sm.ServiceManagerError) bool {
@@ -391,13 +377,19 @@ func (r *BaseReconciler) markAsTransientError(ctx context.Context, operationType
 	return ctrl.Result{}, fmt.Errorf(errMsg)
 }
 
-func (r *BaseReconciler) removeAnnotation(ctx context.Context, object api.SAPBTPResource, key string) error {
+func (r *BaseReconciler) removeAnnotation(ctx context.Context, object api.SAPBTPResource, keys ...string) error {
 	log := GetLogger(ctx)
 	annotations := object.GetAnnotations()
+	shouldUpdate := false
 	if annotations != nil {
-		if _, ok := annotations[key]; ok {
-			log.Info(fmt.Sprintf("deleting annotation with key %s", key))
-			delete(annotations, key)
+		for _, key := range keys {
+			if _, ok := annotations[key]; ok {
+				log.Info(fmt.Sprintf("deleting annotation with key %s", key))
+				delete(annotations, key)
+				shouldUpdate = true
+			}
+		}
+		if shouldUpdate {
 			object.SetAnnotations(annotations)
 			return r.Client.Update(ctx, object)
 		}

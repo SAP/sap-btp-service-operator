@@ -4,6 +4,7 @@ import (
 	"github.com/SAP/sap-btp-service-operator/api"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"time"
 )
 
 var _ = Describe("Service Instance Webhook Test", func() {
@@ -22,6 +23,27 @@ var _ = Describe("Service Instance Webhook Test", func() {
 				_, err := newInstance.ValidateUpdate(instance)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("changing the btpAccessCredentialsSecret for an existing instance is not allowed"))
+			})
+		})
+		When("service instance IgnoreNonTransientErrorTimestampAnnotation annotation is not set with not a date", func() {
+			It("should not return error from webhook", func() {
+				instance.Annotations = map[string]string{
+					api.IgnoreNonTransientErrorAnnotation:          "true",
+					api.IgnoreNonTransientErrorTimestampAnnotation: "true",
+				}
+				_, err := instance.ValidateUpdate(instance)
+				Expect(err).To(HaveOccurred())
+
+			})
+		})
+		When("service instance IgnoreNonTransientErrorTimestampAnnotation annotation is not set with future date", func() {
+			It("should not return error from webhook", func() {
+				instance.Annotations = map[string]string{
+					api.IgnoreNonTransientErrorAnnotation:          "true",
+					api.IgnoreNonTransientErrorTimestampAnnotation: time.Now().Add(48 * time.Hour).Format(time.RFC3339),
+				}
+				_, err := instance.ValidateUpdate(instance)
+				Expect(err).To(HaveOccurred())
 			})
 		})
 	})
@@ -51,6 +73,29 @@ var _ = Describe("Service Instance Webhook Test", func() {
 				}
 				_, err := instance.ValidateDelete()
 				Expect(err).ToNot(HaveOccurred())
+			})
+		})
+		Context("Validate Create", func() {
+			When("service instance IgnoreNonTransientErrorTimestampAnnotation annotation is not set with not a date", func() {
+				It("should not return error from webhook", func() {
+					instance.Annotations = map[string]string{
+						api.IgnoreNonTransientErrorAnnotation:          "true",
+						api.IgnoreNonTransientErrorTimestampAnnotation: "true",
+					}
+					_, err := instance.ValidateCreate()
+					Expect(err).To(HaveOccurred())
+
+				})
+			})
+			When("service instance IgnoreNonTransientErrorTimestampAnnotation annotation is not set with future date", func() {
+				It("should not return error from webhook", func() {
+					instance.Annotations = map[string]string{
+						api.IgnoreNonTransientErrorAnnotation:          "true",
+						api.IgnoreNonTransientErrorTimestampAnnotation: time.Now().Add(48 * time.Hour).Format(time.RFC3339),
+					}
+					_, err := instance.ValidateCreate()
+					Expect(err).To(HaveOccurred())
+				})
 			})
 		})
 	})

@@ -17,8 +17,11 @@ limitations under the License.
 package v1
 
 import (
+	"time"
+
 	"github.com/SAP/sap-btp-service-operator/api"
 	"github.com/SAP/sap-btp-service-operator/client/sm/types"
+	"github.com/go-logr/logr"
 	v1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -196,7 +199,7 @@ func (sb *ServiceBinding) SetAnnotations(annotations map[string]string) {
 	sb.Annotations = annotations
 }
 
-func (sb *ServiceBinding) SupportIgnoreNonTransientErrorAnnotation() bool {
+func (sb *ServiceBinding) IsIgnoreNonTransientAnnotationExistAndValid(_ logr.Logger, _ time.Duration) bool {
 	return false
 }
 

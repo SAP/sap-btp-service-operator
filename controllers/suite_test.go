@@ -259,6 +259,26 @@ func waitForResourceCondition(ctx context.Context, resource api.SAPBTPResource, 
 			resource),
 	)
 }
+func waitForResourceAnnotationRemove(ctx context.Context, resource api.SAPBTPResource, annotationsKey ...string) {
+	key := getResourceNamespacedName(resource)
+	Eventually(func() bool {
+		if err := k8sClient.Get(ctx, key, resource); err != nil {
+			return false
+		}
+		for _, annotationKey := range annotationsKey {
+			_, ok := resource.GetAnnotations()[annotationKey]
+			if ok {
+				return false
+			}
+		}
+		return true
+	}, timeout*2, interval).Should(BeTrue(),
+		eventuallyMsgForResource(
+			fmt.Sprintf("annotation %s was not removed", annotationsKey),
+			key,
+			resource),
+	)
+}
 
 func getResourceNamespacedName(resource client.Object) types.NamespacedName {
 	return types.NamespacedName{Namespace: resource.GetNamespace(), Name: resource.GetName()}
