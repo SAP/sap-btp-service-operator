@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/SAP/sap-btp-service-operator/api/utils"
+
 	"github.com/SAP/sap-btp-service-operator/api"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
 	smClientTypes "github.com/SAP/sap-btp-service-operator/client/sm/types"
@@ -320,7 +322,7 @@ func isMarkedForDeletion(object metav1.ObjectMeta) bool {
 	return !object.DeletionTimestamp.IsZero()
 }
 
-func (r *BaseReconciler) isTransientError(smError *sm.ServiceManagerError, log logr.Logger, resource api.SAPBTPResource) bool {
+func (r *BaseReconciler) isTransientError(smError *sm.ServiceManagerError, log logr.Logger) bool {
 	statusCode := smError.GetStatusCode()
 	log.Info(fmt.Sprintf("SM returned error with status code %d", statusCode))
 	return isTransientStatusCode(statusCode) || isConcurrentOperationError(smError)
@@ -348,8 +350,8 @@ func (r *BaseReconciler) handleError(ctx context.Context, operationType smClient
 		log.Info("unable to cast error to SM error, will be treated as non transient")
 		return r.markAsNonTransientError(ctx, operationType, err.Error(), resource)
 	}
-	if r.isTransientError(smError, log, resource) ||
-		api.IsIgnoreNonTransientAnnotationExistAndValid(log, resource, r.Config.IgnoreNonTransientTimeout) {
+	if r.isTransientError(smError, log) ||
+		utils.IsIgnoreNonTransientAnnotationExistAndValid(log, resource, r.Config.IgnoreNonTransientTimeout) {
 		return r.markAsTransientError(ctx, operationType, smError.Error(), resource)
 	}
 

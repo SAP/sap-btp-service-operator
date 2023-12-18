@@ -348,7 +348,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 			When("polling ends with success", func() {
 				BeforeEach(func() {
-					fakeClient.GetInstanceByIDReturns(&smclientTypes.ServiceInstance{Labels: map[string][]string{"subaccount_id": []string{fakeSubaccountID}}}, nil)
+					fakeClient.GetInstanceByIDReturns(&smclientTypes.ServiceInstance{Labels: map[string][]string{"subaccount_id": {fakeSubaccountID}}}, nil)
 				})
 				It("should update in progress condition and provision the instance successfully", func() {
 					serviceInstance = createInstance(ctx, instanceSpec, false)
@@ -1118,7 +1118,7 @@ var _ = Describe("ServiceInstance controller", func() {
 							ExternalName: "name",
 						}}
 					instance.SetGeneration(2)
-					Expect(isFinalState(ctx, instance, ignoreNonTransientTimeout)).To(BeFalse())
+					Expect(isFinalState(ctx, instance)).To(BeFalse())
 				})
 
 				When("Succeeded is false", func() {
@@ -1144,7 +1144,7 @@ var _ = Describe("ServiceInstance controller", func() {
 							},
 						}
 						instance.SetGeneration(1)
-						Expect(isFinalState(ctx, instance, ignoreNonTransientTimeout)).To(BeFalse())
+						Expect(isFinalState(ctx, instance)).To(BeFalse())
 					})
 				})
 			})
@@ -1168,7 +1168,7 @@ var _ = Describe("ServiceInstance controller", func() {
 							ExternalName: "name",
 						}}
 					instance.SetGeneration(2)
-					Expect(isFinalState(ctx, instance, ignoreNonTransientTimeout)).To(BeFalse())
+					Expect(isFinalState(ctx, instance)).To(BeFalse())
 				})
 			})
 
@@ -1194,7 +1194,7 @@ var _ = Describe("ServiceInstance controller", func() {
 							ExternalName: "name",
 						}}
 					instance.SetGeneration(2)
-					Expect(isFinalState(ctx, instance, ignoreNonTransientTimeout)).To(BeFalse())
+					Expect(isFinalState(ctx, instance)).To(BeFalse())
 				})
 			})
 
@@ -1220,7 +1220,7 @@ var _ = Describe("ServiceInstance controller", func() {
 							ExternalName: "name",
 						}}
 					instance.SetGeneration(2)
-					Expect(isFinalState(ctx, instance, ignoreNonTransientTimeout)).To(BeFalse())
+					Expect(isFinalState(ctx, instance)).To(BeFalse())
 				})
 			})
 
@@ -1252,7 +1252,7 @@ var _ = Describe("ServiceInstance controller", func() {
 							Shared:       pointer.Bool(true),
 						}}
 					instance.SetGeneration(2)
-					Expect(isFinalState(ctx, instance, ignoreNonTransientTimeout)).To(BeFalse())
+					Expect(isFinalState(ctx, instance)).To(BeFalse())
 				})
 			})
 
@@ -1284,7 +1284,7 @@ var _ = Describe("ServiceInstance controller", func() {
 							Shared:       pointer.Bool(true),
 						}}
 					instance.SetGeneration(2)
-					Expect(isFinalState(ctx, instance, ignoreNonTransientTimeout)).To(BeTrue())
+					Expect(isFinalState(ctx, instance)).To(BeTrue())
 				})
 			})
 		})

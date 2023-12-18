@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/SAP/sap-btp-service-operator/api/utils"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -43,7 +45,7 @@ var _ webhook.Validator = &ServiceInstance{}
 var serviceinstancelog = logf.Log.WithName("serviceinstance-resource")
 
 func (si *ServiceInstance) ValidateCreate() (warnings admission.Warnings, err error) {
-	return nil, api.ValidateNonTransientTimestampAnnotation(serviceinstancelog, si)
+	return nil, utils.ValidateNonTransientTimestampAnnotation(serviceinstancelog, si)
 }
 
 func (si *ServiceInstance) ValidateUpdate(old runtime.Object) (warnings admission.Warnings, err error) {
@@ -53,7 +55,7 @@ func (si *ServiceInstance) ValidateUpdate(old runtime.Object) (warnings admissio
 	if oldInstance.Spec.BTPAccessCredentialsSecret != si.Spec.BTPAccessCredentialsSecret {
 		return nil, fmt.Errorf("changing the btpAccessCredentialsSecret for an existing instance is not allowed")
 	}
-	return nil, api.ValidateNonTransientTimestampAnnotation(serviceinstancelog, si)
+	return nil, utils.ValidateNonTransientTimestampAnnotation(serviceinstancelog, si)
 }
 
 func (si *ServiceInstance) ValidateDelete() (warnings admission.Warnings, err error) {

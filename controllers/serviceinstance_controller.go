@@ -22,10 +22,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/SAP/sap-btp-service-operator/api/utils"
 	"net/http"
-	"time"
-
-	"github.com/go-logr/logr"
 
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -81,21 +79,18 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	if meta.IsStatusConditionPresentAndEqual(serviceInstance.GetConditions(), api.ConditionSucceeded, metav1.ConditionFalse) &&
-		api.IsIgnoreNonTransientAnnotationExistAndValid(log, serviceInstance, r.Config.IgnoreNonTransientTimeout) {
+		utils.IsIgnoreNonTransientAnnotationExistAndValid(log, serviceInstance, r.Config.IgnoreNonTransientTimeout) {
 		operation := smClientTypes.CREATE
 		if len(serviceInstance.Status.InstanceID) > 0 {
 			operation = smClientTypes.UPDATE
 		}
 		setInProgressConditions(ctx, operation, "", serviceInstance)
-		conditions := serviceInstance.GetConditions()
-		if len(conditions) > 0 {
-			meta.RemoveStatusCondition(&conditions, api.ConditionFailed)
+		if err := r.Status().Update(ctx, serviceInstance); err != nil {
+			return ctrl.Result{}, err
 		}
-		serviceInstance.SetConditions(conditions)
-		r.Status().Update(ctx, serviceInstance)
 	}
 
-	if isFinalState(ctx, serviceInstance, r.Config.IgnoreNonTransientTimeout) {
+	if isFinalState(ctx, serviceInstance) {
 		if len(serviceInstance.Status.HashedSpec) == 0 {
 			updateHashedSpecValue(serviceInstance)
 			err := r.Client.Status().Update(ctx, serviceInstance)
@@ -151,7 +146,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	// Update
-	if updateRequired(serviceInstance, log, r.Config.IgnoreNonTransientTimeout) {
+	if updateRequired(serviceInstance) {
 		if res, err := r.updateInstance(ctx, smClient, serviceInstance); err != nil {
 			log.Info("got error while trying to update instance")
 			return ctrl.Result{}, err
@@ -534,7 +529,7 @@ func (r *ServiceInstanceReconciler) handleInstanceSharingError(ctx context.Conte
 
 	if smError, ok := err.(*sm.ServiceManagerError); ok {
 		log.Info(fmt.Sprintf("SM returned error with status code %d", smError.StatusCode))
-		isTransient = r.isTransientError(smError, log, object)
+		isTransient = r.isTransientError(smError, log)
 		errMsg = smError.Error()
 
 		if smError.StatusCode == http.StatusTooManyRequests {
@@ -553,7 +548,7 @@ func (r *ServiceInstanceReconciler) handleInstanceSharingError(ctx context.Conte
 	return ctrl.Result{Requeue: isTransient}, r.updateStatus(ctx, object)
 }
 
-func isFinalState(ctx context.Context, serviceInstance *servicesv1.ServiceInstance, nonTransientTimeout time.Duration) bool {
+func isFinalState(ctx context.Context, serviceInstance *servicesv1.ServiceInstance) bool {
 	log := GetLogger(ctx)
 	if isMarkedForDeletion(serviceInstance.ObjectMeta) {
 		log.Info("instance is not in final state, it is marked for deletion")
@@ -586,8 +581,7 @@ func isFinalState(ctx context.Context, serviceInstance *servicesv1.ServiceInstan
 	return true
 }
 
-// TODO unit test
-func updateRequired(serviceInstance *servicesv1.ServiceInstance, log logr.Logger, nonTransientTimeout time.Duration) bool {
+func updateRequired(serviceInstance *servicesv1.ServiceInstance) bool {
 	//update is not supported for failed instances (this can occur when instance creation was asynchronously)
 	if serviceInstance.Status.Ready != metav1.ConditionTrue {
 		return false
@@ -601,7 +595,6 @@ func updateRequired(serviceInstance *servicesv1.ServiceInstance, log logr.Logger
 	return getSpecHash(serviceInstance) != serviceInstance.Status.HashedSpec
 }
 
-// TODO unit test
 func sharingUpdateRequired(serviceInstance *servicesv1.ServiceInstance) bool {
 	//relevant only for non-shared instances - sharing instance is possible only for usable instances
 	if serviceInstance.Status.Ready != metav1.ConditionTrue {
