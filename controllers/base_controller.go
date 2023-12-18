@@ -108,6 +108,12 @@ func (r *BaseReconciler) getSMClient(ctx context.Context, object api.SAPBTPResou
 		}
 	}
 
+	if len(cfg.ClientID) == 0 ||
+		len(cfg.ClientSecret) == 0 ||
+		len(cfg.URL) == 0 ||
+		len(cfg.TokenURL) == 0 {
+		return nil, fmt.Errorf("invalid Service-Manager credentials, contact your cluster administrator")
+	}
 	cl, err := sm.NewClient(ctx, cfg, nil)
 	return cl, err
 }
