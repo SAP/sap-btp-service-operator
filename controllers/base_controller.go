@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -344,7 +345,8 @@ func isTransientStatusCode(StatusCode int) bool {
 
 func (r *BaseReconciler) handleError(ctx context.Context, operationType smClientTypes.OperationCategory, err error, resource api.SAPBTPResource) (ctrl.Result, error) {
 	log := GetLogger(ctx)
-	smError, ok := err.(*sm.ServiceManagerError)
+	var smError *sm.ServiceManagerError
+	ok := errors.As(err, &smError)
 	if !ok {
 		log.Info("unable to cast error to SM error, will be treated as non transient")
 		return r.markAsNonTransientError(ctx, operationType, err.Error(), resource)

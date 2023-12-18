@@ -80,6 +80,21 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 	}
 
+	if meta.IsStatusConditionPresentAndEqual(serviceInstance.GetConditions(), api.ConditionSucceeded, metav1.ConditionFalse) &&
+		serviceInstance.IsIgnoreNonTransientAnnotationExistAndValid(log, r.Config.IgnoreNonTransientTimeout) {
+		operation := smClientTypes.CREATE
+		if len(serviceInstance.Status.InstanceID) > 0 {
+			operation = smClientTypes.UPDATE
+		}
+		setInProgressConditions(ctx, operation, "", serviceInstance)
+		conditions := serviceInstance.GetConditions()
+		if len(conditions) > 0 {
+			meta.RemoveStatusCondition(&conditions, api.ConditionFailed)
+		}
+		serviceInstance.SetConditions(conditions)
+		r.Status().Update(ctx, serviceInstance)
+	}
+
 	if isFinalState(ctx, serviceInstance, r.Config.IgnoreNonTransientTimeout) {
 		if len(serviceInstance.Status.HashedSpec) == 0 {
 			updateHashedSpecValue(serviceInstance)
@@ -558,10 +573,7 @@ func isFinalState(ctx context.Context, serviceInstance *servicesv1.ServiceInstan
 		log.Info("instance is not in final state, sync operation is in progress")
 		return false
 	}
-	if isInRetry(serviceInstance, log, nonTransientTimeout) {
-		log.Info("instance is not in final state, IgnoreNonTransientErrorAnnotation exist")
-		return false
-	}
+
 	if sharingUpdateRequired(serviceInstance) {
 		log.Info("instance is not in final state, need to sync sharing status")
 		if len(serviceInstance.Status.HashedSpec) == 0 {
@@ -593,9 +605,7 @@ func updateRequired(serviceInstance *servicesv1.ServiceInstance, log logr.Logger
 	if cond != nil && cond.Reason == UpdateInProgress { //in case of transient error occurred
 		return true
 	}
-	if serviceInstance.IsIgnoreNonTransientAnnotationExistAndValid(log, nonTransientTimeout) {
-		return true
-	}
+
 	return getSpecHash(serviceInstance) != serviceInstance.Status.HashedSpec
 }
 

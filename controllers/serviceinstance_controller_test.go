@@ -251,18 +251,18 @@ var _ = Describe("ServiceInstance controller", func() {
 				Context("first with 400 status then success", func() {
 					errMessage := "failed to provision instance"
 					BeforeEach(func() {
-						fakeClient.ProvisionReturns(nil, &sm.ServiceManagerError{
+						fakeClient.ProvisionReturnsOnCall(0, nil, &sm.ServiceManagerError{
 							StatusCode:  http.StatusBadRequest,
 							Description: errMessage,
 						})
-						fakeClient.ProvisionReturnsOnCall(2, &sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
+						fakeClient.ProvisionReturnsOnCall(1, &sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
 					})
 
 					It("should have failure condition", func() {
 						serviceInstance = createInstance(ctx, instanceSpec, false)
 						waitForResourceCondition(ctx, serviceInstance, api.ConditionFailed, metav1.ConditionTrue, CreateFailed, errMessage)
 					})
-					It("ignoreNonTransientErrorAnnotation should have failure condition after timeout", func() {
+					It("ignoreNonTransientErrorAnnotation should remove the annotation once succeeded", func() {
 						serviceInstance = createInstanceWithAnnotation(ctx, instanceSpec, ignoreNonTransientErrorAnnotation, false)
 						waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionTrue, Created, "")
 						waitForResourceAnnotationRemove(ctx, serviceInstance, api.IgnoreNonTransientErrorAnnotation, api.IgnoreNonTransientErrorTimestampAnnotation)
@@ -280,6 +280,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						serviceInstance = createInstanceWithAnnotation(ctx, instanceSpec, ignoreNonTransientErrorAnnotation, false)
 						waitForResourceCondition(ctx, serviceInstance, api.ConditionFailed, metav1.ConditionTrue, CreateFailed, errMessage)
 						waitForResourceAnnotationRemove(ctx, serviceInstance, api.IgnoreNonTransientErrorAnnotation, api.IgnoreNonTransientErrorTimestampAnnotation)
+						waitForResourceCondition(ctx, serviceInstance, api.ConditionFailed, metav1.ConditionTrue, CreateFailed, errMessage)
 						sinceCreate := time.Since(serviceInstance.GetCreationTimestamp().Time)
 						Expect(sinceCreate > ignoreNonTransientTimeout)
 					})
