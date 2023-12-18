@@ -17,11 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"time"
-
 	"github.com/SAP/sap-btp-service-operator/api"
 	smClientTypes "github.com/SAP/sap-btp-service-operator/client/sm/types"
-	"github.com/go-logr/logr"
 	v1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -181,10 +178,6 @@ func (sb *ServiceBinding) GetReady() metav1.ConditionStatus {
 
 func (sb *ServiceBinding) SetReady(ready metav1.ConditionStatus) {
 	sb.Status.Ready = ready
-}
-
-func (sb *ServiceBinding) IsIgnoreNonTransientAnnotationExistAndValid(_ logr.Logger, _ time.Duration) bool {
-	return false
 }
 
 // +kubebuilder:object:root=true

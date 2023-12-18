@@ -138,7 +138,7 @@ var _ = Describe("Service Instance Type Test", func() {
 			api.IgnoreNonTransientErrorTimestampAnnotation: "true",
 		}
 		instance.SetAnnotations(annotation)
-		err := instance.ValidateNonTransientTimestampAnnotation(serviceinstancelog)
+		err := api.ValidateNonTransientTimestampAnnotation(serviceinstancelog, instance)
 		Expect(err).To(HaveOccurred())
 		Expect(err.Error()).To(ContainSubstring("is not a valid timestamp"))
 	})
@@ -149,7 +149,7 @@ var _ = Describe("Service Instance Type Test", func() {
 			api.IgnoreNonTransientErrorTimestampAnnotation: time.Now().Add(48 * time.Hour).Format(time.RFC3339),
 		}
 		instance.SetAnnotations(annotation)
-		err := instance.ValidateNonTransientTimestampAnnotation(serviceinstancelog)
+		err := api.ValidateNonTransientTimestampAnnotation(serviceinstancelog, instance)
 		Expect(err).To(HaveOccurred())
 		Expect(err.Error()).To(ContainSubstring("cannot be a future timestamp"))
 	})
@@ -160,7 +160,7 @@ var _ = Describe("Service Instance Type Test", func() {
 			api.IgnoreNonTransientErrorTimestampAnnotation: time.Now().Format(time.RFC3339),
 		}
 		instance.SetAnnotations(annotation)
-		exist := instance.IsIgnoreNonTransientAnnotationExistAndValid(serviceinstancelog, time.Hour)
+		exist := api.IsIgnoreNonTransientAnnotationExistAndValid(serviceinstancelog, instance, time.Hour)
 		Expect(exist).To(BeTrue())
 	})
 	It("validate annotation exist and valid", func() {
@@ -170,7 +170,7 @@ var _ = Describe("Service Instance Type Test", func() {
 			api.IgnoreNonTransientErrorTimestampAnnotation: time.Now().Format(time.RFC3339),
 		}
 		instance.SetAnnotations(annotation)
-		err := instance.ValidateNonTransientTimestampAnnotation(serviceinstancelog)
+		err := api.ValidateNonTransientTimestampAnnotation(serviceinstancelog, instance)
 		Expect(err).NotTo(HaveOccurred())
 	})
 	It("validate timeout for Ignore Non Transient Error Annotation", func() {
@@ -180,7 +180,7 @@ var _ = Describe("Service Instance Type Test", func() {
 			api.IgnoreNonTransientErrorTimestampAnnotation: time.Now().Truncate(48 * time.Hour).Format(time.RFC3339),
 		}
 		instance.SetAnnotations(annotation)
-		exist := instance.IsIgnoreNonTransientAnnotationExistAndValid(serviceinstancelog, time.Hour)
+		exist := api.IsIgnoreNonTransientAnnotationExistAndValid(serviceinstancelog, instance, time.Hour)
 		Expect(exist).To(BeFalse())
 	})
 	It("validate annotation not exist", func() {
@@ -189,7 +189,7 @@ var _ = Describe("Service Instance Type Test", func() {
 			api.IgnoreNonTransientErrorTimestampAnnotation: time.Now().Format(time.RFC3339),
 		}
 		instance.SetAnnotations(annotation)
-		exist := instance.IsIgnoreNonTransientAnnotationExistAndValid(serviceinstancelog, time.Hour)
+		exist := api.IsIgnoreNonTransientAnnotationExistAndValid(serviceinstancelog, instance, time.Hour)
 		Expect(exist).To(BeFalse())
 	})
 })

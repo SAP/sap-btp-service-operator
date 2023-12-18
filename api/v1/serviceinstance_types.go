@@ -17,12 +17,8 @@ limitations under the License.
 package v1
 
 import (
-	"fmt"
-	"time"
-
 	"github.com/SAP/sap-btp-service-operator/api"
 	"github.com/SAP/sap-btp-service-operator/client/sm/types"
-	"github.com/go-logr/logr"
 	v1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -214,46 +210,4 @@ func (si *ServiceInstance) Hub() {}
 
 func (si *ServiceInstance) ShouldBeShared() bool {
 	return si.Spec.Shared != nil && *si.Spec.Shared
-}
-
-func (si *ServiceInstance) ValidateNonTransientTimestampAnnotation(log logr.Logger) error {
-
-	sinceAnnotation, exist, err := si.GetTimeSinceIgnoreNonTransientAnnotationTimestamp(log)
-	if err != nil {
-		return err
-	}
-	if exist && sinceAnnotation < 0 {
-		return fmt.Errorf("annotation %s cannot be a future timestamp", api.IgnoreNonTransientErrorTimestampAnnotation)
-	}
-	return nil
-}
-
-func (si *ServiceInstance) IsIgnoreNonTransientAnnotationExistAndValid(log logr.Logger, timeout time.Duration) bool {
-
-	sinceAnnotation, exist, _ := si.GetTimeSinceIgnoreNonTransientAnnotationTimestamp(log)
-	if !exist {
-		return false
-	}
-	if sinceAnnotation > timeout {
-		log.Info(fmt.Sprintf("timeout reached- consider error to be non transient. since annotation timestamp %s, IgnoreNonTransientTimeout %s", sinceAnnotation, timeout))
-		return false
-	}
-	log.Info(fmt.Sprintf("timeout didn't reached- consider error to be transient. since annotation timestamp %s, IgnoreNonTransientTimeout %s", sinceAnnotation, timeout))
-	return true
-
-}
-
-func (si *ServiceInstance) GetTimeSinceIgnoreNonTransientAnnotationTimestamp(log logr.Logger) (time.Duration, bool, error) {
-	if si.Annotations != nil {
-		if _, ok := si.Annotations[api.IgnoreNonTransientErrorAnnotation]; ok {
-			log.Info("ignoreNonTransientErrorAnnotation annotation exist- checking timeout")
-			annotationTime, err := time.Parse(time.RFC3339, si.Annotations[api.IgnoreNonTransientErrorTimestampAnnotation])
-			if err != nil {
-				log.Error(err, fmt.Sprintf("failed to parse %s", api.IgnoreNonTransientErrorTimestampAnnotation))
-				return time.Since(time.Now()), false, fmt.Errorf("annotation %s is not a valid timestamp", api.IgnoreNonTransientErrorTimestampAnnotation)
-			}
-			return time.Since(annotationTime), true, nil
-		}
-	}
-	return time.Since(time.Now()), false, nil
 }

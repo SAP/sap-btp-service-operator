@@ -81,7 +81,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	if meta.IsStatusConditionPresentAndEqual(serviceInstance.GetConditions(), api.ConditionSucceeded, metav1.ConditionFalse) &&
-		serviceInstance.IsIgnoreNonTransientAnnotationExistAndValid(log, r.Config.IgnoreNonTransientTimeout) {
+		api.IsIgnoreNonTransientAnnotationExistAndValid(log, serviceInstance, r.Config.IgnoreNonTransientTimeout) {
 		operation := smClientTypes.CREATE
 		if len(serviceInstance.Status.InstanceID) > 0 {
 			operation = smClientTypes.UPDATE
@@ -584,14 +584,6 @@ func isFinalState(ctx context.Context, serviceInstance *servicesv1.ServiceInstan
 
 	log.Info(fmt.Sprintf("instance is in final state (generation: %d)", serviceInstance.Generation))
 	return true
-}
-
-func isInRetry(serviceInstance *servicesv1.ServiceInstance, log logr.Logger, nonTransientTimeout time.Duration) bool {
-	conditions := serviceInstance.GetConditions()
-	if meta.IsStatusConditionPresentAndEqual(conditions, api.ConditionSucceeded, metav1.ConditionFalse) {
-		return serviceInstance.IsIgnoreNonTransientAnnotationExistAndValid(log, nonTransientTimeout)
-	}
-	return false
 }
 
 // TODO unit test

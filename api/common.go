@@ -2,10 +2,6 @@ package api
 
 import (
 	"fmt"
-	"time"
-
-	"github.com/go-logr/logr"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -86,5 +82,4 @@ type SAPBTPResource interface {
 	GetReady() metav1.ConditionStatus
 	GetAnnotations() map[string]string
 	SetAnnotations(map[string]string)
-	IsIgnoreNonTransientAnnotationExistAndValid(log logr.Logger, timeout time.Duration) bool
 }

@@ -43,7 +43,7 @@ func (s *ServiceInstanceDefaulter) Handle(_ context.Context, req admission.Reque
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
-
+	s.setIgnoreNonTransientErrorTimestampAnnotation(instance)
 	marshaledInstance, err := json.Marshal(instance)
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
@@ -59,14 +59,6 @@ func (s *ServiceInstanceDefaulter) setServiceInstanceUserInfo(req admission.Requ
 		Extra:    req.UserInfo.Extra,
 	}
 
-	if instance.Annotations != nil {
-		if _, ok := instance.Annotations[api.IgnoreNonTransientErrorAnnotation]; ok {
-			if _, exist := instance.Annotations[api.IgnoreNonTransientErrorTimestampAnnotation]; !exist {
-				instance.Annotations[api.IgnoreNonTransientErrorTimestampAnnotation] = time.Now().Format(time.RFC3339)
-			}
-		}
-	}
-
 	if req.Operation == v1admission.Create || req.Operation == v1admission.Delete {
 		instance.Spec.UserInfo = userInfo
 	} else if req.Operation == v1admission.Update {
@@ -80,4 +72,14 @@ func (s *ServiceInstanceDefaulter) setServiceInstanceUserInfo(req admission.Requ
 		}
 	}
 	return nil
+}
+
+func (s *ServiceInstanceDefaulter) setIgnoreNonTransientErrorTimestampAnnotation(instance *servicesv1.ServiceInstance) {
+	if instance.Annotations != nil {
+		if _, ok := instance.Annotations[api.IgnoreNonTransientErrorAnnotation]; ok {
+			if _, exist := instance.Annotations[api.IgnoreNonTransientErrorTimestampAnnotation]; !exist {
+				instance.Annotations[api.IgnoreNonTransientErrorTimestampAnnotation] = time.Now().Format(time.RFC3339)
+			}
+		}
+	}
 }
