@@ -1,11 +1,7 @@
 package v1
 
 import (
-	"fmt"
-	"time"
-
 	"github.com/SAP/sap-btp-service-operator/api"
-	"github.com/SAP/sap-btp-service-operator/api/utils"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -132,67 +128,5 @@ var _ = Describe("Service Instance Type Test", func() {
 		}
 		instance.SetAnnotations(annotation)
 		Expect(instance.GetAnnotations()).To(Equal(annotation))
-	})
-
-	It("validate timestamp annotation- not date", func() {
-
-		annotation := map[string]string{
-			api.IgnoreNonTransientErrorAnnotation:          "true",
-			api.IgnoreNonTransientErrorTimestampAnnotation: "true",
-		}
-		instance.SetAnnotations(annotation)
-		err := utils.ValidateNonTransientTimestampAnnotation(serviceinstancelog, instance)
-		Expect(err).To(HaveOccurred())
-		Expect(err.Error()).To(ContainSubstring("is not a valid timestamp"))
-	})
-	It("validate timestamp annotation- future date", func() {
-
-		annotation := map[string]string{
-			api.IgnoreNonTransientErrorAnnotation:          "true",
-			api.IgnoreNonTransientErrorTimestampAnnotation: time.Now().Add(48 * time.Hour).Format(time.RFC3339),
-		}
-		instance.SetAnnotations(annotation)
-		err := utils.ValidateNonTransientTimestampAnnotation(serviceinstancelog, instance)
-		Expect(err).To(HaveOccurred())
-		Expect(err.Error()).To(ContainSubstring(fmt.Sprintf(utils.AnnotationInFutureError, api.IgnoreNonTransientErrorTimestampAnnotation)))
-	})
-	It("validate annotation exist and valid", func() {
-
-		annotation := map[string]string{
-			api.IgnoreNonTransientErrorAnnotation:          "true",
-			api.IgnoreNonTransientErrorTimestampAnnotation: time.Now().Format(time.RFC3339),
-		}
-		instance.SetAnnotations(annotation)
-		exist := utils.IsIgnoreNonTransientAnnotationExistAndValid(serviceinstancelog, instance, time.Hour)
-		Expect(exist).To(BeTrue())
-	})
-	It("validate annotation exist and valid", func() {
-
-		annotation := map[string]string{
-			api.IgnoreNonTransientErrorAnnotation:          "true",
-			api.IgnoreNonTransientErrorTimestampAnnotation: time.Now().Format(time.RFC3339),
-		}
-		instance.SetAnnotations(annotation)
-		err := utils.ValidateNonTransientTimestampAnnotation(serviceinstancelog, instance)
-		Expect(err).NotTo(HaveOccurred())
-	})
-	It("validate timeout for Ignore Non Transient Error Annotation", func() {
-
-		annotation := map[string]string{
-			api.IgnoreNonTransientErrorAnnotation:          "true",
-			api.IgnoreNonTransientErrorTimestampAnnotation: time.Now().Truncate(48 * time.Hour).Format(time.RFC3339),
-		}
-		instance.SetAnnotations(annotation)
-		exist := utils.IsIgnoreNonTransientAnnotationExistAndValid(serviceinstancelog, instance, time.Hour)
-		Expect(exist).To(BeFalse())
-	})
-	It("validate annotation not exist", func() {
-
-		annotation := map[string]string{
-			api.IgnoreNonTransientErrorTimestampAnnotation: time.Now().Format(time.RFC3339),
-		}
-		instance.SetAnnotations(annotation)
-		exist := utils.IsIgnoreNonTransientAnnotationExistAndValid(serviceinstancelog, instance, time.Hour)
-		Expect(exist).To(BeFalse())
 	})
 })

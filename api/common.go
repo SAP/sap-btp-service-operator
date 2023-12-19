@@ -20,7 +20,7 @@ const (
 	PreventDeletion                            string         = "services.cloud.sap.com/preventDeletion"
 	UseInstanceMetadataNameInSecret            string         = "services.cloud.sap.com/useInstanceMetadataName"
 	IgnoreNonTransientErrorAnnotation          string         = "services.cloud.sap.com/ignoreNonTransientError"
-	IgnoreNonTransientErrorTimestampAnnotation string         = "services.cloud.sap.com/ignoreNonTransientTimestampError"
+	IgnoreNonTransientErrorTimestampAnnotation string         = "services.cloud.sap.com/ignoreNonTransientErrorTimestamp"
 )
 
 type HTTPStatusCodeError struct {

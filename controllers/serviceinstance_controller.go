@@ -24,8 +24,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/SAP/sap-btp-service-operator/api/utils"
-
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 
@@ -79,9 +77,9 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 	}
 
-	if meta.IsStatusConditionPresentAndEqual(serviceInstance.GetConditions(), api.ConditionSucceeded, metav1.ConditionFalse) &&
-		utils.IsIgnoreNonTransientAnnotationExistAndValid(log, serviceInstance, r.Config.IgnoreNonTransientTimeout) {
-		changeLastConditionToInProgress(serviceInstance)
+	if meta.IsStatusConditionPresentAndEqual(serviceInstance.GetConditions(), api.ConditionFailed, metav1.ConditionTrue) &&
+		shouldIgnoreNonTransient(log, serviceInstance, r.Config.IgnoreNonTransientTimeout) {
+		markNonTransientStatusAsTransient(serviceInstance)
 		if err := r.Status().Update(ctx, serviceInstance); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -721,7 +719,7 @@ func getErrorMsgFromLastOperation(status *smClientTypes.Operation) string {
 	return errMsg
 }
 
-func changeLastConditionToInProgress(serviceInstance *servicesv1.ServiceInstance) {
+func markNonTransientStatusAsTransient(serviceInstance *servicesv1.ServiceInstance) {
 	conditions := serviceInstance.GetConditions()
 	lastOpCondition := meta.FindStatusCondition(conditions, api.ConditionSucceeded)
 	operation := smClientTypes.CREATE

@@ -4,10 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
-
-	"github.com/SAP/sap-btp-service-operator/api/utils"
-
 	"github.com/SAP/sap-btp-service-operator/api"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
 	smClientTypes "github.com/SAP/sap-btp-service-operator/client/sm/types"
@@ -20,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	apimachinerytypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
+	"net/http"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -350,8 +347,7 @@ func (r *BaseReconciler) handleError(ctx context.Context, operationType smClient
 		log.Info("unable to cast error to SM error, will be treated as non transient")
 		return r.markAsNonTransientError(ctx, operationType, err.Error(), resource)
 	}
-	if r.isTransientError(smError, log) ||
-		utils.IsIgnoreNonTransientAnnotationExistAndValid(log, resource, r.Config.IgnoreNonTransientTimeout) {
+	if r.isTransientError(smError, log) || shouldIgnoreNonTransient(log, resource, r.Config.IgnoreNonTransientTimeout) {
 		return r.markAsTransientError(ctx, operationType, smError.Error(), resource)
 	}
 

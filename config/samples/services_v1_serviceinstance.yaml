@@ -2,8 +2,6 @@ apiVersion: services.cloud.sap.com/v1
 kind: ServiceInstance
 metadata:
   name: sample-instance-1
-  annotations:
-    services.cloud.sap.com/ignoreNonTransientError: "true"
 spec:
   serviceOfferingName: service-manager
   servicePlanName: subaccount-audit
