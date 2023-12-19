@@ -19,6 +19,13 @@ var _ = Describe("Service Binding Webhook Test", func() {
 				_, err := binding.ValidateCreate()
 				Expect(err).ToNot(HaveOccurred())
 			})
+			It("should failed", func() {
+				binding.Annotations = map[string]string{
+					api.IgnoreNonTransientErrorAnnotation: "false",
+				}
+				_, err := binding.ValidateCreate()
+				Expect(err).To(HaveOccurred())
+			})
 		})
 
 		Context("Validate update of spec before binding is created (failure recovery)", func() {
@@ -109,6 +116,16 @@ var _ = Describe("Service Binding Webhook Test", func() {
 					Expect(err).ToNot(HaveOccurred())
 				})
 			})
+			When("Annotation changed", func() {
+				It("should fail", func() {
+					newBinding.Annotations = map[string]string{
+						api.IgnoreNonTransientErrorAnnotation: "false",
+					}
+					_, err := newBinding.ValidateUpdate(binding)
+					Expect(err).To(HaveOccurred())
+				})
+			})
+
 		})
 
 		Context("Validate update of spec after binding is created", func() {
