@@ -734,4 +734,5 @@ func changeLastConditionToInProgress(serviceInstance *servicesv1.ServiceInstance
 		meta.RemoveStatusCondition(&conditions, api.ConditionFailed)
 	}
 	meta.SetStatusCondition(&conditions, *lastOpCondition)
+	serviceInstance.SetConditions(conditions)
 }
