@@ -35,8 +35,8 @@ type HTTPStatusCodeError struct {
 }
 
 func (e HTTPStatusCodeError) Error() string {
-	errorMessage := "<nil>"
-	description := "<nil>"
+	errorMessage := ""
+	description := ""
 
 	if e.ErrorMessage != nil {
 		errorMessage = *e.ErrorMessage
@@ -44,7 +44,7 @@ func (e HTTPStatusCodeError) Error() string {
 	if e.Description != nil {
 		description = *e.Description
 	}
-	return fmt.Sprintf("Status: %v; ErrorMessage: %v; Description: %v; ResponseError: %v", e.StatusCode, errorMessage, description, e.ResponseError)
+	return fmt.Sprintf("BrokerError:%s, Status: %d, Description: %s", errorMessage, e.StatusCode, description)
 }
 
 const (
