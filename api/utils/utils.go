@@ -2,9 +2,10 @@ package utils
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/SAP/sap-btp-service-operator/api"
 	"github.com/go-logr/logr"
-	"time"
 )
 
 func ValidateNonTransientTimestampAnnotation(log logr.Logger, resource api.SAPBTPResource) error {

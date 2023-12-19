@@ -22,8 +22,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/SAP/sap-btp-service-operator/api/utils"
 	"net/http"
+
+	"github.com/SAP/sap-btp-service-operator/api/utils"
 
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
