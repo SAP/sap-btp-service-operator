@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-var _ = FDescribe("Controller Util", func() {
+var _ = Describe("Controller Util", func() {
 
 	Context("normalize credentials", func() {
 		var credentialsJSON json.RawMessage
