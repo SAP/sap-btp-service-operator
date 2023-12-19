@@ -81,11 +81,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	if meta.IsStatusConditionPresentAndEqual(serviceInstance.GetConditions(), api.ConditionSucceeded, metav1.ConditionFalse) &&
 		utils.IsIgnoreNonTransientAnnotationExistAndValid(log, serviceInstance, r.Config.IgnoreNonTransientTimeout) {
-		operation := smClientTypes.CREATE
-		if len(serviceInstance.Status.InstanceID) > 0 {
-			operation = smClientTypes.UPDATE
-		}
-		setInProgressConditions(ctx, operation, "", serviceInstance)
+		changeLastConditionToInProgress(serviceInstance)
 		if err := r.Status().Update(ctx, serviceInstance); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -723,4 +719,19 @@ func getErrorMsgFromLastOperation(status *smClientTypes.Operation) string {
 		}
 	}
 	return errMsg
+}
+
+func changeLastConditionToInProgress(serviceInstance *servicesv1.ServiceInstance) {
+	conditions := serviceInstance.GetConditions()
+	lastOpCondition := meta.FindStatusCondition(conditions, api.ConditionSucceeded)
+	operation := smClientTypes.CREATE
+	if len(serviceInstance.Status.InstanceID) > 0 {
+		operation = smClientTypes.UPDATE
+	}
+	lastOpCondition.Reason = getConditionReason(operation, smClientTypes.INPROGRESS)
+
+	if len(conditions) > 0 {
+		meta.RemoveStatusCondition(&conditions, api.ConditionFailed)
+	}
+	meta.SetStatusCondition(&conditions, *lastOpCondition)
 }
