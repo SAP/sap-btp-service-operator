@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"fmt"
 	"github.com/SAP/sap-btp-service-operator/api"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -25,6 +26,8 @@ var _ = Describe("Service Binding Webhook Test", func() {
 				}
 				_, err := binding.ValidateCreate()
 				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring(fmt.Sprintf(AnnotationNotSupportedError, api.IgnoreNonTransientErrorAnnotation)))
+
 			})
 		})
 
@@ -123,6 +126,8 @@ var _ = Describe("Service Binding Webhook Test", func() {
 					}
 					_, err := newBinding.ValidateUpdate(binding)
 					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring(fmt.Sprintf(AnnotationNotSupportedError, api.IgnoreNonTransientErrorAnnotation)))
+
 				})
 			})
 

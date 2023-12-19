@@ -8,6 +8,9 @@ import (
 	"github.com/go-logr/logr"
 )
 
+var AnnotationInFutureError = "Annotation %s cannot be a date in the future."
+var AnnotationNotValidTimestampError = "Annotation %s is not a valid timestamp"
+
 func ValidateNonTransientTimestampAnnotation(log logr.Logger, resource api.SAPBTPResource) error {
 
 	sinceAnnotation, exist, err := GetTimeSinceIgnoreNonTransientAnnotationTimestamp(log, resource)
@@ -15,7 +18,7 @@ func ValidateNonTransientTimestampAnnotation(log logr.Logger, resource api.SAPBT
 		return err
 	}
 	if exist && sinceAnnotation < 0 {
-		return fmt.Errorf("annotation %s cannot be a future timestamp", api.IgnoreNonTransientErrorTimestampAnnotation)
+		return fmt.Errorf(AnnotationInFutureError, api.IgnoreNonTransientErrorTimestampAnnotation)
 	}
 	return nil
 }
@@ -43,7 +46,7 @@ func GetTimeSinceIgnoreNonTransientAnnotationTimestamp(log logr.Logger, resource
 			annotationTime, err := time.Parse(time.RFC3339, annotation[api.IgnoreNonTransientErrorTimestampAnnotation])
 			if err != nil {
 				log.Error(err, fmt.Sprintf("failed to parse %s", api.IgnoreNonTransientErrorTimestampAnnotation))
-				return time.Since(time.Now()), false, fmt.Errorf("annotation %s is not a valid timestamp", api.IgnoreNonTransientErrorTimestampAnnotation)
+				return time.Since(time.Now()), false, fmt.Errorf(AnnotationNotValidTimestampError, api.IgnoreNonTransientErrorTimestampAnnotation)
 			}
 			return time.Since(annotationTime), true, nil
 		}

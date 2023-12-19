@@ -32,6 +32,7 @@ import (
 
 // log is for logging in this package.
 var servicebindinglog = logf.Log.WithName("servicebinding-resource")
+var AnnotationNotSupportedError = "The specified annotation '%s' is not supported within the service binding object."
 
 func (sb *ServiceBinding) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
@@ -134,7 +135,7 @@ func (sb *ServiceBinding) validateCredRotatingConfig() error {
 func (sb *ServiceBinding) validateAnnotations() error {
 	if sb.Annotations != nil {
 		if _, ok := sb.Annotations[api.IgnoreNonTransientErrorAnnotation]; ok {
-			return fmt.Errorf("annotation %s is not suppoted in service binding", api.IgnoreNonTransientErrorAnnotation)
+			return fmt.Errorf(AnnotationNotSupportedError, api.IgnoreNonTransientErrorAnnotation)
 		}
 	}
 	return nil

@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/SAP/sap-btp-service-operator/api"
@@ -153,7 +154,7 @@ var _ = Describe("Service Instance Type Test", func() {
 		instance.SetAnnotations(annotation)
 		err := utils.ValidateNonTransientTimestampAnnotation(serviceinstancelog, instance)
 		Expect(err).To(HaveOccurred())
-		Expect(err.Error()).To(ContainSubstring("cannot be a future timestamp"))
+		Expect(err.Error()).To(ContainSubstring(fmt.Sprintf(utils.AnnotationInFutureError, api.IgnoreNonTransientErrorTimestampAnnotation)))
 	})
 	It("validate annotation exist and valid", func() {
 

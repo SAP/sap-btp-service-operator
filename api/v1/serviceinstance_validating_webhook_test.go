@@ -1,7 +1,9 @@
 package v1
 
 import (
+	"fmt"
 	"github.com/SAP/sap-btp-service-operator/api"
+	"github.com/SAP/sap-btp-service-operator/api/utils"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"time"
@@ -84,6 +86,7 @@ var _ = Describe("Service Instance Webhook Test", func() {
 					}
 					_, err := instance.ValidateCreate()
 					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring(fmt.Sprintf(utils.AnnotationNotValidTimestampError, api.IgnoreNonTransientErrorTimestampAnnotation)))
 
 				})
 			})
@@ -95,6 +98,8 @@ var _ = Describe("Service Instance Webhook Test", func() {
 					}
 					_, err := instance.ValidateCreate()
 					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring(fmt.Sprintf(utils.AnnotationInFutureError, api.IgnoreNonTransientErrorTimestampAnnotation)))
+
 				})
 			})
 		})
