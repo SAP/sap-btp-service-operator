@@ -1,9 +1,9 @@
 apiVersion: services.cloud.sap.com/v1
 kind: ServiceInstance
 metadata:
-  name: sample-instance-5
+  name: sample-instance-1
   annotations:
     services.cloud.sap.com/ignoreNonTransientError: "true"
 spec:
-  serviceOfferingName: led-zeppelin
-  servicePlanName: x-small
+  serviceOfferingName: service-manager
+  servicePlanName: subaccount-audit
