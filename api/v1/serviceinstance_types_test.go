@@ -121,4 +121,12 @@ var _ = Describe("Service Instance Type Test", func() {
 		instance.SetStatus(status)
 		Expect(instance.GetStatus()).To(Equal(status))
 	})
+
+	It("should update annotation", func() {
+		annotation := map[string]string{
+			api.IgnoreNonTransientErrorAnnotation: "true",
+		}
+		instance.SetAnnotations(annotation)
+		Expect(instance.GetAnnotations()).To(Equal(annotation))
+	})
 })

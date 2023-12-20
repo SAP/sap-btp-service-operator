@@ -63,10 +63,11 @@ import (
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
 const (
-	timeout      = time.Second * 20
-	interval     = time.Millisecond * 50
-	syncPeriod   = time.Millisecond * 250
-	pollInterval = time.Millisecond * 250
+	timeout                   = time.Second * 20
+	interval                  = time.Millisecond * 50
+	syncPeriod                = time.Millisecond * 250
+	pollInterval              = time.Millisecond * 250
+	ignoreNonTransientTimeout = time.Second * 10
 
 	fakeBindingID        = "fake-binding-id"
 	bindingTestNamespace = "test-namespace"
@@ -128,6 +129,7 @@ var _ = BeforeSuite(func(done Done) {
 	testConfig := config.Get()
 	testConfig.SyncPeriod = syncPeriod
 	testConfig.PollInterval = pollInterval
+	testConfig.IgnoreNonTransientTimeout = ignoreNonTransientTimeout
 
 	By("registering webhooks")
 	k8sManager.GetWebhookServer().Register("/mutate-services-cloud-sap-com-v1-serviceinstance", &webhook.Admission{Handler: &webhooks.ServiceInstanceDefaulter{Decoder: admission.NewDecoder(k8sManager.GetScheme())}})
@@ -253,6 +255,26 @@ func waitForResourceCondition(ctx context.Context, resource api.SAPBTPResource, 
 	}, timeout*2, interval).Should(BeTrue(),
 		eventuallyMsgForResource(
 			fmt.Sprintf("expected condition: {type: %s, status: %s, reason: %s, message: %s} was not met", conditionType, status, reason, message),
+			key,
+			resource),
+	)
+}
+func waitForResourceAnnotationRemove(ctx context.Context, resource api.SAPBTPResource, annotationsKey ...string) {
+	key := getResourceNamespacedName(resource)
+	Eventually(func() bool {
+		if err := k8sClient.Get(ctx, key, resource); err != nil {
+			return false
+		}
+		for _, annotationKey := range annotationsKey {
+			_, ok := resource.GetAnnotations()[annotationKey]
+			if ok {
+				return false
+			}
+		}
+		return true
+	}, timeout*2, interval).Should(BeTrue(),
+		eventuallyMsgForResource(
+			fmt.Sprintf("annotation %s was not removed", annotationsKey),
 			key,
 			resource),
 	)

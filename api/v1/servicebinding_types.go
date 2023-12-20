@@ -188,6 +188,14 @@ func (sb *ServiceBinding) SetReady(ready metav1.ConditionStatus) {
 	sb.Status.Ready = ready
 }
 
+func (sb *ServiceBinding) GetAnnotations() map[string]string {
+	return sb.Annotations
+}
+
+func (sb *ServiceBinding) SetAnnotations(annotations map[string]string) {
+	sb.Annotations = annotations
+}
+
 // +kubebuilder:object:root=true
 
 // ServiceBindingList contains a list of ServiceBinding

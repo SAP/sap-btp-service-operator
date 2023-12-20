@@ -3,8 +3,12 @@ package webhooks
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"reflect"
+	"time"
+
+	"github.com/SAP/sap-btp-service-operator/api"
 
 	v1admission "k8s.io/api/admission/v1"
 	v1 "k8s.io/api/authentication/v1"
@@ -25,26 +29,32 @@ type ServiceInstanceDefaulter struct {
 func (s *ServiceInstanceDefaulter) Handle(_ context.Context, req admission.Request) admission.Response {
 	instancelog.Info("Defaulter webhook for serviceinstance")
 	instance := &servicesv1.ServiceInstance{}
-	err := s.Decoder.Decode(req, instance)
-	if err != nil {
+	if err := s.Decoder.Decode(req, instance); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	// mutate the fields
 	if len(instance.Spec.ExternalName) == 0 {
-		instancelog.Info("externalName not provided, defaulting to k8s name", "name", instance.Name)
+		instancelog.Info(fmt.Sprintf("externalName not provided, defaulting to k8s name: %s", instance.Name))
 		instance.Spec.ExternalName = instance.Name
 	}
 
-	err = s.setServiceInstanceUserInfo(req, instance)
-	if err != nil {
+	if err := s.setServiceInstanceUserInfo(req, instance); err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
+	}
+
+	if len(instance.Annotations) > 0 && len(instance.Annotations[api.IgnoreNonTransientErrorAnnotation]) > 0 {
+		if _, exist := instance.Annotations[api.IgnoreNonTransientErrorTimestampAnnotation]; !exist {
+			annotationValue := time.Now().Format(time.RFC3339)
+			instancelog.Info(fmt.Sprintf("%s annotation exists, adding %s annotation with value %s", api.IgnoreNonTransientErrorAnnotation, api.IgnoreNonTransientErrorTimestampAnnotation, annotationValue))
+			instance.Annotations[api.IgnoreNonTransientErrorTimestampAnnotation] = annotationValue
+		}
 	}
 
 	marshaledInstance, err := json.Marshal(instance)
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
+
 	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledInstance)
 }
 
@@ -55,6 +65,7 @@ func (s *ServiceInstanceDefaulter) setServiceInstanceUserInfo(req admission.Requ
 		Groups:   req.UserInfo.Groups,
 		Extra:    req.UserInfo.Extra,
 	}
+
 	if req.Operation == v1admission.Create || req.Operation == v1admission.Delete {
 		instance.Spec.UserInfo = userInfo
 	} else if req.Operation == v1admission.Update {

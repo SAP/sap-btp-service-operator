@@ -11,14 +11,16 @@ import (
 type ControllerName string
 
 const (
-	ServiceInstanceController       ControllerName = "ServiceInstance"
-	ServiceBindingController        ControllerName = "ServiceBinding"
-	FinalizerName                   string         = "services.cloud.sap.com/sap-btp-finalizer"
-	StaleBindingIDLabel             string         = "services.cloud.sap.com/stale"
-	StaleBindingRotationOfLabel     string         = "services.cloud.sap.com/rotationOf"
-	ForceRotateAnnotation           string         = "services.cloud.sap.com/forceRotate"
-	PreventDeletion                 string         = "services.cloud.sap.com/preventDeletion"
-	UseInstanceMetadataNameInSecret string         = "services.cloud.sap.com/useInstanceMetadataName"
+	ServiceInstanceController                  ControllerName = "ServiceInstance"
+	ServiceBindingController                   ControllerName = "ServiceBinding"
+	FinalizerName                              string         = "services.cloud.sap.com/sap-btp-finalizer"
+	StaleBindingIDLabel                        string         = "services.cloud.sap.com/stale"
+	StaleBindingRotationOfLabel                string         = "services.cloud.sap.com/rotationOf"
+	ForceRotateAnnotation                      string         = "services.cloud.sap.com/forceRotate"
+	PreventDeletion                            string         = "services.cloud.sap.com/preventDeletion"
+	UseInstanceMetadataNameInSecret            string         = "services.cloud.sap.com/useInstanceMetadataName"
+	IgnoreNonTransientErrorAnnotation          string         = "services.cloud.sap.com/ignoreNonTransientError"
+	IgnoreNonTransientErrorTimestampAnnotation string         = "services.cloud.sap.com/ignoreNonTransientErrorTimestamp"
 )
 
 type HTTPStatusCodeError struct {
@@ -33,8 +35,8 @@ type HTTPStatusCodeError struct {
 }
 
 func (e HTTPStatusCodeError) Error() string {
-	errorMessage := "<nil>"
-	description := "<nil>"
+	errorMessage := ""
+	description := ""
 
 	if e.ErrorMessage != nil {
 		errorMessage = *e.ErrorMessage
@@ -42,7 +44,7 @@ func (e HTTPStatusCodeError) Error() string {
 	if e.Description != nil {
 		description = *e.Description
 	}
-	return fmt.Sprintf("Status: %v; ErrorMessage: %v; Description: %v; ResponseError: %v", e.StatusCode, errorMessage, description, e.ResponseError)
+	return fmt.Sprintf("BrokerError:%s, Status: %d, Description: %s", errorMessage, e.StatusCode, description)
 }
 
 const (
@@ -79,4 +81,6 @@ type SAPBTPResource interface {
 	DeepClone() SAPBTPResource
 	SetReady(metav1.ConditionStatus)
 	GetReady() metav1.ConditionStatus
+	GetAnnotations() map[string]string
+	SetAnnotations(map[string]string)
 }
