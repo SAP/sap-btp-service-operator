@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/SAP/sap-btp-service-operator/api"
-	"github.com/go-logr/logr"
 	"strings"
 	"time"
+
+	"github.com/SAP/sap-btp-service-operator/api"
+	"github.com/go-logr/logr"
 
 	"k8s.io/apimachinery/pkg/util/rand"
 
