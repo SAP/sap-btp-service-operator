@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -250,7 +251,6 @@ func setSuccessConditions(operationType smClientTypes.OperationCategory, object 
 
 	object.SetConditions(conditions)
 	object.SetReady(metav1.ConditionTrue)
-
 }
 
 func setCredRotationInProgressConditions(reason, message string, object api.SAPBTPResource) {
@@ -320,7 +320,7 @@ func isMarkedForDeletion(object metav1.ObjectMeta) bool {
 	return !object.DeletionTimestamp.IsZero()
 }
 
-func isTransientError(smError *sm.ServiceManagerError, log logr.Logger) bool {
+func (r *BaseReconciler) isTransientError(smError *sm.ServiceManagerError, log logr.Logger) bool {
 	statusCode := smError.GetStatusCode()
 	log.Info(fmt.Sprintf("SM returned error with status code %d", statusCode))
 	return isTransientStatusCode(statusCode) || isConcurrentOperationError(smError)
@@ -342,15 +342,16 @@ func isTransientStatusCode(StatusCode int) bool {
 
 func (r *BaseReconciler) handleError(ctx context.Context, operationType smClientTypes.OperationCategory, err error, resource api.SAPBTPResource) (ctrl.Result, error) {
 	log := GetLogger(ctx)
-	smError, ok := err.(*sm.ServiceManagerError)
+	var smError *sm.ServiceManagerError
+	ok := errors.As(err, &smError)
 	if !ok {
 		log.Info("unable to cast error to SM error, will be treated as non transient")
 		return r.markAsNonTransientError(ctx, operationType, err.Error(), resource)
 	}
-
-	if isTransient := isTransientError(smError, log); isTransient {
+	if r.isTransientError(smError, log) || shouldIgnoreNonTransient(log, resource, r.Config.IgnoreNonTransientTimeout) {
 		return r.markAsTransientError(ctx, operationType, smError.Error(), resource)
 	}
+
 	return r.markAsNonTransientError(ctx, operationType, smError.Error(), resource)
 }
 
@@ -380,6 +381,26 @@ func (r *BaseReconciler) markAsTransientError(ctx context.Context, operationType
 	}
 
 	return ctrl.Result{}, fmt.Errorf(errMsg)
+}
+
+func (r *BaseReconciler) removeAnnotation(ctx context.Context, object api.SAPBTPResource, keys ...string) error {
+	log := GetLogger(ctx)
+	annotations := object.GetAnnotations()
+	shouldUpdate := false
+	if annotations != nil {
+		for _, key := range keys {
+			if _, ok := annotations[key]; ok {
+				log.Info(fmt.Sprintf("deleting annotation with key %s", key))
+				delete(annotations, key)
+				shouldUpdate = true
+			}
+		}
+		if shouldUpdate {
+			object.SetAnnotations(annotations)
+			return r.Client.Update(ctx, object)
+		}
+	}
+	return nil
 }
 
 func isInProgress(object api.SAPBTPResource) bool {

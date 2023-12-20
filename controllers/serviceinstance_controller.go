@@ -77,12 +77,24 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 	}
 
+	if meta.IsStatusConditionPresentAndEqual(serviceInstance.GetConditions(), api.ConditionFailed, metav1.ConditionTrue) &&
+		shouldIgnoreNonTransient(log, serviceInstance, r.Config.IgnoreNonTransientTimeout) {
+		markNonTransientStatusAsTransient(serviceInstance)
+		if err := r.Status().Update(ctx, serviceInstance); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
 	if isFinalState(ctx, serviceInstance) {
 		if len(serviceInstance.Status.HashedSpec) == 0 {
 			updateHashedSpecValue(serviceInstance)
-			return ctrl.Result{}, r.Client.Status().Update(ctx, serviceInstance)
+			err := r.Client.Status().Update(ctx, serviceInstance)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
 		}
-		return ctrl.Result{}, nil
+
+		return ctrl.Result{}, r.removeAnnotation(ctx, serviceInstance, api.IgnoreNonTransientErrorAnnotation, api.IgnoreNonTransientErrorTimestampAnnotation)
 	}
 
 	if isMarkedForDeletion(serviceInstance.ObjectMeta) {
@@ -512,7 +524,7 @@ func (r *ServiceInstanceReconciler) handleInstanceSharingError(ctx context.Conte
 
 	if smError, ok := err.(*sm.ServiceManagerError); ok {
 		log.Info(fmt.Sprintf("SM returned error with status code %d", smError.StatusCode))
-		isTransient = isTransientError(smError, log)
+		isTransient = r.isTransientError(smError, log)
 		errMsg = smError.Error()
 
 		if smError.StatusCode == http.StatusTooManyRequests {
@@ -564,7 +576,6 @@ func isFinalState(ctx context.Context, serviceInstance *servicesv1.ServiceInstan
 	return true
 }
 
-// TODO unit test
 func updateRequired(serviceInstance *servicesv1.ServiceInstance) bool {
 	//update is not supported for failed instances (this can occur when instance creation was asynchronously)
 	if serviceInstance.Status.Ready != metav1.ConditionTrue {
@@ -579,7 +590,6 @@ func updateRequired(serviceInstance *servicesv1.ServiceInstance) bool {
 	return getSpecHash(serviceInstance) != serviceInstance.Status.HashedSpec
 }
 
-// TODO unit test
 func sharingUpdateRequired(serviceInstance *servicesv1.ServiceInstance) bool {
 	//relevant only for non-shared instances - sharing instance is possible only for usable instances
 	if serviceInstance.Status.Ready != metav1.ConditionTrue {
@@ -707,4 +717,20 @@ func getErrorMsgFromLastOperation(status *smClientTypes.Operation) string {
 		}
 	}
 	return errMsg
+}
+
+func markNonTransientStatusAsTransient(serviceInstance *servicesv1.ServiceInstance) {
+	conditions := serviceInstance.GetConditions()
+	lastOpCondition := meta.FindStatusCondition(conditions, api.ConditionSucceeded)
+	operation := smClientTypes.CREATE
+	if len(serviceInstance.Status.InstanceID) > 0 {
+		operation = smClientTypes.UPDATE
+	}
+	lastOpCondition.Reason = getConditionReason(operation, smClientTypes.INPROGRESS)
+
+	if len(conditions) > 0 {
+		meta.RemoveStatusCondition(&conditions, api.ConditionFailed)
+	}
+	meta.SetStatusCondition(&conditions, *lastOpCondition)
+	serviceInstance.SetConditions(conditions)
 }

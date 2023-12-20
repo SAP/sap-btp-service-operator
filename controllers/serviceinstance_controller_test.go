@@ -23,6 +23,7 @@ import (
 	"net/http"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"strings"
+	"time"
 )
 
 // +kubebuilder:docs-gen:collapse=Imports
@@ -80,15 +81,16 @@ var _ = Describe("ServiceInstance controller", func() {
 		},
 	}
 
-	createInstance := func(ctx context.Context, instanceSpec v1.ServiceInstanceSpec, waitForReady bool) *v1.ServiceInstance {
+	createInstance := func(ctx context.Context, instanceSpec v1.ServiceInstanceSpec, annotations map[string]string, waitForReady bool) *v1.ServiceInstance {
 		instance := &v1.ServiceInstance{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "services.cloud.sap.com/v1",
 				Kind:       "ServiceInstance",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      fakeInstanceName,
-				Namespace: testNamespace,
+				Name:        fakeInstanceName,
+				Namespace:   testNamespace,
+				Annotations: annotations,
 			},
 			Spec: instanceSpec,
 		}
@@ -199,7 +201,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					})
 
 					It("provisioning should fail", func() {
-						serviceInstance = createInstance(ctx, instanceSpec, false)
+						serviceInstance = createInstance(ctx, instanceSpec, nil, false)
 						waitForInstanceConditionAndMessage(ctx, defaultLookupKey, api.ConditionSucceeded, "provided plan id does not match")
 					})
 				})
@@ -209,7 +211,7 @@ var _ = Describe("ServiceInstance controller", func() {
 		Context("Sync", func() {
 			When("provision request to SM succeeds", func() {
 				It("should provision instance of the provided offering and plan name successfully", func() {
-					serviceInstance = createInstance(ctx, instanceSpec, true)
+					serviceInstance = createInstance(ctx, instanceSpec, nil, true)
 					Expect(serviceInstance.Status.InstanceID).To(Equal(fakeInstanceID))
 					Expect(serviceInstance.Status.SubaccountID).To(Equal(fakeSubaccountID))
 					Expect(serviceInstance.Spec.ExternalName).To(Equal(fakeInstanceExternalName))
@@ -225,10 +227,11 @@ var _ = Describe("ServiceInstance controller", func() {
 			})
 
 			When("provision request to SM fails", func() {
-				Context("with 400 status", func() {
-					errMessage := "failed to provision instance"
+				errMessage := "failed to provision instance"
+
+				Context("provision fails once and then succeeds", func() {
 					BeforeEach(func() {
-						fakeClient.ProvisionReturns(nil, &sm.ServiceManagerError{
+						fakeClient.ProvisionReturnsOnCall(0, nil, &sm.ServiceManagerError{
 							StatusCode:  http.StatusBadRequest,
 							Description: errMessage,
 						})
@@ -236,14 +239,43 @@ var _ = Describe("ServiceInstance controller", func() {
 					})
 
 					It("should have failure condition", func() {
-						serviceInstance = createInstance(ctx, instanceSpec, false)
+						serviceInstance = createInstance(ctx, instanceSpec, nil, false)
 						waitForResourceCondition(ctx, serviceInstance, api.ConditionFailed, metav1.ConditionTrue, CreateFailed, errMessage)
+					})
+				})
+
+				Context("ignoreNonTransientErrorAnnotation exists", func() {
+					When("provision fails once and then succeeds", func() {
+						It("should remove the annotation", func() {
+							fakeClient.ProvisionReturnsOnCall(0, nil, &sm.ServiceManagerError{
+								StatusCode:  http.StatusBadRequest,
+								Description: errMessage,
+							})
+							fakeClient.ProvisionReturnsOnCall(1, &sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
+							serviceInstance = createInstance(ctx, instanceSpec, map[string]string{api.IgnoreNonTransientErrorAnnotation: "true"}, false)
+							waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionTrue, Created, "")
+							waitForResourceAnnotationRemove(ctx, serviceInstance, api.IgnoreNonTransientErrorAnnotation, api.IgnoreNonTransientErrorTimestampAnnotation)
+						})
+					})
+
+					When("provision fails until timeout", func() {
+						It("should have failure conditions and remove the annotation", func() {
+							fakeClient.ProvisionReturns(nil, &sm.ServiceManagerError{
+								StatusCode:  http.StatusBadRequest,
+								Description: errMessage,
+							})
+							serviceInstance = createInstance(ctx, instanceSpec, map[string]string{api.IgnoreNonTransientErrorAnnotation: "true"}, false)
+							waitForResourceCondition(ctx, serviceInstance, api.ConditionFailed, metav1.ConditionTrue, CreateFailed, errMessage)
+							waitForResourceAnnotationRemove(ctx, serviceInstance, api.IgnoreNonTransientErrorAnnotation, api.IgnoreNonTransientErrorTimestampAnnotation)
+							waitForResourceCondition(ctx, serviceInstance, api.ConditionFailed, metav1.ConditionTrue, CreateFailed, errMessage)
+							sinceCreate := time.Since(serviceInstance.GetCreationTimestamp().Time)
+							Expect(sinceCreate > ignoreNonTransientTimeout)
+						})
 					})
 				})
 
 				Context("with 429 status eventually succeeds", func() {
 					BeforeEach(func() {
-						errMessage := "failed to provision instance"
 						fakeClient.ProvisionReturnsOnCall(0, nil, &sm.ServiceManagerError{
 							StatusCode:  http.StatusTooManyRequests,
 							Description: errMessage,
@@ -252,41 +284,49 @@ var _ = Describe("ServiceInstance controller", func() {
 					})
 
 					It("should retry until success", func() {
-						serviceInstance = createInstance(ctx, instanceSpec, true)
+						serviceInstance = createInstance(ctx, instanceSpec, nil, true)
 						waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionTrue, Created, "")
 					})
 				})
 
 				Context("with sm status code 502 and broker status code 429", func() {
-					errMessage := "broker too many requests"
+					tooManyRequestsError := "broker too many requests"
 					BeforeEach(func() {
-						fakeClient.ProvisionReturns(nil, getTransientBrokerError(errMessage))
+						fakeClient.ProvisionReturns(nil, getTransientBrokerError(tooManyRequestsError))
 					})
 
 					It("should be transient error and eventually succeed", func() {
-						serviceInstance = createInstance(ctx, instanceSpec, false)
-						waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionFalse, CreateInProgress, errMessage)
+						serviceInstance = createInstance(ctx, instanceSpec, nil, false)
+						waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionFalse, CreateInProgress, tooManyRequestsError)
 						fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
 						waitForResourceToBeReady(ctx, serviceInstance)
 					})
 				})
 
 				Context("with sm status code 502 and broker status code 400", func() {
-					errMessage := "failed to provision instance"
 					BeforeEach(func() {
 						fakeClient.ProvisionReturns(nil, getNonTransientBrokerError(errMessage))
-						fakeClient.ProvisionReturnsOnCall(1, &sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
+						fakeClient.ProvisionReturnsOnCall(2, &sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
 					})
 
 					It("should have failure condition - non transient error", func() {
-						serviceInstance = createInstance(ctx, instanceSpec, false)
+						serviceInstance = createInstance(ctx, instanceSpec, nil, false)
 						waitForResourceCondition(ctx, serviceInstance, api.ConditionFailed, metav1.ConditionTrue, CreateFailed, errMessage)
+					})
+
+					When("ignoreNonTransientErrorAnnotation exists", func() {
+						It("should have failure conditions and remove the annotation after timeout", func() {
+							serviceInstance = createInstance(ctx, instanceSpec, map[string]string{api.IgnoreNonTransientErrorAnnotation: "true"}, false)
+							waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionTrue, Created, "")
+							waitForResourceAnnotationRemove(ctx, serviceInstance, api.IgnoreNonTransientErrorAnnotation, api.IgnoreNonTransientErrorTimestampAnnotation)
+							Expect(fakeClient.ProvisionCallCount()).To(BeNumerically(">", 1))
+						})
 					})
 				})
 			})
 		})
 
-		Context("async", func() {
+		Context("Async", func() {
 			BeforeEach(func() {
 				fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: fakeInstanceID, Location: "/v1/service_instances/fakeid/operations/1234"}, nil)
 				fakeClient.StatusReturns(&smclientTypes.Operation{
@@ -298,10 +338,10 @@ var _ = Describe("ServiceInstance controller", func() {
 
 			When("polling ends with success", func() {
 				BeforeEach(func() {
-					fakeClient.GetInstanceByIDReturns(&smclientTypes.ServiceInstance{Labels: map[string][]string{"subaccount_id": []string{fakeSubaccountID}}}, nil)
+					fakeClient.GetInstanceByIDReturns(&smclientTypes.ServiceInstance{Labels: map[string][]string{"subaccount_id": {fakeSubaccountID}}}, nil)
 				})
 				It("should update in progress condition and provision the instance successfully", func() {
-					serviceInstance = createInstance(ctx, instanceSpec, false)
+					serviceInstance = createInstance(ctx, instanceSpec, nil, false)
 					fakeClient.StatusReturns(&smclientTypes.Operation{
 						ID:    "1234",
 						Type:  smClientTypes.CREATE,
@@ -314,7 +354,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 			When("polling ends with failure", func() {
 				It("should update to failure condition with the broker err description", func() {
-					serviceInstance = createInstance(ctx, instanceSpec, false)
+					serviceInstance = createInstance(ctx, instanceSpec, nil, false)
 					fakeClient.StatusReturns(&smclientTypes.Operation{
 						ID:     "1234",
 						Type:   smClientTypes.CREATE,
@@ -327,7 +367,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 			When("updating during create", func() {
 				It("should update the instance after created successfully", func() {
-					serviceInstance = createInstance(ctx, instanceSpec, false)
+					serviceInstance = createInstance(ctx, instanceSpec, nil, false)
 					waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionFalse, CreateInProgress, "")
 					newName := "new-name" + uuid.New().String()
 
@@ -355,7 +395,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 			When("deleting while create is in progress", func() {
 				It("should be deleted successfully", func() {
-					serviceInstance = createInstance(ctx, instanceSpec, false)
+					serviceInstance = createInstance(ctx, instanceSpec, nil, false)
 
 					By("waiting for instance to be CreateInProgress")
 					waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionFalse, CreateInProgress, "")
@@ -387,7 +427,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					ServicePlanName:     "a-plan-name",
 					ServiceOfferingName: "an-offering-name",
 				}
-				serviceInstance = createInstance(ctx, withoutExternal, true)
+				serviceInstance = createInstance(ctx, withoutExternal, nil, true)
 				Expect(serviceInstance.Status.InstanceID).To(Equal(fakeInstanceID))
 				Expect(serviceInstance.Spec.ExternalName).To(Equal(fakeInstanceName))
 				Expect(serviceInstance.Name).To(Equal(fakeInstanceName))
@@ -397,7 +437,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 	Describe("Update", func() {
 		BeforeEach(func() {
-			serviceInstance = createInstance(ctx, instanceSpec, true)
+			serviceInstance = createInstance(ctx, instanceSpec, nil, true)
 			Expect(serviceInstance.Spec.ExternalName).To(Equal(fakeInstanceExternalName))
 		})
 
@@ -502,20 +542,43 @@ var _ = Describe("ServiceInstance controller", func() {
 				})
 			})
 
-			Context("spec is changed, sm returns 502 and broker returns 429", func() {
-				errMessage := "broker too many requests"
-				BeforeEach(func() {
-					fakeClient.UpdateInstanceReturns(nil, "", getTransientBrokerError(errMessage))
+			Context("spec is changed and sm returns 502", func() {
+				When("the error is transient", func() {
+					errMessage := "broker too many requests"
+					BeforeEach(func() {
+						fakeClient.UpdateInstanceReturns(nil, "", getTransientBrokerError(errMessage))
+					})
+
+					It("recognize the error as transient and eventually succeed", func() {
+						newExternalName := "my-new-external-name" + uuid.New().String()
+						serviceInstance.Spec.ExternalName = newExternalName
+						updateInstance(ctx, serviceInstance)
+						waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionFalse, UpdateInProgress, "")
+						fakeClient.UpdateInstanceReturns(nil, "", nil)
+						updateInstance(ctx, serviceInstance)
+						waitForResourceToBeReady(ctx, serviceInstance)
+					})
 				})
 
-				It("recognize the error as transient and eventually succeed", func() {
-					newExternalName := "my-new-external-name" + uuid.New().String()
-					serviceInstance.Spec.ExternalName = newExternalName
-					updateInstance(ctx, serviceInstance)
-					waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionFalse, UpdateInProgress, "")
-					fakeClient.UpdateInstanceReturns(nil, "", nil)
-					updateInstance(ctx, serviceInstance)
-					waitForResourceToBeReady(ctx, serviceInstance)
+				When("the error is non transient but ignoreNonTransientErrorAnnotation exists", func() {
+					errMessage := "broker update error"
+					BeforeEach(func() {
+						fakeClient.UpdateInstanceReturns(nil, "", getNonTransientBrokerError(errMessage))
+					})
+					It("recognizes the error as transient and eventually succeed", func() {
+						newExternalName := "my-new-external-name" + uuid.New().String()
+						serviceInstance.Spec.ExternalName = newExternalName
+						updateInstance(ctx, serviceInstance)
+						waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionFalse, UpdateFailed, "")
+						serviceInstance.Annotations = map[string]string{api.IgnoreNonTransientErrorAnnotation: "true"}
+						updateInstance(ctx, serviceInstance)
+						waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionFalse, UpdateInProgress, "")
+						fakeClient.UpdateInstanceReturns(nil, "", nil)
+
+						waitForResourceToBeReady(ctx, serviceInstance)
+						waitForResourceAnnotationRemove(ctx, serviceInstance, api.IgnoreNonTransientErrorAnnotation, api.IgnoreNonTransientErrorTimestampAnnotation)
+
+					})
 				})
 			})
 
@@ -569,7 +632,7 @@ var _ = Describe("ServiceInstance controller", func() {
 		When("subaccount id changed", func() {
 			It("should fail", func() {
 				deleteInstance(ctx, serviceInstance, true)
-				serviceInstance = createInstance(ctx, instanceSpec, true)
+				serviceInstance = createInstance(ctx, instanceSpec, nil, true)
 				serviceInstance.Spec.BTPAccessCredentialsSecret = "12345"
 				err := k8sClient.Update(ctx, serviceInstance)
 				Expect(err).To(HaveOccurred())
@@ -580,7 +643,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 	Describe("Delete", func() {
 		BeforeEach(func() {
-			serviceInstance = createInstance(ctx, instanceSpec, true)
+			serviceInstance = createInstance(ctx, instanceSpec, nil, true)
 			fakeClient.DeprovisionReturns("", nil)
 		})
 		AfterEach(func() {
@@ -729,7 +792,7 @@ var _ = Describe("ServiceInstance controller", func() {
 	Describe("full reconcile", func() {
 		When("instance hashedSpec is not initialized", func() {
 			BeforeEach(func() {
-				serviceInstance = createInstance(ctx, instanceSpec, true)
+				serviceInstance = createInstance(ctx, instanceSpec, nil, true)
 			})
 			It("should not send update request and update the hashed spec", func() {
 				hashed := serviceInstance.Status.HashedSpec
@@ -760,7 +823,7 @@ var _ = Describe("ServiceInstance controller", func() {
 			})
 
 			It("should call correctly to SM and recover the instance", func() {
-				serviceInstance = createInstance(ctx, instanceSpec, true)
+				serviceInstance = createInstance(ctx, instanceSpec, nil, true)
 				Expect(fakeClient.ProvisionCallCount()).To(Equal(0))
 				Expect(serviceInstance.Status.InstanceID).To(Equal(fakeInstanceID))
 				smCallArgs := fakeClient.ListInstancesArgsForCall(0)
@@ -783,7 +846,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					})
 
 					It("should recover the existing instance and poll until instance is ready", func() {
-						serviceInstance = createInstance(ctx, instanceSpec, false)
+						serviceInstance = createInstance(ctx, instanceSpec, nil, false)
 						key := getResourceNamespacedName(serviceInstance)
 						Eventually(func() bool {
 							_ = k8sClient.Get(ctx, key, serviceInstance)
@@ -804,7 +867,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					})
 
 					It("should recover the existing instance and update condition failure", func() {
-						serviceInstance = createInstance(ctx, instanceSpec, false)
+						serviceInstance = createInstance(ctx, instanceSpec, nil, false)
 						waitForResourceCondition(ctx, serviceInstance, api.ConditionSucceeded, metav1.ConditionFalse, CreateFailed, "")
 						Expect(serviceInstance.Status.InstanceID).To(Equal(fakeInstanceID))
 						Expect(fakeClient.ProvisionCallCount()).To(Equal(0))
@@ -822,7 +885,7 @@ var _ = Describe("ServiceInstance controller", func() {
 							recoveredInstance.Ready = true
 						})
 						It("should recover the instance with status Ready=true", func() {
-							serviceInstance = createInstance(ctx, instanceSpec, false)
+							serviceInstance = createInstance(ctx, instanceSpec, nil, false)
 							waitForResourceToBeReady(ctx, serviceInstance)
 							Expect(fakeClient.ProvisionCallCount()).To(Equal(0))
 							Expect(serviceInstance.Status.InstanceID).To(Equal(fakeInstanceID))
@@ -833,7 +896,7 @@ var _ = Describe("ServiceInstance controller", func() {
 							recoveredInstance.Ready = false
 						})
 						It("should recover the instance with status Ready=false", func() {
-							serviceInstance = createInstance(ctx, instanceSpec, false)
+							serviceInstance = createInstance(ctx, instanceSpec, nil, false)
 							waitForResourceCondition(ctx, serviceInstance, api.ConditionFailed, metav1.ConditionTrue, CreateFailed, "")
 							Expect(fakeClient.ProvisionCallCount()).To(Equal(0))
 							Expect(serviceInstance.Status.InstanceID).To(Equal(fakeInstanceID))
@@ -850,14 +913,14 @@ var _ = Describe("ServiceInstance controller", func() {
 			When("creating instance with shared=true", func() {
 				It("should succeed to provision and sharing the instance", func() {
 					fakeClient.ShareInstanceReturns(nil)
-					serviceInstance = createInstance(ctx, sharedInstanceSpec, true)
+					serviceInstance = createInstance(ctx, sharedInstanceSpec, nil, true)
 					waitForInstanceToBeShared(ctx, serviceInstance)
 				})
 			})
 
 			Context("sharing an existing instance", func() {
 				BeforeEach(func() {
-					serviceInstance = createInstance(ctx, instanceSpec, true)
+					serviceInstance = createInstance(ctx, instanceSpec, nil, true)
 				})
 
 				When("updating existing instance to shared", func() {
@@ -898,7 +961,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						StatusCode:  http.StatusBadRequest,
 						Description: "errMessage",
 					})
-					serviceInstance = createInstance(ctx, sharedInstanceSpec, false)
+					serviceInstance = createInstance(ctx, sharedInstanceSpec, nil, false)
 					waitForResourceCondition(ctx, serviceInstance, api.ConditionFailed, metav1.ConditionTrue, CreateFailed, "")
 					Expect(fakeClient.ShareInstanceCallCount()).To(BeZero())
 				})
@@ -906,7 +969,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 			When("instance is valid and share failed", func() {
 				BeforeEach(func() {
-					serviceInstance = createInstance(ctx, instanceSpec, true)
+					serviceInstance = createInstance(ctx, instanceSpec, nil, true)
 				})
 
 				When("shared failed with rate limit error", func() {
@@ -968,7 +1031,7 @@ var _ = Describe("ServiceInstance controller", func() {
 			Context("un-sharing an existing shared instance", func() {
 				BeforeEach(func() {
 					fakeClient.ShareInstanceReturns(nil)
-					serviceInstance = createInstance(ctx, sharedInstanceSpec, true)
+					serviceInstance = createInstance(ctx, sharedInstanceSpec, nil, true)
 					waitForInstanceToBeShared(ctx, serviceInstance)
 				})
 
@@ -1007,7 +1070,7 @@ var _ = Describe("ServiceInstance controller", func() {
 			When("instance is valid and un-share failed", func() {
 				BeforeEach(func() {
 					fakeClient.ShareInstanceReturns(nil)
-					serviceInstance = createInstance(ctx, sharedInstanceSpec, true)
+					serviceInstance = createInstance(ctx, sharedInstanceSpec, nil, true)
 					waitForInstanceToBeShared(ctx, serviceInstance)
 					fakeClient.UnShareInstanceReturns(&sm.ServiceManagerError{
 						StatusCode:  http.StatusBadRequest,

@@ -32,6 +32,7 @@ import (
 
 // log is for logging in this package.
 var servicebindinglog = logf.Log.WithName("servicebinding-resource")
+var AnnotationNotSupportedError = "The specified annotation '%s' is not supported within the service binding object."
 
 func (sb *ServiceBinding) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
@@ -49,6 +50,9 @@ var _ webhook.Validator = &ServiceBinding{}
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (sb *ServiceBinding) ValidateCreate() (admission.Warnings, error) {
 	servicebindinglog.Info("validate create", "name", sb.Name)
+	if err := sb.validateAnnotations(); err != nil {
+		return nil, err
+	}
 	if sb.Spec.CredRotationPolicy != nil {
 		if err := sb.validateCredRotatingConfig(); err != nil {
 			return nil, err
@@ -60,6 +64,9 @@ func (sb *ServiceBinding) ValidateCreate() (admission.Warnings, error) {
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (sb *ServiceBinding) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 	servicebindinglog.Info("validate update", "name", sb.Name)
+	if err := sb.validateAnnotations(); err != nil {
+		return nil, err
+	}
 	if sb.Spec.CredRotationPolicy != nil {
 		if err := sb.validateCredRotatingConfig(); err != nil {
 			return nil, err
@@ -122,5 +129,14 @@ func (sb *ServiceBinding) validateCredRotatingConfig() error {
 		return err
 	}
 
+	return nil
+}
+
+func (sb *ServiceBinding) validateAnnotations() error {
+	if sb.Annotations != nil {
+		if _, ok := sb.Annotations[api.IgnoreNonTransientErrorAnnotation]; ok {
+			return fmt.Errorf(AnnotationNotSupportedError, api.IgnoreNonTransientErrorAnnotation)
+		}
+	}
 	return nil
 }

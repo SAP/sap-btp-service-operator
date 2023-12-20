@@ -3,7 +3,12 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
+	"time"
+
+	"github.com/SAP/sap-btp-service-operator/api"
+	"github.com/go-logr/logr"
 
 	"k8s.io/apimachinery/pkg/util/rand"
 
@@ -23,6 +28,25 @@ const (
 	JSON    format = "json"
 	UNKNOWN format = "unknown"
 )
+
+func shouldIgnoreNonTransient(log logr.Logger, resource api.SAPBTPResource, timeout time.Duration) bool {
+	annotations := resource.GetAnnotations()
+	if len(annotations) == 0 || len(annotations[api.IgnoreNonTransientErrorAnnotation]) == 0 {
+		return false
+	}
+
+	// we ignore the error
+	// for service instances, the value is validated in webhook
+	// for service bindings, the annotation is not allowed
+	annotationTime, _ := time.Parse(time.RFC3339, annotations[api.IgnoreNonTransientErrorTimestampAnnotation])
+	sinceAnnotation := time.Since(annotationTime)
+	if sinceAnnotation > timeout {
+		log.Info(fmt.Sprintf("timeout of %s reached - error is considered to be non transient. time passed since annotation timestamp %s", timeout, sinceAnnotation))
+		return false
+	}
+	log.Info(fmt.Sprintf("timeout of %s was not reached - error is considered to be transient. ime passed since annotation timestamp %s", timeout, sinceAnnotation))
+	return true
+}
 
 func normalizeCredentials(credentialsJSON json.RawMessage) (map[string][]byte, []SecretMetadataProperty, error) {
 	var credentialsMap map[string]interface{}
