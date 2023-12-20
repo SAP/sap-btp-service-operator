@@ -38,14 +38,13 @@ func shouldIgnoreNonTransient(log logr.Logger, resource api.SAPBTPResource, time
 	// for service instances, the value is validated in webhook
 	// for service bindings, the annotation is not allowed
 	annotationTime, _ := time.Parse(time.RFC3339, annotations[api.IgnoreNonTransientErrorTimestampAnnotation])
-
-	if sinceAnnotation := time.Since(annotationTime); sinceAnnotation > timeout {
+	sinceAnnotation := time.Since(annotationTime)
+	if sinceAnnotation > timeout {
 		log.Info(fmt.Sprintf("timeout of %s reached - error is considered to be non transient. time passed since annotation timestamp %s", timeout, sinceAnnotation))
 		return false
-	} else {
-		log.Info(fmt.Sprintf("timeout of %s was not reached - error is considered to be transient. ime passed since annotation timestamp %s", timeout, sinceAnnotation))
-		return true
 	}
+	log.Info(fmt.Sprintf("timeout of %s was not reached - error is considered to be transient. ime passed since annotation timestamp %s", timeout, sinceAnnotation))
+	return true
 }
 
 func normalizeCredentials(credentialsJSON json.RawMessage) (map[string][]byte, []SecretMetadataProperty, error) {
