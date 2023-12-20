@@ -375,7 +375,7 @@ func (r *BaseReconciler) markAsNonTransientError(ctx context.Context, operationT
 func (r *BaseReconciler) markAsTransientError(ctx context.Context, operationType smClientTypes.OperationCategory, err error, object api.SAPBTPResource) (ctrl.Result, error) {
 	log := GetLogger(ctx)
 	//DO NOT REMOVE - 429 error is not reflected to the status
-	if smError, ok := err.(*sm.ServiceManagerError); !ok || (ok && smError.StatusCode != http.StatusTooManyRequests) {
+	if smError, ok := err.(*sm.ServiceManagerError); !ok || smError.StatusCode != http.StatusTooManyRequests {
 		setInProgressConditions(ctx, operationType, err.Error(), object)
 		log.Info(fmt.Sprintf("operation %s of %s encountered a transient error %s, retrying operation :)", operationType, object.GetControllerName(), err.Error()))
 		if updateErr := r.updateStatus(ctx, object); updateErr != nil {
