@@ -122,7 +122,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	smClient, err := r.getSMClient(ctx, serviceInstance, serviceInstance.Spec.BTPAccessCredentialsSecret)
 	if err != nil {
 		log.Error(err, "failed to get sm client")
-		return r.markAsTransientError(ctx, Unknown, err.Error(), serviceInstance)
+		return r.markAsTransientError(ctx, Unknown, err, serviceInstance)
 	}
 
 	if serviceInstance.Status.InstanceID == "" {
@@ -130,7 +130,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		smInstance, err := r.getInstanceForRecovery(ctx, smClient, serviceInstance)
 		if err != nil {
 			log.Error(err, "failed to check instance recovery")
-			return r.markAsTransientError(ctx, Unknown, err.Error(), serviceInstance)
+			return r.markAsTransientError(ctx, Unknown, err, serviceInstance)
 		}
 		if smInstance != nil {
 			return r.recover(ctx, smClient, serviceInstance, smInstance)
@@ -266,7 +266,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, serviceI
 		smClient, err := r.getSMClient(ctx, serviceInstance, serviceInstance.Spec.BTPAccessCredentialsSecret)
 		if err != nil {
 			log.Error(err, "failed to get sm client")
-			return r.markAsTransientError(ctx, Unknown, err.Error(), serviceInstance)
+			return r.markAsTransientError(ctx, Unknown, err, serviceInstance)
 		}
 		if len(serviceInstance.Status.InstanceID) == 0 {
 			log.Info("No instance id found validating instance does not exists in SM before removing finalizer")
@@ -348,7 +348,7 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, serviceInstance *s
 	smClient, err := r.getSMClient(ctx, serviceInstance, serviceInstance.Spec.BTPAccessCredentialsSecret)
 	if err != nil {
 		log.Error(err, "failed to get sm client")
-		return r.markAsTransientError(ctx, Unknown, err.Error(), serviceInstance)
+		return r.markAsTransientError(ctx, Unknown, err, serviceInstance)
 	}
 
 	status, statusErr := smClient.Status(serviceInstance.Status.OperationURL, nil)
