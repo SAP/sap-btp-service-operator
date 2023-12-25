@@ -86,24 +86,28 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 	}
 
-	serviceInstance, err := r.getServiceInstanceForBinding(ctx, serviceBinding)
-	if client.IgnoreNotFound(err) != nil {
-		log.Error(err, "failed to get service instance for binding")
-		return ctrl.Result{}, err
+	serviceInstance, instanceErr := r.getServiceInstanceForBinding(ctx, serviceBinding)
+	if instanceErr != nil {
+		if !apierrors.IsNotFound(instanceErr) {
+			log.Error(instanceErr, "failed to get service instance for binding")
+			return ctrl.Result{}, instanceErr
+		} else if !isMarkedForDeletion(serviceBinding.ObjectMeta) {
+			//instance is not found and binding is not marked for deletion
+			instanceNamespace := serviceBinding.Namespace
+			if len(serviceBinding.Spec.ServiceInstanceNamespace) > 0 {
+				instanceNamespace = serviceBinding.Spec.ServiceInstanceNamespace
+			}
+			errMsg := fmt.Sprintf("couldn't find the service instance '%s' in namespace '%s'", serviceBinding.Spec.ServiceInstanceName, instanceNamespace)
+			setBlockedCondition(ctx, errMsg, serviceBinding)
+			if updateErr := r.updateStatus(ctx, serviceBinding); updateErr != nil {
+				return ctrl.Result{}, updateErr
+			}
+			return ctrl.Result{}, instanceErr
+		}
 	}
 
 	if isMarkedForDeletion(serviceBinding.ObjectMeta) {
 		return r.delete(ctx, serviceBinding, serviceInstance.Spec.BTPAccessCredentialsSecret)
-	}
-
-	if err != nil { // instance not found
-		instanceNamespace := serviceBinding.Namespace
-		if len(serviceBinding.Spec.ServiceInstanceNamespace) > 0 {
-			instanceNamespace = serviceBinding.Spec.ServiceInstanceNamespace
-		}
-		errMsg := fmt.Sprintf("couldn't find the service instance '%s' in namespace '%s'", serviceBinding.Spec.ServiceInstanceName, instanceNamespace)
-		setBlockedCondition(ctx, errMsg, serviceBinding)
-		return ctrl.Result{}, r.updateStatus(ctx, serviceBinding)
 	}
 
 	if len(serviceBinding.Status.OperationURL) > 0 {
