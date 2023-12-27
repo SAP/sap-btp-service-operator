@@ -184,13 +184,13 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 		smClient, err := r.getSMClient(ctx, serviceBinding, serviceInstance.Spec.BTPAccessCredentialsSecret)
 		if err != nil {
-			return r.markAsTransientError(ctx, Unknown, err.Error(), serviceBinding)
+			return r.markAsTransientError(ctx, Unknown, err, serviceBinding)
 		}
 
 		smBinding, err := r.getBindingForRecovery(ctx, smClient, serviceBinding)
 		if err != nil {
 			log.Error(err, "failed to check binding recovery")
-			return r.markAsTransientError(ctx, smClientTypes.CREATE, err.Error(), serviceBinding)
+			return r.markAsTransientError(ctx, smClientTypes.CREATE, err, serviceBinding)
 		}
 		if smBinding != nil {
 			return r.recover(ctx, serviceBinding, smBinding)
@@ -279,7 +279,7 @@ func (r *ServiceBindingReconciler) delete(ctx context.Context, serviceBinding *s
 	if controllerutil.ContainsFinalizer(serviceBinding, api.FinalizerName) {
 		smClient, err := r.getSMClient(ctx, serviceBinding, btpAccessCredentialsSecret)
 		if err != nil {
-			return r.markAsTransientError(ctx, Unknown, err.Error(), serviceBinding)
+			return r.markAsTransientError(ctx, Unknown, err, serviceBinding)
 		}
 
 		if len(serviceBinding.Status.BindingID) == 0 {
@@ -342,7 +342,7 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, serviceBinding *ser
 
 	smClient, err := r.getSMClient(ctx, serviceBinding, btpAccessCredentialsSecret)
 	if err != nil {
-		return r.markAsTransientError(ctx, Unknown, err.Error(), serviceBinding)
+		return r.markAsTransientError(ctx, Unknown, err, serviceBinding)
 	}
 
 	status, statusErr := smClient.Status(serviceBinding.Status.OperationURL, nil)
@@ -363,7 +363,7 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, serviceBinding *ser
 	}
 
 	if status == nil {
-		return r.markAsTransientError(ctx, serviceBinding.Status.OperationType, fmt.Sprintf("failed to get last operation status of %s", serviceBinding.Name), serviceBinding)
+		return r.markAsTransientError(ctx, serviceBinding.Status.OperationType, fmt.Errorf("failed to get last operation status of %s", serviceBinding.Name), serviceBinding)
 	}
 	switch status.State {
 	case smClientTypes.INPROGRESS:
@@ -712,7 +712,7 @@ func (r *ServiceBindingReconciler) handleSecretError(ctx context.Context, op smC
 	if apierrors.ReasonForError(err) == metav1.StatusReasonUnknown {
 		return r.markAsNonTransientError(ctx, op, err.Error(), binding)
 	}
-	return r.markAsTransientError(ctx, op, err.Error(), binding)
+	return r.markAsTransientError(ctx, op, err, binding)
 }
 
 func (r *ServiceBindingReconciler) addInstanceInfo(ctx context.Context, binding *servicesv1.ServiceBinding, credentialsMap map[string][]byte) ([]SecretMetadataProperty, error) {
