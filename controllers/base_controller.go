@@ -96,9 +96,8 @@ func (r *BaseReconciler) getSMClient(ctx context.Context, object api.SAPBTPResou
 	}
 
 	if len(clientConfig.ClientID) == 0 || len(clientConfig.URL) == 0 || len(clientConfig.TokenURL) == 0 {
-		log.Info("credentials secret found but did not contain required data")
+		log.Info("credentials secret found but did not contain all the required data")
 		return nil, fmt.Errorf("invalid Service-Manager credentials, contact your cluster administrator")
-
 	}
 
 	if len(clientConfig.ClientSecret) == 0 {
@@ -107,8 +106,8 @@ func (r *BaseReconciler) getSMClient(ctx context.Context, object api.SAPBTPResou
 			return nil, err
 		}
 
-		if len(tlsSecret.Data) == 0 || len(tlsSecret.Data[v1.TLSCertKey]) == 0 || len(tlsSecret.Data[v1.TLSPrivateKeyKey]) == 0 {
-			log.Info("tls secret found but did not contain required data")
+		if tlsSecret == nil || len(tlsSecret.Data) == 0 || len(tlsSecret.Data[v1.TLSCertKey]) == 0 || len(tlsSecret.Data[v1.TLSPrivateKeyKey]) == 0 {
+			log.Info("clientsecret not found in SM credentials, and tls secret is invalid")
 			return nil, fmt.Errorf("invalid Service-Manager credentials, contact your cluster administrator")
 		}
 
