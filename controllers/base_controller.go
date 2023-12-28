@@ -86,36 +86,38 @@ func (r *BaseReconciler) getSMClient(ctx context.Context, object api.SAPBTPResou
 		return nil, err
 	}
 
-	secretData := secret.Data
-	cfg := &sm.ClientConfig{
-		ClientID:       string(secretData["clientid"]),
-		ClientSecret:   string(secretData["clientsecret"]),
-		URL:            string(secretData["sm_url"]),
-		TokenURL:       string(secretData["tokenurl"]),
-		TokenURLSuffix: string(secretData["tokenurlsuffix"]),
+	clientConfig := &sm.ClientConfig{
+		ClientID:       string(secret.Data["clientid"]),
+		ClientSecret:   string(secret.Data["clientsecret"]),
+		URL:            string(secret.Data["sm_url"]),
+		TokenURL:       string(secret.Data["tokenurl"]),
+		TokenURLSuffix: string(secret.Data["tokenurlsuffix"]),
 		SSLDisabled:    false,
 	}
 
-	if len(cfg.ClientSecret) == 0 {
-		tls, err := r.SecretResolver.GetSecretForResource(ctx, object.GetNamespace(), secrets.SAPBTPOperatorTLSSecretName, subaccountID)
+	if len(clientConfig.ClientID) == 0 || len(clientConfig.URL) == 0 || len(clientConfig.TokenURL) == 0 {
+		log.Info("credentials secret found but did not contain required data")
+		return nil, fmt.Errorf("invalid Service-Manager credentials, contact your cluster administrator")
+
+	}
+
+	if len(clientConfig.ClientSecret) == 0 {
+		tlsSecret, err := r.SecretResolver.GetSecretForResource(ctx, object.GetNamespace(), secrets.SAPBTPOperatorTLSSecretName, subaccountID)
 		if client.IgnoreNotFound(err) != nil {
 			return nil, err
 		}
 
-		if tls != nil {
-			cfg.TLSCertKey = string(tls.Data[v1.TLSCertKey])
-			cfg.TLSPrivateKey = string(tls.Data[v1.TLSPrivateKeyKey])
-			log.Info("found tls configuration", "client", cfg.ClientID)
+		if len(tlsSecret.Data) == 0 || len(tlsSecret.Data[v1.TLSCertKey]) == 0 || len(tlsSecret.Data[v1.TLSPrivateKeyKey]) == 0 {
+			log.Info("tls secret found but did not contain required data")
+			return nil, fmt.Errorf("invalid Service-Manager credentials, contact your cluster administrator")
 		}
+
+		log.Info("found tls configuration")
+		clientConfig.TLSCertKey = string(tlsSecret.Data[v1.TLSCertKey])
+		clientConfig.TLSPrivateKey = string(tlsSecret.Data[v1.TLSPrivateKeyKey])
 	}
 
-	if len(cfg.ClientID) == 0 ||
-		len(cfg.ClientSecret) == 0 ||
-		len(cfg.URL) == 0 ||
-		len(cfg.TokenURL) == 0 {
-		return nil, fmt.Errorf("invalid Service-Manager credentials, contact your cluster administrator")
-	}
-	cl, err := sm.NewClient(ctx, cfg, nil)
+	cl, err := sm.NewClient(ctx, clientConfig, nil)
 	return cl, err
 }
 
