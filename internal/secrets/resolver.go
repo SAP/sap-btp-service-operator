@@ -26,19 +26,21 @@ type SecretResolver struct {
 	Log                    logr.Logger
 }
 
-func (sr *SecretResolver) GetSecretForResource(ctx context.Context, namespace, name, btpAccessSecret string) (*v1.Secret, error) {
+func (sr *SecretResolver) GetSecretFromManagementNamespace(ctx context.Context, name string) (*v1.Secret, error) {
 	secretForResource := &v1.Secret{}
 
-	if len(btpAccessSecret) > 0 {
-		sr.Log.Info(fmt.Sprintf("Searching for secret name %s in namespace %s",
-			btpAccessSecret, sr.ManagementNamespace))
-		err := sr.Client.Get(ctx, types.NamespacedName{Name: btpAccessSecret, Namespace: sr.ManagementNamespace}, secretForResource)
-		if err != nil {
-			sr.Log.Error(err, fmt.Sprintf("Could not fetch secret named %s", btpAccessSecret))
-			return nil, err
-		}
-		return secretForResource, nil
+	sr.Log.Info(fmt.Sprintf("Searching for secret name %s in namespace %s",
+		name, sr.ManagementNamespace))
+	err := sr.Client.Get(ctx, types.NamespacedName{Name: name, Namespace: sr.ManagementNamespace}, secretForResource)
+	if err != nil {
+		sr.Log.Error(err, fmt.Sprintf("Could not fetch secret named %s", name))
+		return nil, err
 	}
+	return secretForResource, nil
+}
+
+func (sr *SecretResolver) GetSecretForResource(ctx context.Context, namespace, name string) (*v1.Secret, error) {
+	secretForResource := &v1.Secret{}
 
 	// search namespace secret
 	if sr.EnableNamespaceSecrets {

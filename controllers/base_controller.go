@@ -75,14 +75,19 @@ func GetLogger(ctx context.Context) logr.Logger {
 	return ctx.Value(LogKey{}).(logr.Logger)
 }
 
-func (r *BaseReconciler) getSMClient(ctx context.Context, object api.SAPBTPResource, subaccountID string) (sm.Client, error) {
+func (r *BaseReconciler) getSMClient(ctx context.Context, object api.SAPBTPResource, btpAccessSecretName string) (sm.Client, error) {
 	if r.SMClient != nil {
 		return r.SMClient(), nil
 	}
 	log := GetLogger(ctx)
 
-	secret, err := r.SecretResolver.GetSecretForResource(ctx, object.GetNamespace(), secrets.SAPBTPOperatorSecretName, subaccountID)
-	if err != nil {
+	var secret *v1.Secret
+	var err error
+	if len(btpAccessSecretName) > 0 {
+		if secret, err = r.SecretResolver.GetSecretFromManagementNamespace(ctx, btpAccessSecretName); err != nil {
+			return nil, err
+		}
+	} else if secret, err = r.SecretResolver.GetSecretForResource(ctx, object.GetNamespace(), secrets.SAPBTPOperatorSecretName); err != nil {
 		return nil, err
 	}
 
@@ -101,7 +106,11 @@ func (r *BaseReconciler) getSMClient(ctx context.Context, object api.SAPBTPResou
 	}
 
 	if len(clientConfig.ClientSecret) == 0 {
-		tlsSecret, err := r.SecretResolver.GetSecretForResource(ctx, object.GetNamespace(), secrets.SAPBTPOperatorTLSSecretName, subaccountID)
+		if len(btpAccessSecretName) > 0 {
+			log.Info("btpAccessSecret does not contain clientsecret")
+			return nil, fmt.Errorf("invalid Service-Manager credentials, contact your cluster administrator")
+		}
+		tlsSecret, err := r.SecretResolver.GetSecretForResource(ctx, object.GetNamespace(), secrets.SAPBTPOperatorTLSSecretName)
 		if client.IgnoreNotFound(err) != nil {
 			return nil, err
 		}
