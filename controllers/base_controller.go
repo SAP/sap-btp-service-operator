@@ -81,13 +81,12 @@ func (r *BaseReconciler) getSMClient(ctx context.Context, object api.SAPBTPResou
 	}
 	log := GetLogger(ctx)
 
-	var secret *v1.Secret
-	var err error
 	if len(btpAccessSecretName) > 0 {
-		if secret, err = r.SecretResolver.GetSecretFromManagementNamespace(ctx, btpAccessSecretName); err != nil {
-			return nil, err
-		}
-	} else if secret, err = r.SecretResolver.GetSecretForResource(ctx, object.GetNamespace(), secrets.SAPBTPOperatorSecretName); err != nil {
+		return r.getBTPAccessClient(ctx, btpAccessSecretName)
+	}
+
+	secret, err := r.SecretResolver.GetSecretForResource(ctx, object.GetNamespace(), secrets.SAPBTPOperatorSecretName)
+	if err != nil {
 		return nil, err
 	}
 
@@ -106,10 +105,6 @@ func (r *BaseReconciler) getSMClient(ctx context.Context, object api.SAPBTPResou
 	}
 
 	if len(clientConfig.ClientSecret) == 0 {
-		if len(btpAccessSecretName) > 0 {
-			log.Info("btpAccessSecret does not contain clientsecret")
-			return nil, fmt.Errorf("invalid Service-Manager credentials, contact your cluster administrator")
-		}
 		tlsSecret, err := r.SecretResolver.GetSecretForResource(ctx, object.GetNamespace(), secrets.SAPBTPOperatorTLSSecretName)
 		if client.IgnoreNotFound(err) != nil {
 			return nil, err
@@ -125,8 +120,33 @@ func (r *BaseReconciler) getSMClient(ctx context.Context, object api.SAPBTPResou
 		clientConfig.TLSPrivateKey = string(tlsSecret.Data[v1.TLSPrivateKeyKey])
 	}
 
-	cl, err := sm.NewClient(ctx, clientConfig, nil)
-	return cl, err
+	return sm.NewClient(ctx, clientConfig, nil)
+}
+
+func (r *BaseReconciler) getBTPAccessClient(ctx context.Context, secretName string) (sm.Client, error) {
+	log := GetLogger(ctx)
+	secret, err := r.SecretResolver.GetSecretFromManagementNamespace(ctx, secretName)
+	if err != nil {
+		return nil, err
+	}
+
+	clientConfig := &sm.ClientConfig{
+		ClientID:       string(secret.Data["clientid"]),
+		ClientSecret:   string(secret.Data["clientsecret"]),
+		URL:            string(secret.Data["sm_url"]),
+		TokenURL:       string(secret.Data["tokenurl"]),
+		TokenURLSuffix: string(secret.Data["tokenurlsuffix"]),
+		TLSPrivateKey:  string(secret.Data[v1.TLSCertKey]),
+		TLSCertKey:     string(secret.Data[v1.TLSPrivateKeyKey]),
+		SSLDisabled:    false,
+	}
+
+	if !clientConfig.IsValid() {
+		log.Info("btpAccess secret found but did not contain all the required data")
+		return nil, fmt.Errorf("invalid Service-Manager credentials, contact your cluster administrator")
+	}
+
+	return sm.NewClient(ctx, clientConfig, nil)
 }
 
 func (r *BaseReconciler) removeFinalizer(ctx context.Context, object api.SAPBTPResource, finalizerName string) error {
