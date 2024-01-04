@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -85,36 +86,37 @@ func (r *BaseReconciler) getSMClient(ctx context.Context, object api.SAPBTPResou
 		return nil, err
 	}
 
-	secretData := secret.Data
-	cfg := &sm.ClientConfig{
-		ClientID:       string(secretData["clientid"]),
-		ClientSecret:   string(secretData["clientsecret"]),
-		URL:            string(secretData["sm_url"]),
-		TokenURL:       string(secretData["tokenurl"]),
-		TokenURLSuffix: string(secretData["tokenurlsuffix"]),
+	clientConfig := &sm.ClientConfig{
+		ClientID:       string(secret.Data["clientid"]),
+		ClientSecret:   string(secret.Data["clientsecret"]),
+		URL:            string(secret.Data["sm_url"]),
+		TokenURL:       string(secret.Data["tokenurl"]),
+		TokenURLSuffix: string(secret.Data["tokenurlsuffix"]),
 		SSLDisabled:    false,
 	}
 
-	if len(cfg.ClientSecret) == 0 {
-		tls, err := r.SecretResolver.GetSecretForResource(ctx, object.GetNamespace(), secrets.SAPBTPOperatorTLSSecretName, subaccountID)
+	if len(clientConfig.ClientID) == 0 || len(clientConfig.URL) == 0 || len(clientConfig.TokenURL) == 0 {
+		log.Info("credentials secret found but did not contain all the required data")
+		return nil, fmt.Errorf("invalid Service-Manager credentials, contact your cluster administrator")
+	}
+
+	if len(clientConfig.ClientSecret) == 0 {
+		tlsSecret, err := r.SecretResolver.GetSecretForResource(ctx, object.GetNamespace(), secrets.SAPBTPOperatorTLSSecretName, subaccountID)
 		if client.IgnoreNotFound(err) != nil {
 			return nil, err
 		}
 
-		if tls != nil {
-			cfg.TLSCertKey = string(tls.Data[v1.TLSCertKey])
-			cfg.TLSPrivateKey = string(tls.Data[v1.TLSPrivateKeyKey])
-			log.Info("found tls configuration", "client", cfg.ClientID)
+		if tlsSecret == nil || len(tlsSecret.Data) == 0 || len(tlsSecret.Data[v1.TLSCertKey]) == 0 || len(tlsSecret.Data[v1.TLSPrivateKeyKey]) == 0 {
+			log.Info("clientsecret not found in SM credentials, and tls secret is invalid")
+			return nil, fmt.Errorf("invalid Service-Manager credentials, contact your cluster administrator")
 		}
+
+		log.Info("found tls configuration")
+		clientConfig.TLSCertKey = string(tlsSecret.Data[v1.TLSCertKey])
+		clientConfig.TLSPrivateKey = string(tlsSecret.Data[v1.TLSPrivateKeyKey])
 	}
 
-	if len(cfg.ClientID) == 0 ||
-		len(cfg.ClientSecret) == 0 ||
-		len(cfg.URL) == 0 ||
-		len(cfg.TokenURL) == 0 {
-		return nil, fmt.Errorf("invalid Service-Manager credentials, contact your cluster administrator")
-	}
-	cl, err := sm.NewClient(ctx, cfg, nil)
+	cl, err := sm.NewClient(ctx, clientConfig, nil)
 	return cl, err
 }
 
@@ -250,7 +252,6 @@ func setSuccessConditions(operationType smClientTypes.OperationCategory, object 
 
 	object.SetConditions(conditions)
 	object.SetReady(metav1.ConditionTrue)
-
 }
 
 func setCredRotationInProgressConditions(reason, message string, object api.SAPBTPResource) {
@@ -320,7 +321,7 @@ func isMarkedForDeletion(object metav1.ObjectMeta) bool {
 	return !object.DeletionTimestamp.IsZero()
 }
 
-func isTransientError(smError *sm.ServiceManagerError, log logr.Logger) bool {
+func (r *BaseReconciler) isTransientError(smError *sm.ServiceManagerError, log logr.Logger) bool {
 	statusCode := smError.GetStatusCode()
 	log.Info(fmt.Sprintf("SM returned error with status code %d", statusCode))
 	return isTransientStatusCode(statusCode) || isConcurrentOperationError(smError)
@@ -342,15 +343,16 @@ func isTransientStatusCode(StatusCode int) bool {
 
 func (r *BaseReconciler) handleError(ctx context.Context, operationType smClientTypes.OperationCategory, err error, resource api.SAPBTPResource) (ctrl.Result, error) {
 	log := GetLogger(ctx)
-	smError, ok := err.(*sm.ServiceManagerError)
+	var smError *sm.ServiceManagerError
+	ok := errors.As(err, &smError)
 	if !ok {
 		log.Info("unable to cast error to SM error, will be treated as non transient")
 		return r.markAsNonTransientError(ctx, operationType, err.Error(), resource)
 	}
-
-	if isTransient := isTransientError(smError, log); isTransient {
-		return r.markAsTransientError(ctx, operationType, smError.Error(), resource)
+	if r.isTransientError(smError, log) || shouldIgnoreNonTransient(log, resource, r.Config.IgnoreNonTransientTimeout) {
+		return r.markAsTransientError(ctx, operationType, smError, resource)
 	}
+
 	return r.markAsNonTransientError(ctx, operationType, smError.Error(), resource)
 }
 
@@ -371,15 +373,38 @@ func (r *BaseReconciler) markAsNonTransientError(ctx context.Context, operationT
 	return ctrl.Result{}, nil
 }
 
-func (r *BaseReconciler) markAsTransientError(ctx context.Context, operationType smClientTypes.OperationCategory, errMsg string, object api.SAPBTPResource) (ctrl.Result, error) {
+func (r *BaseReconciler) markAsTransientError(ctx context.Context, operationType smClientTypes.OperationCategory, err error, object api.SAPBTPResource) (ctrl.Result, error) {
 	log := GetLogger(ctx)
-	setInProgressConditions(ctx, operationType, errMsg, object)
-	log.Info(fmt.Sprintf("operation %s of %s encountered a transient error %s, retrying operation :)", operationType, object.GetControllerName(), errMsg))
-	if err := r.updateStatus(ctx, object); err != nil {
-		return ctrl.Result{}, err
+	//DO NOT REMOVE - 429 error is not reflected to the status
+	if smError, ok := err.(*sm.ServiceManagerError); !ok || smError.StatusCode != http.StatusTooManyRequests {
+		setInProgressConditions(ctx, operationType, err.Error(), object)
+		log.Info(fmt.Sprintf("operation %s of %s encountered a transient error %s, retrying operation :)", operationType, object.GetControllerName(), err.Error()))
+		if updateErr := r.updateStatus(ctx, object); updateErr != nil {
+			return ctrl.Result{}, updateErr
+		}
 	}
 
-	return ctrl.Result{}, fmt.Errorf(errMsg)
+	return ctrl.Result{}, err
+}
+
+func (r *BaseReconciler) removeAnnotation(ctx context.Context, object api.SAPBTPResource, keys ...string) error {
+	log := GetLogger(ctx)
+	annotations := object.GetAnnotations()
+	shouldUpdate := false
+	if annotations != nil {
+		for _, key := range keys {
+			if _, ok := annotations[key]; ok {
+				log.Info(fmt.Sprintf("deleting annotation with key %s", key))
+				delete(annotations, key)
+				shouldUpdate = true
+			}
+		}
+		if shouldUpdate {
+			object.SetAnnotations(annotations)
+			return r.Client.Update(ctx, object)
+		}
+	}
+	return nil
 }
 
 func isInProgress(object api.SAPBTPResource) bool {

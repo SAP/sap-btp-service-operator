@@ -11,6 +11,7 @@ import (
 
 var _ = Describe("Service Instance Type Test", func() {
 	var instance *ServiceInstance
+
 	BeforeEach(func() {
 		instance = getInstance()
 		conditions := instance.GetConditions()
@@ -120,5 +121,13 @@ var _ = Describe("Service Instance Type Test", func() {
 		status := ServiceInstanceStatus{InstanceID: "1234"}
 		instance.SetStatus(status)
 		Expect(instance.GetStatus()).To(Equal(status))
+	})
+
+	It("should update annotation", func() {
+		annotation := map[string]string{
+			api.IgnoreNonTransientErrorAnnotation: "true",
+		}
+		instance.SetAnnotations(annotation)
+		Expect(instance.GetAnnotations()).To(Equal(annotation))
 	})
 })
