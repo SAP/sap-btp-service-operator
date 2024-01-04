@@ -714,6 +714,27 @@ var _ = Describe("ServiceBinding controller", func() {
 					deleteAndValidate(createdBinding)
 				})
 			})
+
+			When("delete orphan binding with finalizer", func() {
+				BeforeEach(func() {
+					fakeClient.UnbindReturns("", nil)
+				})
+				It("should succeed", func() {
+					createdBinding, err := createBindingWithoutAssertions(ctx, bindingName+"-new", bindingTestNamespace, "non-exist-instance", "", "binding-external-name")
+					Expect(err).ToNot(HaveOccurred())
+					createdBinding.Finalizers = []string{api.FinalizerName}
+					Expect(k8sClient.Update(ctx, createdBinding))
+					Eventually(func() bool {
+						err := k8sClient.Get(ctx, getResourceNamespacedName(createdBinding), createdBinding)
+						if err != nil {
+							return false
+						}
+						cond := meta.FindStatusCondition(createdBinding.GetConditions(), api.ConditionSucceeded)
+						return cond != nil && cond.Reason == Blocked
+					}, timeout, interval).Should(BeTrue())
+					deleteAndValidate(createdBinding)
+				})
+			})
 		})
 
 		Context("Async", func() {
