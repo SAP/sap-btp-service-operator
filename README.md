@@ -509,9 +509,10 @@ data:
 
 ### 3. Centrally-Managed Namespace
 Define a secret named: `<namespace>-sap-btp-service-operator` in the Centrally Managed Namespace.
-Note: The centrally managed namespace is determined by the value specified in .Values.manager.management_namespace, 
-which can be provided during installation (See step 4 of the [Setup](#setup) section). 
-In the event that this value is not set, the system defaults to using the installation namespace.
+
+**Note:**
+The system's centrally-managed namespace is set by the value in .Values.manager.management_namespace. You can provide this value during installation (refer to step 4 in the [Setup](#setup) section). 
+If you don't specify this value, the system will use the installation namespace as the default.
 
 ```yaml
 apiVersion: v1
