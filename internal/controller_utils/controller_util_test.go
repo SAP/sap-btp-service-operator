@@ -1,8 +1,8 @@
-package controllers
+package controller_utils
 
 import (
 	"encoding/json"
-	"github.com/SAP/sap-btp-service-operator/api"
+	"github.com/SAP/sap-btp-service-operator/api/common"
 	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -20,7 +20,7 @@ var _ = Describe("Controller Util", func() {
 		})
 
 		It("should normalize correctly", func() {
-			res, metadata, err := normalizeCredentials(credentialsJSON)
+			res, metadata, err := NormalizeCredentials(credentialsJSON)
 			str := SecretMetadataProperty{
 				Name:   "keyStr",
 				Format: string(TEXT),
@@ -44,7 +44,7 @@ var _ = Describe("Controller Util", func() {
 
 	})
 
-	Context("shouldIgnoreNonTransient", func() {
+	Context("ShouldIgnoreNonTransient", func() {
 		var (
 			instance *v1.ServiceInstance
 			logger   = logf.Log.WithName("test-logger")
@@ -56,25 +56,25 @@ var _ = Describe("Controller Util", func() {
 
 		It("should return false if no ignore annotation", func() {
 			instance.SetAnnotations(nil)
-			Expect(shouldIgnoreNonTransient(logger, instance, time.Hour)).To(BeFalse())
+			Expect(ShouldIgnoreNonTransient(logger, instance, time.Hour)).To(BeFalse())
 		})
 
 		It("should return false if time exceeded", func() {
 			annotation := map[string]string{
-				api.IgnoreNonTransientErrorAnnotation:          "true",
-				api.IgnoreNonTransientErrorTimestampAnnotation: time.Now().Truncate(48 * time.Hour).Format(time.RFC3339),
+				common.IgnoreNonTransientErrorAnnotation:          "true",
+				common.IgnoreNonTransientErrorTimestampAnnotation: time.Now().Truncate(48 * time.Hour).Format(time.RFC3339),
 			}
 			instance.SetAnnotations(annotation)
-			Expect(shouldIgnoreNonTransient(logger, instance, time.Hour)).To(BeFalse())
+			Expect(ShouldIgnoreNonTransient(logger, instance, time.Hour)).To(BeFalse())
 		})
 
 		It("should return true if time not exceeded", func() {
 			annotation := map[string]string{
-				api.IgnoreNonTransientErrorAnnotation:          "true",
-				api.IgnoreNonTransientErrorTimestampAnnotation: time.Now().Format(time.RFC3339),
+				common.IgnoreNonTransientErrorAnnotation:          "true",
+				common.IgnoreNonTransientErrorTimestampAnnotation: time.Now().Format(time.RFC3339),
 			}
 			instance.SetAnnotations(annotation)
-			Expect(shouldIgnoreNonTransient(logger, instance, time.Hour)).To(BeTrue())
+			Expect(ShouldIgnoreNonTransient(logger, instance, time.Hour)).To(BeTrue())
 		})
 	})
 })

@@ -4,12 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/SAP/sap-btp-service-operator/api/common"
+	"github.com/SAP/sap-btp-service-operator/internal/controller_utils"
 	"k8s.io/utils/pointer"
 	"net/http"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"strings"
 
-	"github.com/SAP/sap-btp-service-operator/api"
 	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
 	"github.com/SAP/sap-btp-service-operator/client/sm/smfakes"
@@ -61,7 +62,7 @@ var _ = Describe("ServiceBinding controller", func() {
 			}
 
 			if wait {
-				return isResourceReady(createdBinding) || isFailed(createdBinding)
+				return isResourceReady(createdBinding) || controller_utils.IsFailed(createdBinding)
 			} else {
 				return len(createdBinding.Status.Conditions) > 0 && createdBinding.Status.Conditions[0].Message != "Pending"
 			}
@@ -78,7 +79,7 @@ var _ = Describe("ServiceBinding controller", func() {
 		if err != nil {
 			Expect(err.Error()).To(ContainSubstring(failureMessage))
 		} else {
-			waitForResourceCondition(ctx, binding, api.ConditionFailed, metav1.ConditionTrue, "", failureMessage)
+			waitForResourceCondition(ctx, binding, common.ConditionFailed, metav1.ConditionTrue, "", failureMessage)
 		}
 	}
 
@@ -87,7 +88,7 @@ var _ = Describe("ServiceBinding controller", func() {
 		if err != nil {
 			Expect(err.Error()).To(ContainSubstring(failureMessage))
 		} else {
-			waitForResourceCondition(ctx, binding, api.ConditionSucceeded, metav1.ConditionFalse, "", failureMessage)
+			waitForResourceCondition(ctx, binding, common.ConditionSucceeded, metav1.ConditionFalse, "", failureMessage)
 		}
 		return binding
 	}
@@ -139,24 +140,24 @@ var _ = Describe("ServiceBinding controller", func() {
 		Expect(bindingSecret.Data).To(HaveKey("instance_guid"))
 	}
 
-	validateSecretMetadata := func(bindingSecret *corev1.Secret, credentialProperties []SecretMetadataProperty) {
-		metadata := make(map[string][]SecretMetadataProperty)
+	validateSecretMetadata := func(bindingSecret *corev1.Secret, credentialProperties []controller_utils.SecretMetadataProperty) {
+		metadata := make(map[string][]controller_utils.SecretMetadataProperty)
 		Expect(json.Unmarshal(bindingSecret.Data[".metadata"], &metadata)).To(Succeed())
 		if credentialProperties != nil {
 			Expect(metadata["credentialProperties"]).To(ContainElements(credentialProperties))
 		}
-		Expect(metadata["metaDataProperties"]).To(ContainElement(SecretMetadataProperty{Name: "instance_name", Format: string(TEXT)}))
-		Expect(metadata["metaDataProperties"]).To(ContainElement(SecretMetadataProperty{Name: "instance_guid", Format: string(TEXT)}))
-		Expect(metadata["metaDataProperties"]).To(ContainElement(SecretMetadataProperty{Name: "plan", Format: string(TEXT)}))
-		Expect(metadata["metaDataProperties"]).To(ContainElement(SecretMetadataProperty{Name: "label", Format: string(TEXT)}))
-		Expect(metadata["metaDataProperties"]).To(ContainElement(SecretMetadataProperty{Name: "type", Format: string(TEXT)}))
-		Expect(metadata["metaDataProperties"]).To(ContainElement(SecretMetadataProperty{Name: "tags", Format: string(JSON)}))
+		Expect(metadata["metaDataProperties"]).To(ContainElement(controller_utils.SecretMetadataProperty{Name: "instance_name", Format: string(controller_utils.TEXT)}))
+		Expect(metadata["metaDataProperties"]).To(ContainElement(controller_utils.SecretMetadataProperty{Name: "instance_guid", Format: string(controller_utils.TEXT)}))
+		Expect(metadata["metaDataProperties"]).To(ContainElement(controller_utils.SecretMetadataProperty{Name: "plan", Format: string(controller_utils.TEXT)}))
+		Expect(metadata["metaDataProperties"]).To(ContainElement(controller_utils.SecretMetadataProperty{Name: "label", Format: string(controller_utils.TEXT)}))
+		Expect(metadata["metaDataProperties"]).To(ContainElement(controller_utils.SecretMetadataProperty{Name: "type", Format: string(controller_utils.TEXT)}))
+		Expect(metadata["metaDataProperties"]).To(ContainElement(controller_utils.SecretMetadataProperty{Name: "tags", Format: string(controller_utils.JSON)}))
 	}
 
 	BeforeEach(func() {
 		ctx = context.Background()
 		log := ctrl.Log.WithName("bindingTest")
-		ctx = context.WithValue(ctx, LogKey{}, log)
+		ctx = context.WithValue(ctx, controller_utils.LogKey{}, log)
 		testUUID = uuid.New().String()
 		instanceName = "test-instance-" + testUUID
 		bindingName = "test-binding-" + testUUID
@@ -232,7 +233,7 @@ var _ = Describe("ServiceBinding controller", func() {
 						binding.Spec.ServiceInstanceName = instanceName
 						binding.Spec.SecretName = secretName
 						Expect(k8sClient.Create(ctx, binding)).To(Succeed())
-						waitForResourceCondition(ctx, binding, api.ConditionSucceeded, metav1.ConditionFalse, Blocked, fmt.Sprintf(secretNameTakenErrorFormat, secretName))
+						waitForResourceCondition(ctx, binding, common.ConditionSucceeded, metav1.ConditionFalse, common.Blocked, fmt.Sprintf(secretNameTakenErrorFormat, secretName))
 					})
 				})
 
@@ -255,7 +256,7 @@ var _ = Describe("ServiceBinding controller", func() {
 						binding.Spec.SecretName = secretName
 						Expect(k8sClient.Create(ctx, binding)).To(Succeed())
 
-						waitForResourceCondition(ctx, binding, api.ConditionSucceeded, metav1.ConditionFalse, Blocked, fmt.Sprintf(secretAlreadyOwnedErrorFormat, secretName, owningBindingName))
+						waitForResourceCondition(ctx, binding, common.ConditionSucceeded, metav1.ConditionFalse, common.Blocked, fmt.Sprintf(secretAlreadyOwnedErrorFormat, secretName, owningBindingName))
 
 						bindingLookupKey := getResourceNamespacedName(binding)
 						binding.Spec.SecretName = secretName + "-new"
@@ -281,14 +282,14 @@ var _ = Describe("ServiceBinding controller", func() {
 				validateSecretData(bindingSecret, "secret_key", "secret_value")
 				validateSecretData(bindingSecret, "escaped", `{"escaped_key":"escaped_val"}`)
 				validateInstanceInfo(bindingSecret, instanceExternalName)
-				credentialProperties := []SecretMetadataProperty{
+				credentialProperties := []controller_utils.SecretMetadataProperty{
 					{
 						Name:   "secret_key",
-						Format: string(TEXT),
+						Format: string(controller_utils.TEXT),
 					},
 					{
 						Name:   "escaped",
-						Format: string(TEXT),
+						Format: string(controller_utils.TEXT),
 					},
 				}
 				validateSecretMetadata(bindingSecret, credentialProperties)
@@ -307,10 +308,10 @@ var _ = Describe("ServiceBinding controller", func() {
 				bindingSecret := getSecret(ctx, binding.Spec.SecretName, bindingTestNamespace, true)
 				validateSecretData(bindingSecret, secretKey, `{"secret_key": "secret_value", "escaped": "{\"escaped_key\":\"escaped_val\"}"}`)
 				validateInstanceInfo(bindingSecret, instanceExternalName)
-				credentialProperties := []SecretMetadataProperty{
+				credentialProperties := []controller_utils.SecretMetadataProperty{
 					{
 						Name:      "mycredentials",
-						Format:    string(JSON),
+						Format:    string(controller_utils.JSON),
 						Container: true,
 					},
 				}
@@ -435,7 +436,7 @@ var _ = Describe("ServiceBinding controller", func() {
 							false,
 						)
 
-						cond := meta.FindStatusCondition(createdBinding.GetConditions(), api.ConditionSucceeded)
+						cond := meta.FindStatusCondition(createdBinding.GetConditions(), common.ConditionSucceeded)
 						Expect(cond).To(Not(BeNil()))
 						Expect(cond.Message).To(ContainSubstring(errorMessage))
 						Expect(cond.Status).To(Equal(metav1.ConditionFalse))
@@ -466,7 +467,7 @@ var _ = Describe("ServiceBinding controller", func() {
 
 				It("creation will fail with appropriate message", func() {
 					createdBinding, _ = createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "")
-					waitForResourceCondition(ctx, createdBinding, api.ConditionFailed, metav1.ConditionTrue, "CreateFailed", "failed to create secret")
+					waitForResourceCondition(ctx, createdBinding, common.ConditionFailed, metav1.ConditionTrue, "CreateFailed", "failed to create secret")
 				})
 			})
 		})
@@ -505,7 +506,7 @@ var _ = Describe("ServiceBinding controller", func() {
 				It("should eventually succeed", func() {
 					binding, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "")
 					Expect(err).ToNot(HaveOccurred())
-					waitForResourceCondition(ctx, binding, api.ConditionFailed, metav1.ConditionTrue, "", "no polling for you")
+					waitForResourceCondition(ctx, binding, common.ConditionFailed, metav1.ConditionTrue, "", "no polling for you")
 					fakeClient.ListBindingsReturns(&smClientTypes.ServiceBindings{
 						ServiceBindings: []smClientTypes.ServiceBinding{
 							{
@@ -528,7 +529,7 @@ var _ = Describe("ServiceBinding controller", func() {
 		Context("useMetaName annotation is provided", func() {
 			It("should put in the secret.instance_name the instance meta.name", func() {
 				createdInstance.Annotations = map[string]string{
-					api.UseInstanceMetadataNameInSecret: "true",
+					common.UseInstanceMetadataNameInSecret: "true",
 				}
 				updateInstance(ctx, createdInstance)
 				createdBinding = createBinding(ctx, bindingName, bindingTestNamespace, instanceName, "", "")
@@ -556,10 +557,10 @@ var _ = Describe("ServiceBinding controller", func() {
 
 		When("referenced service instance is failed", func() {
 			It("should retry and succeed once the instance is ready", func() {
-				setFailureConditions(smClientTypes.CREATE, "Failed to create instance (test)", createdInstance)
+				controller_utils.SetFailureConditions(smClientTypes.CREATE, "Failed to create instance (test)", createdInstance)
 				updateInstanceStatus(ctx, createdInstance)
 				binding := createBindingWithBlockedError(ctx, bindingName, bindingTestNamespace, instanceName, "binding-external-name", "is not usable")
-				setSuccessConditions(smClientTypes.CREATE, createdInstance)
+				controller_utils.SetSuccessConditions(smClientTypes.CREATE, createdInstance)
 				updateInstanceStatus(ctx, createdInstance)
 				waitForResourceToBeReady(ctx, binding)
 			})
@@ -568,16 +569,16 @@ var _ = Describe("ServiceBinding controller", func() {
 		When("referenced service instance is not ready", func() {
 			It("should retry and succeed once the instance is ready", func() {
 				fakeClient.StatusReturns(&smClientTypes.Operation{ResourceID: fakeInstanceID, State: smClientTypes.INPROGRESS}, nil)
-				setInProgressConditions(ctx, smClientTypes.CREATE, "", createdInstance)
+				controller_utils.SetInProgressConditions(ctx, smClientTypes.CREATE, "", createdInstance)
 				createdInstance.Status.OperationURL = "/1234"
 				createdInstance.Status.OperationType = smClientTypes.CREATE
 				updateInstanceStatus(ctx, createdInstance)
 
 				createdBinding, err := createBindingWithoutAssertionsAndWait(ctx, bindingName, bindingTestNamespace, instanceName, "", "binding-external-name", false)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(isInProgress(createdBinding)).To(BeTrue())
+				Expect(controller_utils.IsInProgress(createdBinding)).To(BeTrue())
 
-				setSuccessConditions(smClientTypes.CREATE, createdInstance)
+				controller_utils.SetSuccessConditions(smClientTypes.CREATE, createdInstance)
 				createdInstance.Status.OperationType = ""
 				createdInstance.Status.OperationURL = ""
 				updateInstanceStatus(ctx, createdInstance)
@@ -696,7 +697,7 @@ var _ = Describe("ServiceBinding controller", func() {
 						if err != nil {
 							return false
 						}
-						failedCond := meta.FindStatusCondition(createdBinding.GetConditions(), api.ConditionFailed)
+						failedCond := meta.FindStatusCondition(createdBinding.GetConditions(), common.ConditionFailed)
 						return failedCond != nil && strings.Contains(failedCond.Message, errorMessage)
 					}, timeout, interval).Should(BeTrue())
 					Expect(len(createdBinding.Finalizers)).To(Equal(1))
@@ -722,15 +723,15 @@ var _ = Describe("ServiceBinding controller", func() {
 				It("should succeed", func() {
 					createdBinding, err := createBindingWithoutAssertions(ctx, bindingName+"-new", bindingTestNamespace, "non-exist-instance", "", "binding-external-name")
 					Expect(err).ToNot(HaveOccurred())
-					createdBinding.Finalizers = []string{api.FinalizerName}
+					createdBinding.Finalizers = []string{common.FinalizerName}
 					Expect(k8sClient.Update(ctx, createdBinding))
 					Eventually(func() bool {
 						err := k8sClient.Get(ctx, getResourceNamespacedName(createdBinding), createdBinding)
 						if err != nil {
 							return false
 						}
-						cond := meta.FindStatusCondition(createdBinding.GetConditions(), api.ConditionSucceeded)
-						return cond != nil && cond.Reason == Blocked
+						cond := meta.FindStatusCondition(createdBinding.GetConditions(), common.ConditionSucceeded)
+						return cond != nil && cond.Reason == common.Blocked
 					}, timeout, interval).Should(BeTrue())
 					deleteAndValidate(createdBinding)
 				})
@@ -770,7 +771,7 @@ var _ = Describe("ServiceBinding controller", func() {
 						if err != nil {
 							return false
 						}
-						failedCond := meta.FindStatusCondition(createdBinding.GetConditions(), api.ConditionFailed)
+						failedCond := meta.FindStatusCondition(createdBinding.GetConditions(), common.ConditionFailed)
 						return failedCond != nil && strings.Contains(failedCond.Message, errorMessage)
 					}, timeout, interval).Should(BeTrue())
 					fakeClient.UnbindReturns("", nil)
@@ -792,7 +793,7 @@ var _ = Describe("ServiceBinding controller", func() {
 						if err != nil {
 							return false
 						}
-						failedCond := meta.FindStatusCondition(createdBinding.GetConditions(), api.ConditionFailed)
+						failedCond := meta.FindStatusCondition(createdBinding.GetConditions(), common.ConditionFailed)
 						return failedCond != nil && strings.Contains(failedCond.Message, "no polling for you")
 					}, timeout, interval).Should(BeTrue())
 					fakeClient.UnbindReturns("", nil)
@@ -850,13 +851,13 @@ var _ = Describe("ServiceBinding controller", func() {
 						Expect(smCallArgs.FieldQuery[1]).To(ContainSubstring("context/clusterid"))
 						Expect(smCallArgs.FieldQuery[2]).To(ContainSubstring("context/namespace"))
 
-						waitForResourceCondition(ctx, createdBinding, api.ConditionSucceeded, testCase.expectedConditionSucceededStatus, getConditionReason(testCase.lastOpType, testCase.lastOpState), "")
+						waitForResourceCondition(ctx, createdBinding, common.ConditionSucceeded, testCase.expectedConditionSucceededStatus, controller_utils.GetConditionReason(testCase.lastOpType, testCase.lastOpState), "")
 
 						switch testCase.lastOpState {
 						case smClientTypes.FAILED:
-							Expect(isFailed(createdBinding))
+							Expect(controller_utils.IsFailed(createdBinding))
 						case smClientTypes.INPROGRESS:
-							Expect(isInProgress(createdBinding))
+							Expect(controller_utils.IsInProgress(createdBinding))
 						case smClientTypes.SUCCEEDED:
 							Expect(isResourceReady(createdBinding))
 						}
@@ -955,7 +956,7 @@ var _ = Describe("ServiceBinding controller", func() {
 
 			bindingList := &v1.ServiceBindingList{}
 			Eventually(func() bool {
-				Expect(k8sClient.List(ctx, bindingList, client.MatchingLabels{api.StaleBindingIDLabel: myBinding.Status.BindingID}, client.InNamespace(bindingTestNamespace))).To(Succeed())
+				Expect(k8sClient.List(ctx, bindingList, client.MatchingLabels{common.StaleBindingIDLabel: myBinding.Status.BindingID}, client.InNamespace(bindingTestNamespace))).To(Succeed())
 				return len(bindingList.Items) > 0
 			}, timeout, interval).Should(BeTrue())
 
@@ -975,7 +976,7 @@ var _ = Describe("ServiceBinding controller", func() {
 				RotatedBindingTTL: "1h",
 			}
 			createdBinding.Annotations = map[string]string{
-				api.ForceRotateAnnotation: "true",
+				common.ForceRotateAnnotation: "true",
 			}
 
 			updateBinding(ctx, defaultLookupKey, createdBinding)
@@ -985,7 +986,7 @@ var _ = Describe("ServiceBinding controller", func() {
 				return err == nil && myBinding.Status.LastCredentialsRotationTime != nil
 			}, timeout, interval).Should(BeTrue())
 
-			_, ok := myBinding.Annotations[api.ForceRotateAnnotation]
+			_, ok := myBinding.Annotations[common.ForceRotateAnnotation]
 			Expect(ok).To(BeFalse())
 		})
 
@@ -994,8 +995,8 @@ var _ = Describe("ServiceBinding controller", func() {
 				Expect(k8sClient.Get(ctx, types.NamespacedName{Name: createdBinding.Name, Namespace: bindingTestNamespace}, createdBinding)).To(Succeed())
 				staleBinding := generateBasicStaleBinding(createdBinding)
 				staleBinding.Labels = map[string]string{
-					api.StaleBindingIDLabel:         createdBinding.Status.BindingID,
-					api.StaleBindingRotationOfLabel: createdBinding.Name,
+					common.StaleBindingIDLabel:         createdBinding.Status.BindingID,
+					common.StaleBindingRotationOfLabel: createdBinding.Name,
 				}
 				staleBinding.Spec.CredRotationPolicy = &v1.CredentialsRotationPolicy{
 					Enabled:           false,
@@ -1013,15 +1014,15 @@ var _ = Describe("ServiceBinding controller", func() {
 				failedBinding = newBindingObject("failedbinding", bindingTestNamespace)
 				failedBinding.Spec.ServiceInstanceName = "notexistinstance"
 				Expect(k8sClient.Create(ctx, failedBinding)).To(Succeed())
-				waitForResourceCondition(ctx, failedBinding, api.ConditionSucceeded, metav1.ConditionFalse, Blocked, "")
+				waitForResourceCondition(ctx, failedBinding, common.ConditionSucceeded, metav1.ConditionFalse, common.Blocked, "")
 			})
 
 			It("should not delete old binding when stale", func() {
 				Expect(k8sClient.Get(ctx, types.NamespacedName{Name: createdBinding.Name, Namespace: bindingTestNamespace}, createdBinding)).To(Succeed())
 				staleBinding := generateBasicStaleBinding(createdBinding)
 				staleBinding.Labels = map[string]string{
-					api.StaleBindingIDLabel:         "1234",
-					api.StaleBindingRotationOfLabel: failedBinding.Name,
+					common.StaleBindingIDLabel:         "1234",
+					common.StaleBindingRotationOfLabel: failedBinding.Name,
 				}
 				staleBinding.Spec.CredRotationPolicy = &v1.CredentialsRotationPolicy{
 					Enabled:           false,
@@ -1029,7 +1030,7 @@ var _ = Describe("ServiceBinding controller", func() {
 					RotationFrequency: "0ns",
 				}
 				Expect(k8sClient.Create(ctx, staleBinding)).To(Succeed())
-				waitForResourceCondition(ctx, staleBinding, api.ConditionPendingTermination, metav1.ConditionTrue, api.ConditionPendingTermination, "")
+				waitForResourceCondition(ctx, staleBinding, common.ConditionPendingTermination, metav1.ConditionTrue, common.ConditionPendingTermination, "")
 			})
 		})
 
@@ -1038,7 +1039,7 @@ var _ = Describe("ServiceBinding controller", func() {
 				Expect(k8sClient.Get(ctx, types.NamespacedName{Name: createdBinding.Name, Namespace: bindingTestNamespace}, createdBinding)).To(Succeed())
 				staleBinding := generateBasicStaleBinding(createdBinding)
 				staleBinding.Labels = map[string]string{
-					api.StaleBindingIDLabel: createdBinding.Status.BindingID,
+					common.StaleBindingIDLabel: createdBinding.Status.BindingID,
 				}
 				staleBinding.Spec.CredRotationPolicy = &v1.CredentialsRotationPolicy{
 					Enabled:           false,
@@ -1147,7 +1148,7 @@ var _ = Describe("ServiceBinding controller", func() {
 
 				bindingList := &v1.ServiceBindingList{}
 				Eventually(func() bool {
-					Expect(k8sClient.List(ctx, bindingList, client.MatchingLabels{api.StaleBindingIDLabel: myBinding.Status.BindingID}, client.InNamespace(testNamespace))).To(Succeed())
+					Expect(k8sClient.List(ctx, bindingList, client.MatchingLabels{common.StaleBindingIDLabel: myBinding.Status.BindingID}, client.InNamespace(testNamespace))).To(Succeed())
 					return len(bindingList.Items) > 0
 				}, timeout, interval).Should(BeTrue())
 				oldBinding := bindingList.Items[0]

@@ -4,11 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/SAP/sap-btp-service-operator/api/common"
 	"net/http"
 	"reflect"
 	"time"
-
-	"github.com/SAP/sap-btp-service-operator/api"
 
 	v1admission "k8s.io/api/admission/v1"
 	v1 "k8s.io/api/authentication/v1"
@@ -42,11 +41,11 @@ func (s *ServiceInstanceDefaulter) Handle(_ context.Context, req admission.Reque
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
-	if len(instance.Annotations) > 0 && len(instance.Annotations[api.IgnoreNonTransientErrorAnnotation]) > 0 {
-		if _, exist := instance.Annotations[api.IgnoreNonTransientErrorTimestampAnnotation]; !exist {
+	if len(instance.Annotations) > 0 && len(instance.Annotations[common.IgnoreNonTransientErrorAnnotation]) > 0 {
+		if _, exist := instance.Annotations[common.IgnoreNonTransientErrorTimestampAnnotation]; !exist {
 			annotationValue := time.Now().Format(time.RFC3339)
-			instancelog.Info(fmt.Sprintf("%s annotation exists, adding %s annotation with value %s", api.IgnoreNonTransientErrorAnnotation, api.IgnoreNonTransientErrorTimestampAnnotation, annotationValue))
-			instance.Annotations[api.IgnoreNonTransientErrorTimestampAnnotation] = annotationValue
+			instancelog.Info(fmt.Sprintf("%s annotation exists, adding %s annotation with value %s", common.IgnoreNonTransientErrorAnnotation, common.IgnoreNonTransientErrorTimestampAnnotation, annotationValue))
+			instance.Annotations[common.IgnoreNonTransientErrorTimestampAnnotation] = annotationValue
 		}
 	}
 

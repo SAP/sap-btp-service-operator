@@ -1,4 +1,4 @@
-package controllers
+package controller_utils
 
 import (
 	"context"
@@ -22,7 +22,7 @@ import (
 // secret values.
 // The second return value is parameters marshalled to byt array
 // The third return value is any error that caused the function to fail.
-func buildParameters(kubeClient client.Client, namespace string, parametersFrom []servicesv1.ParametersFromSource, parameters *runtime.RawExtension) (map[string]interface{}, []byte, error) {
+func BuildParameters(kubeClient client.Client, namespace string, parametersFrom []servicesv1.ParametersFromSource, parameters *runtime.RawExtension) (map[string]interface{}, []byte, error) {
 	params := make(map[string]interface{})
 	if len(parametersFrom) > 0 {
 		for _, p := range parametersFrom {

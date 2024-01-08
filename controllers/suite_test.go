@@ -21,6 +21,8 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"github.com/SAP/sap-btp-service-operator/api/common"
+	"github.com/SAP/sap-btp-service-operator/internal/secrets"
 	"net"
 	"net/http"
 	"path/filepath"
@@ -33,7 +35,6 @@ import (
 	ginkgo_config "github.com/onsi/ginkgo/config"
 	. "github.com/onsi/gomega"
 
-	"github.com/SAP/sap-btp-service-operator/api"
 	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	"github.com/SAP/sap-btp-service-operator/api/v1/webhooks"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
@@ -143,26 +144,26 @@ var _ = BeforeSuite(func(done Done) {
 
 	By("registering controllers")
 	err = (&ServiceInstanceReconciler{
-		BaseReconciler: &BaseReconciler{
-			Client:   k8sManager.GetClient(),
-			Scheme:   k8sManager.GetScheme(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ServiceInstance"),
-			SMClient: func() sm.Client { return fakeClient },
-			Config:   testConfig,
-			Recorder: k8sManager.GetEventRecorderFor("ServiceInstance"),
+		Client: k8sManager.GetClient(),
+		Scheme: k8sManager.GetScheme(),
+		Log:    ctrl.Log.WithName("controllers").WithName("ServiceInstance"),
+		GetSMClientFunc: func(_ context.Context, _ *secrets.SecretResolver, _ common.SAPBTPResource, _ string) (sm.Client, error) {
+			return fakeClient, nil
 		},
+		Config:   testConfig,
+		Recorder: k8sManager.GetEventRecorderFor("ServiceInstance"),
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	err = (&ServiceBindingReconciler{
-		BaseReconciler: &BaseReconciler{
-			Client:   k8sManager.GetClient(),
-			Scheme:   k8sManager.GetScheme(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ServiceBinding"),
-			SMClient: func() sm.Client { return fakeClient },
-			Config:   testConfig,
-			Recorder: k8sManager.GetEventRecorderFor("ServiceBinding"),
+		Client: k8sManager.GetClient(),
+		Scheme: k8sManager.GetScheme(),
+		Log:    ctrl.Log.WithName("controllers").WithName("ServiceBinding"),
+		GetSMClientFunc: func(_ context.Context, _ *secrets.SecretResolver, _ common.SAPBTPResource, _ string) (sm.Client, error) {
+			return fakeClient, nil
 		},
+		Config:   testConfig,
+		Recorder: k8sManager.GetEventRecorderFor("ServiceBinding"),
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
@@ -214,16 +215,16 @@ var _ = AfterSuite(func() {
 	printSection("Finished AfterSuite")
 })
 
-func isResourceReady(resource api.SAPBTPResource) bool {
+func isResourceReady(resource common.SAPBTPResource) bool {
 	return resource.GetObservedGeneration() == resource.GetGeneration() &&
-		meta.IsStatusConditionPresentAndEqual(resource.GetConditions(), api.ConditionReady, metav1.ConditionTrue)
+		meta.IsStatusConditionPresentAndEqual(resource.GetConditions(), common.ConditionReady, metav1.ConditionTrue)
 }
 
-func waitForResourceToBeReady(ctx context.Context, resource api.SAPBTPResource) {
-	waitForResourceCondition(ctx, resource, api.ConditionReady, metav1.ConditionTrue, "", "")
+func waitForResourceToBeReady(ctx context.Context, resource common.SAPBTPResource) {
+	waitForResourceCondition(ctx, resource, common.ConditionReady, metav1.ConditionTrue, "", "")
 }
 
-func waitForResourceCondition(ctx context.Context, resource api.SAPBTPResource, conditionType string, status metav1.ConditionStatus, reason, message string) {
+func waitForResourceCondition(ctx context.Context, resource common.SAPBTPResource, conditionType string, status metav1.ConditionStatus, reason, message string) {
 	key := getResourceNamespacedName(resource)
 	Eventually(func() bool {
 		if err := k8sClient.Get(ctx, key, resource); err != nil {
@@ -259,7 +260,7 @@ func waitForResourceCondition(ctx context.Context, resource api.SAPBTPResource, 
 			resource),
 	)
 }
-func waitForResourceAnnotationRemove(ctx context.Context, resource api.SAPBTPResource, annotationsKey ...string) {
+func waitForResourceAnnotationRemove(ctx context.Context, resource common.SAPBTPResource, annotationsKey ...string) {
 	key := getResourceNamespacedName(resource)
 	Eventually(func() bool {
 		if err := k8sClient.Get(ctx, key, resource); err != nil {
@@ -347,7 +348,7 @@ func getNonTransientBrokerError(errMessage string) error {
 	return &sm.ServiceManagerError{
 		StatusCode:  http.StatusBadRequest,
 		Description: "smErrMessage",
-		BrokerError: &api.HTTPStatusCodeError{
+		BrokerError: &common.HTTPStatusCodeError{
 			StatusCode:   400,
 			ErrorMessage: &errMessage,
 		}}
@@ -357,7 +358,7 @@ func getTransientBrokerError(errorMessage string) error {
 	return &sm.ServiceManagerError{
 		StatusCode:  http.StatusBadGateway,
 		Description: "smErrMessage",
-		BrokerError: &api.HTTPStatusCodeError{
+		BrokerError: &common.HTTPStatusCodeError{
 			StatusCode:   http.StatusTooManyRequests,
 			ErrorMessage: &errorMessage,
 		},

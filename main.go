@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	"github.com/SAP/sap-btp-service-operator/internal/controller_utils"
 	"os"
 
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -106,27 +107,25 @@ func main() {
 	}
 
 	if err = (&controllers.ServiceInstanceReconciler{
-		BaseReconciler: &controllers.BaseReconciler{
-			Client:         mgr.GetClient(),
-			Log:            ctrl.Log.WithName("controllers").WithName("ServiceInstance"),
-			Scheme:         mgr.GetScheme(),
-			Config:         config.Get(),
-			SecretResolver: secretResolver,
-			Recorder:       mgr.GetEventRecorderFor("ServiceInstance"),
-		},
+		Client:          mgr.GetClient(),
+		Log:             ctrl.Log.WithName("controllers").WithName("ServiceInstance"),
+		Scheme:          mgr.GetScheme(),
+		Config:          config.Get(),
+		SecretResolver:  secretResolver,
+		Recorder:        mgr.GetEventRecorderFor("ServiceInstance"),
+		GetSMClientFunc: controller_utils.GetSMClient,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ServiceInstance")
 		os.Exit(1)
 	}
 	if err = (&controllers.ServiceBindingReconciler{
-		BaseReconciler: &controllers.BaseReconciler{
-			Client:         mgr.GetClient(),
-			Log:            ctrl.Log.WithName("controllers").WithName("ServiceBinding"),
-			Scheme:         mgr.GetScheme(),
-			Config:         config.Get(),
-			SecretResolver: secretResolver,
-			Recorder:       mgr.GetEventRecorderFor("ServiceBinding"),
-		},
+		Client:          mgr.GetClient(),
+		Log:             ctrl.Log.WithName("controllers").WithName("ServiceBinding"),
+		Scheme:          mgr.GetScheme(),
+		Config:          config.Get(),
+		SecretResolver:  secretResolver,
+		Recorder:        mgr.GetEventRecorderFor("ServiceBinding"),
+		GetSMClientFunc: controller_utils.GetSMClient,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ServiceBinding")
 		os.Exit(1)

@@ -22,8 +22,8 @@ type Config struct {
 	AllowedNamespaces         []string      `envconfig:"allowed_namespaces"`
 	EnableNamespaceSecrets    bool          `envconfig:"enable_namespace_secrets"`
 	ClusterID                 string        `envconfig:"cluster_id"`
-	RetryBaseDelay            time.Duration `envconfig:"retry_base_delay"`
-	RetryMaxDelay             time.Duration `envconfig:"retry_max_delay"`
+	RetryBaseDelay            time.Duration
+	RetryMaxDelay             time.Duration
 	IgnoreNonTransientTimeout time.Duration
 }
 

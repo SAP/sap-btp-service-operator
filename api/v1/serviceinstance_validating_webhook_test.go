@@ -2,7 +2,7 @@ package v1
 
 import (
 	"fmt"
-	"github.com/SAP/sap-btp-service-operator/api"
+	"github.com/SAP/sap-btp-service-operator/api/common"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"time"
@@ -29,8 +29,8 @@ var _ = Describe("Service Instance Webhook Test", func() {
 		When("service instance IgnoreNonTransientErrorTimestampAnnotation annotation is not set with not a date", func() {
 			It("should return error from webhook", func() {
 				instance.Annotations = map[string]string{
-					api.IgnoreNonTransientErrorAnnotation:          "true",
-					api.IgnoreNonTransientErrorTimestampAnnotation: "true",
+					common.IgnoreNonTransientErrorAnnotation:          "true",
+					common.IgnoreNonTransientErrorTimestampAnnotation: "true",
 				}
 				_, err := instance.ValidateUpdate(instance)
 				Expect(err).To(HaveOccurred())
@@ -40,8 +40,8 @@ var _ = Describe("Service Instance Webhook Test", func() {
 		When("service instance IgnoreNonTransientErrorTimestampAnnotation annotation is not set with future date", func() {
 			It("should return error from webhook", func() {
 				instance.Annotations = map[string]string{
-					api.IgnoreNonTransientErrorAnnotation:          "true",
-					api.IgnoreNonTransientErrorTimestampAnnotation: time.Now().Add(48 * time.Hour).Format(time.RFC3339),
+					common.IgnoreNonTransientErrorAnnotation:          "true",
+					common.IgnoreNonTransientErrorTimestampAnnotation: time.Now().Add(48 * time.Hour).Format(time.RFC3339),
 				}
 				_, err := instance.ValidateUpdate(instance)
 				Expect(err).To(HaveOccurred())
@@ -53,7 +53,7 @@ var _ = Describe("Service Instance Webhook Test", func() {
 		When("service instance is marked as prevent deletion", func() {
 			It("should return error from webhook", func() {
 				instance.Annotations = map[string]string{
-					api.PreventDeletion: "true",
+					common.PreventDeletion: "true",
 				}
 				_, err := instance.ValidateDelete()
 				Expect(err).To(HaveOccurred())
@@ -70,7 +70,7 @@ var _ = Describe("Service Instance Webhook Test", func() {
 		When("service instance prevent deletion annotation is not set with true", func() {
 			It("should not return error from webhook", func() {
 				instance.Annotations = map[string]string{
-					api.PreventDeletion: "not-true",
+					common.PreventDeletion: "not-true",
 				}
 				_, err := instance.ValidateDelete()
 				Expect(err).ToNot(HaveOccurred())
@@ -80,24 +80,24 @@ var _ = Describe("Service Instance Webhook Test", func() {
 			When("service instance IgnoreNonTransientErrorTimestampAnnotation annotation is not set with not a date", func() {
 				It("should not return error from webhook", func() {
 					instance.Annotations = map[string]string{
-						api.IgnoreNonTransientErrorAnnotation:          "true",
-						api.IgnoreNonTransientErrorTimestampAnnotation: "true",
+						common.IgnoreNonTransientErrorAnnotation:          "true",
+						common.IgnoreNonTransientErrorTimestampAnnotation: "true",
 					}
 					_, err := instance.ValidateCreate()
 					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring(fmt.Sprintf(annotationNotValidTimestampError, api.IgnoreNonTransientErrorTimestampAnnotation)))
+					Expect(err.Error()).To(ContainSubstring(fmt.Sprintf(annotationNotValidTimestampError, common.IgnoreNonTransientErrorTimestampAnnotation)))
 
 				})
 			})
 			When("service instance IgnoreNonTransientErrorTimestampAnnotation annotation is not set with future date", func() {
 				It("should not return error from webhook", func() {
 					instance.Annotations = map[string]string{
-						api.IgnoreNonTransientErrorAnnotation:          "true",
-						api.IgnoreNonTransientErrorTimestampAnnotation: time.Now().Add(48 * time.Hour).Format(time.RFC3339),
+						common.IgnoreNonTransientErrorAnnotation:          "true",
+						common.IgnoreNonTransientErrorTimestampAnnotation: time.Now().Add(48 * time.Hour).Format(time.RFC3339),
 					}
 					_, err := instance.ValidateCreate()
 					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring(fmt.Sprintf(annotationInFutureError, api.IgnoreNonTransientErrorTimestampAnnotation)))
+					Expect(err.Error()).To(ContainSubstring(fmt.Sprintf(annotationInFutureError, common.IgnoreNonTransientErrorTimestampAnnotation)))
 
 				})
 			})
@@ -107,8 +107,8 @@ var _ = Describe("Service Instance Webhook Test", func() {
 	Context("validateNonTransientTimestampAnnotation", func() {
 		It("fails when not a valid date", func() {
 			annotation := map[string]string{
-				api.IgnoreNonTransientErrorAnnotation:          "true",
-				api.IgnoreNonTransientErrorTimestampAnnotation: "true",
+				common.IgnoreNonTransientErrorAnnotation:          "true",
+				common.IgnoreNonTransientErrorTimestampAnnotation: "true",
 			}
 			instance.SetAnnotations(annotation)
 			err := instance.validateNonTransientTimestampAnnotation()
@@ -118,19 +118,19 @@ var _ = Describe("Service Instance Webhook Test", func() {
 
 		It("fails when a future date", func() {
 			annotation := map[string]string{
-				api.IgnoreNonTransientErrorAnnotation:          "true",
-				api.IgnoreNonTransientErrorTimestampAnnotation: time.Now().Add(48 * time.Hour).Format(time.RFC3339),
+				common.IgnoreNonTransientErrorAnnotation:          "true",
+				common.IgnoreNonTransientErrorTimestampAnnotation: time.Now().Add(48 * time.Hour).Format(time.RFC3339),
 			}
 			instance.SetAnnotations(annotation)
 			err := instance.validateNonTransientTimestampAnnotation()
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring(fmt.Sprintf(annotationInFutureError, api.IgnoreNonTransientErrorTimestampAnnotation)))
+			Expect(err.Error()).To(ContainSubstring(fmt.Sprintf(annotationInFutureError, common.IgnoreNonTransientErrorTimestampAnnotation)))
 		})
 
 		It("succeeds when timestamp is valid and in the past", func() {
 			annotation := map[string]string{
-				api.IgnoreNonTransientErrorAnnotation:          "true",
-				api.IgnoreNonTransientErrorTimestampAnnotation: time.Now().Format(time.RFC3339),
+				common.IgnoreNonTransientErrorAnnotation:          "true",
+				common.IgnoreNonTransientErrorTimestampAnnotation: time.Now().Format(time.RFC3339),
 			}
 			instance.SetAnnotations(annotation)
 			err := instance.validateNonTransientTimestampAnnotation()

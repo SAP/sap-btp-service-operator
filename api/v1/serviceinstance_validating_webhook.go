@@ -18,6 +18,7 @@ package v1
 
 import (
 	"fmt"
+	"github.com/SAP/sap-btp-service-operator/api/common"
 	"strings"
 	"time"
 
@@ -26,8 +27,6 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
-
-	"github.com/SAP/sap-btp-service-operator/api"
 )
 
 const (
@@ -65,7 +64,7 @@ func (si *ServiceInstance) ValidateUpdate(old runtime.Object) (warnings admissio
 func (si *ServiceInstance) ValidateDelete() (warnings admission.Warnings, err error) {
 	serviceinstancelog.Info("validate delete", "name", si.Name)
 	if si.Annotations != nil {
-		preventDeletion, ok := si.Annotations[api.PreventDeletion]
+		preventDeletion, ok := si.Annotations[common.PreventDeletion]
 		if ok && strings.ToLower(preventDeletion) == "true" {
 			return nil, fmt.Errorf("service instance '%s' is marked with \"prevent deletion\"", si.Name)
 		}
@@ -74,16 +73,16 @@ func (si *ServiceInstance) ValidateDelete() (warnings admission.Warnings, err er
 }
 
 func (si *ServiceInstance) validateNonTransientTimestampAnnotation() error {
-	if len(si.Annotations) > 0 && len(si.Annotations[api.IgnoreNonTransientErrorAnnotation]) > 0 {
-		serviceinstancelog.Info(fmt.Sprintf("%s annotation exist, validating %s annotation", api.IgnoreNonTransientErrorAnnotation, api.IgnoreNonTransientErrorTimestampAnnotation))
-		annotationTime, err := time.Parse(time.RFC3339, si.Annotations[api.IgnoreNonTransientErrorTimestampAnnotation])
+	if len(si.Annotations) > 0 && len(si.Annotations[common.IgnoreNonTransientErrorAnnotation]) > 0 {
+		serviceinstancelog.Info(fmt.Sprintf("%s annotation exist, validating %s annotation", common.IgnoreNonTransientErrorAnnotation, common.IgnoreNonTransientErrorTimestampAnnotation))
+		annotationTime, err := time.Parse(time.RFC3339, si.Annotations[common.IgnoreNonTransientErrorTimestampAnnotation])
 		if err != nil {
-			serviceinstancelog.Error(err, fmt.Sprintf("failed to parse %s", api.IgnoreNonTransientErrorTimestampAnnotation))
-			return fmt.Errorf(annotationNotValidTimestampError, api.IgnoreNonTransientErrorTimestampAnnotation)
+			serviceinstancelog.Error(err, fmt.Sprintf("failed to parse %s", common.IgnoreNonTransientErrorTimestampAnnotation))
+			return fmt.Errorf(annotationNotValidTimestampError, common.IgnoreNonTransientErrorTimestampAnnotation)
 		}
 
 		if time.Since(annotationTime) < 0 {
-			return fmt.Errorf(annotationInFutureError, api.IgnoreNonTransientErrorTimestampAnnotation)
+			return fmt.Errorf(annotationInFutureError, common.IgnoreNonTransientErrorTimestampAnnotation)
 		}
 	}
 
