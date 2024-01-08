@@ -9,7 +9,7 @@ import (
 	"github.com/SAP/sap-btp-service-operator/client/sm/smfakes"
 	smClientTypes "github.com/SAP/sap-btp-service-operator/client/sm/types"
 	smclientTypes "github.com/SAP/sap-btp-service-operator/client/sm/types"
-	"github.com/SAP/sap-btp-service-operator/internal/controller_utils"
+	"github.com/SAP/sap-btp-service-operator/internal/utils"
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -127,7 +127,7 @@ var _ = Describe("ServiceInstance controller", func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 		log := ctrl.Log.WithName("instanceTest")
-		ctx = context.WithValue(ctx, controller_utils.LogKey{}, log)
+		ctx = context.WithValue(ctx, utils.LogKey{}, log)
 		fakeInstanceName = "ic-test-" + uuid.New().String()
 		defaultLookupKey = types.NamespacedName{Name: fakeInstanceName, Namespace: testNamespace}
 

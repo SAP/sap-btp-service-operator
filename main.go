@@ -18,7 +18,7 @@ package main
 
 import (
 	"flag"
-	"github.com/SAP/sap-btp-service-operator/internal/controller_utils"
+	"github.com/SAP/sap-btp-service-operator/internal/utils"
 	"os"
 
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -113,7 +113,7 @@ func main() {
 		Config:          config.Get(),
 		SecretResolver:  secretResolver,
 		Recorder:        mgr.GetEventRecorderFor("ServiceInstance"),
-		GetSMClientFunc: controller_utils.GetSMClient,
+		GetSMClientFunc: utils.GetSMClient,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ServiceInstance")
 		os.Exit(1)
@@ -125,7 +125,7 @@ func main() {
 		Config:          config.Get(),
 		SecretResolver:  secretResolver,
 		Recorder:        mgr.GetEventRecorderFor("ServiceBinding"),
-		GetSMClientFunc: controller_utils.GetSMClient,
+		GetSMClientFunc: utils.GetSMClient,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ServiceBinding")
 		os.Exit(1)

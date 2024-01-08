@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/SAP/sap-btp-service-operator/api/common"
-	"github.com/SAP/sap-btp-service-operator/internal/controller_utils"
+	"github.com/SAP/sap-btp-service-operator/internal/utils"
 	"k8s.io/utils/pointer"
 	"net/http"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -62,7 +62,7 @@ var _ = Describe("ServiceBinding controller", func() {
 			}
 
 			if wait {
-				return isResourceReady(createdBinding) || controller_utils.IsFailed(createdBinding)
+				return isResourceReady(createdBinding) || utils.IsFailed(createdBinding)
 			} else {
 				return len(createdBinding.Status.Conditions) > 0 && createdBinding.Status.Conditions[0].Message != "Pending"
 			}
@@ -140,24 +140,24 @@ var _ = Describe("ServiceBinding controller", func() {
 		Expect(bindingSecret.Data).To(HaveKey("instance_guid"))
 	}
 
-	validateSecretMetadata := func(bindingSecret *corev1.Secret, credentialProperties []controller_utils.SecretMetadataProperty) {
-		metadata := make(map[string][]controller_utils.SecretMetadataProperty)
+	validateSecretMetadata := func(bindingSecret *corev1.Secret, credentialProperties []utils.SecretMetadataProperty) {
+		metadata := make(map[string][]utils.SecretMetadataProperty)
 		Expect(json.Unmarshal(bindingSecret.Data[".metadata"], &metadata)).To(Succeed())
 		if credentialProperties != nil {
 			Expect(metadata["credentialProperties"]).To(ContainElements(credentialProperties))
 		}
-		Expect(metadata["metaDataProperties"]).To(ContainElement(controller_utils.SecretMetadataProperty{Name: "instance_name", Format: string(controller_utils.TEXT)}))
-		Expect(metadata["metaDataProperties"]).To(ContainElement(controller_utils.SecretMetadataProperty{Name: "instance_guid", Format: string(controller_utils.TEXT)}))
-		Expect(metadata["metaDataProperties"]).To(ContainElement(controller_utils.SecretMetadataProperty{Name: "plan", Format: string(controller_utils.TEXT)}))
-		Expect(metadata["metaDataProperties"]).To(ContainElement(controller_utils.SecretMetadataProperty{Name: "label", Format: string(controller_utils.TEXT)}))
-		Expect(metadata["metaDataProperties"]).To(ContainElement(controller_utils.SecretMetadataProperty{Name: "type", Format: string(controller_utils.TEXT)}))
-		Expect(metadata["metaDataProperties"]).To(ContainElement(controller_utils.SecretMetadataProperty{Name: "tags", Format: string(controller_utils.JSON)}))
+		Expect(metadata["metaDataProperties"]).To(ContainElement(utils.SecretMetadataProperty{Name: "instance_name", Format: string(utils.TEXT)}))
+		Expect(metadata["metaDataProperties"]).To(ContainElement(utils.SecretMetadataProperty{Name: "instance_guid", Format: string(utils.TEXT)}))
+		Expect(metadata["metaDataProperties"]).To(ContainElement(utils.SecretMetadataProperty{Name: "plan", Format: string(utils.TEXT)}))
+		Expect(metadata["metaDataProperties"]).To(ContainElement(utils.SecretMetadataProperty{Name: "label", Format: string(utils.TEXT)}))
+		Expect(metadata["metaDataProperties"]).To(ContainElement(utils.SecretMetadataProperty{Name: "type", Format: string(utils.TEXT)}))
+		Expect(metadata["metaDataProperties"]).To(ContainElement(utils.SecretMetadataProperty{Name: "tags", Format: string(utils.JSON)}))
 	}
 
 	BeforeEach(func() {
 		ctx = context.Background()
 		log := ctrl.Log.WithName("bindingTest")
-		ctx = context.WithValue(ctx, controller_utils.LogKey{}, log)
+		ctx = context.WithValue(ctx, utils.LogKey{}, log)
 		testUUID = uuid.New().String()
 		instanceName = "test-instance-" + testUUID
 		bindingName = "test-binding-" + testUUID
@@ -282,14 +282,14 @@ var _ = Describe("ServiceBinding controller", func() {
 				validateSecretData(bindingSecret, "secret_key", "secret_value")
 				validateSecretData(bindingSecret, "escaped", `{"escaped_key":"escaped_val"}`)
 				validateInstanceInfo(bindingSecret, instanceExternalName)
-				credentialProperties := []controller_utils.SecretMetadataProperty{
+				credentialProperties := []utils.SecretMetadataProperty{
 					{
 						Name:   "secret_key",
-						Format: string(controller_utils.TEXT),
+						Format: string(utils.TEXT),
 					},
 					{
 						Name:   "escaped",
-						Format: string(controller_utils.TEXT),
+						Format: string(utils.TEXT),
 					},
 				}
 				validateSecretMetadata(bindingSecret, credentialProperties)
@@ -308,10 +308,10 @@ var _ = Describe("ServiceBinding controller", func() {
 				bindingSecret := getSecret(ctx, binding.Spec.SecretName, bindingTestNamespace, true)
 				validateSecretData(bindingSecret, secretKey, `{"secret_key": "secret_value", "escaped": "{\"escaped_key\":\"escaped_val\"}"}`)
 				validateInstanceInfo(bindingSecret, instanceExternalName)
-				credentialProperties := []controller_utils.SecretMetadataProperty{
+				credentialProperties := []utils.SecretMetadataProperty{
 					{
 						Name:      "mycredentials",
-						Format:    string(controller_utils.JSON),
+						Format:    string(utils.JSON),
 						Container: true,
 					},
 				}
@@ -557,10 +557,10 @@ var _ = Describe("ServiceBinding controller", func() {
 
 		When("referenced service instance is failed", func() {
 			It("should retry and succeed once the instance is ready", func() {
-				controller_utils.SetFailureConditions(smClientTypes.CREATE, "Failed to create instance (test)", createdInstance)
+				utils.SetFailureConditions(smClientTypes.CREATE, "Failed to create instance (test)", createdInstance)
 				updateInstanceStatus(ctx, createdInstance)
 				binding := createBindingWithBlockedError(ctx, bindingName, bindingTestNamespace, instanceName, "binding-external-name", "is not usable")
-				controller_utils.SetSuccessConditions(smClientTypes.CREATE, createdInstance)
+				utils.SetSuccessConditions(smClientTypes.CREATE, createdInstance)
 				updateInstanceStatus(ctx, createdInstance)
 				waitForResourceToBeReady(ctx, binding)
 			})
@@ -569,16 +569,16 @@ var _ = Describe("ServiceBinding controller", func() {
 		When("referenced service instance is not ready", func() {
 			It("should retry and succeed once the instance is ready", func() {
 				fakeClient.StatusReturns(&smClientTypes.Operation{ResourceID: fakeInstanceID, State: smClientTypes.INPROGRESS}, nil)
-				controller_utils.SetInProgressConditions(ctx, smClientTypes.CREATE, "", createdInstance)
+				utils.SetInProgressConditions(ctx, smClientTypes.CREATE, "", createdInstance)
 				createdInstance.Status.OperationURL = "/1234"
 				createdInstance.Status.OperationType = smClientTypes.CREATE
 				updateInstanceStatus(ctx, createdInstance)
 
 				createdBinding, err := createBindingWithoutAssertionsAndWait(ctx, bindingName, bindingTestNamespace, instanceName, "", "binding-external-name", false)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(controller_utils.IsInProgress(createdBinding)).To(BeTrue())
+				Expect(utils.IsInProgress(createdBinding)).To(BeTrue())
 
-				controller_utils.SetSuccessConditions(smClientTypes.CREATE, createdInstance)
+				utils.SetSuccessConditions(smClientTypes.CREATE, createdInstance)
 				createdInstance.Status.OperationType = ""
 				createdInstance.Status.OperationURL = ""
 				updateInstanceStatus(ctx, createdInstance)
@@ -851,13 +851,13 @@ var _ = Describe("ServiceBinding controller", func() {
 						Expect(smCallArgs.FieldQuery[1]).To(ContainSubstring("context/clusterid"))
 						Expect(smCallArgs.FieldQuery[2]).To(ContainSubstring("context/namespace"))
 
-						waitForResourceCondition(ctx, createdBinding, common.ConditionSucceeded, testCase.expectedConditionSucceededStatus, controller_utils.GetConditionReason(testCase.lastOpType, testCase.lastOpState), "")
+						waitForResourceCondition(ctx, createdBinding, common.ConditionSucceeded, testCase.expectedConditionSucceededStatus, utils.GetConditionReason(testCase.lastOpType, testCase.lastOpState), "")
 
 						switch testCase.lastOpState {
 						case smClientTypes.FAILED:
-							Expect(controller_utils.IsFailed(createdBinding))
+							Expect(utils.IsFailed(createdBinding))
 						case smClientTypes.INPROGRESS:
-							Expect(controller_utils.IsInProgress(createdBinding))
+							Expect(utils.IsInProgress(createdBinding))
 						case smClientTypes.SUCCEEDED:
 							Expect(isResourceReady(createdBinding))
 						}

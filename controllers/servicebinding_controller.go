@@ -21,8 +21,8 @@ import (
 	"encoding/json"
 	"github.com/SAP/sap-btp-service-operator/api/common"
 	"github.com/SAP/sap-btp-service-operator/internal/config"
-	"github.com/SAP/sap-btp-service-operator/internal/controller_utils"
 	"github.com/SAP/sap-btp-service-operator/internal/secrets"
+	"github.com/SAP/sap-btp-service-operator/internal/utils"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
@@ -78,7 +78,7 @@ type ServiceBindingReconciler struct {
 // +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;create;update
 func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("servicebinding", req.NamespacedName).WithValues("correlation_id", uuid.New().String(), req.Name, req.Namespace)
-	ctx = context.WithValue(ctx, controller_utils.LogKey{}, log)
+	ctx = context.WithValue(ctx, utils.LogKey{}, log)
 
 	serviceBinding := &servicesv1.ServiceBinding{}
 	if err := r.Client.Get(ctx, req.NamespacedName, serviceBinding); err != nil {
@@ -91,7 +91,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	serviceBinding.SetObservedGeneration(serviceBinding.Generation)
 
 	if len(serviceBinding.GetConditions()) == 0 {
-		if err := controller_utils.InitConditions(ctx, r.Client, serviceBinding); err != nil {
+		if err := utils.InitConditions(ctx, r.Client, serviceBinding); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
@@ -101,22 +101,22 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		if !apierrors.IsNotFound(instanceErr) {
 			log.Error(instanceErr, "failed to get service instance for binding")
 			return ctrl.Result{}, instanceErr
-		} else if !controller_utils.IsMarkedForDeletion(serviceBinding.ObjectMeta) {
+		} else if !utils.IsMarkedForDeletion(serviceBinding.ObjectMeta) {
 			//instance is not found and binding is not marked for deletion
 			instanceNamespace := serviceBinding.Namespace
 			if len(serviceBinding.Spec.ServiceInstanceNamespace) > 0 {
 				instanceNamespace = serviceBinding.Spec.ServiceInstanceNamespace
 			}
 			errMsg := fmt.Sprintf("couldn't find the service instance '%s' in namespace '%s'", serviceBinding.Spec.ServiceInstanceName, instanceNamespace)
-			controller_utils.SetBlockedCondition(ctx, errMsg, serviceBinding)
-			if updateErr := controller_utils.UpdateStatus(ctx, r.Client, serviceBinding); updateErr != nil {
+			utils.SetBlockedCondition(ctx, errMsg, serviceBinding)
+			if updateErr := utils.UpdateStatus(ctx, r.Client, serviceBinding); updateErr != nil {
 				return ctrl.Result{}, updateErr
 			}
 			return ctrl.Result{}, instanceErr
 		}
 	}
 
-	if controller_utils.IsMarkedForDeletion(serviceBinding.ObjectMeta) {
+	if utils.IsMarkedForDeletion(serviceBinding.ObjectMeta) {
 		return r.delete(ctx, serviceBinding, serviceInstance.Spec.BTPAccessCredentialsSecret)
 	}
 
@@ -140,7 +140,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 
 		if initCredRotationIfRequired(serviceBinding) {
-			return ctrl.Result{}, controller_utils.UpdateStatus(ctx, r.Client, serviceBinding)
+			return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
 		}
 	}
 
@@ -160,19 +160,19 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	if serviceNotUsable(serviceInstance) {
 		instanceErr := fmt.Errorf("service instance '%s' is not usable", serviceBinding.Spec.ServiceInstanceName)
-		controller_utils.SetBlockedCondition(ctx, instanceErr.Error(), serviceBinding)
-		if err := controller_utils.UpdateStatus(ctx, r.Client, serviceBinding); err != nil {
+		utils.SetBlockedCondition(ctx, instanceErr.Error(), serviceBinding)
+		if err := utils.UpdateStatus(ctx, r.Client, serviceBinding); err != nil {
 			return ctrl.Result{}, err
 		}
 
 		return ctrl.Result{}, instanceErr
 	}
 
-	if controller_utils.IsInProgress(serviceInstance) {
+	if utils.IsInProgress(serviceInstance) {
 		log.Info(fmt.Sprintf("Service instance with k8s name %s is not ready for binding yet", serviceInstance.Name))
-		controller_utils.SetInProgressConditions(ctx, smClientTypes.CREATE, fmt.Sprintf("creation in progress, waiting for service instance '%s' to be ready", serviceBinding.Spec.ServiceInstanceName), serviceBinding)
+		utils.SetInProgressConditions(ctx, smClientTypes.CREATE, fmt.Sprintf("creation in progress, waiting for service instance '%s' to be ready", serviceBinding.Spec.ServiceInstanceName), serviceBinding)
 
-		return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, controller_utils.UpdateStatus(ctx, r.Client, serviceBinding)
+		return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
 	}
 
 	//set owner instance only for original bindings (not rotated)
@@ -188,19 +188,19 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	if serviceBinding.Status.BindingID == "" {
 		if err := r.validateSecretNameIsAvailable(ctx, serviceBinding); err != nil {
-			controller_utils.SetBlockedCondition(ctx, err.Error(), serviceBinding)
-			return ctrl.Result{}, controller_utils.UpdateStatus(ctx, r.Client, serviceBinding)
+			utils.SetBlockedCondition(ctx, err.Error(), serviceBinding)
+			return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
 		}
 
 		smClient, err := r.GetSMClientFunc(ctx, r.SecretResolver, serviceBinding, serviceInstance.Spec.BTPAccessCredentialsSecret)
 		if err != nil {
-			return controller_utils.MarkAsTransientError(ctx, r.Client, common.Unknown, err, serviceBinding)
+			return utils.MarkAsTransientError(ctx, r.Client, common.Unknown, err, serviceBinding)
 		}
 
 		smBinding, err := r.getBindingForRecovery(ctx, smClient, serviceBinding)
 		if err != nil {
 			log.Error(err, "failed to check binding recovery")
-			return controller_utils.MarkAsTransientError(ctx, r.Client, smClientTypes.CREATE, err, serviceBinding)
+			return utils.MarkAsTransientError(ctx, r.Client, smClientTypes.CREATE, err, serviceBinding)
 		}
 		if smBinding != nil {
 			return r.recover(ctx, serviceBinding, smBinding)
@@ -221,13 +221,13 @@ func (r *ServiceBindingReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient sm.Client, serviceInstance *servicesv1.ServiceInstance, serviceBinding *servicesv1.ServiceBinding) (ctrl.Result, error) {
-	log := controller_utils.GetLogger(ctx)
+	log := utils.GetLogger(ctx)
 	log.Info("Creating smBinding in SM")
 	serviceBinding.Status.InstanceID = serviceInstance.Status.InstanceID
-	_, bindingParameters, err := controller_utils.BuildParameters(r.Client, serviceBinding.Namespace, serviceBinding.Spec.ParametersFrom, serviceBinding.Spec.Parameters)
+	_, bindingParameters, err := utils.BuildParameters(r.Client, serviceBinding.Namespace, serviceBinding.Spec.ParametersFrom, serviceBinding.Spec.Parameters)
 	if err != nil {
 		log.Error(err, "failed to parse smBinding parameters")
-		return controller_utils.MarkAsNonTransientError(ctx, r.Client, smClientTypes.CREATE, err.Error(), serviceBinding)
+		return utils.MarkAsNonTransientError(ctx, r.Client, smClientTypes.CREATE, err.Error(), serviceBinding)
 	}
 
 	smBinding, operationURL, bindErr := smClient.Bind(&smClientTypes.ServiceBinding{
@@ -239,25 +239,25 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 		},
 		ServiceInstanceID: serviceInstance.Status.InstanceID,
 		Parameters:        bindingParameters,
-	}, nil, controller_utils.BuildUserInfo(ctx, serviceBinding.Spec.UserInfo))
+	}, nil, utils.BuildUserInfo(ctx, serviceBinding.Spec.UserInfo))
 
 	if bindErr != nil {
 		log.Error(err, "failed to create service binding", "serviceInstanceID", serviceInstance.Status.InstanceID)
-		return controller_utils.HandleError(ctx, r.Client, smClientTypes.CREATE, bindErr, serviceBinding, false)
+		return utils.HandleError(ctx, r.Client, smClientTypes.CREATE, bindErr, serviceBinding, false)
 	}
 
 	if operationURL != "" {
 		var bindingID string
 		if bindingID = sm.ExtractBindingID(operationURL); len(bindingID) == 0 {
-			return controller_utils.MarkAsNonTransientError(ctx, r.Client, smClientTypes.CREATE, fmt.Sprintf("failed to extract smBinding ID from operation URL %s", operationURL), serviceBinding)
+			return utils.MarkAsNonTransientError(ctx, r.Client, smClientTypes.CREATE, fmt.Sprintf("failed to extract smBinding ID from operation URL %s", operationURL), serviceBinding)
 		}
 		serviceBinding.Status.BindingID = bindingID
 
 		log.Info("Create smBinding request is async")
 		serviceBinding.Status.OperationURL = operationURL
 		serviceBinding.Status.OperationType = smClientTypes.CREATE
-		controller_utils.SetInProgressConditions(ctx, smClientTypes.CREATE, "", serviceBinding)
-		if err := controller_utils.UpdateStatus(ctx, r.Client, serviceBinding); err != nil {
+		utils.SetInProgressConditions(ctx, smClientTypes.CREATE, "", serviceBinding)
+		if err := utils.UpdateStatus(ctx, r.Client, serviceBinding); err != nil {
 			log.Error(err, "unable to update ServiceBinding status")
 			return ctrl.Result{}, err
 		}
@@ -278,18 +278,18 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 	serviceBinding.Status.BindingID = smBinding.ID
 	serviceBinding.Status.SubaccountID = subaccountID
 	serviceBinding.Status.Ready = metav1.ConditionTrue
-	controller_utils.SetSuccessConditions(smClientTypes.CREATE, serviceBinding)
+	utils.SetSuccessConditions(smClientTypes.CREATE, serviceBinding)
 	log.Info("Updating binding", "bindingID", smBinding.ID)
 
-	return ctrl.Result{}, controller_utils.UpdateStatus(ctx, r.Client, serviceBinding)
+	return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
 }
 
 func (r *ServiceBindingReconciler) delete(ctx context.Context, serviceBinding *servicesv1.ServiceBinding, btpAccessCredentialsSecret string) (ctrl.Result, error) {
-	log := controller_utils.GetLogger(ctx)
+	log := utils.GetLogger(ctx)
 	if controllerutil.ContainsFinalizer(serviceBinding, common.FinalizerName) {
 		smClient, err := r.GetSMClientFunc(ctx, r.SecretResolver, serviceBinding, btpAccessCredentialsSecret)
 		if err != nil {
-			return controller_utils.MarkAsTransientError(ctx, r.Client, common.Unknown, err, serviceBinding)
+			return utils.MarkAsTransientError(ctx, r.Client, common.Unknown, err, serviceBinding)
 		}
 
 		if len(serviceBinding.Status.BindingID) == 0 {
@@ -301,8 +301,8 @@ func (r *ServiceBindingReconciler) delete(ctx context.Context, serviceBinding *s
 			if smBinding != nil {
 				log.Info("binding exists in SM continue with deletion")
 				serviceBinding.Status.BindingID = smBinding.ID
-				controller_utils.SetInProgressConditions(ctx, smClientTypes.DELETE, "delete after recovery", serviceBinding)
-				return ctrl.Result{}, controller_utils.UpdateStatus(ctx, r.Client, serviceBinding)
+				utils.SetInProgressConditions(ctx, smClientTypes.DELETE, "delete after recovery", serviceBinding)
+				return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
 			}
 
 			// make sure there's no secret stored for the binding
@@ -311,7 +311,7 @@ func (r *ServiceBindingReconciler) delete(ctx context.Context, serviceBinding *s
 			}
 
 			log.Info("Binding does not exists in SM, removing finalizer")
-			if err := controller_utils.RemoveFinalizer(ctx, r.Client, serviceBinding, common.FinalizerName); err != nil {
+			if err := utils.RemoveFinalizer(ctx, r.Client, serviceBinding, common.FinalizerName); err != nil {
 				return ctrl.Result{}, err
 			}
 			return ctrl.Result{}, nil
@@ -323,18 +323,18 @@ func (r *ServiceBindingReconciler) delete(ctx context.Context, serviceBinding *s
 		}
 
 		log.Info(fmt.Sprintf("Deleting binding with id %v from SM", serviceBinding.Status.BindingID))
-		operationURL, unbindErr := smClient.Unbind(serviceBinding.Status.BindingID, nil, controller_utils.BuildUserInfo(ctx, serviceBinding.Spec.UserInfo))
+		operationURL, unbindErr := smClient.Unbind(serviceBinding.Status.BindingID, nil, utils.BuildUserInfo(ctx, serviceBinding.Spec.UserInfo))
 		if unbindErr != nil {
 			// delete will proceed anyway
-			return controller_utils.MarkAsNonTransientError(ctx, r.Client, smClientTypes.DELETE, unbindErr.Error(), serviceBinding)
+			return utils.MarkAsNonTransientError(ctx, r.Client, smClientTypes.DELETE, unbindErr.Error(), serviceBinding)
 		}
 
 		if operationURL != "" {
 			log.Info("Deleting binding async")
 			serviceBinding.Status.OperationURL = operationURL
 			serviceBinding.Status.OperationType = smClientTypes.DELETE
-			controller_utils.SetInProgressConditions(ctx, smClientTypes.DELETE, "", serviceBinding)
-			if err := controller_utils.UpdateStatus(ctx, r.Client, serviceBinding); err != nil {
+			utils.SetInProgressConditions(ctx, smClientTypes.DELETE, "", serviceBinding)
+			if err := utils.UpdateStatus(ctx, r.Client, serviceBinding); err != nil {
 				return ctrl.Result{}, err
 			}
 			return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, nil
@@ -347,41 +347,41 @@ func (r *ServiceBindingReconciler) delete(ctx context.Context, serviceBinding *s
 }
 
 func (r *ServiceBindingReconciler) poll(ctx context.Context, serviceBinding *servicesv1.ServiceBinding, btpAccessCredentialsSecret string) (ctrl.Result, error) {
-	log := controller_utils.GetLogger(ctx)
+	log := utils.GetLogger(ctx)
 	log.Info(fmt.Sprintf("resource is in progress, found operation url %s", serviceBinding.Status.OperationURL))
 
 	smClient, err := r.GetSMClientFunc(ctx, r.SecretResolver, serviceBinding, btpAccessCredentialsSecret)
 	if err != nil {
-		return controller_utils.MarkAsTransientError(ctx, r.Client, common.Unknown, err, serviceBinding)
+		return utils.MarkAsTransientError(ctx, r.Client, common.Unknown, err, serviceBinding)
 	}
 
 	status, statusErr := smClient.Status(serviceBinding.Status.OperationURL, nil)
 	if statusErr != nil {
 		log.Info(fmt.Sprintf("failed to fetch operation, got error from SM: %s", statusErr.Error()), "operationURL", serviceBinding.Status.OperationURL)
-		controller_utils.SetFailureConditions(serviceBinding.Status.OperationType, statusErr.Error(), serviceBinding)
+		utils.SetFailureConditions(serviceBinding.Status.OperationType, statusErr.Error(), serviceBinding)
 		freshStatus := servicesv1.ServiceBindingStatus{
 			Conditions: serviceBinding.GetConditions(),
 		}
-		if controller_utils.IsMarkedForDeletion(serviceBinding.ObjectMeta) {
+		if utils.IsMarkedForDeletion(serviceBinding.ObjectMeta) {
 			freshStatus.BindingID = serviceBinding.Status.BindingID
 		}
 		serviceBinding.Status = freshStatus
-		if err := controller_utils.UpdateStatus(ctx, r.Client, serviceBinding); err != nil {
+		if err := utils.UpdateStatus(ctx, r.Client, serviceBinding); err != nil {
 			log.Error(err, "failed to update status during polling")
 		}
 		return ctrl.Result{}, statusErr
 	}
 
 	if status == nil {
-		return controller_utils.MarkAsTransientError(ctx, r.Client, serviceBinding.Status.OperationType, fmt.Errorf("failed to get last operation status of %s", serviceBinding.Name), serviceBinding)
+		return utils.MarkAsTransientError(ctx, r.Client, serviceBinding.Status.OperationType, fmt.Errorf("failed to get last operation status of %s", serviceBinding.Name), serviceBinding)
 	}
 	switch status.State {
 	case smClientTypes.INPROGRESS:
 		fallthrough
 	case smClientTypes.PENDING:
 		if len(status.Description) != 0 {
-			controller_utils.SetInProgressConditions(ctx, status.Type, status.Description, serviceBinding)
-			if err := controller_utils.UpdateStatus(ctx, r.Client, serviceBinding); err != nil {
+			utils.SetInProgressConditions(ctx, status.Type, status.Description, serviceBinding)
+			if err := utils.UpdateStatus(ctx, r.Client, serviceBinding); err != nil {
 				log.Error(err, "unable to update ServiceBinding polling description")
 				return ctrl.Result{}, err
 			}
@@ -389,11 +389,11 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, serviceBinding *ser
 		return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, nil
 	case smClientTypes.FAILED:
 		// non transient error - should not retry
-		controller_utils.SetFailureConditions(status.Type, status.Description, serviceBinding)
+		utils.SetFailureConditions(status.Type, status.Description, serviceBinding)
 		if serviceBinding.Status.OperationType == smClientTypes.DELETE {
 			serviceBinding.Status.OperationURL = ""
 			serviceBinding.Status.OperationType = ""
-			if err := controller_utils.UpdateStatus(ctx, r.Client, serviceBinding); err != nil {
+			if err := utils.UpdateStatus(ctx, r.Client, serviceBinding); err != nil {
 				log.Error(err, "unable to update ServiceBinding status")
 				return ctrl.Result{}, err
 			}
@@ -404,7 +404,7 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, serviceBinding *ser
 			return ctrl.Result{}, fmt.Errorf(errMsg)
 		}
 	case smClientTypes.SUCCEEDED:
-		controller_utils.SetSuccessConditions(status.Type, serviceBinding)
+		utils.SetSuccessConditions(status.Type, serviceBinding)
 		switch serviceBinding.Status.OperationType {
 		case smClientTypes.CREATE:
 			smBinding, err := smClient.GetBindingByID(serviceBinding.Status.BindingID, nil)
@@ -419,7 +419,7 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, serviceBinding *ser
 			if err := r.storeBindingSecret(ctx, serviceBinding, smBinding); err != nil {
 				return r.handleSecretError(ctx, smClientTypes.CREATE, err, serviceBinding)
 			}
-			controller_utils.SetSuccessConditions(status.Type, serviceBinding)
+			utils.SetSuccessConditions(status.Type, serviceBinding)
 		case smClientTypes.DELETE:
 			return r.deleteSecretAndRemoveFinalizer(ctx, serviceBinding)
 		}
@@ -428,11 +428,11 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, serviceBinding *ser
 	serviceBinding.Status.OperationURL = ""
 	serviceBinding.Status.OperationType = ""
 
-	return ctrl.Result{}, controller_utils.UpdateStatus(ctx, r.Client, serviceBinding)
+	return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
 }
 
 func (r *ServiceBindingReconciler) getBindingForRecovery(ctx context.Context, smClient sm.Client, serviceBinding *servicesv1.ServiceBinding) (*smClientTypes.ServiceBinding, error) {
-	log := controller_utils.GetLogger(ctx)
+	log := utils.GetLogger(ctx)
 	nameQuery := fmt.Sprintf("name eq '%s'", serviceBinding.Spec.ExternalName)
 	clusterIDQuery := fmt.Sprintf("context/clusterid eq '%s'", r.Config.ClusterID)
 	namespaceQuery := fmt.Sprintf("context/namespace eq '%s'", serviceBinding.Namespace)
@@ -459,20 +459,20 @@ func (r *ServiceBindingReconciler) getBindingForRecovery(ctx context.Context, sm
 }
 
 func (r *ServiceBindingReconciler) maintain(ctx context.Context, binding *servicesv1.ServiceBinding) (ctrl.Result, error) {
-	log := controller_utils.GetLogger(ctx)
+	log := utils.GetLogger(ctx)
 	shouldUpdateStatus := false
 	if binding.Generation != binding.Status.ObservedGeneration {
 		binding.SetObservedGeneration(binding.Generation)
 		shouldUpdateStatus = true
 	}
 
-	if !controller_utils.IsFailed(binding) {
+	if !utils.IsFailed(binding) {
 		if _, err := r.getSecret(ctx, binding.Namespace, binding.Spec.SecretName); err != nil {
-			if apierrors.IsNotFound(err) && !controller_utils.IsMarkedForDeletion(binding.ObjectMeta) {
+			if apierrors.IsNotFound(err) && !utils.IsMarkedForDeletion(binding.ObjectMeta) {
 				log.Info(fmt.Sprintf("secret not found recovering binding %s", binding.Name))
 				binding.Status.BindingID = ""
 				binding.Status.Ready = metav1.ConditionFalse
-				controller_utils.SetInProgressConditions(ctx, smClientTypes.CREATE, "recreating deleted secret", binding)
+				utils.SetInProgressConditions(ctx, smClientTypes.CREATE, "recreating deleted secret", binding)
 				shouldUpdateStatus = true
 				r.Recorder.Event(binding, corev1.EventTypeWarning, "SecretDeleted", "SecretDeleted")
 			} else {
@@ -483,14 +483,14 @@ func (r *ServiceBindingReconciler) maintain(ctx context.Context, binding *servic
 
 	if shouldUpdateStatus {
 		log.Info(fmt.Sprintf("maintanance required for binding %s", binding.Name))
-		return ctrl.Result{}, controller_utils.UpdateStatus(ctx, r.Client, binding)
+		return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, binding)
 	}
 
 	return ctrl.Result{}, nil
 }
 
 func (r *ServiceBindingReconciler) getServiceInstanceForBinding(ctx context.Context, binding *servicesv1.ServiceBinding) (*servicesv1.ServiceInstance, error) {
-	log := controller_utils.GetLogger(ctx)
+	log := utils.GetLogger(ctx)
 	serviceInstance := &servicesv1.ServiceInstance{}
 	namespace := binding.Namespace
 	if len(binding.Spec.ServiceInstanceNamespace) > 0 {
@@ -505,7 +505,7 @@ func (r *ServiceBindingReconciler) getServiceInstanceForBinding(ctx context.Cont
 }
 
 func (r *ServiceBindingReconciler) setOwner(ctx context.Context, serviceInstance *servicesv1.ServiceInstance, serviceBinding *servicesv1.ServiceBinding) error {
-	log := controller_utils.GetLogger(ctx)
+	log := utils.GetLogger(ctx)
 	log.Info("Binding instance as owner of binding", "bindingName", serviceBinding.Name, "instanceName", serviceInstance.Name)
 	if err := controllerutil.SetControllerReference(serviceInstance, serviceBinding, r.Scheme); err != nil {
 		log.Error(err, fmt.Sprintf("Could not update the smBinding %s owner instance reference", serviceBinding.Name))
@@ -541,20 +541,20 @@ func (r *ServiceBindingReconciler) resyncBindingStatus(ctx context.Context, k8sB
 	case smClientTypes.INPROGRESS:
 		k8sBinding.Status.OperationURL = sm.BuildOperationURL(smBinding.LastOperation.ID, smBinding.ID, smClientTypes.ServiceBindingsURL)
 		k8sBinding.Status.OperationType = smBinding.LastOperation.Type
-		controller_utils.SetInProgressConditions(ctx, smBinding.LastOperation.Type, smBinding.LastOperation.Description, k8sBinding)
+		utils.SetInProgressConditions(ctx, smBinding.LastOperation.Type, smBinding.LastOperation.Description, k8sBinding)
 	case smClientTypes.SUCCEEDED:
-		controller_utils.SetSuccessConditions(operationType, k8sBinding)
+		utils.SetSuccessConditions(operationType, k8sBinding)
 	case smClientTypes.FAILED:
-		controller_utils.SetFailureConditions(operationType, description, k8sBinding)
+		utils.SetFailureConditions(operationType, description, k8sBinding)
 	}
 }
 
 func (r *ServiceBindingReconciler) storeBindingSecret(ctx context.Context, k8sBinding *servicesv1.ServiceBinding, smBinding *smClientTypes.ServiceBinding) error {
-	log := controller_utils.GetLogger(ctx)
+	log := utils.GetLogger(ctx)
 	logger := log.WithValues("bindingName", k8sBinding.Name, "secretName", k8sBinding.Spec.SecretName)
 
 	var credentialsMap map[string][]byte
-	var credentialProperties []controller_utils.SecretMetadataProperty
+	var credentialProperties []utils.SecretMetadataProperty
 
 	if len(smBinding.Credentials) == 0 {
 		log.Info("Binding credentials are empty")
@@ -563,16 +563,16 @@ func (r *ServiceBindingReconciler) storeBindingSecret(ctx context.Context, k8sBi
 		credentialsMap = map[string][]byte{
 			*k8sBinding.Spec.SecretKey: smBinding.Credentials,
 		}
-		credentialProperties = []controller_utils.SecretMetadataProperty{
+		credentialProperties = []utils.SecretMetadataProperty{
 			{
 				Name:      *k8sBinding.Spec.SecretKey,
-				Format:    string(controller_utils.JSON),
+				Format:    string(utils.JSON),
 				Container: true,
 			},
 		}
 	} else {
 		var err error
-		credentialsMap, credentialProperties, err = controller_utils.NormalizeCredentials(smBinding.Credentials)
+		credentialsMap, credentialProperties, err = utils.NormalizeCredentials(smBinding.Credentials)
 		if err != nil {
 			logger.Error(err, "Failed to store binding secret")
 			return fmt.Errorf("failed to create secret. Error: %v", err.Error())
@@ -591,7 +591,7 @@ func (r *ServiceBindingReconciler) storeBindingSecret(ctx context.Context, k8sBi
 			return err
 		}
 	} else {
-		metadata := map[string][]controller_utils.SecretMetadataProperty{
+		metadata := map[string][]utils.SecretMetadataProperty{
 			"metaDataProperties":   metaDataProperties,
 			"credentialProperties": credentialProperties,
 		}
@@ -620,7 +620,7 @@ func (r *ServiceBindingReconciler) storeBindingSecret(ctx context.Context, k8sBi
 }
 
 func (r *ServiceBindingReconciler) createOrUpdateBindingSecret(ctx context.Context, binding *servicesv1.ServiceBinding, secret *corev1.Secret) error {
-	log := controller_utils.GetLogger(ctx)
+	log := utils.GetLogger(ctx)
 	dbSecret := &corev1.Secret{}
 	create := false
 	if err := r.Client.Get(ctx, types.NamespacedName{Name: binding.Spec.SecretName, Namespace: binding.Namespace}, dbSecret); err != nil {
@@ -649,7 +649,7 @@ func (r *ServiceBindingReconciler) createOrUpdateBindingSecret(ctx context.Conte
 }
 
 func (r *ServiceBindingReconciler) deleteBindingSecret(ctx context.Context, binding *servicesv1.ServiceBinding) error {
-	log := controller_utils.GetLogger(ctx)
+	log := utils.GetLogger(ctx)
 	log.Info("Deleting binding secret")
 	bindingSecret := &corev1.Secret{}
 	if err := r.Client.Get(ctx, types.NamespacedName{
@@ -682,7 +682,7 @@ func (r *ServiceBindingReconciler) deleteSecretAndRemoveFinalizer(ctx context.Co
 		return ctrl.Result{}, err
 	}
 
-	return ctrl.Result{}, controller_utils.RemoveFinalizer(ctx, r.Client, serviceBinding, common.FinalizerName)
+	return ctrl.Result{}, utils.RemoveFinalizer(ctx, r.Client, serviceBinding, common.FinalizerName)
 }
 
 func (r *ServiceBindingReconciler) getSecret(ctx context.Context, namespace string, name string) (*corev1.Secret, error) {
@@ -717,15 +717,15 @@ func (r *ServiceBindingReconciler) validateSecretNameIsAvailable(ctx context.Con
 }
 
 func (r *ServiceBindingReconciler) handleSecretError(ctx context.Context, op smClientTypes.OperationCategory, err error, binding *servicesv1.ServiceBinding) (ctrl.Result, error) {
-	log := controller_utils.GetLogger(ctx)
+	log := utils.GetLogger(ctx)
 	log.Error(err, fmt.Sprintf("failed to store secret %s for binding %s", binding.Spec.SecretName, binding.Name))
 	if apierrors.ReasonForError(err) == metav1.StatusReasonUnknown {
-		return controller_utils.MarkAsNonTransientError(ctx, r.Client, op, err.Error(), binding)
+		return utils.MarkAsNonTransientError(ctx, r.Client, op, err.Error(), binding)
 	}
-	return controller_utils.MarkAsTransientError(ctx, r.Client, op, err, binding)
+	return utils.MarkAsTransientError(ctx, r.Client, op, err, binding)
 }
 
-func (r *ServiceBindingReconciler) addInstanceInfo(ctx context.Context, binding *servicesv1.ServiceBinding, credentialsMap map[string][]byte) ([]controller_utils.SecretMetadataProperty, error) {
+func (r *ServiceBindingReconciler) addInstanceInfo(ctx context.Context, binding *servicesv1.ServiceBinding, credentialsMap map[string][]byte) ([]utils.SecretMetadataProperty, error) {
 	instance, err := r.getServiceInstanceForBinding(ctx, binding)
 	if err != nil {
 		return nil, err
@@ -744,38 +744,38 @@ func (r *ServiceBindingReconciler) addInstanceInfo(ctx context.Context, binding 
 		credentialsMap["tags"] = tagsBytes
 	}
 
-	metadata := []controller_utils.SecretMetadataProperty{
+	metadata := []utils.SecretMetadataProperty{
 		{
 			Name:   "instance_name",
-			Format: string(controller_utils.TEXT),
+			Format: string(utils.TEXT),
 		},
 		{
 			Name:   "instance_guid",
-			Format: string(controller_utils.TEXT),
+			Format: string(utils.TEXT),
 		},
 		{
 			Name:   "plan",
-			Format: string(controller_utils.TEXT),
+			Format: string(utils.TEXT),
 		},
 		{
 			Name:   "label",
-			Format: string(controller_utils.TEXT),
+			Format: string(utils.TEXT),
 		},
 		{
 			Name:   "type",
-			Format: string(controller_utils.TEXT),
+			Format: string(utils.TEXT),
 		},
 	}
 	if _, ok := credentialsMap["tags"]; ok {
-		metadata = append(metadata, controller_utils.SecretMetadataProperty{Name: "tags", Format: string(controller_utils.JSON)})
+		metadata = append(metadata, utils.SecretMetadataProperty{Name: "tags", Format: string(utils.JSON)})
 	}
 
 	return metadata, nil
 }
 
 func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, binding *servicesv1.ServiceBinding, btpAccessCredentialsSecret string) error {
-	suffix := "-" + controller_utils.RandStringRunes(6)
-	log := controller_utils.GetLogger(ctx)
+	suffix := "-" + utils.RandStringRunes(6)
+	log := utils.GetLogger(ctx)
 	if binding.Annotations != nil {
 		if _, ok := binding.Annotations[common.ForceRotateAnnotation]; ok {
 			log.Info("Credentials rotation - deleting force rotate annotation")
@@ -794,7 +794,7 @@ func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, bindin
 			now := metav1.NewTime(time.Now())
 			binding.Status.LastCredentialsRotationTime = &now
 			return r.stopRotation(ctx, binding)
-		} else if controller_utils.IsFailed(binding) {
+		} else if utils.IsFailed(binding) {
 			log.Info("Credentials rotation - binding failed stopping rotation")
 			return r.stopRotation(ctx, binding)
 		}
@@ -823,8 +823,8 @@ func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, bindin
 		log.Info("Credentials rotation - renaming binding to old in SM", "current", binding.Spec.ExternalName)
 		if _, errRenaming := smClient.RenameBinding(binding.Status.BindingID, binding.Spec.ExternalName+suffix, binding.Name+suffix); errRenaming != nil {
 			log.Error(errRenaming, "Credentials rotation - failed renaming binding to old in SM", "binding", binding.Spec.ExternalName)
-			controller_utils.SetCredRotationInProgressConditions(common.CredPreparing, errRenaming.Error(), binding)
-			if errStatus := controller_utils.UpdateStatus(ctx, r.Client, binding); errStatus != nil {
+			utils.SetCredRotationInProgressConditions(common.CredPreparing, errRenaming.Error(), binding)
+			if errStatus := utils.UpdateStatus(ctx, r.Client, binding); errStatus != nil {
 				return errStatus
 			}
 			return errRenaming
@@ -834,8 +834,8 @@ func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, bindin
 		if err := r.createOldBinding(ctx, suffix, binding); err != nil {
 			log.Error(err, "Credentials rotation - failed to back up old binding in K8S")
 
-			controller_utils.SetCredRotationInProgressConditions(common.CredPreparing, err.Error(), binding)
-			if errStatus := controller_utils.UpdateStatus(ctx, r.Client, binding); errStatus != nil {
+			utils.SetCredRotationInProgressConditions(common.CredPreparing, err.Error(), binding)
+			if errStatus := utils.UpdateStatus(ctx, r.Client, binding); errStatus != nil {
 				return errStatus
 			}
 			return err
@@ -844,16 +844,16 @@ func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, bindin
 
 	binding.Status.BindingID = ""
 	binding.Status.Ready = metav1.ConditionFalse
-	controller_utils.SetInProgressConditions(ctx, smClientTypes.CREATE, "rotating binding credentials", binding)
-	controller_utils.SetCredRotationInProgressConditions(common.CredRotating, "", binding)
-	return controller_utils.UpdateStatus(ctx, r.Client, binding)
+	utils.SetInProgressConditions(ctx, smClientTypes.CREATE, "rotating binding credentials", binding)
+	utils.SetCredRotationInProgressConditions(common.CredRotating, "", binding)
+	return utils.UpdateStatus(ctx, r.Client, binding)
 }
 
 func (r *ServiceBindingReconciler) stopRotation(ctx context.Context, binding *servicesv1.ServiceBinding) error {
 	conditions := binding.GetConditions()
 	meta.RemoveStatusCondition(&conditions, common.ConditionCredRotationInProgress)
 	binding.Status.Conditions = conditions
-	return controller_utils.UpdateStatus(ctx, r.Client, binding)
+	return utils.UpdateStatus(ctx, r.Client, binding)
 }
 
 func (r *ServiceBindingReconciler) createOldBinding(ctx context.Context, suffix string, binding *servicesv1.ServiceBinding) error {
@@ -875,7 +875,7 @@ func (r *ServiceBindingReconciler) createOldBinding(ctx context.Context, suffix 
 }
 
 func (r *ServiceBindingReconciler) handleStaleServiceBinding(ctx context.Context, serviceBinding *servicesv1.ServiceBinding) (ctrl.Result, error) {
-	log := controller_utils.GetLogger(ctx)
+	log := utils.GetLogger(ctx)
 	originalBindingName, ok := serviceBinding.Labels[common.StaleBindingRotationOfLabel]
 	if !ok {
 		//if the user removed the "rotationOf" label the stale binding should be deleted otherwise it will remain forever
@@ -904,13 +904,13 @@ func (r *ServiceBindingReconciler) handleStaleServiceBinding(ctx context.Context
 			ObservedGeneration: serviceBinding.GetGeneration(),
 		}
 		meta.SetStatusCondition(&serviceBinding.Status.Conditions, pendingTerminationCondition)
-		return ctrl.Result{}, controller_utils.UpdateStatus(ctx, r.Client, serviceBinding)
+		return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
 	}
 	return ctrl.Result{}, nil
 }
 
 func (r *ServiceBindingReconciler) recover(ctx context.Context, serviceBinding *servicesv1.ServiceBinding, smBinding *smClientTypes.ServiceBinding) (ctrl.Result, error) {
-	log := controller_utils.GetLogger(ctx)
+	log := utils.GetLogger(ctx)
 	log.Info(fmt.Sprintf("found existing smBinding in SM with id %s, updating status", smBinding.ID))
 
 	if smBinding.Credentials != nil {
@@ -924,11 +924,11 @@ func (r *ServiceBindingReconciler) recover(ctx context.Context, serviceBinding *
 	}
 	r.resyncBindingStatus(ctx, serviceBinding, smBinding)
 
-	return ctrl.Result{}, controller_utils.UpdateStatus(ctx, r.Client, serviceBinding)
+	return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
 }
 
 func isStaleServiceBinding(binding *servicesv1.ServiceBinding) bool {
-	if controller_utils.IsMarkedForDeletion(binding.ObjectMeta) {
+	if utils.IsMarkedForDeletion(binding.ObjectMeta) {
 		return false
 	}
 
@@ -946,7 +946,7 @@ func isStaleServiceBinding(binding *servicesv1.ServiceBinding) bool {
 }
 
 func initCredRotationIfRequired(binding *servicesv1.ServiceBinding) bool {
-	if controller_utils.IsFailed(binding) || !credRotationEnabled(binding) || meta.IsStatusConditionTrue(binding.Status.Conditions, common.ConditionCredRotationInProgress) {
+	if utils.IsFailed(binding) || !credRotationEnabled(binding) || meta.IsStatusConditionTrue(binding.Status.Conditions, common.ConditionCredRotationInProgress) {
 		return false
 	}
 	_, forceRotate := binding.Annotations[common.ForceRotateAnnotation]
@@ -959,7 +959,7 @@ func initCredRotationIfRequired(binding *servicesv1.ServiceBinding) bool {
 
 	rotationInterval, _ := time.ParseDuration(binding.Spec.CredRotationPolicy.RotationFrequency)
 	if time.Since(lastCredentialRotationTime.Time) > rotationInterval || forceRotate {
-		controller_utils.SetCredRotationInProgressConditions(common.CredPreparing, "", binding)
+		utils.SetCredRotationInProgressConditions(common.CredPreparing, "", binding)
 		return true
 	}
 
@@ -974,7 +974,7 @@ func mergeInstanceTags(offeringTags, customTags []string) []string {
 	var tags []string
 
 	for _, tag := range append(offeringTags, customTags...) {
-		if !controller_utils.SliceContains(tags, tag) {
+		if !utils.SliceContains(tags, tag) {
 			tags = append(tags, tag)
 		}
 	}
@@ -1012,11 +1012,11 @@ func bindingAlreadyOwnedByInstance(instance *servicesv1.ServiceInstance, binding
 }
 
 func serviceNotUsable(instance *servicesv1.ServiceInstance) bool {
-	if controller_utils.IsMarkedForDeletion(instance.ObjectMeta) {
+	if utils.IsMarkedForDeletion(instance.ObjectMeta) {
 		return true
 	}
 	if len(instance.Status.Conditions) != 0 {
-		return instance.Status.Conditions[0].Reason == controller_utils.GetConditionReason(smClientTypes.CREATE, smClientTypes.FAILED)
+		return instance.Status.Conditions[0].Reason == utils.GetConditionReason(smClientTypes.CREATE, smClientTypes.FAILED)
 	}
 	return false
 }
