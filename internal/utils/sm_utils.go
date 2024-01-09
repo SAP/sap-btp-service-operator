@@ -3,6 +3,7 @@ package utils
 import (
 	"context"
 	"fmt"
+
 	"github.com/SAP/sap-btp-service-operator/api/common"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
 	"github.com/SAP/sap-btp-service-operator/internal/secrets"

@@ -18,8 +18,9 @@ package main
 
 import (
 	"flag"
-	"github.com/SAP/sap-btp-service-operator/internal/utils"
 	"os"
+
+	"github.com/SAP/sap-btp-service-operator/internal/utils"
 
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
