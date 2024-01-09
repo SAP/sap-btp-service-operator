@@ -22,7 +22,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"github.com/SAP/sap-btp-service-operator/api/common"
-	"github.com/SAP/sap-btp-service-operator/internal/secrets"
+	"github.com/SAP/sap-btp-service-operator/internal/utils"
 	"net"
 	"net/http"
 	"path/filepath"
@@ -147,7 +147,7 @@ var _ = BeforeSuite(func(done Done) {
 		Client: k8sManager.GetClient(),
 		Scheme: k8sManager.GetScheme(),
 		Log:    ctrl.Log.WithName("controllers").WithName("ServiceInstance"),
-		GetSMClientFunc: func(_ context.Context, _ *secrets.SecretResolver, _ common.SAPBTPResource, _ string) (sm.Client, error) {
+		GetSMClientFunc: func(_ context.Context, _ *utils.SecretResolver, _, _ string) (sm.Client, error) {
 			return fakeClient, nil
 		},
 		Config:   testConfig,
@@ -159,7 +159,7 @@ var _ = BeforeSuite(func(done Done) {
 		Client: k8sManager.GetClient(),
 		Scheme: k8sManager.GetScheme(),
 		Log:    ctrl.Log.WithName("controllers").WithName("ServiceBinding"),
-		GetSMClientFunc: func(_ context.Context, _ *secrets.SecretResolver, _ common.SAPBTPResource, _ string) (sm.Client, error) {
+		GetSMClientFunc: func(_ context.Context, _ *utils.SecretResolver, _, _ string) (sm.Client, error) {
 			return fakeClient, nil
 		},
 		Config:   testConfig,

@@ -26,7 +26,6 @@ import (
 
 	"github.com/SAP/sap-btp-service-operator/api/common"
 	"github.com/SAP/sap-btp-service-operator/internal/config"
-	"github.com/SAP/sap-btp-service-operator/internal/secrets"
 	"github.com/SAP/sap-btp-service-operator/internal/utils"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -55,9 +54,9 @@ type ServiceInstanceReconciler struct {
 	client.Client
 	Log             logr.Logger
 	Scheme          *runtime.Scheme
-	GetSMClientFunc func(ctx context.Context, secretResolver *secrets.SecretResolver, object common.SAPBTPResource, btpAccessSecretName string) (sm.Client, error)
+	GetSMClientFunc func(ctx context.Context, secretResolver *utils.SecretResolver, resourceNamespace, btpAccessSecretName string) (sm.Client, error)
 	Config          config.Config
-	SecretResolver  *secrets.SecretResolver
+	SecretResolver  *utils.SecretResolver
 	Recorder        record.EventRecorder
 }
 
@@ -131,7 +130,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	log.Info(fmt.Sprintf("instance is not in final state, handling... (generation: %d, observedGen: %d", serviceInstance.Generation, serviceInstance.Status.ObservedGeneration))
 	serviceInstance.SetObservedGeneration(serviceInstance.Generation)
 
-	smClient, err := r.GetSMClientFunc(ctx, r.SecretResolver, serviceInstance, serviceInstance.Spec.BTPAccessCredentialsSecret)
+	smClient, err := r.GetSMClientFunc(ctx, r.SecretResolver, serviceInstance.Namespace, serviceInstance.Spec.BTPAccessCredentialsSecret)
 	if err != nil {
 		log.Error(err, "failed to get sm client")
 		return utils.MarkAsTransientError(ctx, r.Client, common.Unknown, err, serviceInstance)
@@ -275,7 +274,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, serviceI
 	log := utils.GetLogger(ctx)
 
 	if controllerutil.ContainsFinalizer(serviceInstance, common.FinalizerName) {
-		smClient, err := r.GetSMClientFunc(ctx, r.SecretResolver, serviceInstance, serviceInstance.Spec.BTPAccessCredentialsSecret)
+		smClient, err := r.GetSMClientFunc(ctx, r.SecretResolver, serviceInstance.Namespace, serviceInstance.Spec.BTPAccessCredentialsSecret)
 		if err != nil {
 			log.Error(err, "failed to get sm client")
 			return utils.MarkAsTransientError(ctx, r.Client, common.Unknown, err, serviceInstance)
@@ -357,7 +356,7 @@ func (r *ServiceInstanceReconciler) handleInstanceSharing(ctx context.Context, s
 func (r *ServiceInstanceReconciler) poll(ctx context.Context, serviceInstance *servicesv1.ServiceInstance) (ctrl.Result, error) {
 	log := utils.GetLogger(ctx)
 	log.Info(fmt.Sprintf("resource is in progress, found operation url %s", serviceInstance.Status.OperationURL))
-	smClient, err := r.GetSMClientFunc(ctx, r.SecretResolver, serviceInstance, serviceInstance.Spec.BTPAccessCredentialsSecret)
+	smClient, err := r.GetSMClientFunc(ctx, r.SecretResolver, serviceInstance.Namespace, serviceInstance.Spec.BTPAccessCredentialsSecret)
 	if err != nil {
 		log.Error(err, "failed to get sm client")
 		return utils.MarkAsTransientError(ctx, r.Client, common.Unknown, err, serviceInstance)

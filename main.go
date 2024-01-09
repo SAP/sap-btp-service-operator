@@ -34,7 +34,6 @@ import (
 	"github.com/SAP/sap-btp-service-operator/api/v1/webhooks"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	"github.com/SAP/sap-btp-service-operator/internal/secrets"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/SAP/sap-btp-service-operator/internal/config"
@@ -99,7 +98,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	secretResolver := &secrets.SecretResolver{
+	secretResolver := &utils.SecretResolver{
 		ManagementNamespace:    config.Get().ManagementNamespace,
 		ReleaseNamespace:       config.Get().ReleaseNamespace,
 		EnableNamespaceSecrets: config.Get().EnableNamespaceSecrets,

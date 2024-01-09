@@ -23,7 +23,6 @@ import (
 
 	"github.com/SAP/sap-btp-service-operator/api/common"
 	"github.com/SAP/sap-btp-service-operator/internal/config"
-	"github.com/SAP/sap-btp-service-operator/internal/secrets"
 	"github.com/SAP/sap-btp-service-operator/internal/utils"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -64,9 +63,9 @@ type ServiceBindingReconciler struct {
 	client.Client
 	Log             logr.Logger
 	Scheme          *runtime.Scheme
-	GetSMClientFunc func(ctx context.Context, secretResolver *secrets.SecretResolver, object common.SAPBTPResource, btpAccessSecretName string) (sm.Client, error)
+	GetSMClientFunc func(ctx context.Context, secretResolver *utils.SecretResolver, resourceNamespace, btpAccessSecretName string) (sm.Client, error)
 	Config          config.Config
-	SecretResolver  *secrets.SecretResolver
+	SecretResolver  *utils.SecretResolver
 	Recorder        record.EventRecorder
 }
 
@@ -193,7 +192,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
 		}
 
-		smClient, err := r.GetSMClientFunc(ctx, r.SecretResolver, serviceBinding, serviceInstance.Spec.BTPAccessCredentialsSecret)
+		smClient, err := r.GetSMClientFunc(ctx, r.SecretResolver, serviceBinding.Namespace, serviceInstance.Spec.BTPAccessCredentialsSecret)
 		if err != nil {
 			return utils.MarkAsTransientError(ctx, r.Client, common.Unknown, err, serviceBinding)
 		}
@@ -288,7 +287,7 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 func (r *ServiceBindingReconciler) delete(ctx context.Context, serviceBinding *servicesv1.ServiceBinding, btpAccessCredentialsSecret string) (ctrl.Result, error) {
 	log := utils.GetLogger(ctx)
 	if controllerutil.ContainsFinalizer(serviceBinding, common.FinalizerName) {
-		smClient, err := r.GetSMClientFunc(ctx, r.SecretResolver, serviceBinding, btpAccessCredentialsSecret)
+		smClient, err := r.GetSMClientFunc(ctx, r.SecretResolver, serviceBinding.Namespace, btpAccessCredentialsSecret)
 		if err != nil {
 			return utils.MarkAsTransientError(ctx, r.Client, common.Unknown, err, serviceBinding)
 		}
@@ -351,7 +350,7 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, serviceBinding *ser
 	log := utils.GetLogger(ctx)
 	log.Info(fmt.Sprintf("resource is in progress, found operation url %s", serviceBinding.Status.OperationURL))
 
-	smClient, err := r.GetSMClientFunc(ctx, r.SecretResolver, serviceBinding, btpAccessCredentialsSecret)
+	smClient, err := r.GetSMClientFunc(ctx, r.SecretResolver, serviceBinding.Namespace, btpAccessCredentialsSecret)
 	if err != nil {
 		return utils.MarkAsTransientError(ctx, r.Client, common.Unknown, err, serviceBinding)
 	}
@@ -815,7 +814,7 @@ func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, bindin
 	}
 
 	if len(bindings.Items) == 0 {
-		smClient, err := r.GetSMClientFunc(ctx, r.SecretResolver, binding, btpAccessCredentialsSecret)
+		smClient, err := r.GetSMClientFunc(ctx, r.SecretResolver, binding.Namespace, btpAccessCredentialsSecret)
 		if err != nil {
 			return err
 		}

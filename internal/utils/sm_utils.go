@@ -4,21 +4,19 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/SAP/sap-btp-service-operator/api/common"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
-	"github.com/SAP/sap-btp-service-operator/internal/secrets"
 	v1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func GetSMClient(ctx context.Context, secretResolver *secrets.SecretResolver, object common.SAPBTPResource, btpAccessSecretName string) (sm.Client, error) {
+func GetSMClient(ctx context.Context, secretResolver *SecretResolver, resourceNamespace, btpAccessSecretName string) (sm.Client, error) {
 	log := GetLogger(ctx)
 
 	if len(btpAccessSecretName) > 0 {
 		return getBTPAccessClient(ctx, secretResolver, btpAccessSecretName)
 	}
 
-	secret, err := secretResolver.GetSecretForResource(ctx, object.GetNamespace(), secrets.SAPBTPOperatorSecretName)
+	secret, err := secretResolver.GetSecretForResource(ctx, resourceNamespace, SAPBTPOperatorSecretName)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +36,7 @@ func GetSMClient(ctx context.Context, secretResolver *secrets.SecretResolver, ob
 	}
 
 	if len(clientConfig.ClientSecret) == 0 {
-		tlsSecret, err := secretResolver.GetSecretForResource(ctx, object.GetNamespace(), secrets.SAPBTPOperatorTLSSecretName)
+		tlsSecret, err := secretResolver.GetSecretForResource(ctx, resourceNamespace, SAPBTPOperatorTLSSecretName)
 		if client.IgnoreNotFound(err) != nil {
 			return nil, err
 		}
@@ -56,7 +54,7 @@ func GetSMClient(ctx context.Context, secretResolver *secrets.SecretResolver, ob
 	return sm.NewClient(ctx, clientConfig, nil)
 }
 
-func getBTPAccessClient(ctx context.Context, secretResolver *secrets.SecretResolver, secretName string) (sm.Client, error) {
+func getBTPAccessClient(ctx context.Context, secretResolver *SecretResolver, secretName string) (sm.Client, error) {
 	log := GetLogger(ctx)
 	secret, err := secretResolver.GetSecretFromManagementNamespace(ctx, secretName)
 	if err != nil {

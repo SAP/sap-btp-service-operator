@@ -14,14 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package secrets_test
+package utils
 
 import (
 	"context"
 	"testing"
 	"time"
 
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -40,19 +40,28 @@ import (
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
 const (
-	timeout  = time.Second * 10
-	interval = time.Millisecond * 250
+	timeout             = time.Second * 10
+	interval            = time.Millisecond * 250
+	managementNamespace = "test-management-namespace"
+	testNamespace       = "test-namespace"
 )
 
-var k8sClient client.Client
-var testEnv *envtest.Environment
+var (
+	ctx       context.Context
+	k8sClient client.Client
+	testEnv   *envtest.Environment
+)
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Secret Resolver Suite")
+	RunSpecs(t, "Utils Suite")
 }
 
 var _ = BeforeSuite(func(done Done) {
+
+	ctx = context.Background()
+	log := ctrl.Log.WithName("utils_tests")
+	ctx = context.WithValue(ctx, LogKey{}, log)
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 
 	By("bootstrapping test environment")
@@ -89,11 +98,11 @@ var _ = BeforeSuite(func(done Done) {
 	k8sClient = k8sManager.GetClient()
 	Expect(k8sClient).ToNot(BeNil())
 
-	nsSpec := &v1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testNamespace}}
+	nsSpec := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testNamespace}}
 	err = k8sClient.Create(context.Background(), nsSpec)
 	Expect(err).ToNot(HaveOccurred())
 
-	nsSpec = &v1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: managementNamespace}}
+	nsSpec = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: managementNamespace}}
 	err = k8sClient.Create(context.Background(), nsSpec)
 	Expect(err).ToNot(HaveOccurred())
 
