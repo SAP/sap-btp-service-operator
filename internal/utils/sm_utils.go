@@ -67,8 +67,8 @@ func getBTPAccessClient(ctx context.Context, secretResolver *SecretResolver, sec
 		URL:            string(secret.Data["sm_url"]),
 		TokenURL:       string(secret.Data["tokenurl"]),
 		TokenURLSuffix: string(secret.Data["tokenurlsuffix"]),
-		TLSPrivateKey:  string(secret.Data[v1.TLSCertKey]),
-		TLSCertKey:     string(secret.Data[v1.TLSPrivateKeyKey]),
+		TLSPrivateKey:  string(secret.Data[v1.TLSPrivateKeyKey]),
+		TLSCertKey:     string(secret.Data[v1.TLSCertKey]),
 		SSLDisabled:    false,
 	}
 

@@ -196,7 +196,146 @@ var _ = Describe("SM Utils", func() {
 		})
 
 		Context("btpAccessSecret", func() {
-			//TODO
+			Context("client credentials", func() {
+				When("secret is valid", func() {
+					BeforeEach(func() {
+						secret = &corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "my-btp-access-secret",
+								Namespace: managementNamespace,
+							},
+							Data: map[string][]byte{
+								"clientid":     []byte("12345"),
+								"clientsecret": []byte("client-secret"),
+								"sm_url":       []byte("https://some.url"),
+								"tokenurl":     []byte("https://token.url"),
+							},
+						}
+						Expect(k8sClient.Create(ctx, secret)).To(Succeed())
+					})
+					It("should succeed", func() {
+						client, err := GetSMClient(ctx, resolver, testNamespace, "my-btp-access-secret")
+						Expect(err).ToNot(HaveOccurred())
+						Expect(client).ToNot(BeNil())
+					})
+				})
+
+				When("secret is missing client secret and there is no tls secret", func() {
+					BeforeEach(func() {
+						secret = &corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "my-btp-access-secret",
+								Namespace: managementNamespace,
+							},
+							Data: map[string][]byte{
+								"clientid":     []byte("12345"),
+								"clientsecret": []byte(""),
+								"sm_url":       []byte("https://some.url"),
+								"tokenurl":     []byte("https://token.url"),
+							},
+						}
+						Expect(k8sClient.Create(ctx, secret)).To(Succeed())
+					})
+					It("should return error", func() {
+						client, err := GetSMClient(ctx, resolver, testNamespace, "my-btp-access-secret")
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(ContainSubstring("invalid Service-Manager credentials, contact your cluster administrator"))
+						Expect(client).To(BeNil())
+					})
+				})
+				When("secret is missing token url", func() {
+					BeforeEach(func() {
+						secret = &corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "my-btp-access-secret",
+								Namespace: managementNamespace,
+							},
+							Data: map[string][]byte{
+								"clientid":     []byte("12345"),
+								"clientsecret": []byte("clientsecret"),
+								"sm_url":       []byte("https://some.url"),
+								"tokenurl":     []byte(""),
+							},
+						}
+						Expect(k8sClient.Create(ctx, secret)).To(Succeed())
+					})
+					It("should return error", func() {
+						client, err := GetSMClient(ctx, resolver, testNamespace, "my-btp-access-secret")
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(ContainSubstring("invalid Service-Manager credentials, contact your cluster administrator"))
+						Expect(client).To(BeNil())
+					})
+				})
+				When("secret is missing sm url", func() {
+					BeforeEach(func() {
+						secret = &corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "my-btp-access-secret",
+								Namespace: managementNamespace,
+							},
+							Data: map[string][]byte{
+								"clientid":     []byte("12345"),
+								"clientsecret": []byte("clientsecret"),
+								"tokenurl":     []byte("http://tokenurl"),
+							},
+						}
+						Expect(k8sClient.Create(ctx, secret)).To(Succeed())
+					})
+					It("should return error", func() {
+						client, err := GetSMClient(ctx, resolver, testNamespace, "my-btp-access-secret")
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(ContainSubstring("invalid Service-Manager credentials, contact your cluster administrator"))
+						Expect(client).To(BeNil())
+					})
+				})
+			})
+
+			Context("tls credentials", func() {
+				When("secret is valid", func() {
+					BeforeEach(func() {
+						secret = &corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "my-btp-access-secret",
+								Namespace: managementNamespace,
+							},
+							Data: map[string][]byte{
+								"clientid": []byte("12345"),
+								"sm_url":   []byte("https://some.url"),
+								"tokenurl": []byte("https://token.url"),
+								"tls.key":  []byte(tlskey),
+								"tls.crt":  []byte(tlscrt),
+							},
+						}
+						Expect(k8sClient.Create(ctx, secret)).To(Succeed())
+					})
+					It("should succeed", func() {
+						client, err := GetSMClient(ctx, resolver, testNamespace, "my-btp-access-secret")
+						Expect(err).ToNot(HaveOccurred())
+						Expect(client).ToNot(BeNil())
+					})
+				})
+
+				When("tls secret is missing required values", func() {
+					BeforeEach(func() {
+						tlsSecret = &corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "my-btp-access-secret",
+								Namespace: managementNamespace,
+							},
+							Data: map[string][]byte{
+								"tls.key": []byte("12345key"),
+							},
+						}
+						Expect(k8sClient.Create(ctx, tlsSecret)).To(Succeed())
+					})
+					It("should return error", func() {
+						client, err := GetSMClient(ctx, resolver, testNamespace, "my-btp-access-secret")
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(ContainSubstring("invalid Service-Manager credentials, contact your cluster administrator"))
+						Expect(client).To(BeNil())
+					})
+				})
+			})
 		})
 	})
 })
