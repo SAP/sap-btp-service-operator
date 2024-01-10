@@ -18,6 +18,9 @@ package utils
 
 import (
 	"context"
+	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
+	"k8s.io/client-go/rest"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -47,6 +50,7 @@ const (
 )
 
 var (
+	cfg       *rest.Config
 	ctx       context.Context
 	k8sClient client.Client
 	testEnv   *envtest.Environment
@@ -65,12 +69,23 @@ var _ = BeforeSuite(func(done Done) {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 
 	By("bootstrapping test environment")
-	testEnv = &envtest.Environment{}
+	testEnv = &envtest.Environment{
+		CRDDirectoryPaths: []string{filepath.Join("../..", "config", "crd", "bases")},
+	}
 
 	var err error
-	cfg, err := testEnv.Start()
+	cfg, err = testEnv.Start()
 	Expect(err).ToNot(HaveOccurred())
 	Expect(cfg).ToNot(BeNil())
+
+	err = v1.AddToScheme(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
+
+	// +kubebuilder:scaffold:scheme
+
+	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
+	Expect(err).ToNot(HaveOccurred())
+	Expect(k8sClient).ToNot(BeNil())
 
 	// +kubebuilder:scaffold:scheme
 
@@ -95,8 +110,8 @@ var _ = BeforeSuite(func(done Done) {
 	}()
 
 	k8sManager.GetCache().WaitForCacheSync(context.Background())
-	k8sClient = k8sManager.GetClient()
-	Expect(k8sClient).ToNot(BeNil())
+	//k8sClient = k8sManager.GetClient()
+	//Expect(k8sClient).ToNot(BeNil())
 
 	nsSpec := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testNamespace}}
 	err = k8sClient.Create(context.Background(), nsSpec)
