@@ -4,8 +4,12 @@ import (
 	"encoding/json"
 	"github.com/SAP/sap-btp-service-operator/api/common"
 	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
+	"github.com/SAP/sap-btp-service-operator/client/sm"
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"net/http"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"time"
 )
@@ -75,6 +79,126 @@ var _ = Describe("Controller Util", func() {
 			}
 			instance.SetAnnotations(annotation)
 			Expect(ShouldIgnoreNonTransient(logger, instance, time.Hour)).To(BeTrue())
+		})
+	})
+
+	Context("SliceContains", func() {
+		It("slice contains", func() {
+			slice := []string{"element1", "element2", "element3"}
+			Expect(SliceContains(slice, "element2")).To(BeTrue())
+		})
+
+		It("slice doesn't contain", func() {
+			slice := []string{"element1", "element2", "element3"}
+			Expect(SliceContains(slice, "element4")).To(BeFalse())
+		})
+
+		It("empty slice", func() {
+			slice := []string{}
+			Expect(SliceContains(slice, "element1")).To(BeFalse())
+		})
+	})
+
+	Context("IsTransientError", func() {
+		var instance *sm.ServiceManagerError
+		var log logr.Logger
+		BeforeEach(func() {
+			log = GetLogger(ctx)
+		})
+		When("400 status code", func() {
+			BeforeEach(func() {
+				instance = &sm.ServiceManagerError{
+					StatusCode: 400,
+				}
+			})
+
+			It("should not be transient error", func() {
+				Expect(IsTransientError(instance, log)).To(BeFalse())
+			})
+		})
+
+		When("internal server error status code", func() {
+			BeforeEach(func() {
+				instance = &sm.ServiceManagerError{
+					StatusCode: 500,
+				}
+			})
+
+			It("should be non transient error", func() {
+				Expect(IsTransientError(instance, log)).To(BeFalse())
+			})
+		})
+
+		When("concurrent operation error", func() {
+			BeforeEach(func() {
+				instance = &sm.ServiceManagerError{
+					StatusCode: http.StatusUnprocessableEntity,
+					ErrorType:  "ConcurrentOperationInProgress",
+				}
+			})
+
+			It("should be transient error", func() {
+				Expect(IsTransientError(instance, log)).To(BeTrue())
+			})
+		})
+	})
+
+	Context("RemoveAnnotations tests", func() {
+		var resource *v1.ServiceBinding
+		BeforeEach(func() {
+			resource = getBinding()
+			Expect(k8sClient.Create(ctx, resource)).To(Succeed())
+		})
+		AfterEach(func() {
+			err := k8sClient.Delete(ctx, resource)
+			Expect(client.IgnoreNotFound(err)).ToNot(HaveOccurred())
+		})
+		When("a single key is removed", func() {
+			BeforeEach(func() {
+				resource.Annotations = map[string]string{"key1": "value1", "key2": "value2"}
+			})
+
+			It("should not return an error and remove the annotation", func() {
+				err := RemoveAnnotations(ctx, k8sClient, resource, "key1")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resource.GetAnnotations()).To(Equal(map[string]string{"key2": "value2"}))
+			})
+		})
+
+		When("multiple keys are removed", func() {
+			BeforeEach(func() {
+				resource.Annotations = map[string]string{"key1": "value1", "key2": "value2"}
+			})
+
+			It("should not return an error and remove annotations", func() {
+				err := RemoveAnnotations(ctx, k8sClient, resource, "key1", "key2")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resource.GetAnnotations()).To(BeEmpty())
+			})
+		})
+
+		When("non-existent key is removed", func() {
+			BeforeEach(func() {
+				resource.Annotations = map[string]string{"key1": "value1", "key2": "value2"}
+			})
+
+			It("should not return an error", func() {
+				err := RemoveAnnotations(ctx, k8sClient, resource, "key3")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resource.GetAnnotations()).To(Equal(map[string]string{"key1": "value1", "key2": "value2"}))
+			})
+		})
+
+		When("annotations are empty", func() {
+			BeforeEach(func() {
+				resource.Annotations = map[string]string{}
+			})
+
+			It("should not return an error", func() {
+				err := RemoveAnnotations(ctx, k8sClient, resource, "key1")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resource.GetAnnotations()).To(BeEmpty())
+			})
 		})
 	})
 })
