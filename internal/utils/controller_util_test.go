@@ -8,6 +8,7 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	authv1 "k8s.io/api/authentication/v1"
 	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -199,6 +200,19 @@ var _ = Describe("Controller Util", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(resource.GetAnnotations()).To(BeEmpty())
 			})
+		})
+	})
+
+	Context("build user info test ", func() {
+
+		It("should return empty with nil UserInfo", func() {
+			Expect(BuildUserInfo(ctx, nil)).To(Equal(""))
+		})
+
+		It("should return correct UserInfo string with valid UserInfo", func() {
+			got := BuildUserInfo(ctx, &authv1.UserInfo{Username: "user1", UID: "1"})
+			expected := `{"username":"user1","uid":"1"}`
+			Expect(got).To(Equal(expected))
 		})
 	})
 })
