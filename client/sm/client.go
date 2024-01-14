@@ -28,7 +28,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/SAP/sap-btp-service-operator/api"
+	"github.com/SAP/sap-btp-service-operator/api/common"
+
 	"github.com/SAP/sap-btp-service-operator/client/sm/types"
 	"github.com/SAP/sap-btp-service-operator/internal/auth"
 	"github.com/SAP/sap-btp-service-operator/internal/httputil"
@@ -69,10 +70,10 @@ type Client interface {
 }
 
 type ServiceManagerError struct {
-	ErrorType   string                   `json:"error,omitempty"`
-	Description string                   `json:"description,omitempty"`
-	StatusCode  int                      `json:"-"`
-	BrokerError *api.HTTPStatusCodeError `json:"broker_error,omitempty"`
+	ErrorType   string                      `json:"error,omitempty"`
+	Description string                      `json:"description,omitempty"`
+	StatusCode  int                         `json:"-"`
+	BrokerError *common.HTTPStatusCodeError `json:"broker_error,omitempty"`
 }
 
 func (e *ServiceManagerError) Error() string {

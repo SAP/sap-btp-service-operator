@@ -1,7 +1,7 @@
 package v1
 
 import (
-	"github.com/SAP/sap-btp-service-operator/api"
+	"github.com/SAP/sap-btp-service-operator/api/common"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -14,7 +14,7 @@ var _ = Describe("Service Binding Type Test", func() {
 	BeforeEach(func() {
 		binding = getBinding()
 		conditions := binding.GetConditions()
-		lastOpCondition := metav1.Condition{Type: api.ConditionSucceeded, Status: metav1.ConditionTrue, Reason: "reason", Message: "message"}
+		lastOpCondition := metav1.Condition{Type: common.ConditionSucceeded, Status: metav1.ConditionTrue, Reason: "reason", Message: "message"}
 		meta.SetStatusCondition(&conditions, lastOpCondition)
 		binding.SetConditions(conditions)
 	})
@@ -63,7 +63,7 @@ var _ = Describe("Service Binding Type Test", func() {
 	})
 
 	It("should return controller name", func() {
-		Expect(binding.GetControllerName()).To(Equal(api.ServiceBindingController))
+		Expect(binding.GetControllerName()).To(Equal(common.ServiceBindingController))
 	})
 
 	It("should update observed generation", func() {
@@ -100,7 +100,7 @@ var _ = Describe("Service Binding Type Test", func() {
 
 	It("should update annotation", func() {
 		annotation := map[string]string{
-			api.IgnoreNonTransientErrorAnnotation: "true",
+			common.IgnoreNonTransientErrorAnnotation: "true",
 		}
 		binding.SetAnnotations(annotation)
 		Expect(binding.GetAnnotations()).To(Equal(annotation))

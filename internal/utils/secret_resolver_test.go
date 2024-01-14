@@ -1,15 +1,15 @@
-package secrets_test
+package utils
 
 import (
 	"context"
 
-	"github.com/SAP/sap-btp-service-operator/internal/secrets"
 	"github.com/google/uuid"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -18,24 +18,19 @@ import (
 
 // +kubebuilder:docs-gen:collapse=Imports
 
-const (
-	managementNamespace = "test-management-namespace"
-	testNamespace       = "test-namespace"
-)
-
 var _ = Describe("Secrets Resolver", func() {
 
 	var ctx context.Context
-	var resolver *secrets.SecretResolver
+	var resolver *SecretResolver
 	var expectedClientID string
 	var secret *corev1.Secret
 
 	createSecret := func(namePrefix string, namespace string) *corev1.Secret {
 		var name string
 		if namePrefix == "" {
-			name = secrets.SAPBTPOperatorSecretName
+			name = SAPBTPOperatorSecretName
 		} else {
-			name = fmt.Sprintf("%s-%s", namePrefix, secrets.SAPBTPOperatorSecretName)
+			name = fmt.Sprintf("%s-%s", namePrefix, SAPBTPOperatorSecretName)
 		}
 		By(fmt.Sprintf("Creating secret with name %s", name))
 
@@ -68,21 +63,21 @@ var _ = Describe("Secrets Resolver", func() {
 	}
 
 	validateSecretResolved := func() {
-		resolvedSecret, err := resolver.GetSecretForResource(ctx, testNamespace, secrets.SAPBTPOperatorSecretName, "")
+		resolvedSecret, err := resolver.GetSecretForResource(ctx, testNamespace, SAPBTPOperatorSecretName)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(resolvedSecret).ToNot(BeNil())
 		Expect(string(resolvedSecret.Data["clientid"])).To(Equal(expectedClientID))
 	}
 
 	validateSecretNotResolved := func() {
-		_, err := resolver.GetSecretForResource(ctx, testNamespace, secrets.SAPBTPOperatorSecretName, "")
+		_, err := resolver.GetSecretForResource(ctx, testNamespace, SAPBTPOperatorSecretName)
 		Expect(err).To(HaveOccurred())
 		Expect(err.Error()).To(ContainSubstring("not found"))
 	}
 
 	BeforeEach(func() {
 		ctx = context.Background()
-		resolver = &secrets.SecretResolver{
+		resolver = &SecretResolver{
 			ManagementNamespace: managementNamespace,
 			ReleaseNamespace:    managementNamespace,
 			Log:                 logf.Log.WithName("SecretResolver"),
@@ -185,7 +180,7 @@ var _ = Describe("Secrets Resolver", func() {
 		})
 
 		It("should resolve the secret", func() {
-			resolvedSecret, err := resolver.GetSecretForResource(ctx, testNamespace, secrets.SAPBTPOperatorSecretName, secret.Name)
+			resolvedSecret, err := resolver.GetSecretFromManagementNamespace(ctx, secret.Name)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(resolvedSecret).ToNot(BeNil())
 			Expect(string(resolvedSecret.Data["clientid"])).To(Equal(expectedClientID))
