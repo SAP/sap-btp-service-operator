@@ -52,12 +52,12 @@ import (
 // ServiceInstanceReconciler reconciles a ServiceInstance object
 type ServiceInstanceReconciler struct {
 	client.Client
-	Log             logr.Logger
-	Scheme          *runtime.Scheme
-	GetSMClientFunc func(ctx context.Context, secretResolver *utils.SecretResolver, resourceNamespace, btpAccessSecretName string) (sm.Client, error)
-	Config          config.Config
-	SecretResolver  *utils.SecretResolver
-	Recorder        record.EventRecorder
+	Log            logr.Logger
+	Scheme         *runtime.Scheme
+	GetSMClient    func(ctx context.Context, secretResolver *utils.SecretResolver, resourceNamespace, btpAccessSecretName string) (sm.Client, error)
+	Config         config.Config
+	SecretResolver *utils.SecretResolver
+	Recorder       record.EventRecorder
 }
 
 // +kubebuilder:rbac:groups=services.cloud.sap.com,resources=serviceinstances,verbs=get;list;watch;create;update;patch;delete
@@ -130,7 +130,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	log.Info(fmt.Sprintf("instance is not in final state, handling... (generation: %d, observedGen: %d", serviceInstance.Generation, serviceInstance.Status.ObservedGeneration))
 	serviceInstance.SetObservedGeneration(serviceInstance.Generation)
 
-	smClient, err := r.GetSMClientFunc(ctx, r.SecretResolver, serviceInstance.Namespace, serviceInstance.Spec.BTPAccessCredentialsSecret)
+	smClient, err := r.GetSMClient(ctx, r.SecretResolver, serviceInstance.Namespace, serviceInstance.Spec.BTPAccessCredentialsSecret)
 	if err != nil {
 		log.Error(err, "failed to get sm client")
 		return utils.MarkAsTransientError(ctx, r.Client, common.Unknown, err, serviceInstance)
@@ -180,7 +180,7 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	log := utils.GetLogger(ctx)
 	log.Info("Creating instance in SM")
 	updateHashedSpecValue(serviceInstance)
-	_, instanceParameters, err := utils.BuildParameters(r.Client, serviceInstance.Namespace, serviceInstance.Spec.ParametersFrom, serviceInstance.Spec.Parameters)
+	_, instanceParameters, err := utils.BuildSMRequestParameters(r.Client, serviceInstance.Namespace, serviceInstance.Spec.ParametersFrom, serviceInstance.Spec.Parameters)
 	if err != nil {
 		// if parameters are invalid there is nothing we can do, the user should fix it according to the error message in the condition
 		log.Error(err, "failed to parse instance parameters")
@@ -236,7 +236,7 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 
 	updateHashedSpecValue(serviceInstance)
 
-	_, instanceParameters, err := utils.BuildParameters(r.Client, serviceInstance.Namespace, serviceInstance.Spec.ParametersFrom, serviceInstance.Spec.Parameters)
+	_, instanceParameters, err := utils.BuildSMRequestParameters(r.Client, serviceInstance.Namespace, serviceInstance.Spec.ParametersFrom, serviceInstance.Spec.Parameters)
 	if err != nil {
 		log.Error(err, "failed to parse instance parameters")
 		return utils.MarkAsNonTransientError(ctx, r.Client, smClientTypes.UPDATE, fmt.Sprintf("failed to parse parameters: %v", err.Error()), serviceInstance)
@@ -274,7 +274,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, serviceI
 	log := utils.GetLogger(ctx)
 
 	if controllerutil.ContainsFinalizer(serviceInstance, common.FinalizerName) {
-		smClient, err := r.GetSMClientFunc(ctx, r.SecretResolver, serviceInstance.Namespace, serviceInstance.Spec.BTPAccessCredentialsSecret)
+		smClient, err := r.GetSMClient(ctx, r.SecretResolver, serviceInstance.Namespace, serviceInstance.Spec.BTPAccessCredentialsSecret)
 		if err != nil {
 			log.Error(err, "failed to get sm client")
 			return utils.MarkAsTransientError(ctx, r.Client, common.Unknown, err, serviceInstance)
@@ -356,7 +356,7 @@ func (r *ServiceInstanceReconciler) handleInstanceSharing(ctx context.Context, s
 func (r *ServiceInstanceReconciler) poll(ctx context.Context, serviceInstance *servicesv1.ServiceInstance) (ctrl.Result, error) {
 	log := utils.GetLogger(ctx)
 	log.Info(fmt.Sprintf("resource is in progress, found operation url %s", serviceInstance.Status.OperationURL))
-	smClient, err := r.GetSMClientFunc(ctx, r.SecretResolver, serviceInstance.Namespace, serviceInstance.Spec.BTPAccessCredentialsSecret)
+	smClient, err := r.GetSMClient(ctx, r.SecretResolver, serviceInstance.Namespace, serviceInstance.Spec.BTPAccessCredentialsSecret)
 	if err != nil {
 		log.Error(err, "failed to get sm client")
 		return utils.MarkAsTransientError(ctx, r.Client, common.Unknown, err, serviceInstance)

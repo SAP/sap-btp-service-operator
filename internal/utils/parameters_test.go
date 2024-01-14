@@ -8,12 +8,12 @@ import (
 )
 
 var _ = Describe("Parameters", func() {
-	Describe("BuildParameters", func() {
+	Describe("BuildSMRequestParameters", func() {
 		It("handles empty parameters", func() {
 			parametersFrom := []v1.ParametersFromSource{}
 			parameters := (*runtime.RawExtension)(nil)
 
-			params, rawParam, err := BuildParameters(nil, "", parametersFrom, parameters)
+			params, rawParam, err := BuildSMRequestParameters(nil, "", parametersFrom, parameters)
 
 			Expect(err).To(BeNil())
 			Expect(params).To(BeNil())

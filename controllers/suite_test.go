@@ -147,7 +147,7 @@ var _ = BeforeSuite(func(done Done) {
 		Client: k8sManager.GetClient(),
 		Scheme: k8sManager.GetScheme(),
 		Log:    ctrl.Log.WithName("controllers").WithName("ServiceInstance"),
-		GetSMClientFunc: func(_ context.Context, _ *utils.SecretResolver, _, _ string) (sm.Client, error) {
+		GetSMClient: func(_ context.Context, _ *utils.SecretResolver, _, _ string) (sm.Client, error) {
 			return fakeClient, nil
 		},
 		Config:   testConfig,
@@ -159,7 +159,7 @@ var _ = BeforeSuite(func(done Done) {
 		Client: k8sManager.GetClient(),
 		Scheme: k8sManager.GetScheme(),
 		Log:    ctrl.Log.WithName("controllers").WithName("ServiceBinding"),
-		GetSMClientFunc: func(_ context.Context, _ *utils.SecretResolver, _, _ string) (sm.Client, error) {
+		GetSMClient: func(_ context.Context, _ *utils.SecretResolver, _, _ string) (sm.Client, error) {
 			return fakeClient, nil
 		},
 		Config:   testConfig,

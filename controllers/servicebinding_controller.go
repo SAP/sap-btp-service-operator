@@ -61,12 +61,12 @@ const (
 // ServiceBindingReconciler reconciles a ServiceBinding object
 type ServiceBindingReconciler struct {
 	client.Client
-	Log             logr.Logger
-	Scheme          *runtime.Scheme
-	GetSMClientFunc func(ctx context.Context, secretResolver *utils.SecretResolver, resourceNamespace, btpAccessSecretName string) (sm.Client, error)
-	Config          config.Config
-	SecretResolver  *utils.SecretResolver
-	Recorder        record.EventRecorder
+	Log            logr.Logger
+	Scheme         *runtime.Scheme
+	GetSMClient    func(ctx context.Context, secretResolver *utils.SecretResolver, resourceNamespace, btpAccessSecretName string) (sm.Client, error)
+	Config         config.Config
+	SecretResolver *utils.SecretResolver
+	Recorder       record.EventRecorder
 }
 
 // +kubebuilder:rbac:groups=services.cloud.sap.com,resources=servicebindings,verbs=get;list;watch;create;update;patch;delete
@@ -192,7 +192,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
 		}
 
-		smClient, err := r.GetSMClientFunc(ctx, r.SecretResolver, serviceBinding.Namespace, serviceInstance.Spec.BTPAccessCredentialsSecret)
+		smClient, err := r.GetSMClient(ctx, r.SecretResolver, serviceBinding.Namespace, serviceInstance.Spec.BTPAccessCredentialsSecret)
 		if err != nil {
 			return utils.MarkAsTransientError(ctx, r.Client, common.Unknown, err, serviceBinding)
 		}
@@ -224,7 +224,7 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 	log := utils.GetLogger(ctx)
 	log.Info("Creating smBinding in SM")
 	serviceBinding.Status.InstanceID = serviceInstance.Status.InstanceID
-	_, bindingParameters, err := utils.BuildParameters(r.Client, serviceBinding.Namespace, serviceBinding.Spec.ParametersFrom, serviceBinding.Spec.Parameters)
+	_, bindingParameters, err := utils.BuildSMRequestParameters(r.Client, serviceBinding.Namespace, serviceBinding.Spec.ParametersFrom, serviceBinding.Spec.Parameters)
 	if err != nil {
 		log.Error(err, "failed to parse smBinding parameters")
 		return utils.MarkAsNonTransientError(ctx, r.Client, smClientTypes.CREATE, err.Error(), serviceBinding)
@@ -287,7 +287,7 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 func (r *ServiceBindingReconciler) delete(ctx context.Context, serviceBinding *servicesv1.ServiceBinding, btpAccessCredentialsSecret string) (ctrl.Result, error) {
 	log := utils.GetLogger(ctx)
 	if controllerutil.ContainsFinalizer(serviceBinding, common.FinalizerName) {
-		smClient, err := r.GetSMClientFunc(ctx, r.SecretResolver, serviceBinding.Namespace, btpAccessCredentialsSecret)
+		smClient, err := r.GetSMClient(ctx, r.SecretResolver, serviceBinding.Namespace, btpAccessCredentialsSecret)
 		if err != nil {
 			return utils.MarkAsTransientError(ctx, r.Client, common.Unknown, err, serviceBinding)
 		}
@@ -350,7 +350,7 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, serviceBinding *ser
 	log := utils.GetLogger(ctx)
 	log.Info(fmt.Sprintf("resource is in progress, found operation url %s", serviceBinding.Status.OperationURL))
 
-	smClient, err := r.GetSMClientFunc(ctx, r.SecretResolver, serviceBinding.Namespace, btpAccessCredentialsSecret)
+	smClient, err := r.GetSMClient(ctx, r.SecretResolver, serviceBinding.Namespace, btpAccessCredentialsSecret)
 	if err != nil {
 		return utils.MarkAsTransientError(ctx, r.Client, common.Unknown, err, serviceBinding)
 	}
@@ -814,7 +814,7 @@ func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, bindin
 	}
 
 	if len(bindings.Items) == 0 {
-		smClient, err := r.GetSMClientFunc(ctx, r.SecretResolver, binding.Namespace, btpAccessCredentialsSecret)
+		smClient, err := r.GetSMClient(ctx, r.SecretResolver, binding.Namespace, btpAccessCredentialsSecret)
 		if err != nil {
 			return err
 		}
