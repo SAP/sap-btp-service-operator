@@ -82,9 +82,9 @@ func ShouldIgnoreNonTransient(log logr.Logger, serviceInstance *servicesv1.Servi
 
 func getFirstErrorTimestamp(serviceInstance *servicesv1.ServiceInstance) time.Time {
 	if serviceInstance.Status.FirstErrorTimestamp.IsZero() {
-		serviceInstance.Status.FirstErrorTimestamp = time.Now()
+		serviceInstance.Status.FirstErrorTimestamp = metav1.NewTime(time.Now())
 	}
-	return serviceInstance.Status.FirstErrorTimestamp
+	return serviceInstance.Status.FirstErrorTimestamp.Time
 }
 
 func NormalizeCredentials(credentialsJSON json.RawMessage) (map[string][]byte, []SecretMetadataProperty, error) {

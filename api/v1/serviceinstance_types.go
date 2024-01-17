@@ -22,7 +22,6 @@ import (
 	v1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"time"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -121,7 +120,7 @@ type ServiceInstanceStatus struct {
 	// The subaccount id of the service instance
 	SubaccountID string `json:"subaccountID,omitempty"`
 
-	FirstErrorTimestamp time.Time `json:"firstErrorTimestamp,omitempty"`
+	FirstErrorTimestamp metav1.Time `json:"firstErrorTimestamp,omitempty"`
 }
 
 // +kubebuilder:object:root=true
