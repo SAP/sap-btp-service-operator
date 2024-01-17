@@ -76,15 +76,15 @@ func ShouldIgnoreNonTransient(log logr.Logger, serviceInstance *servicesv1.Servi
 		log.Info(fmt.Sprintf("timeout of %s reached - error is considered to be non transient. time passed since first trail %s", timeout, sinceFirstTrail))
 		return false
 	}
-	log.Info(fmt.Sprintf("timeout of %s was not reached - error is considered to be transient. ime passed since first trail %s", timeout, sinceFirstTrail))
+	log.Info(fmt.Sprintf("timeout of %s was not reached - error is considered to be transient. time passed since first trail %s", timeout, sinceFirstTrail))
 	return true
 }
 
 func getFirstErrorTimestamp(serviceInstance *servicesv1.ServiceInstance) time.Time {
 	if serviceInstance.Status.FirstErrorTimestamp.IsZero() {
-		serviceInstance.Status.FirstErrorTimestamp = metav1.NewTime(time.Now())
+		serviceInstance.Status.FirstErrorTimestamp = time.Now()
 	}
-	return serviceInstance.Status.FirstErrorTimestamp.Time
+	return serviceInstance.Status.FirstErrorTimestamp
 }
 
 func NormalizeCredentials(credentialsJSON json.RawMessage) (map[string][]byte, []SecretMetadataProperty, error) {

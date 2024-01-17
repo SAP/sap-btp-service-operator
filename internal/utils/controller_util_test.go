@@ -8,7 +8,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	authv1 "k8s.io/api/authentication/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -63,12 +62,11 @@ var _ = Describe("Controller Util", func() {
 			Expect(ShouldIgnoreNonTransient(logger, instance, time.Hour)).To(BeTrue())
 		})
 		It("should return false if time exceeded", func() {
-
-			instance.Status.FirstErrorTimestamp = metav1.NewTime(time.Now().Truncate(2 * time.Hour))
+			instance.Status.FirstErrorTimestamp = time.Now().Add(-2 * time.Hour)
 			Expect(ShouldIgnoreNonTransient(logger, instance, time.Hour)).To(BeFalse())
 		})
 		It("should return true if time not exceeded", func() {
-			instance.Status.FirstErrorTimestamp = metav1.NewTime(time.Now())
+			instance.Status.FirstErrorTimestamp = time.Now()
 			Expect(ShouldIgnoreNonTransient(logger, instance, time.Hour)).To(BeTrue())
 		})
 	})

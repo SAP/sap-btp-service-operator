@@ -238,7 +238,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						fakeClient.ProvisionReturnsOnCall(1, &sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
 					})
 
-					FIt("should have failure condition", func() {
+					It("should have failure condition", func() {
 						serviceInstance = createInstance(ctx, instanceSpec, nil, false)
 						waitForResourceCondition(ctx, serviceInstance, common.ConditionFailed, metav1.ConditionTrue, common.CreateFailed, errMessage)
 					})
