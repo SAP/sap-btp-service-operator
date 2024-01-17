@@ -68,7 +68,7 @@ const (
 	interval                  = time.Millisecond * 50
 	syncPeriod                = time.Millisecond * 250
 	pollInterval              = time.Millisecond * 250
-	ignoreNonTransientTimeout = time.Second * 10
+	ignoreNonTransientTimeout = 0
 
 	fakeBindingID        = "fake-binding-id"
 	bindingTestNamespace = "test-namespace"
