@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	servicesv1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	"net/http"
 	"strings"
 	"time"
@@ -68,23 +69,22 @@ func UpdateStatus(ctx context.Context, k8sClient client.Client, object common.SA
 	return k8sClient.Status().Update(ctx, object)
 }
 
-func ShouldIgnoreNonTransient(log logr.Logger, resource common.SAPBTPResource, timeout time.Duration) bool {
-	annotations := resource.GetAnnotations()
-	if len(annotations) == 0 || len(annotations[common.IgnoreNonTransientErrorAnnotation]) == 0 {
+func ShouldIgnoreNonTransient(log logr.Logger, serviceInstance *servicesv1.ServiceInstance, timeout time.Duration) bool {
+	firstTrailTimestamp := getFirstErrorTimestamp(serviceInstance)
+	sinceFirstTrail := time.Since(firstTrailTimestamp)
+	if sinceFirstTrail > timeout {
+		log.Info(fmt.Sprintf("timeout of %s reached - error is considered to be non transient. time passed since first trail %s", timeout, sinceFirstTrail))
 		return false
 	}
-
-	// we ignore the error
-	// for service instances, the value is validated in webhook
-	// for service bindings, the annotation is not allowed
-	annotationTime, _ := time.Parse(time.RFC3339, annotations[common.IgnoreNonTransientErrorTimestampAnnotation])
-	sinceAnnotation := time.Since(annotationTime)
-	if sinceAnnotation > timeout {
-		log.Info(fmt.Sprintf("timeout of %s reached - error is considered to be non transient. time passed since annotation timestamp %s", timeout, sinceAnnotation))
-		return false
-	}
-	log.Info(fmt.Sprintf("timeout of %s was not reached - error is considered to be transient. ime passed since annotation timestamp %s", timeout, sinceAnnotation))
+	log.Info(fmt.Sprintf("timeout of %s was not reached - error is considered to be transient. ime passed since first trail %s", timeout, sinceFirstTrail))
 	return true
+}
+
+func getFirstErrorTimestamp(serviceInstance *servicesv1.ServiceInstance) time.Time {
+	if serviceInstance.Status.FirstErrorTimestamp.IsZero() {
+		serviceInstance.Status.FirstErrorTimestamp = metav1.NewTime(time.Now())
+	}
+	return serviceInstance.Status.FirstErrorTimestamp.Time
 }
 
 func NormalizeCredentials(credentialsJSON json.RawMessage) (map[string][]byte, []SecretMetadataProperty, error) {

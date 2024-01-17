@@ -18,10 +18,8 @@ package v1
 
 import (
 	"fmt"
-	"strings"
-	"time"
-
 	"github.com/SAP/sap-btp-service-operator/api/common"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -49,7 +47,7 @@ var _ webhook.Validator = &ServiceInstance{}
 var serviceinstancelog = logf.Log.WithName("serviceinstance-resource")
 
 func (si *ServiceInstance) ValidateCreate() (warnings admission.Warnings, err error) {
-	return nil, si.validateNonTransientTimestampAnnotation()
+	return nil, nil
 }
 
 func (si *ServiceInstance) ValidateUpdate(old runtime.Object) (warnings admission.Warnings, err error) {
@@ -59,7 +57,7 @@ func (si *ServiceInstance) ValidateUpdate(old runtime.Object) (warnings admissio
 	if oldInstance.Spec.BTPAccessCredentialsSecret != si.Spec.BTPAccessCredentialsSecret {
 		return nil, fmt.Errorf("changing the btpAccessCredentialsSecret for an existing instance is not allowed")
 	}
-	return nil, si.validateNonTransientTimestampAnnotation()
+	return nil, nil
 }
 
 func (si *ServiceInstance) ValidateDelete() (warnings admission.Warnings, err error) {
@@ -71,21 +69,4 @@ func (si *ServiceInstance) ValidateDelete() (warnings admission.Warnings, err er
 		}
 	}
 	return nil, nil
-}
-
-func (si *ServiceInstance) validateNonTransientTimestampAnnotation() error {
-	if len(si.Annotations) > 0 && len(si.Annotations[common.IgnoreNonTransientErrorAnnotation]) > 0 {
-		serviceinstancelog.Info(fmt.Sprintf("%s annotation exist, validating %s annotation", common.IgnoreNonTransientErrorAnnotation, common.IgnoreNonTransientErrorTimestampAnnotation))
-		annotationTime, err := time.Parse(time.RFC3339, si.Annotations[common.IgnoreNonTransientErrorTimestampAnnotation])
-		if err != nil {
-			serviceinstancelog.Error(err, fmt.Sprintf("failed to parse %s", common.IgnoreNonTransientErrorTimestampAnnotation))
-			return fmt.Errorf(annotationNotValidTimestampError, common.IgnoreNonTransientErrorTimestampAnnotation)
-		}
-
-		if time.Since(annotationTime) < 0 {
-			return fmt.Errorf(annotationInFutureError, common.IgnoreNonTransientErrorTimestampAnnotation)
-		}
-	}
-
-	return nil
 }

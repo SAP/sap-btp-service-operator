@@ -119,6 +119,8 @@ type ServiceInstanceStatus struct {
 
 	// The subaccount id of the service instance
 	SubaccountID string `json:"subaccountID,omitempty"`
+
+	FirstErrorTimestamp metav1.Time `json:"firstErrorTimestamp,omitempty"`
 }
 
 // +kubebuilder:object:root=true

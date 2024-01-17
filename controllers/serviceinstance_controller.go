@@ -105,7 +105,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			}
 		}
 
-		return ctrl.Result{}, utils.RemoveAnnotations(ctx, r.Client, serviceInstance, common.IgnoreNonTransientErrorAnnotation, common.IgnoreNonTransientErrorTimestampAnnotation)
+		return ctrl.Result{}, nil
 	}
 
 	if utils.IsMarkedForDeletion(serviceInstance.ObjectMeta) {
