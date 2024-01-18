@@ -18,19 +18,15 @@ package v1
 
 import (
 	"fmt"
-	"github.com/SAP/sap-btp-service-operator/api/common"
 	"strings"
+
+	"github.com/SAP/sap-btp-service-operator/api/common"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
-)
-
-const (
-	annotationInFutureError          = "Annotation %s cannot be a date in the future."
-	annotationNotValidTimestampError = "Annotation %s is not a valid timestamp"
 )
 
 func (si *ServiceInstance) SetupWebhookWithManager(mgr ctrl.Manager) error {
