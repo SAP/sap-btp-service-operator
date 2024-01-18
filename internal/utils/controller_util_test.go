@@ -63,11 +63,13 @@ var _ = Describe("Controller Util", func() {
 			Expect(ShouldIgnoreNonTransient(logger, instance, time.Hour)).To(BeTrue())
 		})
 		It("should return false if time exceeded", func() {
-			instance.Status.FirstErrorTimestamp = metav1.NewTime(time.Now().Add(-2 * time.Hour))
+			firstErrorTime := metav1.NewTime(time.Now().Add(-2 * time.Hour))
+			instance.Status.FirstErrorTimestamp = &firstErrorTime
 			Expect(ShouldIgnoreNonTransient(logger, instance, time.Hour)).To(BeFalse())
 		})
 		It("should return true if time not exceeded", func() {
-			instance.Status.FirstErrorTimestamp = metav1.NewTime(time.Now())
+			firstErrorTime := metav1.NewTime(time.Now())
+			instance.Status.FirstErrorTimestamp = &firstErrorTime
 			Expect(ShouldIgnoreNonTransient(logger, instance, time.Hour)).To(BeTrue())
 		})
 	})

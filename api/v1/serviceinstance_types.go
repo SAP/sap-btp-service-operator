@@ -120,7 +120,9 @@ type ServiceInstanceStatus struct {
 	// The subaccount id of the service instance
 	SubaccountID string `json:"subaccountID,omitempty"`
 
-	FirstErrorTimestamp metav1.Time `json:"firstErrorTimestamp,omitempty"`
+	// The first error timestamp - used to stop retrying after a while
+	// +optional
+	FirstErrorTimestamp *metav1.Time `json:"firstErrorTimestamp,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -132,6 +134,7 @@ type ServiceInstanceStatus struct {
 // +kubebuilder:printcolumn:JSONPath=".spec.dataCenter",name="dataCenter",type=string
 // +kubebuilder:printcolumn:JSONPath=".status.conditions[0].reason",name="Status",type=string
 // +kubebuilder:printcolumn:JSONPath=".status.ready",name="Ready",type=string
+// +kubebuilder:printcolumn:JSONPath=".status.firstErrorTimestamp",name="FirstErrorTimestamp",type=date
 // +kubebuilder:printcolumn:JSONPath=".metadata.creationTimestamp",name="Age",type=date
 // +kubebuilder:printcolumn:JSONPath=".status.instanceID",name="ID",type=string,priority=1
 // +kubebuilder:printcolumn:JSONPath=".status.conditions[0].message",name="Message",type=string,priority=1

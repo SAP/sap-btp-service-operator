@@ -34,6 +34,9 @@ spec:
     - jsonPath: .status.ready
       name: Ready
       type: string
+    - jsonPath: .status.firstErrorTimestamp
+      name: FirstErrorTimestamp
+      type: date
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
@@ -236,6 +239,11 @@ spec:
                   - type
                   type: object
                 type: array
+              firstErrorTimestamp:
+                description: The first error timestamp - used to stop retrying after
+                  a while
+                format: date-time
+                type: string
               hashedSpec:
                 description: HashedSpec is the hashed spec without the shared property
                 type: string

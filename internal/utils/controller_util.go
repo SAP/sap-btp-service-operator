@@ -82,7 +82,8 @@ func ShouldIgnoreNonTransient(log logr.Logger, serviceInstance *servicesv1.Servi
 
 func getFirstErrorTimestamp(serviceInstance *servicesv1.ServiceInstance) time.Time {
 	if serviceInstance.Status.FirstErrorTimestamp.IsZero() {
-		serviceInstance.Status.FirstErrorTimestamp = metav1.NewTime(time.Now())
+		now := metav1.NewTime(time.Now())
+		serviceInstance.Status.FirstErrorTimestamp = &now
 	}
 	return serviceInstance.Status.FirstErrorTimestamp.Time
 }
