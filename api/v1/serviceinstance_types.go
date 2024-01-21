@@ -197,6 +197,9 @@ func (si *ServiceInstance) GetAnnotations() map[string]string {
 func (si *ServiceInstance) SetAnnotations(annotations map[string]string) {
 	si.Annotations = annotations
 }
+func (si *ServiceInstance) SetFirstErrorTimestamp(time *metav1.Time) {
+	si.Status.FirstErrorTimestamp = time
+}
 
 // +kubebuilder:object:root=true
 

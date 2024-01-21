@@ -195,6 +195,8 @@ func (sb *ServiceBinding) GetAnnotations() map[string]string {
 func (sb *ServiceBinding) SetAnnotations(annotations map[string]string) {
 	sb.Annotations = annotations
 }
+func (sb *ServiceBinding) SetFirstErrorTimestamp(time *metav1.Time) {
+}
 
 // +kubebuilder:object:root=true
 

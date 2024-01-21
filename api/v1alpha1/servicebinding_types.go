@@ -179,6 +179,8 @@ func (sb *ServiceBinding) GetReady() metav1.ConditionStatus {
 func (sb *ServiceBinding) SetReady(ready metav1.ConditionStatus) {
 	sb.Status.Ready = ready
 }
+func (sb *ServiceBinding) SetFirstErrorTimestamp(time *metav1.Time) {
+}
 
 // +kubebuilder:object:root=true
 

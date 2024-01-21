@@ -22,14 +22,13 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"net/http"
-
 	"github.com/SAP/sap-btp-service-operator/api/common"
 	"github.com/SAP/sap-btp-service-operator/internal/config"
 	"github.com/SAP/sap-btp-service-operator/internal/utils"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
+	"net/http"
 
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -84,14 +83,6 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	if len(serviceInstance.GetConditions()) == 0 {
 		err := utils.InitConditions(ctx, r.Client, serviceInstance)
 		if err != nil {
-			return ctrl.Result{}, err
-		}
-	}
-
-	if meta.IsStatusConditionPresentAndEqual(serviceInstance.GetConditions(), common.ConditionFailed, metav1.ConditionTrue) &&
-		utils.ShouldIgnoreNonTransient(log, serviceInstance, r.Config.IgnoreNonTransientTimeout) {
-		markNonTransientStatusAsTransient(serviceInstance)
-		if err := r.Status().Update(ctx, serviceInstance); err != nil {
 			return ctrl.Result{}, err
 		}
 	}

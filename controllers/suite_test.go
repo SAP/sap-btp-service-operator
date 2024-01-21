@@ -68,7 +68,7 @@ const (
 	interval                  = time.Millisecond * 50
 	syncPeriod                = time.Millisecond * 250
 	pollInterval              = time.Millisecond * 250
-	ignoreNonTransientTimeout = 0
+	ignoreNonTransientTimeout = time.Second * 10
 
 	fakeBindingID        = "fake-binding-id"
 	bindingTestNamespace = "test-namespace"
@@ -256,26 +256,6 @@ func waitForResourceCondition(ctx context.Context, resource common.SAPBTPResourc
 	}, timeout*2, interval).Should(BeTrue(),
 		eventuallyMsgForResource(
 			fmt.Sprintf("expected condition: {type: %s, status: %s, reason: %s, message: %s} was not met", conditionType, status, reason, message),
-			key,
-			resource),
-	)
-}
-func waitForResourceAnnotationRemove(ctx context.Context, resource common.SAPBTPResource, annotationsKey ...string) {
-	key := getResourceNamespacedName(resource)
-	Eventually(func() bool {
-		if err := k8sClient.Get(ctx, key, resource); err != nil {
-			return false
-		}
-		for _, annotationKey := range annotationsKey {
-			_, ok := resource.GetAnnotations()[annotationKey]
-			if ok {
-				return false
-			}
-		}
-		return true
-	}, timeout*2, interval).Should(BeTrue(),
-		eventuallyMsgForResource(
-			fmt.Sprintf("annotation %s was not removed", annotationsKey),
 			key,
 			resource),
 	)

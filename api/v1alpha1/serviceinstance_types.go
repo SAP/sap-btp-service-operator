@@ -106,6 +106,10 @@ type ServiceInstanceStatus struct {
 
 	// Indicates whether instance is ready for usage
 	Ready metav1.ConditionStatus `json:"ready,omitempty"`
+
+	// The first error timestamp - used to stop retrying after a while
+	// +optional
+	FirstErrorTimestamp *metav1.Time `json:"firstErrorTimestamp,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -168,6 +172,9 @@ func (in *ServiceInstance) GetReady() metav1.ConditionStatus {
 
 func (in *ServiceInstance) SetReady(ready metav1.ConditionStatus) {
 	in.Status.Ready = ready
+}
+func (si *ServiceInstance) SetFirstErrorTimestamp(time *metav1.Time) {
+	si.Status.FirstErrorTimestamp = time
 }
 
 // +kubebuilder:object:root=true

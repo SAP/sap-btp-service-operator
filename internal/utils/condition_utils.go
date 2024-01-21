@@ -120,6 +120,7 @@ func SetSuccessConditions(operationType smClientTypes.OperationCategory, object 
 
 	object.SetConditions(conditions)
 	object.SetReady(metav1.ConditionTrue)
+	object.SetFirstErrorTimestamp(nil)
 }
 
 func SetCredRotationInProgressConditions(reason, message string, object common.SAPBTPResource) {
@@ -184,6 +185,7 @@ func MarkAsNonTransientError(ctx context.Context, k8sClient client.Client, opera
 	if operationType != smClientTypes.DELETE {
 		log.Info(fmt.Sprintf("operation %s of %s encountered a non transient error %s, giving up operation :(", operationType, object.GetControllerName(), errMsg))
 	}
+	object.SetFirstErrorTimestamp(nil)
 	object.SetObservedGeneration(object.GetGeneration())
 	err := UpdateStatus(ctx, k8sClient, object)
 	if err != nil {
