@@ -7,6 +7,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"time"
 )
 
 var _ = Describe("Service Instance Type Test", func() {
@@ -129,5 +130,16 @@ var _ = Describe("Service Instance Type Test", func() {
 		}
 		instance.SetAnnotations(annotation)
 		Expect(instance.GetAnnotations()).To(Equal(annotation))
+	})
+
+	It("should set first error timestamp", func() {
+		now := time.Now()
+		instance.SetFirstErrorTimestamp(&metav1.Time{Time: now})
+		Expect(instance.Status.FirstErrorTimestamp.Time).To(Equal(now))
+	})
+
+	It("should set first error timestamp", func() {
+		instance.SetFirstErrorTimestamp(nil)
+		Expect(instance.Status.FirstErrorTimestamp).To(BeNil())
 	})
 })

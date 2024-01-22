@@ -59,7 +59,7 @@ var _ = Describe("Controller Util", func() {
 			instance = &v1.ServiceInstance{}
 		})
 
-		It("should return false if no ignore annotation", func() {
+		It("should return true if no firstErrorTimestamp", func() {
 			Expect(ShouldIgnoreNonTransient(logger, instance, time.Hour)).To(BeTrue())
 		})
 		It("should return false if time exceeded", func() {
@@ -206,4 +206,5 @@ var _ = Describe("Controller Util", func() {
 			Expect(got).To(Equal(expected))
 		})
 	})
+
 })
