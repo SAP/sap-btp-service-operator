@@ -173,8 +173,8 @@ func (in *ServiceInstance) GetReady() metav1.ConditionStatus {
 func (in *ServiceInstance) SetReady(ready metav1.ConditionStatus) {
 	in.Status.Ready = ready
 }
-func (si *ServiceInstance) SetFirstErrorTimestamp(time *metav1.Time) {
-	si.Status.FirstErrorTimestamp = time
+func (in *ServiceInstance) SetFirstErrorTimestamp(time *metav1.Time) {
+	in.Status.FirstErrorTimestamp = time
 }
 
 // +kubebuilder:object:root=true

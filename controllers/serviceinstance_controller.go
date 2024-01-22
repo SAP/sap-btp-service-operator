@@ -720,19 +720,3 @@ func getErrorMsgFromLastOperation(status *smClientTypes.Operation) string {
 	}
 	return errMsg
 }
-
-func markNonTransientStatusAsTransient(serviceInstance *servicesv1.ServiceInstance) {
-	conditions := serviceInstance.GetConditions()
-	lastOpCondition := meta.FindStatusCondition(conditions, common.ConditionSucceeded)
-	operation := smClientTypes.CREATE
-	if len(serviceInstance.Status.InstanceID) > 0 {
-		operation = smClientTypes.UPDATE
-	}
-	lastOpCondition.Reason = utils.GetConditionReason(operation, smClientTypes.INPROGRESS)
-
-	if len(conditions) > 0 {
-		meta.RemoveStatusCondition(&conditions, common.ConditionFailed)
-	}
-	meta.SetStatusCondition(&conditions, *lastOpCondition)
-	serviceInstance.SetConditions(conditions)
-}
