@@ -38,7 +38,7 @@ func Get() Config {
 			AllowClusterAccess:        true,
 			RetryBaseDelay:            10 * time.Second,
 			RetryMaxDelay:             time.Hour,
-			IgnoreNonTransientTimeout: 2 * time.Hour,
+			IgnoreNonTransientTimeout: 24 * time.Hour,
 		}
 		envconfig.MustProcess("", &config)
 	})

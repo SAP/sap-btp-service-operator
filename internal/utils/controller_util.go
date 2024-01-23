@@ -71,7 +71,7 @@ func UpdateStatus(ctx context.Context, k8sClient client.Client, object common.SA
 }
 
 func ShouldIgnoreNonTransient(log logr.Logger, serviceInstance *servicesv1.ServiceInstance, timeout time.Duration) bool {
-	firstTrailTimestamp := getFirstErrorTimestamp(serviceInstance)
+	firstTrailTimestamp := getFirstErrorTimestamp(log, serviceInstance)
 	sinceFirstTrail := time.Since(firstTrailTimestamp)
 	if sinceFirstTrail > timeout {
 		log.Info(fmt.Sprintf("timeout of %s reached - error is considered to be non transient. time passed since first trail %s", timeout, sinceFirstTrail))
@@ -81,10 +81,11 @@ func ShouldIgnoreNonTransient(log logr.Logger, serviceInstance *servicesv1.Servi
 	return true
 }
 
-func getFirstErrorTimestamp(serviceInstance *servicesv1.ServiceInstance) time.Time {
-	if serviceInstance.Status.FirstErrorTimestamp.IsZero() {
-		now := metav1.NewTime(time.Now())
+func getFirstErrorTimestamp(log logr.Logger, serviceInstance *servicesv1.ServiceInstance) time.Time {
+	if serviceInstance.Status.FirstErrorTimestamp == nil || serviceInstance.Status.FirstErrorTimestamp.IsZero() {
+		now := metav1.Now()
 		serviceInstance.Status.FirstErrorTimestamp = &now
+		log.Info(fmt.Sprintf("setting new FirstErrorTimestamp: %s , for service instance %s", now, serviceInstance.Name))
 	}
 	return serviceInstance.Status.FirstErrorTimestamp.Time
 }
