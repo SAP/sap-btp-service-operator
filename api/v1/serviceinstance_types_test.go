@@ -18,6 +18,7 @@ var _ = Describe("Service Instance Type Test", func() {
 		lastOpCondition := metav1.Condition{Type: common.ConditionSucceeded, Status: metav1.ConditionTrue, Reason: "reason", Message: "message"}
 		meta.SetStatusCondition(&conditions, lastOpCondition)
 		instance.SetConditions(conditions)
+		instance.SetFirstErrorTimestamp(&metav1.Time{Time: time.Now()})
 	})
 
 	It("should clone correctly", func() {
@@ -43,6 +44,7 @@ var _ = Describe("Service Instance Type Test", func() {
 		clonedStatus := &ServiceInstanceStatus{}
 		instance.Status.DeepCopyInto(clonedStatus)
 		Expect(&instance.Status).To(Equal(clonedStatus))
+		Expect(instance.Status.FirstErrorTimestamp).To(Equal(clonedStatus.FirstErrorTimestamp))
 
 		clonedSpec := &ServiceInstanceSpec{}
 		instance.Spec.DeepCopyInto(clonedSpec)
