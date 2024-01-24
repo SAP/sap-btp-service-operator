@@ -439,50 +439,10 @@ The SAP BTP service operator can also be configured to manage multiple subaccoun
 
 You have several options at your disposal to manage multiple subaccounts in a cluster by configuring secrets in the following ways:
 
-### 1. Explicit Secret Configuration   
 
-#### Define a new secret
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: mybtpsecret
-  namespace: <namespace>
-type: Opaque
-data:
-  clientid: "<clientid>"
-  clientsecret: "<clientsecret>"
-  sm_url: "<sm_url>"
-  tokenurl: "<auth_url>"
-  tokenurlsuffix: "/oauth/token"
-```
-with TLS configurations:
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: mybtpsecret
-  namespace: <namespace>
-type: kubernetes.io/tls
-data:
-  tls.crt: <crt> #base64 encoded
-  tls.key: <key> #base64 encoded
-```
-#### Configure the secret name in the `ServiceInstance` resource within the property `btpAccessCredentialsSecret`:
-```yaml
-apiVersion: services.cloud.sap.com/v1
-kind: ServiceInstance
-metadata:
-  name: sample-instance-1
-spec:
-  serviceOfferingName: service-manager
-  servicePlanName: subaccount-audit
-  btpAccessCredentialsSecret: mybtpsecret
-```
+### 1. Namespaces and Subaccounts 
 
-### 2. Namespaces and Subaccounts 
-
-You can associate a subaccount with a namespace or a centrally-managed namespace:
+You can associate a subaccount with a specific namespace or a centrally-managed namespace:
 
 #### Namespace Secret
 
@@ -539,7 +499,47 @@ data:
   tokenurl: "<auth_url>"
   tokenurlsuffix: "/oauth/token"
 ```
-  
+### 1. Explicit Secret Configuration   
+
+#### Define a new secret
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mybtpsecret
+  namespace: <namespace>
+type: Opaque
+data:
+  clientid: "<clientid>"
+  clientsecret: "<clientsecret>"
+  sm_url: "<sm_url>"
+  tokenurl: "<auth_url>"
+  tokenurlsuffix: "/oauth/token"
+```
+with TLS configurations:
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mybtpsecret
+  namespace: <namespace>
+type: kubernetes.io/tls
+data:
+  tls.crt: <crt> #base64 encoded
+  tls.key: <key> #base64 encoded
+```
+#### Configure the secret name in the `ServiceInstance` resource within the property `btpAccessCredentialsSecret`:
+```yaml
+apiVersion: services.cloud.sap.com/v1
+kind: ServiceInstance
+metadata:
+  name: sample-instance-1
+spec:
+  serviceOfferingName: service-manager
+  servicePlanName: subaccount-audit
+  btpAccessCredentialsSecret: mybtpsecret
+```
+
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
 ## Troubleshooting and Support
