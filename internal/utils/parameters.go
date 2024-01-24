@@ -1,4 +1,4 @@
-package controllers
+package utils
 
 import (
 	"context"
@@ -22,7 +22,7 @@ import (
 // secret values.
 // The second return value is parameters marshalled to byt array
 // The third return value is any error that caused the function to fail.
-func buildParameters(kubeClient client.Client, namespace string, parametersFrom []servicesv1.ParametersFromSource, parameters *runtime.RawExtension) (map[string]interface{}, []byte, error) {
+func BuildSMRequestParameters(kubeClient client.Client, namespace string, parametersFrom []servicesv1.ParametersFromSource, parameters *runtime.RawExtension) (map[string]interface{}, []byte, error) {
 	params := make(map[string]interface{})
 	if len(parametersFrom) > 0 {
 		for _, p := range parametersFrom {
@@ -67,25 +67,6 @@ func buildParameters(kubeClient client.Client, namespace string, parametersFrom 
 	return params, parametersRaw, nil
 }
 
-// fetchParametersFromSource fetches data from a specified external source and
-// represents it in the parameters map format
-func fetchParametersFromSource(kubeClient client.Client, namespace string, parametersFrom *servicesv1.ParametersFromSource) (map[string]interface{}, error) {
-	var params map[string]interface{}
-	if parametersFrom.SecretKeyRef != nil {
-		data, err := fetchSecretKeyValue(kubeClient, namespace, parametersFrom.SecretKeyRef)
-		if err != nil {
-			return nil, err
-		}
-		p, err := unmarshalJSON(data)
-		if err != nil {
-			return nil, err
-		}
-		params = p
-
-	}
-	return params, nil
-}
-
 // UnmarshalRawParameters produces a map structure from a given raw YAML/JSON input
 func UnmarshalRawParameters(in []byte) (map[string]interface{}, error) {
 	parameters := make(map[string]interface{})
@@ -123,4 +104,23 @@ func fetchSecretKeyValue(kubeClient client.Client, namespace string, secretKeyRe
 		return nil, err
 	}
 	return secret.Data[secretKeyRef.Key], nil
+}
+
+// fetchParametersFromSource fetches data from a specified external source and
+// represents it in the parameters map format
+func fetchParametersFromSource(kubeClient client.Client, namespace string, parametersFrom *servicesv1.ParametersFromSource) (map[string]interface{}, error) {
+	var params map[string]interface{}
+	if parametersFrom.SecretKeyRef != nil {
+		data, err := fetchSecretKeyValue(kubeClient, namespace, parametersFrom.SecretKeyRef)
+		if err != nil {
+			return nil, err
+		}
+		p, err := unmarshalJSON(data)
+		if err != nil {
+			return nil, err
+		}
+		params = p
+
+	}
+	return params, nil
 }
