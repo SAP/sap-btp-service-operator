@@ -501,7 +501,7 @@ data:
 ```
 ### 2. Explicit Secret Configuration  
 
-You can specify on the `ServiceInstance` level to which subaccount it should be associated:
+You can specify on the `ServiceInstance` level in which subaccount it shall be created:
 
 #### Define a new secret
 ```yaml
