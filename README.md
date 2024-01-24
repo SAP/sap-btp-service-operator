@@ -490,7 +490,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: <namespace>-sap-btp-service-operator
-  namespace: centrally managed namespace
+  namespace: <centrally managed namespace>
 type: Opaque
 data:
   clientid: "<clientid>"
