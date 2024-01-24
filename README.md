@@ -442,8 +442,8 @@ You have several options at your disposal to work with multiple subaccounts in a
 
 ### 1. Namespace Level
 
-You can associate a subaccount with a random or a centrally-managed namespace:
-
+To associate namespace to a specific subaccount you have to maintain the access credentials to the subaccount in a secret which is dedicated for the specific namespace. 
+Such secret can be located either in the namespace itself or in a centrally-managed namespace:
 #### Namespace Secret
 
 Define a secret named `sap-btp-service-operator` in the namespace.
