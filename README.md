@@ -431,13 +431,13 @@ You can also choose the `services.cloud.sap.com/forceRotate` annotation (value d
 ## Working with Multiple Subaccounts
 
 By default, a Kubernetes cluster is related to one subaccount (see step 4 of the [Setup](#setup) section.)
-The SAP BTP service operator can also be configured to manage multiple subaccounts within a single Kubernetes cluster. In this more complex use case, each resource is linked to a specific subaccount using a unique set of credentials. To connect a resource to a subaccount:
+The SAP BTP service operator can also be configured to work with multiple subaccounts within a single Kubernetes cluster. In this more complex use case, each resource is linked to a specific subaccount using a unique set of credentials. To connect a resource to a subaccount:
 
 * Obtain the SAP BTP service operator's [access credentials](#setup).
 
 * Store these credentials securely in a secret.
 
-You have several options at your disposal to manage multiple subaccounts in a cluster by configuring secrets on several levels:
+You have several options at your disposal to work with multiple subaccounts in a cluster by configuring secrets on several levels:
 
 
 ### 1. Namespace Level
