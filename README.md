@@ -437,12 +437,12 @@ The SAP BTP service operator can also be configured to manage multiple subaccoun
 
 * Store these credentials securely in a secret.
 
-You have several options at your disposal to manage multiple subaccounts in a cluster by configuring secrets in the following ways:
+You have several options at your disposal to manage multiple subaccounts in a cluster by configuring secrets on several levels:
 
 
-### 1. Namespaces and Subaccounts 
+### 1. Namespace Level
 
-You can associate a subaccount with a specific namespace or a centrally-managed namespace:
+You can associate a subaccount with a random or a centrally-managed namespace:
 
 #### Namespace Secret
 
@@ -499,7 +499,9 @@ data:
   tokenurl: "<auth_url>"
   tokenurlsuffix: "/oauth/token"
 ```
-### 1. Explicit Secret Configuration   
+### 2. Explicit Secret Configuration  
+
+You can specify on the `ServiceInstance` level to which subaccount it should be associated:
 
 #### Define a new secret
 ```yaml
