@@ -437,13 +437,14 @@ The SAP BTP service operator can also be configured to work with multiple subacc
 
 * Store these credentials securely in a secret.
 
-You have several options at your disposal to work with multiple subaccounts in a cluster by configuring secrets on several levels:
+You have several options at your disposal to define working with multiple subaccounts in a cluster by configuring secrets on the following levels:
 
 
 ### 1. Namespace Level
 
-To associate namespace to a specific subaccount you have to maintain the access credentials to the subaccount in a secret which is dedicated for the specific namespace. 
+To associate namespace to a specific subaccount you maintain the access credentials to the subaccount in a secret which is dedicated to a specific namespace. 
 Such secret can be located either in the namespace itself or in a centrally-managed namespace:
+
 #### Namespace Secret
 
 Define a secret named `sap-btp-service-operator` in the namespace.
