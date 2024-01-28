@@ -15,21 +15,20 @@ The SAP BTP service operator is based on the [Kubernetes Operator pattern](https
 * [Prerequisites](#prerequisites)
 * [Setup](#setup)
     * [Working with Multiple Subaccounts](#working-with-multiple-subaccounts)
-* [Versions](#versions)
 * [Using the SAP BTP Service Operator](#using-the-sap-btp-service-operator)
     * [Creating a service instance](#step-1-create-a-service-instance)
     * [Binding the service instance](#step-2-create-a-service-binding)
+    * [Credentials Rotation](#credentials-rotation)
     * [Developer Mode Secret](#developer-mode-secret)
 * [Reference Documentation](#reference-documentation)
     * [Service instance properties](#service-instance)
     * [Binding properties](#service-binding)
     * [Passing parameters](#passing-parameters)
     * [Managing access](#managing-access)
-* [SAP BTP kubectl Extension](#sap-btp-kubectl-plugin-experimental) 
-* [Credentials Rotation](#credentials-rotation)
-* [Troubleshooting and Support](#troubleshooting-and-support)
+* [SAP BTP kubectl Extension](#sap-btp-kubectl-plugin-experimental)
 * [Formats of Secret Objects](#formats-of-secret-objects)
 * [Uninstalling the Operator](#uninstalling-the-operator)
+* [Troubleshooting and Support](#troubleshooting-and-support)
 
 ## Architecture
 SAP BTP service operator communicates with [Service Manager](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/3a27b85a47fc4dff99184dd5bf181e14.html) that uses the [Open service broker API](https://github.com/openservicebrokerapi/servicebroker) to communicate with service brokers, acting as an intermediary for the Kubernetes API Server to negotiate the initial provisioning and retrieve the credentials necessary for the application to use a managed service.<br><br>
@@ -220,14 +219,6 @@ The following list shows the priority of the secrets that are used to authentica
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
-## Versions
-Review the supported Kubernetes API versions for the following SAP BTP Service Operator versions.
-
-| Operator version | Kubernetes API version |
-| --- | --- |
-| `v0.2` or later | `v1` |
-| `v0.1` | `v1alpha1` |
-
 ## Using the SAP BTP Service Operator
 
 #### Step 1: Create a service instance
@@ -313,6 +304,27 @@ spec:
     ```
     
     See [Using Secrets](https://kubernetes.io/docs/concepts/configuration/secret/#using-secrets) to learn about different options on how to use the credentials from your application running in the Kubernetes cluster, 
+
+[Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
+
+## Credentials Rotation
+To enable automatic credentials rotation, you need to set the following parameters of the `credentialsRotationPolicy` field in the `spec` field of the `ServiceBinding` resource:
+
+- `enabled` - Whether the credentials rotation option is enabled. Default value is false.
+- `rotationFrequency` - Indicates the frequency at which the credentials rotation is performed.
+- `rotatedBindingTTL` - Indicates for how long to keep the rotated `ServiceBinding`.
+
+Valid time units for `rotationFrequency` and `rotatedBindingTTL` are: "ns", "us" or ("µs"), "ms", "s", "m", "h".</br></br>
+`status.lastCredentialsRotationTime` indicates the last time the `ServiceBinding` secret was rotated.</br>
+Please note that `credentialsRotationPolicy` evaluated and executed during [control loop](https://kubernetes.io/docs/concepts/architecture/controller/) which runs on every update or during
+full reconciliation process.
+
+During the transition period, there are two (or more) `ServiceBinding`: the original and the rotated one (holds the `services.cloud.sap.com/stale` label), which is deleted once the `rotatedBindingTTL` duration elapses.</br></br>
+You can also choose the `services.cloud.sap.com/forceRotate` annotation (value doesn't matter), upon which immediate credentials rotation is performed. Note that the prerequisite for the force action is that credentials rotation `enabled` field is set to true.).
+
+**Note:**<br> It isn't possible to enable automatic credentials rotation to an already-rotated `ServiceBinding` (with the `services.cloud.sap.com/stale` label).
+
+[Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
 ## Developer Mode
 TODO describe developer mode
@@ -531,55 +543,6 @@ If not specified, the `default` namespace is used.
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes).
 
-## Credentials Rotation
-To enable automatic credentials rotation, you need to set the following parameters of the `credentialsRotationPolicy` field in the `spec` field of the `ServiceBinding` resource:
-
-- `enabled` - Whether the credentials rotation option is enabled. Default value is false. 
-- `rotationFrequency` - Indicates the frequency at which the credentials rotation is performed. 
-- `rotatedBindingTTL` - Indicates for how long to keep the rotated `ServiceBinding`.
-
-Valid time units for `rotationFrequency` and `rotatedBindingTTL` are: "ns", "us" or ("µs"), "ms", "s", "m", "h".</br></br>
-`status.lastCredentialsRotationTime` indicates the last time the `ServiceBinding` secret was rotated.</br>
-Please note that `credentialsRotationPolicy` evaluated and executed during [control loop](https://kubernetes.io/docs/concepts/architecture/controller/) which runs on every update or during
-full reconciliation process.
-
-During the transition period, there are two (or more) `ServiceBinding`: the original and the rotated one (holds the `services.cloud.sap.com/stale` label), which is deleted once the `rotatedBindingTTL` duration elapses.</br></br>
-You can also choose the `services.cloud.sap.com/forceRotate` annotation (value doesn't matter), upon which immediate credentials rotation is performed. Note that the prerequisite for the force action is that credentials rotation `enabled` field is set to true.).
-
-**Note:**<br> It isn't possible to enable automatic credentials rotation to an already-rotated `ServiceBinding` (with the `services.cloud.sap.com/stale` label).
-
-[Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
-
-## Troubleshooting and Support
-
-  #### Cannot Create a Service Binding for Service Instance in `Delete Failed` State 
-
-  The deletion of my service instance failed. To fix the failure, I have to create a service binding, but I can't do this because the instance is in the `Delete  Failed` state.
- 
-  **Solution** 
- 
- To overcome this issue, use the `force_k8s_binding` query param when you create a service binding and set it to `true` (`force_k8s_binding=true`). You can do & this   either with the Service Manager Control CLI (smctl) [bind](https://help.sap.com/docs/SERVICEMANAGEMENT/09cc82baadc542a688176dce601398de/f53ff2634e0a46d6bfc72ec075418dcd.html) command or 'Create a Service Binding' [Service Manager API](https://api.sap.com/api/APIServiceManagment/resource).
-
-  smctl Example
-
-  >   ```bash
-  >   smctl bind INSTANCE_NAME BINDING_NAME --param force_k8s_binding=true
-  >   ```
-
-<br>
-  Once you've finished working on the service instance, delete it by running the following command:
-
-
-  >   ```bash
-  >   smctl unbind INSTANCE_NAME BINDING_NAME --param force_k8s_binding=true
-  >   ```
-  **Note:** `force_k8s_binding` is supported only for the Kubernetes instances that are in `Delete Failed` state.<br>
-
-You're welcome to raise issues related to feature requests, bugs, or give us general feedback on this project's GitHub Issues page. 
-The SAP BTP service operator project maintainers will respond to the best of their abilities. 
-
-[Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
-
 ## Formats of Secret Objects
 
 ### Key- Value Pairs (Default)
@@ -699,5 +662,35 @@ We currently do not accept community contributions.
 
 ## License
 This project is licensed under Apache 2.0 unless noted otherwise in the [license](./LICENSE) file.
+
+[Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
+
+## Troubleshooting and Support
+
+#### Cannot Create a Service Binding for Service Instance in `Delete Failed` State
+
+The deletion of my service instance failed. To fix the failure, I have to create a service binding, but I can't do this because the instance is in the `Delete  Failed` state.
+
+**Solution**
+
+To overcome this issue, use the `force_k8s_binding` query param when you create a service binding and set it to `true` (`force_k8s_binding=true`). You can do & this   either with the Service Manager Control CLI (smctl) [bind](https://help.sap.com/docs/SERVICEMANAGEMENT/09cc82baadc542a688176dce601398de/f53ff2634e0a46d6bfc72ec075418dcd.html) command or 'Create a Service Binding' [Service Manager API](https://api.sap.com/api/APIServiceManagment/resource).
+
+smctl Example
+
+>   ```bash
+  >   smctl bind INSTANCE_NAME BINDING_NAME --param force_k8s_binding=true
+  >   ```
+
+<br>
+  Once you've finished working on the service instance, delete it by running the following command:
+
+
+>   ```bash
+  >   smctl unbind INSTANCE_NAME BINDING_NAME --param force_k8s_binding=true
+  >   ```
+**Note:** `force_k8s_binding` is supported only for the Kubernetes instances that are in `Delete Failed` state.<br>
+
+You're welcome to raise issues related to feature requests, bugs, or give us general feedback on this project's GitHub Issues page.
+The SAP BTP service operator project maintainers will respond to the best of their abilities.
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
