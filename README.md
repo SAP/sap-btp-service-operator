@@ -19,7 +19,7 @@ The SAP BTP service operator is based on the [Kubernetes Operator pattern](https
     * [Creating a service instance](#step-1-create-a-service-instance)
     * [Binding the service instance](#step-2-create-a-service-binding)
     * [Credentials Rotation](#credentials-rotation)
-    * [Developer Mode Secret](#developer-mode-secret)
+    * [Developer Mode](#developer-mode)
 * [Reference Documentation](#reference-documentation)
     * [Service instance properties](#service-instance)
     * [Binding properties](#service-binding)
