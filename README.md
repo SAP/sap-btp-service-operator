@@ -14,10 +14,12 @@ The SAP BTP service operator is based on the [Kubernetes Operator pattern](https
 * [Architecture](#architecture)
 * [Prerequisites](#prerequisites)
 * [Setup](#setup)
+    * [Working with Multiple Subaccounts](#working-with-multiple-subaccounts)
 * [Versions](#versions)
 * [Using the SAP BTP Service Operator](#using-the-sap-btp-service-operator)
     * [Creating a service instance](#step-1-create-a-service-instance)
     * [Binding the service instance](#step-2-create-a-service-binding)
+    * [Developer Mode Secret](#developer-mode-secret)
 * [Reference Documentation](#reference-documentation)
     * [Service instance properties](#service-instance)
     * [Binding properties](#service-binding)
@@ -25,7 +27,6 @@ The SAP BTP service operator is based on the [Kubernetes Operator pattern](https
     * [Managing access](#managing-access)
 * [SAP BTP kubectl Extension](#sap-btp-kubectl-plugin-experimental) 
 * [Credentials Rotation](#credentials-rotation)
-* [Working with Multiple Subaccounts](#working-with-multiple-subaccounts)
 * [Troubleshooting and Support](#troubleshooting-and-support)
 * [Formats of Secret Objects](#formats-of-secret-objects)
 * [Uninstalling the Operator](#uninstalling-the-operator)
@@ -219,38 +220,6 @@ The following list shows the priority of the secrets that are used to authentica
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
-## Developer Mode Secret
-Define a secret named `sap-btp-service-operator` in the namespace.
-`ServiceInstance` and `ServiceBinding` applied in the namespace belong to the subaccount from which the credentials were issued.
-
-#### Namespace Secret Structure
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: sap-btp-service-operator
-  namespace: <namespace>
-type: Opaque
-data:
-  clientid: "<clientid>"
-  clientsecret: "<clientsecret>"
-  sm_url: "<sm_url>"
-  tokenurl: "<auth_url>"
-  tokenurlsuffix: "/oauth/token"
-```
-with TLS configurations:
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: sap-btp-service-operator-tls
-  namespace: <namespace>
-type: kubernetes.io/tls
-data:
-  tls.crt: <crt> #base64 encoded
-  tls.key: <key> #base64 encoded
-```
-
 ## Versions
 Review the supported Kubernetes API versions for the following SAP BTP Service Operator versions.
 
@@ -344,6 +313,39 @@ spec:
     ```
     
     See [Using Secrets](https://kubernetes.io/docs/concepts/configuration/secret/#using-secrets) to learn about different options on how to use the credentials from your application running in the Kubernetes cluster, 
+
+## Developer Mode
+TODO describe developer mode
+Define a secret named `sap-btp-service-operator` in the namespace.
+`ServiceInstance` and `ServiceBinding` applied in the namespace belong to the subaccount from which the credentials were issued.
+
+#### Namespace Secret Structure
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sap-btp-service-operator
+  namespace: <namespace>
+type: Opaque
+data:
+  clientid: "<clientid>"
+  clientsecret: "<clientsecret>"
+  sm_url: "<sm_url>"
+  tokenurl: "<auth_url>"
+  tokenurlsuffix: "/oauth/token"
+```
+with TLS configurations:
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sap-btp-service-operator-tls
+  namespace: <namespace>
+type: kubernetes.io/tls
+data:
+  tls.crt: <crt> #base64 encoded
+  tls.key: <key> #base64 encoded
+```
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
