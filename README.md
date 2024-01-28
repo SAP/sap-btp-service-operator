@@ -430,19 +430,25 @@ You can also choose the `services.cloud.sap.com/forceRotate` annotation (value d
 
 ## Working with Multiple Subaccounts
 
-By default, a Kubernetes cluster is related to one subaccount (see step 4 of the [Setup](#setup) section.)
+By default, a Kubernetes cluster is associated with one subaccount (see step 4 of the [Setup](#setup) section.)
+The general steps you must execute to associate a subaccount to a cluster:
 
 * Obtain the SAP BTP service operator's [access credentials](#setup).
 
 * Store these credentials securely in a secret.
 
-You have several options at your disposal to define working with multiple subaccounts in a cluster by configuring dedicated secrets
+You can also apply more complex use cases whereby more than one subaccount is associated with a Kubernetes cluster.
+This can happen on the two levels within the cluster:
 
+- in a namespace
+- in a specific `ServiceInstance` resource in a namespace
 
-### Default Secret For Namespace
+Secret types related to these use cases are outlined below. 
+
+### Default Secret For a Namespace
 
 To associate namespace to a specific subaccount you maintain the access credentials to the subaccount in a secret which is dedicated to a specific namespace. 
-Define a secret named: `<namespace-name>-sap-btp-service-operator` in the Centrally Managed Namespace.
+Define a secret named: `<namespace-name>-sap-btp-service-operator` in the centrally-managed namespace.
 
 **Note:**
 The system's centrally-managed namespace is set by the value in `.Values.manager.management_namespace`. You can provide this value during installation (refer to step 4 in the [Setup](#setup) section). 
@@ -462,7 +468,7 @@ data:
   tokenurl: "<auth_url>"
   tokenurlsuffix: "/oauth/token"
 ```
-If you are using TLS binding, create additional secret named `<namespace-name>-sap-btp-service-operator-tls` which contains the TLS certificate and key.
+If you are using TLS binding, create additional secret named `<namespace-name>-sap-btp-service-operator-tls`. It contains the TLS certificate and key.
 
 ```yaml
 apiVersion: v1
@@ -477,9 +483,9 @@ data:
 ```
 
 
-### Explicit Subaccount For Resource  
+### Explicit Subaccount per `ServiceInstance` Resource  
 
-To associate `ServiceInstance` to a specific subaccount you maintain the access credentials to the subaccount in a secret which is located in the Centrally Managed Namespace.
+To associate a `ServiceInstance` resource to a specific subaccount, you maintain the access credentials to the subaccount in a secret which is located in the centrally-managed namespace.
 
 #### Define a new secret
 ```yaml
@@ -509,8 +515,8 @@ spec:
   btpAccessCredentialsSecret: mybtpsecret
 ```
 
-##### Secrets priority
-The following list shows the priority of the secrets that are used to authenticate the SAP BTP service operator:
+##### Presedence during Authentication
+SAP BRP service operator checks for the credentials in the following order:
 1. Explicit secret defined in the `ServiceInstance` resource
 2. Default namespace secret
 3. Default cluster secret
