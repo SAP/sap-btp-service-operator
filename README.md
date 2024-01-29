@@ -20,7 +20,7 @@ The SAP BTP service operator is based on the [Kubernetes Operator pattern](https
     * [Service Instance](#service-instance)
     * [Service Binding](#service-binding)
       * [Formats of output Secret](#formats-of-output-secret)
-      * [Credentials Rotation](#credentials-rotation)
+      * [Automatic Credentials Rotation](#automatic-credentials-rotation)
     * [Passing parameters](#passing-parameters)
 * [Reference Documentation](#reference-documentation)
     * [Service Instance properties](#Service-Instance-properties)
@@ -111,7 +111,7 @@ It is implemented using a [CRDs-based](https://kubernetes.io/docs/concepts/exten
         --set manager.secret.clientid=<clientid> \
         --set manager.secret.clientsecret=<clientsecret> \
         --set manager.secret.sm_url=<sm_url> \
-        --set manager.secret.tokenurl=<url>
+        --set manager.secret.tokenurl=<auth_url>
     ```
    The example of the deployment that uses the X.509 access credentials type:
     ```bash
@@ -122,8 +122,31 @@ It is implemented using a [CRDs-based](https://kubernetes.io/docs/concepts/exten
         --set manager.secret.tls.crt="$(cat /path/to/cert)" \
         --set manager.secret.tls.key="$(cat /path/to/key)" \
         --set manager.secret.sm_url=<sm_url> \
-        --set manager.secret.tokenurl=<certurl>
+        --set manager.secret.tokenurl=<auth_url>
     ```
+
+The credentials which are provided during the installation are stored in a secret named 'sap-btp-service-operator', in the 'sap-btp-operator' namespace.
+These credentials are used by the BTP service operator to communicate with the SAP BTP subaccount.
+
+<details>
+<summary>Example of the secret </summary>
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sap-btp-service-operator
+  namespace: sap-btp-operator
+type: Opaque
+data:
+  clientid: "<clientid>"
+  clientsecret: "<clientsecret>"
+  sm_url: "<sm_url>"
+  tokenurl: "<auth_url>"
+  tokenurlsuffix: "/oauth/token"
+```
+</details>
+
 **Note:**<br> In order to rotate the credentials between the BTP service operator and Service Manager, you have to create a new binding for the service-operator-access service instance, and then to execute the setup script again, with the new set of credentials. Afterwards you can delete the old binding.
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
@@ -359,7 +382,7 @@ your-secretRootKey-value:
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
-## Credentials Rotation
+## Automatic Credentials Rotation
 To enable automatic credentials rotation, you need to set the following parameters of the `credentialsRotationPolicy` field in the `spec` field of the `ServiceBinding` resource:
 
 - `enabled` - Whether the credentials rotation option is enabled. Default value is false.
