@@ -37,8 +37,8 @@ func Get() Config {
 			AllowedNamespaces:         []string{},
 			AllowClusterAccess:        true,
 			RetryBaseDelay:            10 * time.Second,
-			RetryMaxDelay:             time.Hour,
-			IgnoreNonTransientTimeout: 24 * time.Hour,
+			RetryMaxDelay:             3 * time.Hour,
+			IgnoreNonTransientTimeout: 0 * time.Hour,
 		}
 		envconfig.MustProcess("", &config)
 	})
