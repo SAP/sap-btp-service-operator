@@ -23,8 +23,8 @@ The SAP BTP service operator is based on the [Kubernetes Operator pattern](https
       * [Credentials Rotation](#credentials-rotation)
     * [Passing parameters](#passing-parameters)
 * [Reference Documentation](#reference-documentation)
-    * [Service instance properties](#service-instance)
-    * [Binding properties](#service-binding)
+    * [Service Instance properties](#Service-Instance-properties)
+    * [Service Binding properties](#service-binding-properties)
 * [Uninstalling the Operator](#uninstalling-the-operator)
 * [Troubleshooting and Support](#troubleshooting-and-support)
 
@@ -460,7 +460,7 @@ secret-parameter:
 
 ## Reference Documentation
 
-### Service Instance
+### Service Instance properties
 #### Spec
 | Parameter         | Type     | Description                                                                                                                                                                                                       |
 |:-----------------|:---------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -483,14 +483,14 @@ secret-parameter:
 | operationURL | `string` | The URL of the current operation performed on the service instance.  |
 | operationType   |  `string`| The type of the current operation. Possible values are CREATE, UPDATE, or DELETE. |
 | conditions       |  `[]condition`   | An array of conditions describing the status of the service instance.<br/>The possible condition types are:<br>- `Ready`: set to `true`  if the instance is ready and usable<br/>- `Failed`: set to `true` when an operation on the service instance fails.<br/> In the case of failure, the details about the error are available in the condition message.<br>- `Succeeded`: set to `true` when an operation on the service instance succeeded. In case of `false` operation considered as in progress unless `Failed` condition exists.<br>- `Shared`: set to `true` when sharing of the service instance succeeded. set to `false` when unsharing of the service instance succeeded or when service instance is not shared. |
-| tags       |  `[]string`   | Tags describing the ServiceInstance as provided in service catalog, will be copied to `ServiceBinding` secret in the key called `tags`.
+| tags       |  `[]string`   | Tags describing the ServiceInstance as provided in service catalog, will be copied to `ServiceBinding` secret in the key called `tags`.|
 
 #### Anotations
 | Parameter         | Type                 | Description                                                                                                                                                                                                                         |
 |:-----------------|:---------------------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | services.cloud.sap.com/preventDeletion   | `map[string] string` | You can prevent deletion of any service instance by adding the following annotation: services.cloud.sap.com/preventDeletion : "true". To enable back the deletion of the instance, either remove the annotation or set it to false. |
 
-### Service Binding 
+### Service Binding properties
 #### Spec
 | Parameter             | Type       | Description                                                                                                                                                                                                                                                                                                                              |
 |:-----------------|:---------|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
