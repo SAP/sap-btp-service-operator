@@ -164,18 +164,22 @@ By default, the SAP BTP operator has cluster-wide permissions.<br>You can also l
 
 ## Working with Multiple Subaccounts
 
-By default, a Kubernetes cluster is related to one subaccount (see step 4 of the [Setup](#setup) section.),
-and any service instance which is applied in any namespace will be created in that subaccount.
+By default, a Kubernetes cluster is associated with a single subaccount (as described in step 4 of the [Setup](#setup) section). 
+Consequently, any service instance created within any namespace will be provisioned in that subaccount.
 
-You can configure the SAP BTP service operator to work with more than one subaccount in the same Kubernetes cluster. Either by configuring different namespaces to be connected to different subaccounts, or, in to define for each service instance, in which subaccount it will be created.
+However, the SAP BTP service operator also supports multi-subaccount configurations in a single cluster. This is achieved through:
 
-You have several options at your disposal to define working with multiple subaccounts in a cluster by configuring dedicated secrets in the Centrally Managed Namespace.
+- Namespace-based mapping: Connect different namespaces to separate subaccounts. This approach leverages dedicated credentials configured for each namespace.
+  
+- Explicit instance-level mapping: Define the specific subaccount for each service instance, regardless of the namespace context.
+
+  Both can be achieved through dedicated secrets managed in the centrally-managed namespace. Choosing the most suitable approach depends on your specific needs and application architecture.
 
 **Note:**
 The system's centrally-managed namespace is set by the value in `.Values.manager.management_namespace`. You can provide this value during installation (refer to step 4 in the [Setup](#setup) section).
 If you don't specify this value, the system will use the installation namespace as the default.
 
-### Default Subaccount For Namespace
+### Default Subaccount For a Namespace
 
 To associate namespace to a specific subaccount you maintain the access credentials to the subaccount in a secret which is dedicated to a specific namespace.
 Define a secret named: `<namespace-name>-sap-btp-service-operator` in the Centrally Managed Namespace.
@@ -195,11 +199,13 @@ data:
   tokenurlsuffix: "/oauth/token"
 ```
 
-### Explicit Subaccount For ServiceInstance
+### Explicit Subaccount For a ServiceInstance Resource
 
-It is possible to create in the same namespace service instances in different subaccounts.
-First you have to maintain access credentials to the different subaccounts, in secrets which are located in the Centrally Managed Namespace.
-On the `ServiceInstance` resource use the btpAccessCredentialsSecret property, to explicitly specify the name of the secret where the access credentials to the specific subaccount are stored.
+You can deploy service instances belonging to different subaccounts within the same namespace. To achieve this, follow these steps:
+
+1. Store access credentials: Securely store the access credentials for each subaccount in separate secrets within the centrally-managed namespace.
+2. Specify subaccount per service: In the `ServiceInstance` resource, use the `btpAccessCredentialsSecret` property to reference the specific secret containing the relevant subaccount's credentials. This explicitly tells the operator which subaccount to use for provisioning the service instance.
+
 
 #### Define a new secret
 ```yaml
