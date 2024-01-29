@@ -129,7 +129,7 @@ The credentials which are provided during the installation are stored in a secre
 These credentials are used by the BTP service operator to communicate with the SAP BTP subaccount.
 
 <details>
-<summary>Example of the secret </summary>
+<summary> BTP Access Secret Structure </summary>
 
 ```yaml
 apiVersion: v1
@@ -164,19 +164,21 @@ By default, the SAP BTP operator has cluster-wide permissions.<br>You can also l
 
 ## Working with Multiple Subaccounts
 
-By default, a Kubernetes cluster is related to one subaccount (see step 4 of the [Setup](#setup) section.)
-The BTP subaccount access credentials are stored in a `Secret`. <br>
+By default, a Kubernetes cluster is related to one subaccount (see step 4 of the [Setup](#setup) section.),
+and any service instance which is applied in any namespace will be created in that subaccount.
 
-You have several options at your disposal to define working with multiple subaccounts in a cluster by configuring dedicated secrets
+You can configure the SAP BTP service operator to work with more than one subaccount in the same Kubernetes cluster. Either by configuring different namespaces to be connected to different subaccounts, or, in to define for each service instance, in which subaccount it will be created.
+
+You have several options at your disposal to define working with multiple subaccounts in a cluster by configuring dedicated secrets in the Centrally Managed Namespace.
+
+**Note:**
+The system's centrally-managed namespace is set by the value in `.Values.manager.management_namespace`. You can provide this value during installation (refer to step 4 in the [Setup](#setup) section).
+If you don't specify this value, the system will use the installation namespace as the default.
 
 ### Default Subaccount For Namespace
 
 To associate namespace to a specific subaccount you maintain the access credentials to the subaccount in a secret which is dedicated to a specific namespace.
 Define a secret named: `<namespace-name>-sap-btp-service-operator` in the Centrally Managed Namespace.
-
-**Note:**
-The system's centrally-managed namespace is set by the value in `.Values.manager.management_namespace`. You can provide this value during installation (refer to step 4 in the [Setup](#setup) section).
-If you don't specify this value, the system will use the installation namespace as the default.
 
 ```yaml
 apiVersion: v1
@@ -195,7 +197,9 @@ data:
 
 ### Explicit Subaccount For ServiceInstance
 
-To create a `ServiceInstance` in a specific subaccount you maintain the access credentials to the subaccount in a secret which is located in the Centrally Managed Namespace.
+It is possible to create in the same namespace service instances in different subaccounts.
+First you have to maintain access credentials to the different subaccounts, in secrets which are located in the Centrally Managed Namespace.
+On the `ServiceInstance` resource use the btpAccessCredentialsSecret property, to explicitly specify the name of the secret where the access credentials to the specific subaccount are stored.
 
 #### Define a new secret
 ```yaml
@@ -225,8 +229,8 @@ spec:
   btpAccessCredentialsSecret: mybtpsecret
 ```
 
-##### Secrets priority
-The following list shows the priority of the secrets that are used to authenticate the SAP BTP service operator:
+##### Secrets Presedence
+SAP BTP service operator search for the credentials in the following order:
 1. Explicit secret defined in the `ServiceInstance`
 2. Default namespace secret
 3. Default cluster secret
