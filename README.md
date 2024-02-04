@@ -420,6 +420,7 @@ If your TTL is longer than the rotation frequency,  the following occurs:
 There is a transition period during which the rotated binding is still valid. Namely, there are two (or more) `ServiceBinding` objects: the original and the rotated one (holds the `services.cloud.sap.com/stale` label). 
 The rotated one is deleted once the `rotatedBindingTTL` duration elapses.</br></br>
  
+**Tip** 
 
 To see when the service binding was last rotated, refer to the `status.lastCredentialsRotationTime`.
 
