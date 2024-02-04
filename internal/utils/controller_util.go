@@ -5,18 +5,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
-	"strings"
-	"time"
-
 	"github.com/SAP/sap-btp-service-operator/api/common"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
 	smClientTypes "github.com/SAP/sap-btp-service-operator/client/sm/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apimachinerytypes "k8s.io/apimachinery/pkg/types"
+	"net/http"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"strings"
 
 	"github.com/go-logr/logr"
 
@@ -66,25 +64,6 @@ func UpdateStatus(ctx context.Context, k8sClient client.Client, object common.SA
 	log := GetLogger(ctx)
 	log.Info(fmt.Sprintf("updating %s status", object.GetObjectKind().GroupVersionKind().Kind))
 	return k8sClient.Status().Update(ctx, object)
-}
-
-func ShouldIgnoreNonTransient(log logr.Logger, resource common.SAPBTPResource, timeout time.Duration) bool {
-	annotations := resource.GetAnnotations()
-	if len(annotations) == 0 || len(annotations[common.IgnoreNonTransientErrorAnnotation]) == 0 {
-		return false
-	}
-
-	// we ignore the error
-	// for service instances, the value is validated in webhook
-	// for service bindings, the annotation is not allowed
-	annotationTime, _ := time.Parse(time.RFC3339, annotations[common.IgnoreNonTransientErrorTimestampAnnotation])
-	sinceAnnotation := time.Since(annotationTime)
-	if sinceAnnotation > timeout {
-		log.Info(fmt.Sprintf("timeout of %s reached - error is considered to be non transient. time passed since annotation timestamp %s", timeout, sinceAnnotation))
-		return false
-	}
-	log.Info(fmt.Sprintf("timeout of %s was not reached - error is considered to be transient. ime passed since annotation timestamp %s", timeout, sinceAnnotation))
-	return true
 }
 
 func NormalizeCredentials(credentialsJSON json.RawMessage) (map[string][]byte, []SecretMetadataProperty, error) {

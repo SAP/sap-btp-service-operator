@@ -24,7 +24,6 @@ import (
 	"net/http"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"strings"
-	"time"
 )
 
 // +kubebuilder:docs-gen:collapse=Imports
@@ -241,7 +240,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 					It("should have failure condition", func() {
 						serviceInstance = createInstance(ctx, instanceSpec, nil, false)
-						waitForResourceCondition(ctx, serviceInstance, common.ConditionFailed, metav1.ConditionTrue, common.CreateFailed, errMessage)
+						waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionTrue, common.Created, "")
 					})
 				})
 
@@ -253,9 +252,8 @@ var _ = Describe("ServiceInstance controller", func() {
 								Description: errMessage,
 							})
 							fakeClient.ProvisionReturnsOnCall(1, &sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
-							serviceInstance = createInstance(ctx, instanceSpec, map[string]string{common.IgnoreNonTransientErrorAnnotation: "true"}, false)
+							serviceInstance = createInstance(ctx, instanceSpec, nil, false)
 							waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionTrue, common.Created, "")
-							waitForResourceAnnotationRemove(ctx, serviceInstance, common.IgnoreNonTransientErrorAnnotation, common.IgnoreNonTransientErrorTimestampAnnotation)
 						})
 					})
 
@@ -265,12 +263,8 @@ var _ = Describe("ServiceInstance controller", func() {
 								StatusCode:  http.StatusBadRequest,
 								Description: errMessage,
 							})
-							serviceInstance = createInstance(ctx, instanceSpec, map[string]string{common.IgnoreNonTransientErrorAnnotation: "true"}, false)
-							waitForResourceCondition(ctx, serviceInstance, common.ConditionFailed, metav1.ConditionTrue, common.CreateFailed, errMessage)
-							waitForResourceAnnotationRemove(ctx, serviceInstance, common.IgnoreNonTransientErrorAnnotation, common.IgnoreNonTransientErrorTimestampAnnotation)
-							waitForResourceCondition(ctx, serviceInstance, common.ConditionFailed, metav1.ConditionTrue, common.CreateFailed, errMessage)
-							sinceCreate := time.Since(serviceInstance.GetCreationTimestamp().Time)
-							Expect(sinceCreate > ignoreNonTransientTimeout)
+							serviceInstance = createInstance(ctx, instanceSpec, nil, false)
+							waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.CreateInProgress, errMessage)
 						})
 					})
 				})
@@ -312,14 +306,13 @@ var _ = Describe("ServiceInstance controller", func() {
 
 					It("should have failure condition - non transient error", func() {
 						serviceInstance = createInstance(ctx, instanceSpec, nil, false)
-						waitForResourceCondition(ctx, serviceInstance, common.ConditionFailed, metav1.ConditionTrue, common.CreateFailed, errMessage)
+						waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.CreateInProgress, errMessage)
 					})
 
 					When("ignoreNonTransientErrorAnnotation exists", func() {
 						It("should have failure conditions and remove the annotation after timeout", func() {
-							serviceInstance = createInstance(ctx, instanceSpec, map[string]string{common.IgnoreNonTransientErrorAnnotation: "true"}, false)
+							serviceInstance = createInstance(ctx, instanceSpec, nil, false)
 							waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionTrue, common.Created, "")
-							waitForResourceAnnotationRemove(ctx, serviceInstance, common.IgnoreNonTransientErrorAnnotation, common.IgnoreNonTransientErrorTimestampAnnotation)
 							Expect(fakeClient.ProvisionCallCount()).To(BeNumerically(">", 1))
 						})
 					})
@@ -570,15 +563,9 @@ var _ = Describe("ServiceInstance controller", func() {
 						newExternalName := "my-new-external-name" + uuid.New().String()
 						serviceInstance.Spec.ExternalName = newExternalName
 						updateInstance(ctx, serviceInstance)
-						waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.UpdateFailed, "")
-						serviceInstance.Annotations = map[string]string{common.IgnoreNonTransientErrorAnnotation: "true"}
-						updateInstance(ctx, serviceInstance)
 						waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.UpdateInProgress, "")
 						fakeClient.UpdateInstanceReturns(nil, "", nil)
-
 						waitForResourceToBeReady(ctx, serviceInstance)
-						waitForResourceAnnotationRemove(ctx, serviceInstance, common.IgnoreNonTransientErrorAnnotation, common.IgnoreNonTransientErrorTimestampAnnotation)
-
 					})
 				})
 			})
@@ -963,7 +950,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						Description: "errMessage",
 					})
 					serviceInstance = createInstance(ctx, sharedInstanceSpec, nil, false)
-					waitForResourceCondition(ctx, serviceInstance, common.ConditionFailed, metav1.ConditionTrue, common.CreateFailed, "")
+					waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.CreateInProgress, "")
 					Expect(fakeClient.ShareInstanceCallCount()).To(BeZero())
 				})
 			})
