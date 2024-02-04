@@ -410,25 +410,22 @@ To enable automatic credentials rotation, you need to set the following paramete
 
 Set the TTL shorter than the rotation frequency. This gives you the opportunity to avoid the transition period timely inform your users of new credentials before the binding's validity expires. 
 
-**Note**
-
-While credentials are rotated, they are still stored in the original secret created for the first binding.
 
 
 If your TTL is longer than the rotation frequency,  the following occurs:
 
 There is a transition period during which the rotated binding is still valid. Namely, there are two (or more) `ServiceBinding` objects: the original and the rotated one (holds the `services.cloud.sap.com/stale` label). 
-The rotated one is deleted once the `rotatedBindingTTL` duration elapses.</br></br>
+The rotated one is deleted once the `rotatedBindingTTL` duration elapses.
+
+**Notes**
+
+- While credentials are rotated, they are still stored in the original secret created for the first binding.
+- `credentialsRotationPolicy` evaluated and executed during [control loop](https://kubernetes.io/docs/concepts/architecture/controller/) which runs on every update or during
+full reconciliation process.
  
 **Tip** 
 
 To see when the service binding was last rotated, refer to the `status.lastCredentialsRotationTime`.
-
-**Note**
-
-`credentialsRotationPolicy` evaluated and executed during [control loop](https://kubernetes.io/docs/concepts/architecture/controller/) which runs on every update or during
-full reconciliation process.
-
 
 You can also choose the `services.cloud.sap.com/forceRotate` annotation (value doesn't matter), upon which immediate credentials rotation is performed. Note that the prerequisite for the force action is that credentials rotation `enabled` field is set to true.).
 
