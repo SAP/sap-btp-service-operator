@@ -28,11 +28,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-const (
-	annotationInFutureError          = "Annotation %s cannot be a date in the future."
-	annotationNotValidTimestampError = "Annotation %s is not a valid timestamp"
-)
-
 func (si *ServiceInstance) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(si).
