@@ -421,6 +421,7 @@ spec:
   a full reconciliation process. This means that the actual rotation time may potentially be greater than the specified duration in 'rotationFrequency'.**
 * The original `ServiceBinding` and `Secret` will always contain the newest BindingID and credentials, old BindingID and credentials are backed up in a new `ServiceBinding` and `Secret` and will be deleted according to the configured TTL. The name of the backup `ServiceBinding` is '<original-binding-name>-guid'
 * To see when the service binding was last rotated, refer to the `status.lastCredentialsRotationTime`.
+* The credentials expiration time is determind by the service broker and is not affected by the `credentialsRotationPolicy` settings.
 * To initiate an instant rotation (regardless to the configured `rotationFrequency` value), simply add the `services.cloud.sap.com/forceRotate: "true"` annotation to the `ServiceBinding`. Note that the prerequisite for the force action is that credentials rotation enabled field is set to true.
 * It isn't possible to enable automatic credentials rotation to an already-rotated `ServiceBinding` (with the `services.cloud.sap.com/stale` label).
 
