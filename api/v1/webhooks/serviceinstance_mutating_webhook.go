@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	v1admission "k8s.io/api/admission/v1"
-	v1 "k8s.io/api/authentication/v1"
 	"net/http"
 	"reflect"
+
+	v1admission "k8s.io/api/admission/v1"
+	v1 "k8s.io/api/authentication/v1"
 
 	servicesv1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"

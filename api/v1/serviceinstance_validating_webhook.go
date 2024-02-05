@@ -18,8 +18,9 @@ package v1
 
 import (
 	"fmt"
-	"github.com/SAP/sap-btp-service-operator/api/common"
 	"strings"
+
+	"github.com/SAP/sap-btp-service-operator/api/common"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
