@@ -243,7 +243,7 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 
 	if bindErr != nil {
 		log.Error(err, "failed to create service binding", "serviceInstanceID", serviceInstance.Status.InstanceID)
-		return utils.HandleError(ctx, r.Client, smClientTypes.CREATE, bindErr, serviceBinding, false)
+		return utils.HandleError(ctx, r.Client, smClientTypes.CREATE, bindErr, serviceBinding, true)
 	}
 
 	if operationURL != "" {

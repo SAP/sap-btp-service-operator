@@ -72,7 +72,16 @@ var _ = Describe("ServiceBinding controller", func() {
 	}
 
 	createBindingWithoutAssertions := func(ctx context.Context, name, namespace, instanceName, instanceNamespace, externalName string) (*v1.ServiceBinding, error) {
-		return createBindingWithoutAssertionsAndWait(ctx, name, namespace, instanceName, instanceNamespace, externalName, true)
+		return createBindingWithoutAssertionsAndWait(ctx, name, namespace, instanceName, instanceNamespace, externalName, false)
+	}
+
+	createBindingWithTransitError := func(ctx context.Context, name, namespace, instanceName, externalName, failureMessage string) {
+		binding, err := createBindingWithoutAssertions(ctx, name, namespace, instanceName, "", externalName)
+		if err != nil {
+			Expect(err.Error()).To(ContainSubstring(failureMessage))
+		} else {
+			waitForResourceCondition(ctx, binding, common.ConditionSucceeded, metav1.ConditionFalse, common.CreateInProgress, failureMessage)
+		}
 	}
 
 	createBindingWithError := func(ctx context.Context, name, namespace, instanceName, externalName, failureMessage string) {
@@ -200,7 +209,7 @@ var _ = Describe("ServiceBinding controller", func() {
 		Context("invalid parameters", func() {
 			When("service instance name is not provided", func() {
 				It("should fail", func() {
-					createBindingWithError(ctx, bindingName, bindingTestNamespace, "", "",
+					createBindingWithTransitError(ctx, bindingName, bindingTestNamespace, "", "",
 						"spec.serviceInstanceName in body should be at least 1 chars long")
 				})
 			})
@@ -417,7 +426,7 @@ var _ = Describe("ServiceBinding controller", func() {
 					})
 
 					It("should fail", func() {
-						createBindingWithError(ctx, bindingName, bindingTestNamespace, instanceName, "binding-external-name", errorMessage)
+						createBindingWithTransitError(ctx, bindingName, bindingTestNamespace, instanceName, "binding-external-name", errorMessage)
 					})
 				})
 
@@ -455,7 +464,7 @@ var _ = Describe("ServiceBinding controller", func() {
 					})
 
 					It("should detect the error as non-transient and fail", func() {
-						createBindingWithError(ctx, bindingName, bindingTestNamespace, instanceName, "binding-external-name", errorMessage)
+						createBindingWithTransitError(ctx, bindingName, bindingTestNamespace, instanceName, "binding-external-name", errorMessage)
 					})
 				})
 

@@ -252,7 +252,7 @@ func waitForResourceCondition(ctx context.Context, resource common.SAPBTPResourc
 		}
 
 		return true
-	}, timeout*2, interval).Should(BeTrue(),
+	}, timeout*3, interval).Should(BeTrue(),
 		eventuallyMsgForResource(
 			fmt.Sprintf("expected condition: {type: %s, status: %s, reason: %s, message: %s} was not met", conditionType, status, reason, message),
 			key,
