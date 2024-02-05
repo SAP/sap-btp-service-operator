@@ -402,7 +402,7 @@ To enable automatic credentials rotation, you need to set the following paramete
 | Parameter         | Type     | Description                                      |   Valid Values  |
 |:-----------------|:---------|:----------------------------------------------------|:---------------------|
 | `enabled` | bool | Whether the credentials rotation option is enabled.    |                                                                                                                                                          |
-| `rotationFrequency` | string | Indicates the interval between credential rotations. |      "ns", "us" or ("µs"), "ms", "s", "m", "h" |                                                                                                                                                                |
+| `rotationFrequency` | string | Indicates the interval between credential rotations. The rotation will occur in the next reconciliation loop if the time that has passed since the `lastCredentialsRotationTime` is greater than the specified `rotationFrequency` interval. **Note that the actual frequency may be longer than the one you specified.**  See under **Important** below.   |   "ns", "us" or ("µs"), "ms", "s", "m", "h" |                                                                                                                                                                |
 | `rotatedBindingTTL`   |  string | Specifies for how long to keep the rotated `ServiceBinding`.   |      "ns", "us" or ("µs"), "ms", "s", "m", "h" |   
 
 
@@ -421,7 +421,7 @@ The TTL provides an opportunity to inform your users of new credentials before t
 
 **Important**
 
-- The `credentialsRotationPolicy` evaluated and executed during the [control loop](https://kubernetes.io/docs/concepts/architecture/controller/) which runs on every update or during
+- The `credentialsRotationPolicy` is evaluated and executed during the [control loop](https://kubernetes.io/docs/concepts/architecture/controller/) which runs on every update or during
   a full reconciliation process. This means that the actual rotation time may potentially be greater than the specified duration in 'rotationFrequency'.
   
 -It isn't possible to enable automatic credentials rotation to an already-rotated `ServiceBinding` (with the `services.cloud.sap.com/stale` label).
@@ -430,7 +430,6 @@ The TTL provides an opportunity to inform your users of new credentials before t
 
 While credentials are rotated, they are still stored in the original secret created for the first binding.
 
- 
 **Tip** 
 
 To see when the service binding was last rotated, refer to the `status.lastCredentialsRotationTime`.
