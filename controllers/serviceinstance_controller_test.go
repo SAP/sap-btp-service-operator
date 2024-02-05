@@ -304,18 +304,10 @@ var _ = Describe("ServiceInstance controller", func() {
 						fakeClient.ProvisionReturns(nil, getNonTransientBrokerError(errMessage))
 						fakeClient.ProvisionReturnsOnCall(2, &sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
 					})
-
-					It("should have failure condition - non transient error", func() {
+					It("should fail first and then succeed", func() {
 						serviceInstance = createInstance(ctx, instanceSpec, nil, false)
-						waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.CreateInProgress, errMessage)
-					})
-
-					When("ignoreNonTransientErrorAnnotation exists", func() {
-						It("should have failure conditions and remove the annotation after timeout", func() {
-							serviceInstance = createInstance(ctx, instanceSpec, nil, false)
-							waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionTrue, common.Created, "")
-							Expect(fakeClient.ProvisionCallCount()).To(BeNumerically(">", 1))
-						})
+						waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionTrue, common.Created, "")
+						Expect(fakeClient.ProvisionCallCount()).To(BeNumerically(">", 1))
 					})
 				})
 			})
