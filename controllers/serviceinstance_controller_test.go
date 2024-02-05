@@ -245,28 +245,24 @@ var _ = Describe("ServiceInstance controller", func() {
 					})
 				})
 
-				Context("ignoreNonTransientErrorAnnotation exists", func() {
-					When("provision fails once and then succeeds", func() {
-						It("should remove the annotation", func() {
-							fakeClient.ProvisionReturnsOnCall(0, nil, &sm.ServiceManagerError{
-								StatusCode:  http.StatusBadRequest,
-								Description: errMessage,
-							})
-							fakeClient.ProvisionReturnsOnCall(1, &sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
-							serviceInstance = createInstance(ctx, instanceSpec, nil, false)
-							waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionTrue, common.Created, "")
-						})
-					})
+				Context("removing non transient error handling", func() {
 
-					When("provision fails until timeout", func() {
-						It("should have failure conditions and remove the annotation", func() {
-							fakeClient.ProvisionReturns(nil, &sm.ServiceManagerError{
-								StatusCode:  http.StatusBadRequest,
-								Description: errMessage,
-							})
-							serviceInstance = createInstance(ctx, instanceSpec, nil, false)
-							waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.CreateInProgress, errMessage)
+					It("provision fails once and then succeeds", func() {
+						fakeClient.ProvisionReturnsOnCall(0, nil, &sm.ServiceManagerError{
+							StatusCode:  http.StatusBadRequest,
+							Description: errMessage,
 						})
+						fakeClient.ProvisionReturnsOnCall(1, &sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
+						serviceInstance = createInstance(ctx, instanceSpec, nil, false)
+						waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionTrue, common.Created, "")
+					})
+					It("provision fails until timeout", func() {
+						fakeClient.ProvisionReturns(nil, &sm.ServiceManagerError{
+							StatusCode:  http.StatusBadRequest,
+							Description: errMessage,
+						})
+						serviceInstance = createInstance(ctx, instanceSpec, nil, false)
+						waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.CreateInProgress, errMessage)
 					})
 				})
 
