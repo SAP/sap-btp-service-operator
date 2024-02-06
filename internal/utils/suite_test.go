@@ -18,11 +18,12 @@ package utils
 
 import (
 	"context"
-	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
-	"k8s.io/client-go/rest"
 	"path/filepath"
 	"testing"
 	"time"
+
+	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
+	"k8s.io/client-go/rest"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

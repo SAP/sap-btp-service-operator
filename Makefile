@@ -108,3 +108,9 @@ lint-deps:
 
 helm-charts:
 	kustomize build config/default > ./sapbtp-operator-charts/templates/crd.yml
+
+precommit: goimports lint ## Run this before commiting
+
+goimports:
+	go install golang.org/x/tools/cmd/goimports@latest
+	goimports -l -w .

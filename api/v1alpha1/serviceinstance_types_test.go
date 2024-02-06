@@ -125,7 +125,7 @@ var _ = Describe("Service Instance Type Test", func() {
 
 	It("should update annotation", func() {
 		annotation := map[string]string{
-			common.IgnoreNonTransientErrorAnnotation: "true",
+			"key": "true",
 		}
 		instance.SetAnnotations(annotation)
 		Expect(instance.GetAnnotations()).To(Equal(annotation))

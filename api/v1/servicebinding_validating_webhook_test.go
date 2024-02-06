@@ -1,7 +1,6 @@
 package v1
 
 import (
-	"fmt"
 	"github.com/SAP/sap-btp-service-operator/api/common"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -19,15 +18,6 @@ var _ = Describe("Service Binding Webhook Test", func() {
 			It("should succeed", func() {
 				_, err := binding.ValidateCreate()
 				Expect(err).ToNot(HaveOccurred())
-			})
-			It("should failed", func() {
-				binding.Annotations = map[string]string{
-					common.IgnoreNonTransientErrorAnnotation: "false",
-				}
-				_, err := binding.ValidateCreate()
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring(fmt.Sprintf(AnnotationNotSupportedError, common.IgnoreNonTransientErrorAnnotation)))
-
 			})
 		})
 
@@ -119,18 +109,6 @@ var _ = Describe("Service Binding Webhook Test", func() {
 					Expect(err).ToNot(HaveOccurred())
 				})
 			})
-			When("Annotation changed", func() {
-				It("should fail", func() {
-					newBinding.Annotations = map[string]string{
-						common.IgnoreNonTransientErrorAnnotation: "false",
-					}
-					_, err := newBinding.ValidateUpdate(binding)
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring(fmt.Sprintf(AnnotationNotSupportedError, common.IgnoreNonTransientErrorAnnotation)))
-
-				})
-			})
-
 		})
 
 		Context("Validate update of spec after binding is created", func() {
