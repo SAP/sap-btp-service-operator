@@ -100,7 +100,7 @@ var _ = Describe("Service Binding Type Test", func() {
 
 	It("should update annotation", func() {
 		annotation := map[string]string{
-			common.IgnoreNonTransientErrorAnnotation: "true",
+			"key": "true",
 		}
 		binding.SetAnnotations(annotation)
 		Expect(binding.GetAnnotations()).To(Equal(annotation))

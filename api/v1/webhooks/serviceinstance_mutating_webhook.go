@@ -6,9 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
-	"time"
-
-	"github.com/SAP/sap-btp-service-operator/api/common"
 
 	v1admission "k8s.io/api/admission/v1"
 	v1 "k8s.io/api/authentication/v1"
@@ -40,14 +37,6 @@ func (s *ServiceInstanceDefaulter) Handle(_ context.Context, req admission.Reque
 
 	if err := s.setServiceInstanceUserInfo(req, instance); err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
-	}
-
-	if len(instance.Annotations) > 0 && len(instance.Annotations[common.IgnoreNonTransientErrorAnnotation]) > 0 {
-		if _, exist := instance.Annotations[common.IgnoreNonTransientErrorTimestampAnnotation]; !exist {
-			annotationValue := time.Now().Format(time.RFC3339)
-			instancelog.Info(fmt.Sprintf("%s annotation exists, adding %s annotation with value %s", common.IgnoreNonTransientErrorAnnotation, common.IgnoreNonTransientErrorTimestampAnnotation, annotationValue))
-			instance.Annotations[common.IgnoreNonTransientErrorTimestampAnnotation] = annotationValue
-		}
 	}
 
 	marshaledInstance, err := json.Marshal(instance)

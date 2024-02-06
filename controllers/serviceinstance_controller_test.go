@@ -3,6 +3,9 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"strings"
+
 	"github.com/SAP/sap-btp-service-operator/api/common"
 	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
@@ -21,10 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
-	"net/http"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"strings"
-	"time"
 )
 
 // +kubebuilder:docs-gen:collapse=Imports
@@ -241,37 +241,28 @@ var _ = Describe("ServiceInstance controller", func() {
 
 					It("should have failure condition", func() {
 						serviceInstance = createInstance(ctx, instanceSpec, nil, false)
-						waitForResourceCondition(ctx, serviceInstance, common.ConditionFailed, metav1.ConditionTrue, common.CreateFailed, errMessage)
+						waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionTrue, common.Created, "")
 					})
 				})
 
-				Context("ignoreNonTransientErrorAnnotation exists", func() {
-					When("provision fails once and then succeeds", func() {
-						It("should remove the annotation", func() {
-							fakeClient.ProvisionReturnsOnCall(0, nil, &sm.ServiceManagerError{
-								StatusCode:  http.StatusBadRequest,
-								Description: errMessage,
-							})
-							fakeClient.ProvisionReturnsOnCall(1, &sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
-							serviceInstance = createInstance(ctx, instanceSpec, map[string]string{common.IgnoreNonTransientErrorAnnotation: "true"}, false)
-							waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionTrue, common.Created, "")
-							waitForResourceAnnotationRemove(ctx, serviceInstance, common.IgnoreNonTransientErrorAnnotation, common.IgnoreNonTransientErrorTimestampAnnotation)
-						})
-					})
+				Context("removing non transient error handling", func() {
 
-					When("provision fails until timeout", func() {
-						It("should have failure conditions and remove the annotation", func() {
-							fakeClient.ProvisionReturns(nil, &sm.ServiceManagerError{
-								StatusCode:  http.StatusBadRequest,
-								Description: errMessage,
-							})
-							serviceInstance = createInstance(ctx, instanceSpec, map[string]string{common.IgnoreNonTransientErrorAnnotation: "true"}, false)
-							waitForResourceCondition(ctx, serviceInstance, common.ConditionFailed, metav1.ConditionTrue, common.CreateFailed, errMessage)
-							waitForResourceAnnotationRemove(ctx, serviceInstance, common.IgnoreNonTransientErrorAnnotation, common.IgnoreNonTransientErrorTimestampAnnotation)
-							waitForResourceCondition(ctx, serviceInstance, common.ConditionFailed, metav1.ConditionTrue, common.CreateFailed, errMessage)
-							sinceCreate := time.Since(serviceInstance.GetCreationTimestamp().Time)
-							Expect(sinceCreate > ignoreNonTransientTimeout)
+					It("provision fails once and then succeeds", func() {
+						fakeClient.ProvisionReturnsOnCall(0, nil, &sm.ServiceManagerError{
+							StatusCode:  http.StatusBadRequest,
+							Description: errMessage,
 						})
+						fakeClient.ProvisionReturnsOnCall(1, &sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
+						serviceInstance = createInstance(ctx, instanceSpec, nil, false)
+						waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionTrue, common.Created, "")
+					})
+					It("provision fails until timeout", func() {
+						fakeClient.ProvisionReturns(nil, &sm.ServiceManagerError{
+							StatusCode:  http.StatusBadRequest,
+							Description: errMessage,
+						})
+						serviceInstance = createInstance(ctx, instanceSpec, nil, false)
+						waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.CreateInProgress, errMessage)
 					})
 				})
 
@@ -309,19 +300,10 @@ var _ = Describe("ServiceInstance controller", func() {
 						fakeClient.ProvisionReturns(nil, getNonTransientBrokerError(errMessage))
 						fakeClient.ProvisionReturnsOnCall(2, &sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
 					})
-
-					It("should have failure condition - non transient error", func() {
+					It("should fail first and then succeed", func() {
 						serviceInstance = createInstance(ctx, instanceSpec, nil, false)
-						waitForResourceCondition(ctx, serviceInstance, common.ConditionFailed, metav1.ConditionTrue, common.CreateFailed, errMessage)
-					})
-
-					When("ignoreNonTransientErrorAnnotation exists", func() {
-						It("should have failure conditions and remove the annotation after timeout", func() {
-							serviceInstance = createInstance(ctx, instanceSpec, map[string]string{common.IgnoreNonTransientErrorAnnotation: "true"}, false)
-							waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionTrue, common.Created, "")
-							waitForResourceAnnotationRemove(ctx, serviceInstance, common.IgnoreNonTransientErrorAnnotation, common.IgnoreNonTransientErrorTimestampAnnotation)
-							Expect(fakeClient.ProvisionCallCount()).To(BeNumerically(">", 1))
-						})
+						waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionTrue, common.Created, "")
+						Expect(fakeClient.ProvisionCallCount()).To(BeNumerically(">", 1))
 					})
 				})
 			})
@@ -561,7 +543,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					})
 				})
 
-				When("the error is non transient but ignoreNonTransientErrorAnnotation exists", func() {
+				When("the error is non transient but we continue to try till success", func() {
 					errMessage := "broker update error"
 					BeforeEach(func() {
 						fakeClient.UpdateInstanceReturns(nil, "", getNonTransientBrokerError(errMessage))
@@ -570,15 +552,9 @@ var _ = Describe("ServiceInstance controller", func() {
 						newExternalName := "my-new-external-name" + uuid.New().String()
 						serviceInstance.Spec.ExternalName = newExternalName
 						updateInstance(ctx, serviceInstance)
-						waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.UpdateFailed, "")
-						serviceInstance.Annotations = map[string]string{common.IgnoreNonTransientErrorAnnotation: "true"}
-						updateInstance(ctx, serviceInstance)
 						waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.UpdateInProgress, "")
 						fakeClient.UpdateInstanceReturns(nil, "", nil)
-
 						waitForResourceToBeReady(ctx, serviceInstance)
-						waitForResourceAnnotationRemove(ctx, serviceInstance, common.IgnoreNonTransientErrorAnnotation, common.IgnoreNonTransientErrorTimestampAnnotation)
-
 					})
 				})
 			})
@@ -963,7 +939,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						Description: "errMessage",
 					})
 					serviceInstance = createInstance(ctx, sharedInstanceSpec, nil, false)
-					waitForResourceCondition(ctx, serviceInstance, common.ConditionFailed, metav1.ConditionTrue, common.CreateFailed, "")
+					waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.CreateInProgress, "")
 					Expect(fakeClient.ShareInstanceCallCount()).To(BeZero())
 				})
 			})

@@ -88,14 +88,6 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 	}
 
-	if meta.IsStatusConditionPresentAndEqual(serviceInstance.GetConditions(), common.ConditionFailed, metav1.ConditionTrue) &&
-		utils.ShouldIgnoreNonTransient(log, serviceInstance, r.Config.IgnoreNonTransientTimeout) {
-		markNonTransientStatusAsTransient(serviceInstance)
-		if err := r.Status().Update(ctx, serviceInstance); err != nil {
-			return ctrl.Result{}, err
-		}
-	}
-
 	if isFinalState(ctx, serviceInstance) {
 		if len(serviceInstance.Status.HashedSpec) == 0 {
 			updateHashedSpecValue(serviceInstance)
@@ -105,7 +97,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			}
 		}
 
-		return ctrl.Result{}, utils.RemoveAnnotations(ctx, r.Client, serviceInstance, common.IgnoreNonTransientErrorAnnotation, common.IgnoreNonTransientErrorTimestampAnnotation)
+		return ctrl.Result{}, nil
 	}
 
 	if utils.IsMarkedForDeletion(serviceInstance.ObjectMeta) {
@@ -201,7 +193,7 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	if provisionErr != nil {
 		log.Error(provisionErr, "failed to create service instance", "serviceOfferingName", serviceInstance.Spec.ServiceOfferingName,
 			"servicePlanName", serviceInstance.Spec.ServicePlanName)
-		return utils.HandleError(ctx, r.Client, smClientTypes.CREATE, provisionErr, serviceInstance, utils.ShouldIgnoreNonTransient(log, serviceInstance, r.Config.IgnoreNonTransientTimeout))
+		return utils.HandleError(ctx, r.Client, smClientTypes.CREATE, provisionErr, serviceInstance, true)
 	}
 
 	serviceInstance.Status.InstanceID = provision.InstanceID
@@ -250,7 +242,7 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 
 	if err != nil {
 		log.Error(err, fmt.Sprintf("failed to update service instance with ID %s", serviceInstance.Status.InstanceID))
-		return utils.HandleError(ctx, r.Client, smClientTypes.UPDATE, err, serviceInstance, utils.ShouldIgnoreNonTransient(log, serviceInstance, r.Config.IgnoreNonTransientTimeout))
+		return utils.HandleError(ctx, r.Client, smClientTypes.UPDATE, err, serviceInstance, true)
 	}
 
 	if operationURL != "" {
@@ -728,20 +720,4 @@ func getErrorMsgFromLastOperation(status *smClientTypes.Operation) string {
 		}
 	}
 	return errMsg
-}
-
-func markNonTransientStatusAsTransient(serviceInstance *servicesv1.ServiceInstance) {
-	conditions := serviceInstance.GetConditions()
-	lastOpCondition := meta.FindStatusCondition(conditions, common.ConditionSucceeded)
-	operation := smClientTypes.CREATE
-	if len(serviceInstance.Status.InstanceID) > 0 {
-		operation = smClientTypes.UPDATE
-	}
-	lastOpCondition.Reason = utils.GetConditionReason(operation, smClientTypes.INPROGRESS)
-
-	if len(conditions) > 0 {
-		meta.RemoveStatusCondition(&conditions, common.ConditionFailed)
-	}
-	meta.SetStatusCondition(&conditions, *lastOpCondition)
-	serviceInstance.SetConditions(conditions)
 }
