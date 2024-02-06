@@ -543,7 +543,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					})
 				})
 
-				When("the error is non transient but ignoreNonTransientErrorAnnotation exists", func() {
+				When("the error is non transient but we continue to try till success", func() {
 					errMessage := "broker update error"
 					BeforeEach(func() {
 						fakeClient.UpdateInstanceReturns(nil, "", getNonTransientBrokerError(errMessage))
