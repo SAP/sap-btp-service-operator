@@ -395,6 +395,7 @@ your-secretRootKey-value:
 ## Automatic Service Binding Rotation
 You can enhance security by rotating your service binding, ensuring that credentials are updated before they expire. 
 Rotation involves generating new bindings with fresh credentials, while preserving the old ones until the transition is complete.
+
 To enable automatic credentials rotation, you need to set the following parameters of the `credentialsRotationPolicy` field in the `spec` field of the `ServiceBinding` resource:
 
 | Parameter         | Type     | Description                                                                                                                                               | Valid Values                                                                                                                                            |
