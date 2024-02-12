@@ -27,6 +27,8 @@ func GetSMClient(ctx context.Context, secretResolver *SecretResolver, resourceNa
 		URL:            string(secret.Data["sm_url"]),
 		TokenURL:       string(secret.Data["tokenurl"]),
 		TokenURLSuffix: string(secret.Data["tokenurlsuffix"]),
+		TLSPrivateKey:  string(secret.Data[v1.TLSPrivateKeyKey]),
+		TLSCertKey:     string(secret.Data[v1.TLSCertKey]),
 		SSLDisabled:    false,
 	}
 
@@ -35,7 +37,8 @@ func GetSMClient(ctx context.Context, secretResolver *SecretResolver, resourceNa
 		return nil, fmt.Errorf("invalid Service-Manager credentials, contact your cluster administrator")
 	}
 
-	if len(clientConfig.ClientSecret) == 0 {
+	//backward compatibility (tls data in a dedicated secret)
+	if len(clientConfig.ClientSecret) == 0 && (len(clientConfig.TLSPrivateKey) == 0 || len(clientConfig.TLSCertKey) == 0) {
 		tlsSecret, err := secretResolver.GetSecretForResource(ctx, resourceNamespace, SAPBTPOperatorTLSSecretName)
 		if client.IgnoreNotFound(err) != nil {
 			return nil, err

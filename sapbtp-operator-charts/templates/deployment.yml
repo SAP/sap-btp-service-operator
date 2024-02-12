@@ -21,8 +21,7 @@ spec:
       annotations:
         {{- $configmap := (include (print $.Template.BasePath "/configmap.yml") .) -}}
         {{- $secret := (include (print $.Template.BasePath "/secret.yml") .) -}}
-        {{- $secretTls := (include (print $.Template.BasePath "/secret-tls.yml") .) -}}
-        {{- $configSha := (print $configmap $secret $secretTls) | sha256sum }}
+        {{- $configSha := (print $configmap $secret) | sha256sum }}
         checksum/config: {{ $configSha }}
         {{- if .Values.manager.annotations }}
         {{- toYaml .Values.manager.annotations | nindent 8 }}
