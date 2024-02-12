@@ -18,10 +18,11 @@ package v1
 
 import (
 	"fmt"
-	"reflect"
-	"time"
-
 	"github.com/SAP/sap-btp-service-operator/api/common"
+	"github.com/pkg/errors"
+	"reflect"
+	"text/template"
+	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -32,7 +33,7 @@ import (
 
 // log is for logging in this package.
 var servicebindinglog = logf.Log.WithName("servicebinding-resource")
-var AnnotationNotSupportedError = "The specified annotation '%s' is not supported within the service binding object."
+var secretTemplateError = "spec.secretTemplate is invalid"
 
 func (sb *ServiceBinding) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
@@ -53,6 +54,14 @@ func (sb *ServiceBinding) ValidateCreate() (admission.Warnings, error) {
 	if sb.Spec.CredRotationPolicy != nil {
 		if err := sb.validateCredRotatingConfig(); err != nil {
 			return nil, err
+		}
+	}
+	if sb.Spec.SecretTemplate != "" {
+		servicebindinglog.Info("validate specified secretTemplate")
+		_, err := template.New("secretTemplate").Funcs(template.FuncMap{}).Parse(sb.Spec.SecretTemplate)
+		if err != nil {
+			servicebindinglog.Error(err, secretTemplateError)
+			return nil, errors.Wrap(err, secretTemplateError)
 		}
 	}
 	return nil, nil

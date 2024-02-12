@@ -47,6 +47,7 @@ func getBinding() *ServiceBinding {
 				RotationFrequency: "1s",
 				RotatedBindingTTL: "1s",
 			},
+			SecretTemplate: "{}",
 		},
 
 		Status: ServiceBindingStatus{},

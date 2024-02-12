@@ -19,6 +19,15 @@ var _ = Describe("Service Binding Webhook Test", func() {
 				_, err := binding.ValidateCreate()
 				Expect(err).ToNot(HaveOccurred())
 			})
+
+			It("should fail", func() {
+				//write test for secretTemplateError
+				binding.Spec.SecretTemplate = "{{"
+				_, err := binding.ValidateCreate()
+				Expect(err).To(HaveOccurred())
+				errMsg := err.Error()
+				Expect(errMsg).To(ContainSubstring("spec.secretTemplate is invalid: template: secretTemplate:1: unclosed action"))
+			})
 		})
 
 		Context("Validate update of spec before binding is created (failure recovery)", func() {
