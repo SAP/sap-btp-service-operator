@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"github.com/pkg/errors"
 	"time"
 
 	"github.com/SAP/sap-btp-service-operator/api/common"
@@ -56,6 +57,8 @@ import (
 const (
 	secretNameTakenErrorFormat    = "the specified secret name '%s' is already taken. Choose another name and try again"
 	secretAlreadyOwnedErrorFormat = "secret %s belongs to another binding %s, choose a different name"
+	credentialPropertiesKey       = "credentialProperties"
+	metaDataPropertiesKey         = "metaDataProperties"
 )
 
 // ServiceBindingReconciler reconciles a ServiceBinding object
@@ -553,6 +556,30 @@ func (r *ServiceBindingReconciler) storeBindingSecret(ctx context.Context, k8sBi
 	log := utils.GetLogger(ctx)
 	logger := log.WithValues("bindingName", k8sBinding.Name, "secretName", k8sBinding.Spec.SecretName)
 
+	var secret *corev1.Secret
+	var err error
+
+	if k8sBinding.Spec.SecretTemplate != "" {
+		secret, err = r.createBindingSecretFromSecretTemplate(ctx, k8sBinding, smBinding.Credentials)
+	} else {
+		secret, err = r.createBindingSecret(ctx, k8sBinding, smBinding)
+	}
+
+	if err != nil {
+		return err
+	}
+	if err = controllerutil.SetControllerReference(k8sBinding, secret, r.Scheme); err != nil {
+		logger.Error(err, "Failed to set secret owner")
+		return err
+	}
+
+	return r.createOrUpdateBindingSecret(ctx, k8sBinding, secret)
+}
+
+func (r *ServiceBindingReconciler) createBindingSecret(ctx context.Context, k8sBinding *servicesv1.ServiceBinding, smBinding *smClientTypes.ServiceBinding) (*corev1.Secret, error) {
+	log := utils.GetLogger(ctx)
+	logger := log.WithValues("bindingName", k8sBinding.Name, "secretName", k8sBinding.Spec.SecretName)
+
 	var credentialsMap map[string][]byte
 	var credentialProperties []utils.SecretMetadataProperty
 
@@ -575,7 +602,7 @@ func (r *ServiceBindingReconciler) storeBindingSecret(ctx context.Context, k8sBi
 		credentialsMap, credentialProperties, err = utils.NormalizeCredentials(smBinding.Credentials)
 		if err != nil {
 			logger.Error(err, "Failed to store binding secret")
-			return fmt.Errorf("failed to create secret. Error: %v", err.Error())
+			return nil, fmt.Errorf("failed to create secret. Error: %v", err.Error())
 		}
 	}
 
@@ -588,12 +615,12 @@ func (r *ServiceBindingReconciler) storeBindingSecret(ctx context.Context, k8sBi
 		var err error
 		credentialsMap, err = singleKeyMap(credentialsMap, *k8sBinding.Spec.SecretRootKey)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	} else {
 		metadata := map[string][]utils.SecretMetadataProperty{
-			"metaDataProperties":   metaDataProperties,
-			"credentialProperties": credentialProperties,
+			metaDataPropertiesKey:   metaDataProperties,
+			credentialPropertiesKey: credentialProperties,
 		}
 		metadataByte, err := json.Marshal(metadata)
 		if err != nil {
@@ -611,12 +638,55 @@ func (r *ServiceBindingReconciler) storeBindingSecret(ctx context.Context, k8sBi
 		},
 		Data: credentialsMap,
 	}
-	if err := controllerutil.SetControllerReference(k8sBinding, secret, r.Scheme); err != nil {
-		logger.Error(err, "Failed to set secret owner")
-		return err
+	return secret, nil
+}
+
+func (r *ServiceBindingReconciler) createBindingSecretFromSecretTemplate(ctx context.Context, k8sBinding *servicesv1.ServiceBinding, inputSmCredentials json.RawMessage) (*corev1.Secret, error) {
+	log := utils.GetLogger(ctx)
+	logger := log.WithValues("bindingName", k8sBinding.Name, "secretName", k8sBinding.Spec.SecretName)
+
+	logger.Info("Create Object using SecretTemplate from ServiceBinding Specs")
+
+	smBindingCredentials := make(map[string]interface{})
+	if inputSmCredentials != nil {
+		err := json.Unmarshal(inputSmCredentials, &smBindingCredentials)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to unmarshal given service binding credentials")
+		}
+	}
+	instanceInfos := make(map[string][]byte)
+	metaDataProperties, err := r.addInstanceInfo(ctx, k8sBinding, instanceInfos)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to add service instance info")
 	}
 
-	return r.createOrUpdateBindingSecret(ctx, k8sBinding, secret)
+	//instanceInfos := make(map[string][]byte)
+	//_, err := r.addInstanceInfo(ctx, k8sBinding, instanceInfos)
+	//if err != nil {
+	//	return nil, errors.Wrap(err, "failed to add service instance info")
+	//}
+	//
+	////convert the bytes to string to ensure, that the secret can be created later by CreateSecretFromTemplate
+	//convertedInstanceInfos := make(map[string]string)
+	//for k, v := range instanceInfos {
+	//	convertedInstanceInfos[k] = string(v)
+	//}
+
+	parameters := map[string]interface{}{
+		credentialPropertiesKey: smBindingCredentials,
+		metaDataPropertiesKey:   metaDataProperties,
+	}
+
+	templateName := fmt.Sprintf("%s/%s", k8sBinding.Namespace, k8sBinding.Name)
+	secret, err := utils.CreateSecretFromTemplate(templateName, k8sBinding.Spec.SecretTemplate, parameters)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create secret from template")
+	}
+
+	secret.SetNamespace(k8sBinding.Namespace)
+	secret.SetName(k8sBinding.Spec.SecretName)
+
+	return secret, nil
 }
 
 func (r *ServiceBindingReconciler) createOrUpdateBindingSecret(ctx context.Context, binding *servicesv1.ServiceBinding, secret *corev1.Secret) error {
