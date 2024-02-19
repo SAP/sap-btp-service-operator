@@ -2,14 +2,15 @@ package utils
 
 import (
 	"fmt"
+	"strings"
+	"text/template"
+
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
-	"strings"
-	"text/template"
 )
 
 //const templateOutputMaxBytes int64 = 1 * 1024 * 1024
