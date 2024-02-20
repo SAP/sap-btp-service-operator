@@ -20,6 +20,7 @@ var validGroupVersionKind = schema.GroupVersionKind{
 	Kind:    "Secret",
 	Version: "v1",
 }
+var allowedMetadataFields = map[string]string{"labels": "any", "annotations": "any"}
 
 // CreateSecretFromTemplate executes the template to create a secret objects, validates and returns it
 // The template needs to be a v1 Secret and in metadata labels and annotations are allowed only
@@ -39,32 +40,38 @@ func CreateSecretFromTemplate(templateName, secretTemplate string, data map[stri
 
 	obj := o.(*unstructured.Unstructured)
 
-	// validate metadata
-	allowedMetadataFields := map[string]string{"labels": "any", "annotations": "any"}
-
-	metadataKeyValues, _, err := unstructured.NestedMap(obj.Object, "metadata")
+	err = validateSecret(err, obj)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to read metadata fields of generated secret manifest")
+		return nil, err
 	}
-
-	for metadataKey := range metadataKeyValues {
-		if _, ok := allowedMetadataFields[metadataKey]; !ok {
-			return nil, fmt.Errorf("metadata field %s is not allowed in generated secret manifest", metadataKey)
-		}
-	}
-
-	// validate GroupVersionKind
-	gvk := obj.GetObjectKind().GroupVersionKind()
-	if gvk != validGroupVersionKind {
-		return nil, fmt.Errorf("generated secret manifest has unexpected type: %q", gvk.String())
-	}
-
 	var secret *corev1.Secret
 	err = runtime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, &secret)
 	if err != nil {
 		return nil, errors.Wrap(err, "the generated secret manifest is not valid")
 	}
 	return secret, nil
+}
+
+func validateSecret(err error, obj *unstructured.Unstructured) error {
+	// validate metadata
+
+	metadataKeyValues, _, err := unstructured.NestedMap(obj.Object, "metadata")
+	if err != nil {
+		return errors.Wrap(err, "failed to read metadata fields of generated secret manifest")
+	}
+
+	for metadataKey := range metadataKeyValues {
+		if _, ok := allowedMetadataFields[metadataKey]; !ok {
+			return fmt.Errorf("metadata field %s is not allowed in generated secret manifest", metadataKey)
+		}
+	}
+
+	// validate GroupVersionKind
+	gvk := obj.GetObjectKind().GroupVersionKind()
+	if gvk != validGroupVersionKind {
+		return fmt.Errorf("generated secret manifest has unexpected type: %q", gvk.String())
+	}
+	return nil
 }
 
 // ParseTemplate create a new template with given name, add allowed sprig functions and parse the template
