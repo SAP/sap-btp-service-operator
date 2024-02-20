@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/lithammer/dedent"
 	. "github.com/onsi/ginkgo"
@@ -117,32 +118,32 @@ var _ = Describe("Secret template", func() {
 			Expect(secret).To(BeNil())
 		})
 
-		//Describe("limited template output size", func() {
-		//
-		//	It("should succeed if template output is too big", func() {
-		//		secretTemplate := dedent.Dedent(`
-		//				apiVersion: v1
-		//				kind: Secret
-		//				stringData:
-		//				  foo: x
-		//			`)
-		//		secretTemplate += strings.Repeat("#", int(templateOutputMaxBytes)-len(secretTemplate))
-		//		Expect(len(secretTemplate)).To(Equal(int(templateOutputMaxBytes)))
-		//
-		//		secret, err := CreateSecretFromTemplate("", secretTemplate, nil)
-		//
-		//		Expect(err).ShouldNot(HaveOccurred())
-		//		Expect(secret).NotTo(BeNil())
-		//	})
-		//
-		//	It("should fail if template output is too big", func() {
-		//		secretTemplate := strings.Repeat("a", int(templateOutputMaxBytes)+1)
-		//
-		//		secret, err := CreateSecretFromTemplate("", secretTemplate, nil)
-		//
-		//		Expect(err).Should(MatchError(ContainSubstring("the size of the generated secret manifest exceeds the limit")))
-		//		Expect(secret).To(BeNil())
-		//	})
-		//})
+		Describe("limited template output size", func() {
+
+			It("should succeed if template output is too big", func() {
+				secretTemplate := dedent.Dedent(`
+						apiVersion: v1
+						kind: Secret
+						stringData:
+						  foo: x
+					`)
+				secretTemplate += strings.Repeat("#", int(templateOutputMaxBytes)-len(secretTemplate))
+				Expect(len(secretTemplate)).To(Equal(int(templateOutputMaxBytes)))
+
+				secret, err := CreateSecretFromTemplate("", secretTemplate, nil)
+
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(secret).NotTo(BeNil())
+			})
+
+			It("should fail if template output is too big", func() {
+				secretTemplate := strings.Repeat("a", int(templateOutputMaxBytes)+1)
+
+				secret, err := CreateSecretFromTemplate("", secretTemplate, nil)
+
+				Expect(err).Should(MatchError(ContainSubstring("the size of the generated secret manifest exceeds the limit")))
+				Expect(secret).To(BeNil())
+			})
+		})
 	})
 })

@@ -2,18 +2,18 @@ package utils
 
 import (
 	"fmt"
-	"strings"
-	"text/template"
-
 	"github.com/pkg/errors"
+	"io"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
+	"strings"
+	"text/template"
 )
 
-//const templateOutputMaxBytes int64 = 1 * 1024 * 1024
+const templateOutputMaxBytes int64 = 1 * 1024 * 1024
 
 var validGroupVersionKind = schema.GroupVersionKind{
 	Group:   "",
@@ -91,21 +91,17 @@ func executeTemplate(templateName, text string, parameters map[string]interface{
 	}
 
 	var stringBuilder strings.Builder
-	//var writer io.Writer = &ioutils.LimitedWriter{
-	//	W: &stringBuilder,
-	//	N: templateOutputMaxBytes,
-	//}
-	//writer = &ioutils.ErrorConversionWriter{
-	//	W: writer,
-	//	Converter: func(err error) error {
-	//		if err == ioutils.ErrLimitExceeded {
-	//			return fmt.Errorf("the size of the generated secret manifest exceeds the limit of %d bytes", templateOutputMaxBytes)
-	//		}
-	//		return err
-	//	},
-	//}
-
-	err = t.Option("missingkey=error").Execute(&stringBuilder, parameters)
+	var writer io.Writer = &LimitedWriter{
+		W: &stringBuilder,
+		N: templateOutputMaxBytes,
+		Converter: func(err error) error {
+			if errors.Is(err, ErrLimitExceeded) {
+				return fmt.Errorf("the size of the generated secret manifest exceeds the limit of %d bytes", templateOutputMaxBytes)
+			}
+			return err
+		},
+	}
+	err = t.Option("missingkey=error").Execute(writer, parameters)
 	if err != nil {
 		return "", err
 	}
