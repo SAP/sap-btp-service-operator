@@ -660,10 +660,14 @@ func (r *ServiceBindingReconciler) createBindingSecretFromSecretTemplate(ctx con
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to add service instance info")
 	}
-
+	//convert the bytes to string to ensure, that the secret can be created later by CreateSecretFromTemplate
+	convertedInstanceInfos := make(map[string]string)
+	for k, v := range instanceInfos {
+		convertedInstanceInfos[k] = string(v)
+	}
 	parameters := map[string]interface{}{
 		credentialPropertiesKey: smBindingCredentials,
-		instancePropertiesKey:   instanceInfos,
+		instancePropertiesKey:   convertedInstanceInfos,
 	}
 
 	templateName := fmt.Sprintf("%s/%s", k8sBinding.Namespace, k8sBinding.Name)

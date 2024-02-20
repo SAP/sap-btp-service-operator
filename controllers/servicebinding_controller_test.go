@@ -597,6 +597,23 @@ var _ = Describe("ServiceBinding controller", func() {
 			})
 		})
 		When("secretTemplate", func() {
+			It("should succeed to create the secret", func() {
+				ctx := context.Background()
+				secretTemplate := dedent.Dedent(
+					`apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    instance_plan: {{ .instanceProperties.plan }}
+  annotations:
+    instance_name: {{ .instanceProperties.instance_name }}
+stringData:
+  newKey: {{ .credentialProperties.secret_key }}`)
+				createdBinding, err := createBindingWithoutAssertionsAndWait(ctx, bindingName, bindingTestNamespace, instanceName, "", "", secretTemplate, true)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(isResourceReady(createdBinding)).To(BeTrue())
+			})
+
 			It("should fail to create the secret if forbidden field is provided under spec.secretTemplate.metadata", func() {
 				ctx := context.Background()
 				secretTemplate := dedent.Dedent(`
