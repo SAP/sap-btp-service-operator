@@ -394,7 +394,7 @@ your-secretRootKey-value:
 
 ## Automatic Service Binding Rotation
 You can enhance security by rotating your service binding, ensuring that credentials are updated before they expire. 
-Rotation involves generating new bindings with fresh credentials, while preserving the old ones until the transition is complete.
+Rotation involves generating new bindings, while preserving the old ones to allow transition with no downtime.
 
 To enable automatic credentials rotation, you need to set the following parameters of the `credentialsRotationPolicy` field in the `spec` field of the `ServiceBinding` resource:
 
@@ -406,10 +406,11 @@ To enable automatic credentials rotation, you need to set the following paramete
 
 **The `credentialsRotationPolicy` is evaluated and executed during the [control loop](https://kubernetes.io/docs/concepts/architecture/controller/) which runs on every update or during
   a full reconciliation process. This means that the actual rotation time may potentially be greater than the specified duration in 'rotationFrequency'.**
-To initiate an instant rotation (regardless to the configured `rotationFrequency` value), simply add the `services.cloud.sap.com/forceRotate: "true"` annotation to the `ServiceBinding`. Note that the prerequisite for the force action is that credentials rotation enabled field is set to true.
+To initiate an instant rotation (regardless to the configured `rotationFrequency` value), simply add the `services.cloud.sap.com/forceRotate: "true"` annotation to the `ServiceBinding`. 
+Note that the prerequisite for the force action is that credentials rotation enabled field is set to true.
 
-**Note**
-* The credentials expiration time is determined by the service broker and is not affected by the `credentialsRotationPolicy` settings.
+**Note** <br>
+The credentials content and expiration time are determined by the service broker, the `credentialsRotationPolicy` has no effect on the expiration time.
 
 
 ### Example
@@ -427,8 +428,8 @@ spec:
     rotationFrequency: 600h
  ```
 
-Once the `ServiceBinding` is rotated, the original binding will be updated with new credentials. 
-A new `ServiceBinding` named '<original-binding-name>-<guid>' will be created as a backup of the old credentials, which will be deleted according to the configured TTL. <br>
+Once the `ServiceBinding` is rotated, the original `ServiceBinding` will be updated with a new binding, the old binding will be saved in a new `ServiceBinding` 
+named '<original-binding-name>-<guid>', which will be deleted according to the configured TTL. <br>
 To see when the service binding was last rotated, refer to the `status.lastCredentialsRotationTime`. <br>
 It isn't possible to enable automatic credentials rotation to a backup `ServiceBinding` (with the `services.cloud.sap.com/stale` label).
   
