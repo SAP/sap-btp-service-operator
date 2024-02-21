@@ -2,15 +2,16 @@ package utils
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
 	"io"
+	"strings"
+	"text/template"
+
+	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
-	"strings"
-	"text/template"
 )
 
 const templateOutputMaxBytes int64 = 1 * 1024 * 1024
@@ -40,7 +41,7 @@ func CreateSecretFromTemplate(templateName, secretTemplate string, data map[stri
 
 	obj := o.(*unstructured.Unstructured)
 
-	err = validateSecret(err, obj)
+	err = validateSecret(obj)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +53,7 @@ func CreateSecretFromTemplate(templateName, secretTemplate string, data map[stri
 	return secret, nil
 }
 
-func validateSecret(err error, obj *unstructured.Unstructured) error {
+func validateSecret(obj *unstructured.Unstructured) error {
 	// validate metadata
 
 	metadataKeyValues, _, err := unstructured.NestedMap(obj.Object, "metadata")
