@@ -30,13 +30,34 @@ func (s *ServiceInstanceDefaulter) Handle(_ context.Context, req admission.Reque
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
+	if req.Operation == v1admission.Create {
+		instance.Spec.UserInfo = &v1.UserInfo{
+			Username: req.UserInfo.Username,
+			UID:      req.UserInfo.UID,
+			Groups:   req.UserInfo.Groups,
+			Extra:    req.UserInfo.Extra,
+		}
+	} else {
+		oldInstance := &servicesv1.ServiceInstance{}
+		err := s.Decoder.DecodeRaw(req.OldObject, oldInstance)
+		if err != nil {
+			return admission.Errored(http.StatusInternalServerError, err)
+		}
+
+		if !reflect.DeepEqual(instance.Spec.UserInfo, oldInstance.Spec.UserInfo) {
+			return admission.Errored(http.StatusBadRequest, fmt.Errorf("modifying spec.userInfo is not allowed"))
+		} else if !reflect.DeepEqual(oldInstance.Spec, instance.Spec) { //UserInfo is updated only when spec is changed
+			instance.Spec.UserInfo = &v1.UserInfo{
+				Username: req.UserInfo.Username,
+				UID:      req.UserInfo.UID,
+				Groups:   req.UserInfo.Groups,
+				Extra:    req.UserInfo.Extra,
+			}
+		}
+	}
 	if len(instance.Spec.ExternalName) == 0 {
 		instancelog.Info(fmt.Sprintf("externalName not provided, defaulting to k8s name: %s", instance.Name))
 		instance.Spec.ExternalName = instance.Name
-	}
-
-	if err := s.setServiceInstanceUserInfo(req, instance); err != nil {
-		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
 	marshaledInstance, err := json.Marshal(instance)
@@ -45,27 +66,4 @@ func (s *ServiceInstanceDefaulter) Handle(_ context.Context, req admission.Reque
 	}
 
 	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledInstance)
-}
-
-func (s *ServiceInstanceDefaulter) setServiceInstanceUserInfo(req admission.Request, instance *servicesv1.ServiceInstance) error {
-	userInfo := &v1.UserInfo{
-		Username: req.UserInfo.Username,
-		UID:      req.UserInfo.UID,
-		Groups:   req.UserInfo.Groups,
-		Extra:    req.UserInfo.Extra,
-	}
-
-	if req.Operation == v1admission.Create || req.Operation == v1admission.Delete {
-		instance.Spec.UserInfo = userInfo
-	} else if req.Operation == v1admission.Update {
-		oldInstance := &servicesv1.ServiceInstance{}
-		err := s.Decoder.DecodeRaw(req.OldObject, oldInstance)
-		if err != nil {
-			return err
-		}
-		if !reflect.DeepEqual(oldInstance.Spec, instance.Spec) {
-			instance.Spec.UserInfo = userInfo
-		}
-	}
-	return nil
 }
