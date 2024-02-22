@@ -21,13 +21,13 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/SAP/sap-btp-service-operator/api/common"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
-
-	"github.com/SAP/sap-btp-service-operator/api"
 )
 
 // log is for logging in this package.
@@ -50,9 +50,6 @@ var _ webhook.Validator = &ServiceBinding{}
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (sb *ServiceBinding) ValidateCreate() (admission.Warnings, error) {
 	servicebindinglog.Info("validate create", "name", sb.Name)
-	if err := sb.validateAnnotations(); err != nil {
-		return nil, err
-	}
 	if sb.Spec.CredRotationPolicy != nil {
 		if err := sb.validateCredRotatingConfig(); err != nil {
 			return nil, err
@@ -64,9 +61,6 @@ func (sb *ServiceBinding) ValidateCreate() (admission.Warnings, error) {
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (sb *ServiceBinding) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 	servicebindinglog.Info("validate update", "name", sb.Name)
-	if err := sb.validateAnnotations(); err != nil {
-		return nil, err
-	}
 	if sb.Spec.CredRotationPolicy != nil {
 		if err := sb.validateCredRotatingConfig(); err != nil {
 			return nil, err
@@ -76,7 +70,7 @@ func (sb *ServiceBinding) ValidateUpdate(old runtime.Object) (admission.Warnings
 	oldBinding := old.(*ServiceBinding)
 	isStale := false
 	if oldBinding.Labels != nil {
-		if _, ok := oldBinding.Labels[api.StaleBindingIDLabel]; ok {
+		if _, ok := oldBinding.Labels[common.StaleBindingIDLabel]; ok {
 			if sb.Spec.CredRotationPolicy.Enabled {
 				return nil, fmt.Errorf("enabling cred rotation for rotated binding is not allowed")
 			}
@@ -95,10 +89,10 @@ func (sb *ServiceBinding) ValidateUpdate(old runtime.Object) (admission.Warnings
 }
 
 func (sb *ServiceBinding) validateRotationLabels(old *ServiceBinding) bool {
-	if sb.Labels[api.StaleBindingIDLabel] != old.Labels[api.StaleBindingIDLabel] {
+	if sb.Labels[common.StaleBindingIDLabel] != old.Labels[common.StaleBindingIDLabel] {
 		return false
 	}
-	return sb.Labels[api.StaleBindingRotationOfLabel] == old.Labels[api.StaleBindingRotationOfLabel]
+	return sb.Labels[common.StaleBindingRotationOfLabel] == old.Labels[common.StaleBindingRotationOfLabel]
 }
 
 func (sb *ServiceBinding) specChanged(oldBinding *ServiceBinding) bool {
@@ -129,14 +123,5 @@ func (sb *ServiceBinding) validateCredRotatingConfig() error {
 		return err
 	}
 
-	return nil
-}
-
-func (sb *ServiceBinding) validateAnnotations() error {
-	if sb.Annotations != nil {
-		if _, ok := sb.Annotations[api.IgnoreNonTransientErrorAnnotation]; ok {
-			return fmt.Errorf(AnnotationNotSupportedError, api.IgnoreNonTransientErrorAnnotation)
-		}
-	}
 	return nil
 }

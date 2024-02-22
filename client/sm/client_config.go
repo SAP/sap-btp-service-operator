@@ -27,3 +27,14 @@ type ClientConfig struct {
 	TLSPrivateKey  string
 	SSLDisabled    bool
 }
+
+func (c ClientConfig) IsValid() bool {
+	if len(c.ClientID) == 0 || len(c.URL) == 0 || len(c.TokenURL) == 0 {
+		return false
+	}
+	if len(c.ClientSecret) == 0 && (len(c.TLSCertKey) == 0 || len(c.TLSPrivateKey) == 0) {
+		return false
+	}
+
+	return true
+}

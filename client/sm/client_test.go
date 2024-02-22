@@ -532,6 +532,41 @@ var _ = Describe("Client test", func() {
 				})
 			})
 		})
+
+		Describe("Share/Unshare", func() {
+			BeforeEach(func() {
+				responseBody, _ := json.Marshal(instance)
+				handlerDetails = []HandlerDetails{
+					{Method: http.MethodPatch, Path: types.ServiceInstancesURL + "/" + instance.ID, ResponseBody: responseBody, ResponseStatusCode: http.StatusOK},
+				}
+			})
+			When("When valid instance is being shared", func() {
+				It("should be shared successfully", func() {
+					err := client.ShareInstance(instance.ID, "test-user")
+					Expect(err).ShouldNot(HaveOccurred())
+				})
+			})
+
+			When("When instance is being unshared", func() {
+				It("should be unshared successfully", func() {
+					err := client.UnShareInstance(instance.ID, "test-user")
+					Expect(err).ShouldNot(HaveOccurred())
+				})
+			})
+
+			When("When instance fails to be shared", func() {
+				BeforeEach(func() {
+					responseBody, _ := json.Marshal(instance)
+					handlerDetails = []HandlerDetails{
+						{Method: http.MethodPatch, Path: types.ServiceInstancesURL + "/" + instance.ID, ResponseBody: responseBody, ResponseStatusCode: http.StatusInternalServerError},
+					}
+				})
+				It("returns error", func() {
+					err := client.UnShareInstance(instance.ID, "test-user")
+					Expect(err).Should(HaveOccurred())
+				})
+			})
+		})
 	})
 
 	Describe("Bindings", func() {

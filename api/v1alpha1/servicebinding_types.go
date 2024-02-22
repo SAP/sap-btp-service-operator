@@ -17,7 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"github.com/SAP/sap-btp-service-operator/api"
+	"github.com/SAP/sap-btp-service-operator/api/common"
 	smClientTypes "github.com/SAP/sap-btp-service-operator/client/sm/types"
 	v1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -144,8 +144,8 @@ func (sb *ServiceBinding) SetConditions(conditions []metav1.Condition) {
 	sb.Status.Conditions = conditions
 }
 
-func (sb *ServiceBinding) GetControllerName() api.ControllerName {
-	return api.ServiceBindingController
+func (sb *ServiceBinding) GetControllerName() common.ControllerName {
+	return common.ServiceBindingController
 }
 
 func (sb *ServiceBinding) GetParameters() *runtime.RawExtension {
@@ -168,7 +168,7 @@ func (sb *ServiceBinding) SetObservedGeneration(newObserved int64) {
 	sb.Status.ObservedGeneration = newObserved
 }
 
-func (sb *ServiceBinding) DeepClone() api.SAPBTPResource {
+func (sb *ServiceBinding) DeepClone() common.SAPBTPResource {
 	return sb.DeepCopy()
 }
 

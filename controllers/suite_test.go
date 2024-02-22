@@ -24,16 +24,18 @@ import (
 	"net"
 	"net/http"
 	"path/filepath"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/SAP/sap-btp-service-operator/api/common"
+	"github.com/SAP/sap-btp-service-operator/internal/utils"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	. "github.com/onsi/ginkgo"
 	ginkgo_config "github.com/onsi/ginkgo/config"
 	. "github.com/onsi/gomega"
 
-	"github.com/SAP/sap-btp-service-operator/api"
 	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	"github.com/SAP/sap-btp-service-operator/api/v1/webhooks"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
@@ -63,11 +65,10 @@ import (
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
 const (
-	timeout                   = time.Second * 20
-	interval                  = time.Millisecond * 50
-	syncPeriod                = time.Millisecond * 250
-	pollInterval              = time.Millisecond * 250
-	ignoreNonTransientTimeout = time.Second * 10
+	timeout      = time.Second * 20
+	interval     = time.Millisecond * 50
+	syncPeriod   = time.Millisecond * 250
+	pollInterval = time.Millisecond * 250
 
 	fakeBindingID        = "fake-binding-id"
 	bindingTestNamespace = "test-namespace"
@@ -129,7 +130,6 @@ var _ = BeforeSuite(func(done Done) {
 	testConfig := config.Get()
 	testConfig.SyncPeriod = syncPeriod
 	testConfig.PollInterval = pollInterval
-	testConfig.IgnoreNonTransientTimeout = ignoreNonTransientTimeout
 
 	By("registering webhooks")
 	k8sManager.GetWebhookServer().Register("/mutate-services-cloud-sap-com-v1-serviceinstance", &webhook.Admission{Handler: &webhooks.ServiceInstanceDefaulter{Decoder: admission.NewDecoder(k8sManager.GetScheme())}})
@@ -143,26 +143,26 @@ var _ = BeforeSuite(func(done Done) {
 
 	By("registering controllers")
 	err = (&ServiceInstanceReconciler{
-		BaseReconciler: &BaseReconciler{
-			Client:   k8sManager.GetClient(),
-			Scheme:   k8sManager.GetScheme(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ServiceInstance"),
-			SMClient: func() sm.Client { return fakeClient },
-			Config:   testConfig,
-			Recorder: k8sManager.GetEventRecorderFor("ServiceInstance"),
+		Client: k8sManager.GetClient(),
+		Scheme: k8sManager.GetScheme(),
+		Log:    ctrl.Log.WithName("controllers").WithName("ServiceInstance"),
+		GetSMClient: func(_ context.Context, _ *utils.SecretResolver, _, _ string) (sm.Client, error) {
+			return fakeClient, nil
 		},
+		Config:   testConfig,
+		Recorder: k8sManager.GetEventRecorderFor("ServiceInstance"),
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	err = (&ServiceBindingReconciler{
-		BaseReconciler: &BaseReconciler{
-			Client:   k8sManager.GetClient(),
-			Scheme:   k8sManager.GetScheme(),
-			Log:      ctrl.Log.WithName("controllers").WithName("ServiceBinding"),
-			SMClient: func() sm.Client { return fakeClient },
-			Config:   testConfig,
-			Recorder: k8sManager.GetEventRecorderFor("ServiceBinding"),
+		Client: k8sManager.GetClient(),
+		Scheme: k8sManager.GetScheme(),
+		Log:    ctrl.Log.WithName("controllers").WithName("ServiceBinding"),
+		GetSMClient: func(_ context.Context, _ *utils.SecretResolver, _, _ string) (sm.Client, error) {
+			return fakeClient, nil
 		},
+		Config:   testConfig,
+		Recorder: k8sManager.GetEventRecorderFor("ServiceBinding"),
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
@@ -214,16 +214,16 @@ var _ = AfterSuite(func() {
 	printSection("Finished AfterSuite")
 })
 
-func isResourceReady(resource api.SAPBTPResource) bool {
+func isResourceReady(resource common.SAPBTPResource) bool {
 	return resource.GetObservedGeneration() == resource.GetGeneration() &&
-		meta.IsStatusConditionPresentAndEqual(resource.GetConditions(), api.ConditionReady, metav1.ConditionTrue)
+		meta.IsStatusConditionPresentAndEqual(resource.GetConditions(), common.ConditionReady, metav1.ConditionTrue)
 }
 
-func waitForResourceToBeReady(ctx context.Context, resource api.SAPBTPResource) {
-	waitForResourceCondition(ctx, resource, api.ConditionReady, metav1.ConditionTrue, "", "")
+func waitForResourceToBeReady(ctx context.Context, resource common.SAPBTPResource) {
+	waitForResourceCondition(ctx, resource, common.ConditionReady, metav1.ConditionTrue, "", "")
 }
 
-func waitForResourceCondition(ctx context.Context, resource api.SAPBTPResource, conditionType string, status metav1.ConditionStatus, reason, message string) {
+func waitForResourceCondition(ctx context.Context, resource common.SAPBTPResource, conditionType string, status metav1.ConditionStatus, reason, message string) {
 	key := getResourceNamespacedName(resource)
 	Eventually(func() bool {
 		if err := k8sClient.Get(ctx, key, resource); err != nil {
@@ -252,14 +252,14 @@ func waitForResourceCondition(ctx context.Context, resource api.SAPBTPResource, 
 		}
 
 		return true
-	}, timeout*2, interval).Should(BeTrue(),
+	}, timeout*3, interval).Should(BeTrue(),
 		eventuallyMsgForResource(
 			fmt.Sprintf("expected condition: {type: %s, status: %s, reason: %s, message: %s} was not met", conditionType, status, reason, message),
 			key,
 			resource),
 	)
 }
-func waitForResourceAnnotationRemove(ctx context.Context, resource api.SAPBTPResource, annotationsKey ...string) {
+func waitForResourceAnnotationRemove(ctx context.Context, resource common.SAPBTPResource, annotationsKey ...string) {
 	key := getResourceNamespacedName(resource)
 	Eventually(func() bool {
 		if err := k8sClient.Get(ctx, key, resource); err != nil {
@@ -347,7 +347,7 @@ func getNonTransientBrokerError(errMessage string) error {
 	return &sm.ServiceManagerError{
 		StatusCode:  http.StatusBadRequest,
 		Description: "smErrMessage",
-		BrokerError: &api.HTTPStatusCodeError{
+		BrokerError: &common.HTTPStatusCodeError{
 			StatusCode:   400,
 			ErrorMessage: &errMessage,
 		}}
@@ -357,7 +357,7 @@ func getTransientBrokerError(errorMessage string) error {
 	return &sm.ServiceManagerError{
 		StatusCode:  http.StatusBadGateway,
 		Description: "smErrMessage",
-		BrokerError: &api.HTTPStatusCodeError{
+		BrokerError: &common.HTTPStatusCodeError{
 			StatusCode:   http.StatusTooManyRequests,
 			ErrorMessage: &errorMessage,
 		},

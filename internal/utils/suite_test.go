@@ -14,14 +14,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package secrets_test
+package utils
 
 import (
 	"context"
+	"path/filepath"
 	"testing"
 	"time"
 
-	v1 "k8s.io/api/core/v1"
+	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
+	"k8s.io/client-go/rest"
+
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -40,28 +44,49 @@ import (
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
 const (
-	timeout  = time.Second * 10
-	interval = time.Millisecond * 250
+	timeout             = time.Second * 10
+	interval            = time.Millisecond * 250
+	managementNamespace = "test-management-namespace"
+	testNamespace       = "test-namespace"
 )
 
-var k8sClient client.Client
-var testEnv *envtest.Environment
+var (
+	cfg       *rest.Config
+	ctx       context.Context
+	k8sClient client.Client
+	testEnv   *envtest.Environment
+)
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Secret Resolver Suite")
+	RunSpecs(t, "Utils Suite")
 }
 
 var _ = BeforeSuite(func(done Done) {
+
+	ctx = context.Background()
+	log := ctrl.Log.WithName("utils_tests")
+	ctx = context.WithValue(ctx, LogKey{}, log)
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 
 	By("bootstrapping test environment")
-	testEnv = &envtest.Environment{}
+	testEnv = &envtest.Environment{
+		CRDDirectoryPaths: []string{filepath.Join("../..", "config", "crd", "bases")},
+	}
 
 	var err error
-	cfg, err := testEnv.Start()
+	cfg, err = testEnv.Start()
 	Expect(err).ToNot(HaveOccurred())
 	Expect(cfg).ToNot(BeNil())
+
+	err = v1.AddToScheme(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
+
+	// +kubebuilder:scaffold:scheme
+
+	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
+	Expect(err).ToNot(HaveOccurred())
+	Expect(k8sClient).ToNot(BeNil())
 
 	// +kubebuilder:scaffold:scheme
 
@@ -86,14 +111,14 @@ var _ = BeforeSuite(func(done Done) {
 	}()
 
 	k8sManager.GetCache().WaitForCacheSync(context.Background())
-	k8sClient = k8sManager.GetClient()
-	Expect(k8sClient).ToNot(BeNil())
+	//k8sClient = k8sManager.GetClient()
+	//Expect(k8sClient).ToNot(BeNil())
 
-	nsSpec := &v1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testNamespace}}
+	nsSpec := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testNamespace}}
 	err = k8sClient.Create(context.Background(), nsSpec)
 	Expect(err).ToNot(HaveOccurred())
 
-	nsSpec = &v1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: managementNamespace}}
+	nsSpec = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: managementNamespace}}
 	err = k8sClient.Create(context.Background(), nsSpec)
 	Expect(err).ToNot(HaveOccurred())
 
