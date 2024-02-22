@@ -30,7 +30,7 @@ func (s *ServiceInstanceDefaulter) Handle(_ context.Context, req admission.Reque
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	if req.Operation == v1admission.Create || req.Operation == v1admission.Delete {
+	if req.Operation == v1admission.Create {
 		instance.Spec.UserInfo = &v1.UserInfo{
 			Username: req.UserInfo.Username,
 			UID:      req.UserInfo.UID,

@@ -3,13 +3,10 @@ package webhooks
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"net/http"
-	"reflect"
-
 	servicesv1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	v1admission "k8s.io/api/admission/v1"
 	v1 "k8s.io/api/authentication/v1"
+	"net/http"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
@@ -50,26 +47,18 @@ func (s *ServiceBindingDefaulter) Handle(_ context.Context, req admission.Reques
 		}
 	}
 
-	if req.Operation == v1admission.Create || req.Operation == v1admission.Delete {
+	if req.Operation == v1admission.Create {
 		binding.Spec.UserInfo = &v1.UserInfo{
 			Username: req.UserInfo.Username,
 			UID:      req.UserInfo.UID,
 			Groups:   req.UserInfo.Groups,
 			Extra:    req.UserInfo.Extra,
 		}
-	} else {
-		oldBinding := &servicesv1.ServiceBinding{}
-		if err := s.Decoder.DecodeRaw(req.OldObject, oldBinding); err != nil {
-			return admission.Errored(http.StatusInternalServerError, err)
-		}
-		if !reflect.DeepEqual(binding.Spec.UserInfo, oldBinding.Spec.UserInfo) {
-			return admission.Errored(http.StatusBadRequest, fmt.Errorf("modifying spec.userInfo is not allowed"))
-		}
 	}
 
-	marshaledInstance, err := json.Marshal(binding)
+	marshaledBinding, err := json.Marshal(binding)
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
-	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledInstance)
+	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledBinding)
 }
