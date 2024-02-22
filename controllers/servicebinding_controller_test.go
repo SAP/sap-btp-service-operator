@@ -652,7 +652,7 @@ var _ = Describe("ServiceBinding controller", func() {
 				}
 				err := k8sClient.Update(ctx, createdBinding)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("modifying spec.userInfo is not allowed"))
+				Expect(err.Error()).To(ContainSubstring("updating service bindings is not supported"))
 			})
 		})
 	})
