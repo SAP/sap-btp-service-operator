@@ -3,7 +3,9 @@ package webhooks
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"reflect"
 
 	servicesv1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	v1admission "k8s.io/api/admission/v1"
@@ -54,6 +56,14 @@ func (s *ServiceBindingDefaulter) Handle(_ context.Context, req admission.Reques
 			UID:      req.UserInfo.UID,
 			Groups:   req.UserInfo.Groups,
 			Extra:    req.UserInfo.Extra,
+		}
+	} else {
+		oldBinding := &servicesv1.ServiceBinding{}
+		if err := s.Decoder.DecodeRaw(req.OldObject, oldBinding); err != nil {
+			return admission.Errored(http.StatusInternalServerError, err)
+		}
+		if !reflect.DeepEqual(binding.Spec.UserInfo, oldBinding.Spec.UserInfo) {
+			return admission.Errored(http.StatusBadRequest, fmt.Errorf("modifying spec.userInfo is not allowed"))
 		}
 	}
 

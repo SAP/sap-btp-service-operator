@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strings"
 
+	authv1 "k8s.io/api/authentication/v1"
+
 	"github.com/SAP/sap-btp-service-operator/api/common"
 	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
@@ -614,6 +616,18 @@ var _ = Describe("ServiceInstance controller", func() {
 				err := k8sClient.Update(ctx, serviceInstance)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("changing the btpAccessCredentialsSecret for an existing instance is not allowed"))
+			})
+		})
+
+		When("UserInfo changed", func() {
+			It("should fail", func() {
+				serviceInstance.Spec.UserInfo = &authv1.UserInfo{
+					Username: "a",
+					UID:      "123",
+				}
+				err := k8sClient.Update(ctx, serviceInstance)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("modifying spec.userInfo is not allowed"))
 			})
 		})
 	})
