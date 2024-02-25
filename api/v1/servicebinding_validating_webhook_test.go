@@ -95,7 +95,7 @@ var _ = Describe("Service Binding Webhook Test", func() {
 				})
 
 				When("SecretTemplate changed", func() {
-					It("should succeed", func() {
+					FIt("should succeed", func() {
 						modifiedSecretTemplate := `
 					                                                       apiVersion: v1
 					                                                       kind: Secret

@@ -112,6 +112,11 @@ func (sb *ServiceBinding) specChanged(oldBinding *ServiceBinding) bool {
 	//allow changing cred rotation config
 	oldSpec.CredRotationPolicy = nil
 	newSpec.CredRotationPolicy = nil
+
+	//allow changing SecretTemplate
+	oldSpec.SecretTemplate = ""
+	newSpec.SecretTemplate = ""
+
 	return !reflect.DeepEqual(oldSpec, newSpec)
 }
 

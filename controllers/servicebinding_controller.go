@@ -136,8 +136,8 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			return ctrl.Result{}, err
 		}
 	}
-
-	isBindingReady := meta.IsStatusConditionPresentAndEqual(serviceBinding.Status.Conditions, common.ConditionReady, metav1.ConditionTrue)
+	condition := meta.FindStatusCondition(serviceBinding.Status.Conditions, common.ConditionReady)
+	isBindingReady := condition != nil && condition.Status == metav1.ConditionTrue
 	if isBindingReady {
 		if isStaleServiceBinding(serviceBinding) {
 			return r.handleStaleServiceBinding(ctx, serviceBinding)
@@ -156,6 +156,12 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	if isBindingReady {
 		log.Info("Binding in final state")
+		if condition.ObservedGeneration != serviceBinding.Generation {
+			err := r.updateSecret(ctx, serviceBinding, serviceInstance, log)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+		}
 		return r.maintain(ctx, serviceBinding)
 	}
 
@@ -215,6 +221,27 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	log.Error(fmt.Errorf("update binding is not allowed, this line should not be reached"), "")
 	return ctrl.Result{}, nil
+}
+
+func (r *ServiceBindingReconciler) updateSecret(ctx context.Context, serviceBinding *servicesv1.ServiceBinding, serviceInstance *servicesv1.ServiceInstance, log logr.Logger) error {
+	log.Info("Updating secret according to the new template")
+	smClient, err := r.GetSMClient(ctx, r.SecretResolver, serviceBinding.Namespace, serviceInstance.Spec.BTPAccessCredentialsSecret)
+	if err != nil {
+		return err
+	}
+	smBinding, err := smClient.GetBindingByID(serviceBinding.Status.BindingID, nil)
+	if err != nil {
+		log.Error(err, "failed to get binding for update secret")
+		return err
+	}
+	if smBinding != nil {
+		if smBinding.Credentials != nil {
+			if err = r.storeBindingSecret(ctx, serviceBinding, smBinding); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func (r *ServiceBindingReconciler) SetupWithManager(mgr ctrl.Manager) error {
@@ -412,7 +439,7 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, serviceBinding *ser
 		switch serviceBinding.Status.OperationType {
 		case smClientTypes.CREATE:
 			smBinding, err := smClient.GetBindingByID(serviceBinding.Status.BindingID, nil)
-			if err != nil {
+			if err != nil || smBinding == nil {
 				log.Error(err, fmt.Sprintf("binding %s succeeded but could not fetch it from SM", serviceBinding.Status.BindingID))
 				return ctrl.Result{}, err
 			}
