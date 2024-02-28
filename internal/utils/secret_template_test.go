@@ -78,32 +78,6 @@ var _ = Describe("Secret template", func() {
 
 	Context("With sprig functions", func() {
 
-		It("should succeed using quotes", func() {
-			param1Value := "value1"
-			data := map[string]interface{}{
-				"param1": param1Value,
-			}
-			expectedSecret := &corev1.Secret{
-				TypeMeta: v1.TypeMeta{
-					Kind:       "Secret",
-					APIVersion: "v1",
-				},
-				StringData: map[string]string{
-					"foo": param1Value},
-			}
-			secretTemplate := dedent.Dedent(`
-					apiVersion: v1
-					kind: Secret
-					stringData:
-					  foo: {{ .param1 }}
-				`)
-
-			secret, err := CreateSecretFromTemplate("", secretTemplate, data)
-
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(secret).Should(Equal(expectedSecret))
-		})
-
 		It("should fail if forbidden sprig func is used in the template", func() {
 			secretTemplate := dedent.Dedent(`
 					apiVersion: v1

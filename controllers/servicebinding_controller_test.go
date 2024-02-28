@@ -761,9 +761,9 @@ stringData:
 kind: Secret
 metadata:
   labels:
-    instance_plan: {{ .instanceProperties.plan }}
+    instance_plan: "a-new-plan-name"
   annotations:
-    instance_name: {{ .instanceProperties.instance_name }}
+    instance_name: "a-new-instance-name"
 stringData:
   newKey2: {{ .credentialProperties.secret_key }}`)
 				createdBinding.Spec.SecretTemplate = secretTemplate
@@ -772,7 +772,7 @@ stringData:
 				By("Verify binding secret created")
 				Eventually(func() bool {
 					bindingSecret := getSecret(ctx, createdBinding.Spec.SecretName, createdBinding.Namespace, true)
-					return string(bindingSecret.Data["newKey2"]) == "secret_value"
+					return string(bindingSecret.Data["newKey2"]) == "secret_value" && bindingSecret.Labels["instance_plan"] == "a-new-plan-name" && bindingSecret.Annotations["instance_name"] == "a-new-instance-name"
 				}, timeout, interval).Should(BeTrue())
 			})
 		})
