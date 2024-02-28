@@ -735,6 +735,8 @@ func (r *ServiceBindingReconciler) createOrUpdateBindingSecret(ctx context.Conte
 	log.Info("Updating existing binding secret", "name", secret.Name)
 	dbSecret.Data = secret.Data
 	dbSecret.StringData = secret.StringData
+	dbSecret.Labels = secret.Labels
+	dbSecret.Annotations = secret.Annotations
 	return r.Client.Update(ctx, dbSecret)
 }
 
