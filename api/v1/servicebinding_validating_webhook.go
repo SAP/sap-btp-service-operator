@@ -19,8 +19,9 @@ package v1
 import (
 	"fmt"
 	"reflect"
-	"text/template"
 	"time"
+
+	"github.com/SAP/sap-btp-service-operator/api/common/utils"
 
 	"github.com/SAP/sap-btp-service-operator/api/common"
 	"github.com/pkg/errors"
@@ -58,11 +59,8 @@ func (sb *ServiceBinding) ValidateCreate() (admission.Warnings, error) {
 		}
 	}
 	if sb.Spec.SecretTemplate != "" {
-		servicebindinglog.Info("validate specified secretTemplate")
-		_, err := template.New("secretTemplate").Funcs(template.FuncMap{}).Parse(sb.Spec.SecretTemplate)
-		if err != nil {
-			servicebindinglog.Error(err, secretTemplateError)
-			return nil, errors.Wrap(err, secretTemplateError)
+		if err := sb.validateSecretTemplate(); err != nil {
+			return nil, err
 		}
 	}
 	return nil, nil
@@ -94,6 +92,11 @@ func (sb *ServiceBinding) ValidateUpdate(old runtime.Object) (admission.Warnings
 	specChanged := sb.specChanged(oldBinding)
 	if specChanged && (sb.Status.BindingID != "" || isStale) {
 		return nil, fmt.Errorf("updating service bindings is not supported")
+	}
+	if sb.Spec.SecretTemplate != "" {
+		if err := sb.validateSecretTemplate(); err != nil {
+			return nil, err
+		}
 	}
 	return nil, nil
 }
@@ -138,5 +141,23 @@ func (sb *ServiceBinding) validateCredRotatingConfig() error {
 		return err
 	}
 
+	return nil
+}
+
+func (sb *ServiceBinding) validateSecretTemplate() error {
+	servicebindinglog.Info("validate specified secretTemplate")
+	x := make(map[string]string)
+	y := make(map[string]string)
+	parameters := map[string]interface{}{
+		common.CredentialPropertiesKey: x,
+		common.InstancePropertiesKey:   y,
+	}
+
+	templateName := fmt.Sprintf("%s/%s", sb.Namespace, sb.Name)
+	_, err := utils.CreateSecretFromTemplate(templateName, sb.Spec.SecretTemplate, "missingkey=zero", parameters)
+	if err != nil {
+		servicebindinglog.Error(err, "failed to create secret from template")
+		return errors.Wrap(err, secretTemplateError)
+	}
 	return nil
 }

@@ -27,7 +27,7 @@ var _ = Describe("Secret template", func() {
 				nonexistingKey,
 			)
 
-			secret, err := CreateSecretFromTemplate("", secretTemplate, nil)
+			secret, err := CreateSecretFromTemplate("", secretTemplate, "missingkey=error", nil)
 
 			Expect(err).Should(MatchError(ContainSubstring("map has no entry for key \"%s\"", nonexistingKey)))
 			Expect(secret).Should(BeNil())
@@ -49,7 +49,7 @@ var _ = Describe("Secret template", func() {
 					unknownField: foo
 				`)
 
-			secret, err := CreateSecretFromTemplate("", secretTemplate, nil)
+			secret, err := CreateSecretFromTemplate("", secretTemplate, "missingkey=error", nil)
 
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(secret).Should(Equal(expectedSecret))
@@ -64,7 +64,7 @@ var _ = Describe("Secret template", func() {
 					kind: Pod
 				`)
 
-			secret, err := CreateSecretFromTemplate("", secretTemplate, nil)
+			secret, err := CreateSecretFromTemplate("", secretTemplate, "missingkey=error", nil)
 
 			Expect(err).Should(MatchError(
 				SatisfyAll(
@@ -86,7 +86,7 @@ var _ = Describe("Secret template", func() {
 					  foo: {{ .param1 | env }}
 				`)
 
-			secret, err := CreateSecretFromTemplate("", secretTemplate, nil)
+			secret, err := CreateSecretFromTemplate("", secretTemplate, "missingkey=error", nil)
 
 			Expect(err).Should(MatchError(ContainSubstring("function \"env\" not defined")))
 			Expect(secret).To(BeNil())
@@ -104,7 +104,7 @@ var _ = Describe("Secret template", func() {
 				secretTemplate += strings.Repeat("#", int(templateOutputMaxBytes)-len(secretTemplate))
 				Expect(len(secretTemplate)).To(Equal(int(templateOutputMaxBytes)))
 
-				secret, err := CreateSecretFromTemplate("", secretTemplate, nil)
+				secret, err := CreateSecretFromTemplate("", secretTemplate, "missingkey=error", nil)
 
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(secret).NotTo(BeNil())
@@ -113,7 +113,7 @@ var _ = Describe("Secret template", func() {
 			It("should fail if template output is too big", func() {
 				secretTemplate := strings.Repeat("a", int(templateOutputMaxBytes)+1)
 
-				secret, err := CreateSecretFromTemplate("", secretTemplate, nil)
+				secret, err := CreateSecretFromTemplate("", secretTemplate, "missingkey=error", nil)
 
 				Expect(err).Should(MatchError(ContainSubstring("the size of the generated secret manifest exceeds the limit")))
 				Expect(secret).To(BeNil())

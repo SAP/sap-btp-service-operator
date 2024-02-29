@@ -21,12 +21,16 @@ var _ = Describe("Service Binding Webhook Test", func() {
 				Expect(err).ToNot(HaveOccurred())
 			})
 			It("should succeed if secretTemplate can be parsed", func() {
-				binding.Spec.SecretTemplate = dedent.Dedent(`
-				                                       apiVersion: v1
-				                                       kind: Secret
-				                                       stringData:
-				                                         secretKey: {{ .secretValue }}`)
-
+				binding.Spec.SecretTemplate = dedent.Dedent(
+					`apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    instance_plan: "a-new-plan-name"
+  annotations:
+    instance_name: "a-new-instance-name"
+stringData:
+  newKey2: {{ .credentialProperties.secret_key }}`)
 				_, err := binding.ValidateCreate()
 
 				Expect(err).ToNot(HaveOccurred())
@@ -37,7 +41,7 @@ var _ = Describe("Service Binding Webhook Test", func() {
 				_, err := binding.ValidateCreate()
 				Expect(err).To(HaveOccurred())
 				errMsg := err.Error()
-				Expect(errMsg).To(ContainSubstring("spec.secretTemplate is invalid: template: secretTemplate:1: unclosed action"))
+				Expect(errMsg).To(ContainSubstring("unclosed action"))
 			})
 			It("should fail if can't secretTemplate have invalid function", func() {
 				//write test for secretTemplateError
@@ -49,7 +53,26 @@ var _ = Describe("Service Binding Webhook Test", func() {
 				_, err := binding.ValidateCreate()
 				Expect(err).To(HaveOccurred())
 				errMsg := err.Error()
-				Expect(errMsg).To(ContainSubstring("spec.secretTemplate is invalid: template: secretTemplate:5: function \"quote\" not defined"))
+				Expect(errMsg).To(ContainSubstring(" function \"quote\" not defined"))
+			})
+			It("should fail if can't secretTemplate have invalid function", func() {
+				//write test for secretTemplateError
+				binding.Spec.SecretTemplate = dedent.Dedent(
+					`apiVersion: v1
+kind: Secret
+metadata:
+  name: "a-new-secret"
+  labels:
+    instance_plan: "a-new-plan-name"
+  annotations:
+    instance_name: "a-new-instance-name"
+stringData:
+  newKey2: {{ .credentialProperties.secret_key }}`)
+
+				_, err := binding.ValidateCreate()
+				Expect(err).To(HaveOccurred())
+				errMsg := err.Error()
+				Expect(errMsg).To(ContainSubstring("metadata field name is not allowed in generated secret manifest"))
 			})
 		})
 
@@ -96,11 +119,12 @@ var _ = Describe("Service Binding Webhook Test", func() {
 
 				When("SecretTemplate changed", func() {
 					It("should succeed", func() {
-						modifiedSecretTemplate := `
-					                                                       apiVersion: v1
-					                                                       kind: Secret
-					                                                       stringData:
-					                                                         key2: "value2"`
+						modifiedSecretTemplate := dedent.Dedent(`
+						apiVersion: v1
+						kind: Secret
+						stringData:
+						  key2: "value2"
+					`)
 						newBinding.Spec.SecretTemplate = modifiedSecretTemplate
 						_, err := newBinding.ValidateUpdate(binding)
 						Expect(err).ToNot(HaveOccurred())

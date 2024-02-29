@@ -33,4 +33,8 @@ const (
 	// Cred Rotation
 	CredPreparing = "Preparing"
 	CredRotating  = "Rotating"
+
+	CredentialPropertiesKey = "credentialProperties"
+	MetaDataPropertiesKey   = "metaDataProperties"
+	InstancePropertiesKey   = "instanceProperties"
 )

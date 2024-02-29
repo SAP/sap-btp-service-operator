@@ -21,6 +21,8 @@ import (
 	"encoding/json"
 	"time"
 
+	utils2 "github.com/SAP/sap-btp-service-operator/api/common/utils"
+
 	"github.com/pkg/errors"
 
 	"github.com/SAP/sap-btp-service-operator/api/common"
@@ -58,9 +60,6 @@ import (
 const (
 	secretNameTakenErrorFormat    = "the specified secret name '%s' is already taken. Choose another name and try again"
 	secretAlreadyOwnedErrorFormat = "secret %s belongs to another binding %s, choose a different name"
-	credentialPropertiesKey       = "credentialProperties"
-	metaDataPropertiesKey         = "metaDataProperties"
-	instancePropertiesKey         = "instanceProperties"
 )
 
 // ServiceBindingReconciler reconciles a ServiceBinding object
@@ -156,13 +155,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	if isBindingReady {
 		log.Info("Binding in final state")
-		if condition.ObservedGeneration != serviceBinding.Generation {
-			err := r.updateSecret(ctx, serviceBinding, serviceInstance, log)
-			if err != nil {
-				return ctrl.Result{}, err
-			}
-		}
-		return r.maintain(ctx, serviceBinding)
+		return r.maintain(ctx, serviceBinding, serviceInstance)
 	}
 
 	log.Info(fmt.Sprintf("Current generation is %v and observed is %v", serviceBinding.Generation, serviceBinding.GetObservedGeneration()))
@@ -174,7 +167,6 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		if err := utils.UpdateStatus(ctx, r.Client, serviceBinding); err != nil {
 			return ctrl.Result{}, err
 		}
-
 		return ctrl.Result{}, instanceErr
 	}
 
@@ -239,6 +231,8 @@ func (r *ServiceBindingReconciler) updateSecret(ctx context.Context, serviceBind
 			if err = r.storeBindingSecret(ctx, serviceBinding, smBinding); err != nil {
 				return err
 			}
+			log.Info("Updating binding", "bindingID", smBinding.ID)
+			utils.SetSuccessConditions(smClientTypes.UPDATE, serviceBinding)
 		}
 	}
 	return nil
@@ -489,14 +483,13 @@ func (r *ServiceBindingReconciler) getBindingForRecovery(ctx context.Context, sm
 	return nil, nil
 }
 
-func (r *ServiceBindingReconciler) maintain(ctx context.Context, binding *servicesv1.ServiceBinding) (ctrl.Result, error) {
+func (r *ServiceBindingReconciler) maintain(ctx context.Context, binding *servicesv1.ServiceBinding, serviceInstance *servicesv1.ServiceInstance) (ctrl.Result, error) {
 	log := utils.GetLogger(ctx)
 	shouldUpdateStatus := false
 	if binding.Generation != binding.Status.ObservedGeneration {
 		binding.SetObservedGeneration(binding.Generation)
 		shouldUpdateStatus = true
 	}
-
 	if !utils.IsFailed(binding) {
 		if _, err := r.getSecret(ctx, binding.Namespace, binding.Spec.SecretName); err != nil {
 			if apierrors.IsNotFound(err) && !utils.IsMarkedForDeletion(binding.ObjectMeta) {
@@ -509,6 +502,12 @@ func (r *ServiceBindingReconciler) maintain(ctx context.Context, binding *servic
 			} else {
 				return ctrl.Result{}, err
 			}
+		} else {
+			err = r.updateSecret(ctx, binding, serviceInstance, log)
+			if err != nil {
+				return r.handleSecretError(ctx, smClientTypes.UPDATE, err, binding)
+			}
+
 		}
 	}
 
@@ -647,8 +646,8 @@ func (r *ServiceBindingReconciler) createBindingSecret(ctx context.Context, k8sB
 		}
 	} else {
 		metadata := map[string][]utils.SecretMetadataProperty{
-			metaDataPropertiesKey:   metaDataProperties,
-			credentialPropertiesKey: credentialProperties,
+			common.MetaDataPropertiesKey:   metaDataProperties,
+			common.CredentialPropertiesKey: credentialProperties,
 		}
 		metadataByte, err := json.Marshal(metadata)
 		if err != nil {
@@ -679,12 +678,14 @@ func (r *ServiceBindingReconciler) createBindingSecretFromSecretTemplate(ctx con
 	if inputSmCredentials != nil {
 		err := json.Unmarshal(inputSmCredentials, &smBindingCredentials)
 		if err != nil {
+			logger.Error(err, "failed to unmarshal given service binding credentials")
 			return nil, errors.Wrap(err, "failed to unmarshal given service binding credentials")
 		}
 	}
 	instanceInfos := make(map[string][]byte)
 	_, err := r.addInstanceInfo(ctx, k8sBinding, instanceInfos)
 	if err != nil {
+		logger.Error(err, "failed to addInstanceInfo")
 		return nil, errors.Wrap(err, "failed to add service instance info")
 	}
 	//convert the bytes to string to ensure, that the secret can be created later by CreateSecretFromTemplate
@@ -693,13 +694,14 @@ func (r *ServiceBindingReconciler) createBindingSecretFromSecretTemplate(ctx con
 		convertedInstanceInfos[k] = string(v)
 	}
 	parameters := map[string]interface{}{
-		credentialPropertiesKey: smBindingCredentials,
-		instancePropertiesKey:   convertedInstanceInfos,
+		common.CredentialPropertiesKey: smBindingCredentials,
+		common.InstancePropertiesKey:   convertedInstanceInfos,
 	}
 
 	templateName := fmt.Sprintf("%s/%s", k8sBinding.Namespace, k8sBinding.Name)
-	secret, err := utils.CreateSecretFromTemplate(templateName, k8sBinding.Spec.SecretTemplate, parameters)
+	secret, err := utils2.CreateSecretFromTemplate(templateName, k8sBinding.Spec.SecretTemplate, "missingkey=error", parameters)
 	if err != nil {
+		logger.Error(err, "failed to create secret from template")
 		return nil, errors.Wrap(err, "failed to create secret from template")
 	}
 

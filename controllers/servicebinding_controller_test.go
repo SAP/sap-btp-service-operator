@@ -627,16 +627,8 @@ stringData:
 				                                       kind: Secret
 				                                       metadata:
 				                                         name: my-secret-name`)
-				binding, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "", secretTemplate)
-				Expect(err).To(BeNil())
-				bindingLookupKey := getResourceNamespacedName(binding)
-				Eventually(func() bool {
-					if err := k8sClient.Get(ctx, bindingLookupKey, binding); err != nil {
-						return false
-					}
-					cond := meta.FindStatusCondition(binding.GetConditions(), common.ConditionSucceeded)
-					return cond != nil && cond.Reason == "CreateFailed" && strings.Contains(cond.Message, "metadata field name is not allowed in generated secret manifest")
-				}, timeout*2, interval).Should(BeTrue())
+				_, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "", secretTemplate)
+				Expect(err.Error()).To(ContainSubstring("metadata field name is not allowed in generated secret manifest"))
 			})
 
 			It("should fail to create the secret if wrong template key in the spec.secretTemplate is provided", func() {
@@ -665,34 +657,18 @@ stringData:
 				                                       apiVersion: v1
 				                                       kind: Pod`)
 
-				binding, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "", secretTemplate)
-				Expect(err).To(BeNil())
-				bindingLookupKey := getResourceNamespacedName(binding)
-				Eventually(func() bool {
-					if err := k8sClient.Get(ctx, bindingLookupKey, binding); err != nil {
-						return false
-					}
-					cond := meta.FindStatusCondition(binding.GetConditions(), common.ConditionSucceeded)
-					return cond != nil && cond.Reason == "CreateFailed" && strings.Contains(cond.Message, "generated secret manifest has unexpected type")
-				}, timeout*2, interval).Should(BeTrue())
+				_, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "", secretTemplate)
+				Expect(err.Error()).To(ContainSubstring("generated secret manifest has unexpected type"))
 			})
 
 			It("should fail to create the secret if secretTemplate is invalid Yaml", func() {
 				ctx := context.Background()
 				secretTemplate := dedent.Dedent(`
 				                                       apiVersion: v1
-				                                         kind: Pod`)
+                                                       kind: Pod`)
 
-				binding, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "", secretTemplate)
-				Expect(err).To(BeNil())
-				bindingLookupKey := getResourceNamespacedName(binding)
-				Eventually(func() bool {
-					if err := k8sClient.Get(ctx, bindingLookupKey, binding); err != nil {
-						return false
-					}
-					cond := meta.FindStatusCondition(binding.GetConditions(), common.ConditionSucceeded)
-					return cond != nil && cond.Reason == "CreateFailed" && strings.Contains(cond.Message, "the generated secret manifest is not a valid YAML document")
-				}, timeout*2, interval).Should(BeTrue())
+				_, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "", secretTemplate)
+				Expect(err.Error()).To(ContainSubstring("the generated secret manifest is not a valid YAML document"))
 			})
 		})
 	})

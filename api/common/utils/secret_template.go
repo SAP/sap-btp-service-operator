@@ -26,9 +26,9 @@ var allowedMetadataFields = map[string]string{"labels": "any", "annotations": "a
 // CreateSecretFromTemplate executes the template to create a secret objects, validates and returns it
 // The template needs to be a v1 Secret and in metadata labels and annotations are allowed only
 // Set templateOptions of the "text/template" package to specify the template behavior
-func CreateSecretFromTemplate(templateName, secretTemplate string, data map[string]interface{}) (*corev1.Secret, error) {
+func CreateSecretFromTemplate(templateName, secretTemplate string, option string, data map[string]interface{}) (*corev1.Secret, error) {
 
-	secretManifest, err := executeTemplate(templateName, secretTemplate, data)
+	secretManifest, err := executeTemplate(templateName, secretTemplate, option, data)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not execute template")
 	}
@@ -85,7 +85,7 @@ func filteredFuncMap() template.FuncMap {
 	return template.FuncMap{}
 }
 
-func executeTemplate(templateName, text string, parameters map[string]interface{}) (string, error) {
+func executeTemplate(templateName, text string, option string, parameters map[string]interface{}) (string, error) {
 	t, err := ParseTemplate(templateName, text)
 	if err != nil {
 		return "", err
@@ -102,7 +102,7 @@ func executeTemplate(templateName, text string, parameters map[string]interface{
 			return err
 		},
 	}
-	err = t.Option("missingkey=error").Execute(writer, parameters)
+	err = t.Option(option).Execute(writer, parameters)
 	if err != nil {
 		return "", err
 	}
