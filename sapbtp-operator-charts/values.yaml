@@ -11,6 +11,7 @@ manager:
   allowed_namespaces: []
   replica_count: 2
   enable_leader_election: true
+  logger_use_dev_mode: true
   management_namespace:
   image:
     repository: ghcr.io/sap/sap-btp-service-operator/controller
