@@ -729,7 +729,7 @@ stringData:
 			})
 		})
 
-		When("secretTemplate", func() {
+		When("secretTemplate  is changed", func() {
 			It("should succeed to create the secret", func() {
 				ctx := context.Background()
 				secretTemplate := dedent.Dedent(
@@ -751,6 +751,44 @@ stringData:
 					return string(bindingSecret.Data["newKey2"]) == "secret_value" && bindingSecret.Labels["instance_plan"] == "a-new-plan-name" && bindingSecret.Annotations["instance_name"] == "a-new-instance-name"
 				}, timeout, interval).Should(BeTrue())
 			})
+		})
+		It("after fail should succeed to create the secret", func() {
+			ctx := context.Background()
+			secretTemplate := dedent.Dedent(
+				`apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    instance_plan: "a-new-plan-name"
+  annotations:
+    instance_name: "a-new-instance-name"
+stringData:
+  newKey2: {{ .credentialProperties.nonexistingKey }}`)
+			createdBinding.Spec.SecretTemplate = secretTemplate
+			err := k8sClient.Update(ctx, createdBinding)
+			Expect(err).ToNot(HaveOccurred())
+			By("Verify binding update failed")
+			waitForResourceCondition(ctx, createdBinding, common.ConditionFailed, metav1.ConditionTrue, "UpdateFailed", "failed to create secret")
+
+			secretTemplate = dedent.Dedent(
+				`apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    instance_plan: "a-new-plan-name"
+  annotations:
+    instance_name: "a-new-instance-name"
+stringData:
+  newKey2: {{ .credentialProperties.secret_key }}`)
+			createdBinding.Spec.SecretTemplate = secretTemplate
+			err = k8sClient.Update(ctx, createdBinding)
+			Expect(err).ToNot(HaveOccurred())
+
+			By("Verify binding secret created")
+			Eventually(func() bool {
+				bindingSecret := getSecret(ctx, createdBinding.Spec.SecretName, createdBinding.Namespace, true)
+				return string(bindingSecret.Data["newKey2"]) == "secret_value" && bindingSecret.Labels["instance_plan"] == "a-new-plan-name" && bindingSecret.Annotations["instance_name"] == "a-new-instance-name"
+			}, timeout, interval).Should(BeTrue())
 		})
 
 		When("UserInfo changed", func() {

@@ -70,7 +70,7 @@ func validateSecret(obj *unstructured.Unstructured) error {
 	// validate GroupVersionKind
 	gvk := obj.GetObjectKind().GroupVersionKind()
 	if gvk != validGroupVersionKind {
-		return fmt.Errorf("generated secret manifest has unexpected type: %q", gvk.String())
+		return fmt.Errorf("generated secret manifest has unexpected type: %s", gvk.String())
 	}
 	return nil
 }

@@ -136,6 +136,14 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 	}
 	condition := meta.FindStatusCondition(serviceBinding.Status.Conditions, common.ConditionReady)
+
+	if serviceBinding.Status.BindingID != "" && condition != nil && condition.ObservedGeneration != serviceBinding.Generation {
+		err := r.updateSecret(ctx, serviceBinding, serviceInstance, log)
+		if err != nil {
+			return r.handleSecretError(ctx, smClientTypes.UPDATE, err, serviceBinding)
+		}
+	}
+
 	isBindingReady := condition != nil && condition.Status == metav1.ConditionTrue
 	if isBindingReady {
 		if isStaleServiceBinding(serviceBinding) {
@@ -502,12 +510,6 @@ func (r *ServiceBindingReconciler) maintain(ctx context.Context, binding *servic
 			} else {
 				return ctrl.Result{}, err
 			}
-		} else {
-			err = r.updateSecret(ctx, binding, serviceInstance, log)
-			if err != nil {
-				return r.handleSecretError(ctx, smClientTypes.UPDATE, err, binding)
-			}
-
 		}
 	}
 
