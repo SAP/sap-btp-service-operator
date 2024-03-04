@@ -64,15 +64,19 @@ func init() {
 func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
+	var loggerUseDevMode bool
 	var probeAddr string
 	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoints bind to.")
 	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+	flag.BoolVar(&loggerUseDevMode, "logger_use_dev_mode", true,
+		"Sets the logger to use dev mode, e.g. more friendly printing format")
+			
 	flag.Parse()
 
-	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
+	ctrl.SetLogger(zap.New(zap.UseDevMode(loggerUseDevMode)))
 
 	mgrOptions := ctrl.Options{
 		Scheme:                 scheme,
