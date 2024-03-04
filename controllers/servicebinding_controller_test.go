@@ -745,6 +745,8 @@ stringData:
 				createdBinding.Spec.SecretTemplate = secretTemplate
 				err := k8sClient.Update(ctx, createdBinding)
 				Expect(err).ToNot(HaveOccurred())
+				By("Verify binding update succeeded")
+				waitForResourceCondition(ctx, createdBinding, common.ConditionSucceeded, metav1.ConditionTrue, common.Updated, "")
 				By("Verify binding secret created")
 				Eventually(func() bool {
 					bindingSecret := getSecret(ctx, createdBinding.Spec.SecretName, createdBinding.Namespace, true)

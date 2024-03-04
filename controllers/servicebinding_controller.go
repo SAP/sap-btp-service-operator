@@ -142,6 +142,10 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		if err != nil {
 			return r.handleSecretError(ctx, smClientTypes.UPDATE, err, serviceBinding)
 		}
+		err = utils.UpdateStatus(ctx, r.Client, serviceBinding)
+		if err != nil {
+			return r.handleSecretError(ctx, smClientTypes.UPDATE, err, serviceBinding)
+		}
 	}
 
 	isBindingReady := condition != nil && condition.Status == metav1.ConditionTrue
