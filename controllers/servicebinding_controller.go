@@ -163,7 +163,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	if isBindingReady {
 		log.Info("Binding in final state")
-		return r.maintain(ctx, serviceBinding, serviceInstance)
+		return r.maintain(ctx, serviceBinding)
 	}
 
 	log.Info(fmt.Sprintf("Current generation is %v and observed is %v", serviceBinding.Generation, serviceBinding.GetObservedGeneration()))
@@ -491,7 +491,7 @@ func (r *ServiceBindingReconciler) getBindingForRecovery(ctx context.Context, sm
 	return nil, nil
 }
 
-func (r *ServiceBindingReconciler) maintain(ctx context.Context, binding *servicesv1.ServiceBinding, serviceInstance *servicesv1.ServiceInstance) (ctrl.Result, error) {
+func (r *ServiceBindingReconciler) maintain(ctx context.Context, binding *servicesv1.ServiceBinding) (ctrl.Result, error) {
 	log := utils.GetLogger(ctx)
 	shouldUpdateStatus := false
 	if binding.Generation != binding.Status.ObservedGeneration {
