@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"time"
 
 	utils2 "github.com/SAP/sap-btp-service-operator/api/common/utils"
@@ -688,20 +689,16 @@ func (r *ServiceBindingReconciler) createBindingSecretFromSecretTemplate(ctx con
 			return nil, errors.Wrap(err, "failed to unmarshal given service binding credentials")
 		}
 	}
-	instanceInfos := make(map[string][]byte)
-	_, err := r.addInstanceInfo(ctx, k8sBinding, instanceInfos)
+
+	instanceInfos, err := r.getInstanceInfo(ctx, k8sBinding)
 	if err != nil {
 		logger.Error(err, "failed to addInstanceInfo")
 		return nil, errors.Wrap(err, "failed to add service instance info")
 	}
-	//convert the bytes to string to ensure, that the secret can be created later by CreateSecretFromTemplate
-	convertedInstanceInfos := make(map[string]string)
-	for k, v := range instanceInfos {
-		convertedInstanceInfos[k] = string(v)
-	}
+
 	parameters := map[string]interface{}{
 		common.CredentialPropertiesKey: smBindingCredentials,
-		common.InstancePropertiesKey:   convertedInstanceInfos,
+		common.InstancePropertiesKey:   instanceInfos,
 	}
 
 	templateName := fmt.Sprintf("%s/%s", k8sBinding.Namespace, k8sBinding.Name)
@@ -823,6 +820,24 @@ func (r *ServiceBindingReconciler) handleSecretError(ctx context.Context, op smC
 		return utils.MarkAsNonTransientError(ctx, r.Client, op, err.Error(), binding)
 	}
 	return utils.MarkAsTransientError(ctx, r.Client, op, err, binding)
+}
+
+func (r *ServiceBindingReconciler) getInstanceInfo(ctx context.Context, binding *servicesv1.ServiceBinding) (map[string]string, error) {
+	instance, err := r.getServiceInstanceForBinding(ctx, binding)
+	if err != nil {
+		return nil, err
+	}
+	instanceInfos := make(map[string]string)
+	instanceInfos["instance_name"] = string(getInstanceNameForSecretCredentials(instance))
+	instanceInfos["instance_guid"] = instance.Status.InstanceID
+	instanceInfos["plan"] = instance.Spec.ServicePlanName
+	instanceInfos["label"] = instance.Spec.ServiceOfferingName
+	instanceInfos["type"] = instance.Spec.ServiceOfferingName
+	if len(instance.Status.Tags) > 0 || len(instance.Spec.CustomTags) > 0 {
+		tags := mergeInstanceTags(instance.Status.Tags, instance.Spec.CustomTags)
+		instanceInfos["tags"] = strings.Join(tags, ",")
+	}
+	return instanceInfos, nil
 }
 
 func (r *ServiceBindingReconciler) addInstanceInfo(ctx context.Context, binding *servicesv1.ServiceBinding, credentialsMap map[string][]byte) ([]utils.SecretMetadataProperty, error) {

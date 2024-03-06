@@ -609,13 +609,16 @@ metadata:
   annotations:
     instance_name: {{ .instanceProperties.instance_name }}
 stringData:
-  newKey: {{ .credentialProperties.secret_key }}`)
+  newKey: {{ .credentialProperties.secret_key }}
+  tags: {{ .instanceProperties.tags }}`)
+
 				createdBinding, err := createBindingWithoutAssertionsAndWait(ctx, bindingName, bindingTestNamespace, instanceName, "", "", secretTemplate, true)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(isResourceReady(createdBinding)).To(BeTrue())
 				By("Verify binding secret created")
 				bindingSecret := getSecret(ctx, createdBinding.Spec.SecretName, createdBinding.Namespace, true)
 				validateSecretData(bindingSecret, "newKey", "secret_value")
+				validateSecretData(bindingSecret, "tags", strings.Join(mergeInstanceTags(createdInstance.Status.Tags, createdInstance.Spec.CustomTags), ","))
 				Expect(bindingSecret.Labels["instance_plan"]).To(Equal("a-plan-name"))
 				Expect(bindingSecret.Annotations["instance_name"]).To(Equal(instanceExternalName))
 			})
