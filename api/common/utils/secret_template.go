@@ -15,7 +15,7 @@ import (
 
 const templateOutputMaxBytes int64 = 1 * 1024 * 1024
 
-var allowedMetadataFields = map[string]string{"labels": "any", "annotations": "any"}
+var allowedMetadataFields = map[string]string{"labels": "any", "annotations": "any", "creationTimestamp": "any"}
 
 // CreateSecretFromTemplate executes the template to create a secret objects, validates and returns it
 // The template needs to be a v1 Secret and in metadata labels and annotations are allowed only
@@ -29,7 +29,7 @@ func CreateSecretFromTemplate(templateName, secretTemplate string, option string
 
 	secret := &corev1.Secret{}
 	if err := yaml.Unmarshal(secretManifest, secret); err != nil {
-		return nil, errors.Wrap(err, "secret template is not valid")
+		return nil, errors.Wrap(err, "secretTemplate is not a valid Secret yaml")
 	}
 
 	if err := validateSecret(secret); err != nil {

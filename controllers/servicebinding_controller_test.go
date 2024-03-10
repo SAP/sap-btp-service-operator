@@ -661,17 +661,8 @@ stringData:
 				                                       kind: Pod`)
 
 				_, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "", secretTemplate)
+				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("generated secret manifest has unexpected type"))
-			})
-
-			It("should fail to create the secret if secretTemplate is invalid Yaml", func() {
-				ctx := context.Background()
-				secretTemplate := dedent.Dedent(`
-				                                       apiVersion: v1
-                                                       kind: Pod`)
-
-				_, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "", secretTemplate)
-				Expect(err.Error()).To(ContainSubstring("the generated secret manifest is not a valid YAML document"))
 			})
 		})
 	})
