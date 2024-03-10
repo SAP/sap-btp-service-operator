@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"text/template"
 
 	"sigs.k8s.io/yaml"
@@ -16,6 +17,11 @@ import (
 const templateOutputMaxBytes int64 = 1 * 1024 * 1024
 
 var allowedMetadataFields = map[string]string{"labels": "any", "annotations": "any", "creationTimestamp": "any"}
+var validGroupVersionKind = schema.GroupVersionKind{
+	Group:   "",
+	Kind:    "Secret",
+	Version: "v1",
+}
 
 // CreateSecretFromTemplate executes the template to create a secret objects, validates and returns it
 // The template needs to be a v1 Secret and in metadata labels and annotations are allowed only
@@ -39,6 +45,12 @@ func CreateSecretFromTemplate(templateName, secretTemplate string, option string
 }
 
 func validateSecret(secret *corev1.Secret) error {
+	// validate GroupVersionKind
+	gvk := secret.GetObjectKind().GroupVersionKind()
+	if gvk != validGroupVersionKind {
+		return fmt.Errorf("generated secret manifest has unexpected type: %s", gvk.String())
+	}
+
 	metadataKeyValues := map[string]interface{}{}
 	secretMetadataBytes, err := json.Marshal(secret.ObjectMeta)
 	if err != nil {
@@ -53,6 +65,7 @@ func validateSecret(secret *corev1.Secret) error {
 			return fmt.Errorf("metadata field %s is not allowed in generated secret manifest", metadataKey)
 		}
 	}
+
 	return nil
 }
 
