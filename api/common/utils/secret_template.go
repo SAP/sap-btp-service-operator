@@ -5,8 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"text/template"
+
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"sigs.k8s.io/yaml"
 
