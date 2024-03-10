@@ -55,7 +55,7 @@ stringData:
 				errMsg := err.Error()
 				Expect(errMsg).To(ContainSubstring(" function \"quote\" not defined"))
 			})
-			It("should fail if can't secretTemplate have invalid function", func() {
+			It("should fail if template contains metadata.name", func() {
 				//write test for secretTemplateError
 				binding.Spec.SecretTemplate = dedent.Dedent(
 					`apiVersion: v1

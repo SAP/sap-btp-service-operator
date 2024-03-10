@@ -1,26 +1,20 @@
 package utils
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
-	"strings"
 	"text/template"
+
+	"sigs.k8s.io/yaml"
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 )
 
 const templateOutputMaxBytes int64 = 1 * 1024 * 1024
 
-var validGroupVersionKind = schema.GroupVersionKind{
-	Group:   "",
-	Kind:    "Secret",
-	Version: "v1",
-}
 var allowedMetadataFields = map[string]string{"labels": "any", "annotations": "any"}
 
 // CreateSecretFromTemplate executes the template to create a secret objects, validates and returns it
@@ -33,44 +27,31 @@ func CreateSecretFromTemplate(templateName, secretTemplate string, option string
 		return nil, errors.Wrap(err, "could not execute template")
 	}
 
-	yamlSerializer := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
-	o, err := runtime.Decode(yamlSerializer, []byte(secretManifest))
-	if err != nil {
-		return nil, errors.Wrapf(err, "the generated secret manifest is not a valid YAML document")
+	secret := &corev1.Secret{}
+	if err := yaml.Unmarshal(secretManifest, secret); err != nil {
+		return nil, errors.Wrap(err, "secret template is not valid")
 	}
 
-	obj := o.(*unstructured.Unstructured)
-
-	err = validateSecret(obj)
-	if err != nil {
+	if err := validateSecret(secret); err != nil {
 		return nil, err
-	}
-	var secret *corev1.Secret
-	err = runtime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, &secret)
-	if err != nil {
-		return nil, errors.Wrap(err, "the generated secret manifest is not valid")
 	}
 	return secret, nil
 }
 
-func validateSecret(obj *unstructured.Unstructured) error {
-	// validate metadata
-
-	metadataKeyValues, _, err := unstructured.NestedMap(obj.Object, "metadata")
+func validateSecret(secret *corev1.Secret) error {
+	metadataKeyValues := map[string]interface{}{}
+	secretMetadataBytes, err := json.Marshal(secret.ObjectMeta)
 	if err != nil {
-		return errors.Wrap(err, "failed to read metadata fields of generated secret manifest")
+		return errors.Wrap(err, "could not marshal secret metadata")
+	}
+	if err := json.Unmarshal(secretMetadataBytes, &metadataKeyValues); err != nil {
+		return errors.Wrap(err, "could not unmarshal secret metadata")
 	}
 
 	for metadataKey := range metadataKeyValues {
 		if _, ok := allowedMetadataFields[metadataKey]; !ok {
 			return fmt.Errorf("metadata field %s is not allowed in generated secret manifest", metadataKey)
 		}
-	}
-
-	// validate GroupVersionKind
-	gvk := obj.GetObjectKind().GroupVersionKind()
-	if gvk != validGroupVersionKind {
-		return fmt.Errorf("generated secret manifest has unexpected type: %s", gvk.String())
 	}
 	return nil
 }
@@ -85,15 +66,15 @@ func filteredFuncMap() template.FuncMap {
 	return template.FuncMap{}
 }
 
-func executeTemplate(templateName, text string, option string, parameters map[string]interface{}) (string, error) {
+func executeTemplate(templateName, text, option string, parameters map[string]interface{}) ([]byte, error) {
 	t, err := ParseTemplate(templateName, text)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	var stringBuilder strings.Builder
+	var buf bytes.Buffer
 	var writer io.Writer = &LimitedWriter{
-		W: &stringBuilder,
+		W: &buf,
 		N: templateOutputMaxBytes,
 		Converter: func(err error) error {
 			if errors.Is(err, ErrLimitExceeded) {
@@ -104,8 +85,8 @@ func executeTemplate(templateName, text string, option string, parameters map[st
 	}
 	err = t.Option(option).Execute(writer, parameters)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return stringBuilder.String(), nil
+	return buf.Bytes(), nil
 }
