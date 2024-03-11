@@ -92,6 +92,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	serviceBinding = serviceBinding.DeepCopy()
+	log.Info(fmt.Sprintf("Current generation is %v and observed is %v", serviceBinding.Generation, serviceBinding.GetObservedGeneration()))
 	serviceBinding.SetObservedGeneration(serviceBinding.Generation)
 
 	if len(serviceBinding.GetConditions()) == 0 {
@@ -170,9 +171,6 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		log.Info("Binding in final state")
 		return r.maintain(ctx, serviceBinding)
 	}
-
-	log.Info(fmt.Sprintf("Current generation is %v and observed is %v", serviceBinding.Generation, serviceBinding.GetObservedGeneration()))
-	serviceBinding.SetObservedGeneration(serviceBinding.Generation)
 
 	if serviceNotUsable(serviceInstance) {
 		instanceErr := fmt.Errorf("service instance '%s' is not usable", serviceBinding.Spec.ServiceInstanceName)
