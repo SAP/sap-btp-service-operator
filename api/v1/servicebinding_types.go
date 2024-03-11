@@ -96,6 +96,7 @@ type ServiceBindingSpec struct {
 	// This is useful if the consumer of service binding data expects them in
 	// a specific format.
 	// For Go templates see https://pkg.go.dev/text/template.
+	// For supported funcs: https://pkg.go.dev/text/template#hdr-Functions
 	// +optional
 	// +kubebuilder:pruning:PreserveUnknownFields
 	SecretTemplate string `json:"secretTemplate,omitempty"`
