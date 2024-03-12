@@ -405,12 +405,13 @@ To enable automatic credentials rotation, you need to set the following paramete
 | `rotatedBindingTTL`   |  string | Specifies for how long to keep the old `ServiceBinding`. The actual TTL may be longer than the one you specified, see details below.   | "m", "h"                                                                                                                                                |   
 
 **The `credentialsRotationPolicy` is evaluated and executed during the [control loop](https://kubernetes.io/docs/concepts/architecture/controller/) which runs on every update or during
-  a full reconciliation process. This means that the actual rotation time may potentially be greater than the specified duration in 'rotationFrequency'.**
+  a full reconciliation process. This means that the actual rotation time may potentially be longer than the specified duration in 'rotationFrequency'.**
 To initiate an instant rotation (regardless to the configured `rotationFrequency` value), simply add the `services.cloud.sap.com/forceRotate: "true"` annotation to the `ServiceBinding`. 
 Note that the prerequisite for the force action is that credentials rotation enabled field is set to true.
+You can use this feature for development and testing.
 
 **Note** <br>
-The credentials content and expiration time are determined by the service broker, the `credentialsRotationPolicy` has no effect on the expiration time.
+The credentials content and expiration time are determined by a specific service, the `credentialsRotationPolicy` has no effect on the expiration time.
 
 
 ### Example
