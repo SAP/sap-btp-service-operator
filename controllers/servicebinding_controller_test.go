@@ -747,6 +747,20 @@ stringData:
 					return string(bindingSecret.Data["newKey2"]) == "secret_value" && bindingSecret.Labels["instance_plan"] == "a-new-plan-name" && bindingSecret.Annotations["instance_name"] == "a-new-instance-name"
 				}, timeout, interval).Should(BeTrue())
 			})
+			It("secretTemplate removed default secret was created", func() {
+				ctx := context.Background()
+				createdBinding.Spec.SecretTemplate = ""
+				err := k8sClient.Update(ctx, createdBinding)
+				Expect(err).ToNot(HaveOccurred())
+				By("Verify binding update succeeded")
+				waitForResourceCondition(ctx, createdBinding, common.ConditionSucceeded, metav1.ConditionTrue, common.Updated, "")
+				By("Verify binding secret created")
+				Eventually(func() bool {
+					bindingSecret := getSecret(ctx, createdBinding.Spec.SecretName, createdBinding.Namespace, true)
+					return string(bindingSecret.Data["secret_key"]) == "secret_value"
+				}, timeout, interval).Should(BeTrue())
+			})
+
 		})
 		It("after fail should succeed to create the secret", func() {
 			ctx := context.Background()
