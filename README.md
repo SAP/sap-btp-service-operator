@@ -437,6 +437,8 @@ Such setup ensures users always work with the ServiceBinding they created. It au
 
 To see when the service binding was last rotated, refer to the `status.lastCredentialsRotationTime`. <br>
 It isn't possible to enable automatic credentials rotation to a backup `ServiceBinding` (with the `services.cloud.sap.com/stale` label).
+
+Refer to the [Service Binding](#service-binding) section for more details about `ServiceBinding`.
   
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
