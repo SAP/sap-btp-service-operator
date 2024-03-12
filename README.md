@@ -440,7 +440,7 @@ spec:
 Once the ServiceBinding is rotated:
 
 The original  `ServiceBinding ` created by the user receives an update with the new credentials.
-The old credentials are saved in a newly-created  `ServiceBinding ` named original-binding-name(variable)-guid(variable). This temporary binding is kept until its set deletion time (TTL) expires.
+The old credentials are saved in a newly-created  `ServiceBinding ` named 'original-binding-name(variable)-guid(variable)'. This temporary binding is kept until its set deletion time (TTL) expires.
 This setup ensures users always work with the  `ServiceBinding ` they created. The system automatically updates it with the latest credentials, handling the complexity of credential rotation in the background.
 
 ### Checking Last Rotation
@@ -449,7 +449,7 @@ To view the timestamp of the last service binding rotation, refer to the `status
 
 ### Limitations
 
-Automatic credential rotation cannot be enabled fora backup `ServiceBinding` marked with the `services.cloud.sap.com/stale` label.
+Automatic credential rotation cannot be enabled for a backup `ServiceBinding` marked with the `services.cloud.sap.com/stale` label.
 
 ### Further Information
 
