@@ -128,7 +128,7 @@ spec:
               secretTemplate:
                 description: 'SecretTemplate is a Go template that generates a custom
                   Kubernetes v1/Secret based on data from the service binding returned
-                  by Service Manager and the instance information The generated secret
+                  by Service Manager and the instance information. The generated secret
                   is used instead of the default secret. This is useful if the consumer
                   of service binding data expects them in a specific format. For Go
                   templates see https://pkg.go.dev/text/template. For supported funcs:
