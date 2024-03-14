@@ -20,7 +20,7 @@ The SAP BTP service operator is based on the [Kubernetes Operator pattern](https
     * [Service Instance](#service-instance)
     * [Service Binding](#service-binding)
       * [Formats of output Secret](#formats-of-output-secret)
-      * [Automatic Credentials Rotation](#automatic-credentials-rotation)
+      * [Service Binding Rotation](#service-binding-rotation)
     * [Passing parameters](#passing-parameters)
 * [Reference Documentation](#reference-documentation)
     * [Service Instance properties](#Service-Instance-properties)
@@ -179,7 +179,7 @@ However, the SAP BTP service operator also supports multi-subaccount configurati
 The system's centrally-managed namespace is set by the value in `.Values.manager.management_namespace`. You can provide this value during installation (refer to step 4 in the [Setup](#setup) section).
 If you don't specify this value, the system will use the installation namespace as the default.
 
-### Default Subaccount For a Namespace
+### Subaccount For a Namespace
 
 To associate namespace to a specific subaccount you maintain the access credentials to the subaccount in a secret which is dedicated to a specific namespace.
 Define a secret named: `<namespace-name>-sap-btp-service-operator` in the Centrally Managed Namespace.
@@ -199,7 +199,7 @@ stringData:
   tokenurlsuffix: "/oauth/token"
 ```
 
-### Explicit Subaccount For a ServiceInstance Resource
+### Subaccount for a ServiceInstance Resource
 
 You can deploy service instances belonging to different subaccounts within the same namespace. To achieve this, follow these steps:
 
@@ -288,7 +288,7 @@ SAP BTP service operator search for the credentials in the following order:
 
 1.  To get access credentials to your service instance and make it available in the cluster so that your applications can use it, create a `ServiceBinding` custom resource, and set the `serviceInstanceName` field to the name of the `ServiceInstance` resource you created.
 
-    The credentials are stored in a secret created in your cluster.
+   The credentials are stored in a secret created in your cluster.
 
 ```yaml
 apiVersion: services.cloud.sap.com/v1
@@ -331,7 +331,7 @@ spec:
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
-##### Formats of output Secret
+##### Formats of Output Secret
 
 ###### Key- Value Pairs (Default)
 The binding object includes credentials returned from the broker and service instance info presented as key-value pairs.
@@ -392,22 +392,69 @@ your-secretRootKey-value:
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
-## Automatic Credentials Rotation
-To enable automatic credentials rotation, you need to set the following parameters of the `credentialsRotationPolicy` field in the `spec` field of the `ServiceBinding` resource:
+## Service Binding Rotation
 
-- `enabled` - Whether the credentials rotation option is enabled. Default value is false.
-- `rotationFrequency` - Indicates the frequency at which the credentials rotation is performed.
-- `rotatedBindingTTL` - Indicates for how long to keep the rotated `ServiceBinding`.
+Enhance security by automatically rotating the credentials associated with your service bindings. This process involves generating a new service binding while keeping the old credentials active for a specified period to ensure a smooth transition.
 
-Valid time units for `rotationFrequency` and `rotatedBindingTTL` are: "ns", "us" or ("µs"), "ms", "s", "m", "h".</br></br>
-`status.lastCredentialsRotationTime` indicates the last time the `ServiceBinding` secret was rotated.</br>
-Please note that `credentialsRotationPolicy` evaluated and executed during [control loop](https://kubernetes.io/docs/concepts/architecture/controller/) which runs on every update or during
-full reconciliation process.
+### Enabling Automatic Rotation
 
-During the transition period, there are two (or more) `ServiceBinding`: the original and the rotated one (holds the `services.cloud.sap.com/stale` label), which is deleted once the `rotatedBindingTTL` duration elapses.</br></br>
-You can also choose the `services.cloud.sap.com/forceRotate` annotation (value doesn't matter), upon which immediate credentials rotation is performed. Note that the prerequisite for the force action is that credentials rotation `enabled` field is set to true.).
+To enable automatic service binding rotation, use the `credentialsRotationPolicy` field within the `spec` section of the `ServiceBinding` resource. This field allows you to configure several parameters:
 
-**Note:**<br> It isn't possible to enable automatic credentials rotation to an already-rotated `ServiceBinding` (with the `services.cloud.sap.com/stale` label).
+| Parameter         | Type     | Description                                                                                                                            | Valid Values                                                                                                                                            |
+|:-----------------|:---------|:---------------------------------------------------------------------------------------------------------------------------------------|:--------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `enabled` | bool | Turns automatic rotation on or off.                                                                                      |                                                                                                                                                         |
+| `rotationFrequency` | string | Defines the desired interval between binding rotations.  Specify time units using "m" (minutes) or "h" (hours). Note that | "m", "h"                                                                                                                                                |                                                                                                                                                                |
+| `rotatedBindingTTL`   |  string | Determines how long to keep the old `ServiceBinding` after rotation (before deletion). The actual TTL may be slightly longer (details below). Specify time units using "m" (minutes) or "h" (hours).   | "m", "h"                                                                                                                                                |   
+
+### Rotation Process
+
+The `credentialsRotationPolicy` is evaluated periodically during a [control loop](https://kubernetes.io/docs/concepts/architecture/controller/), which runs on every service binding update or during a full reconciliation process. This means the actual rotation will occur in the closest upcoming reconciliation loop. 
+
+### Immediate Rotation 
+
+You can trigger an immediate rotation (regardless of the configured `rotationFrequency`) by adding the services.cloud.sap.com/forceRotate: "true" annotation to the `ServiceBinding` resource. This immediate rotation only works if automatic rotation is already enabled. 
+
+**Note**
+
+The `credentialsRotationPolicy` has no control over the credentials validity. The content and expiration time of the credentials is determined by the service you're using.
+
+**Example**
+
+This example configures a `ServiceBinding` to rotate credentials every 25 days (600 hours) and keep the old `ServiceBinding` for 2 days (48 hours) before deleting it:
+
+```yaml
+apiVersion: services.cloud.sap.com/v1
+kind: ServiceBinding
+metadata:
+  name: sample-binding
+spec:
+  serviceInstanceName: sample-instance
+  credentialsRotationPolicy:
+    enabled: true
+    rotatedBindingTTL: 48h
+    rotationFrequency: 600h
+ ```
+
+### After Rotation
+
+Once the ServiceBinding is rotated:
+
+The Secret is updated with the latest credentials. The old credentials are kept in a newly-created secret named 'original-secret-name(variable)-guid(variable)'.
+This temporary secret is kept until the configured deletion time (TTL) expires.
+
+### Checking Last Rotation
+
+To view the timestamp of the last service binding rotation, refer to the `status.lastCredentialsRotationTime` field.
+
+### Limitations
+
+Automatic credential rotation cannot be enabled for a backup `ServiceBinding` (named: original-binding-name(variable)-guid(variable)) which marked with the `services.cloud.sap.com/stale` label.
+This backup service binding was created during the credentials rotation proces to facilitate the process.
+
+### Further Information
+
+For more details about `ServiceBinding`, refer to the dedicated [Service Binding](#service-binding) section in this documentation.
+  
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
