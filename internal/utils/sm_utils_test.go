@@ -39,25 +39,51 @@ var _ = Describe("SM Utils", func() {
 
 		Context("SAPBTPOperatorSecret", func() {
 			When("secret is valid", func() {
-				BeforeEach(func() {
-					secret = &corev1.Secret{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      SAPBTPOperatorSecretName,
-							Namespace: managementNamespace,
-						},
-						Data: map[string][]byte{
-							"clientid":     []byte("12345"),
-							"clientsecret": []byte("client-secret"),
-							"sm_url":       []byte("https://some.url"),
-							"tokenurl":     []byte("https://token.url"),
-						},
-					}
-					Expect(k8sClient.Create(ctx, secret)).To(Succeed())
+				When("secret contains clientSecret", func() {
+					BeforeEach(func() {
+						secret = &corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      SAPBTPOperatorSecretName,
+								Namespace: managementNamespace,
+							},
+							Data: map[string][]byte{
+								"clientid":     []byte("12345"),
+								"clientsecret": []byte("client-secret"),
+								"sm_url":       []byte("https://some.url"),
+								"tokenurl":     []byte("https://token.url"),
+							},
+						}
+						Expect(k8sClient.Create(ctx, secret)).To(Succeed())
+					})
+					It("should succeed", func() {
+						client, err := GetSMClient(ctx, resolver, testNamespace, "")
+						Expect(err).ToNot(HaveOccurred())
+						Expect(client).ToNot(BeNil())
+					})
 				})
-				It("should succeed", func() {
-					client, err := GetSMClient(ctx, resolver, testNamespace, "")
-					Expect(err).ToNot(HaveOccurred())
-					Expect(client).ToNot(BeNil())
+				When("secret not contains clientSecret but contains tls data", func() {
+					BeforeEach(func() {
+						secret = &corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      SAPBTPOperatorSecretName,
+								Namespace: managementNamespace,
+							},
+							Data: map[string][]byte{
+								"clientid":     []byte("12345"),
+								"clientsecret": []byte(""),
+								"sm_url":       []byte("https://some.url"),
+								"tokenurl":     []byte("https://token.url"),
+								"tls.key":      []byte(tlskey),
+								"tls.crt":      []byte(tlscrt),
+							},
+						}
+						Expect(k8sClient.Create(ctx, secret)).To(Succeed())
+					})
+					It("should succeed", func() {
+						client, err := GetSMClient(ctx, resolver, testNamespace, "")
+						Expect(err).ToNot(HaveOccurred())
+						Expect(client).ToNot(BeNil())
+					})
 				})
 			})
 			When("secret is missing client secret and there is no tls secret", func() {

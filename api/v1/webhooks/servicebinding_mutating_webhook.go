@@ -48,7 +48,7 @@ func (s *ServiceBindingDefaulter) Handle(_ context.Context, req admission.Reques
 		}
 	}
 
-	if req.Operation == v1admission.Create || req.Operation == v1admission.Delete {
+	if req.Operation == v1admission.Create {
 		binding.Spec.UserInfo = &v1.UserInfo{
 			Username: req.UserInfo.Username,
 			UID:      req.UserInfo.UID,
@@ -57,9 +57,9 @@ func (s *ServiceBindingDefaulter) Handle(_ context.Context, req admission.Reques
 		}
 	}
 
-	marshaledInstance, err := json.Marshal(binding)
+	marshaledBinding, err := json.Marshal(binding)
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
-	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledInstance)
+	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledBinding)
 }

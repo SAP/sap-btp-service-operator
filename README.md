@@ -138,7 +138,7 @@ metadata:
   name: sap-btp-service-operator
   namespace: sap-btp-operator
 type: Opaque
-data:
+stringData:
   clientid: "<clientid>"
   clientsecret: "<clientsecret>"
   sm_url: "<sm_url>"
@@ -191,7 +191,7 @@ metadata:
   name: <namespace-name>-sap-btp-service-operator
   namespace: <centrally managed namespace>
 type: Opaque
-data:
+stringData:
   clientid: "<clientid>"
   clientsecret: "<clientsecret>"
   sm_url: "<sm_url>"
@@ -215,7 +215,7 @@ metadata:
   name: mybtpsecret
   namespace: <centrally managed namespace>
 type: Opaque
-data:
+stringData:
   clientid: "<clientid>"
   clientsecret: "<clientsecret>"
   sm_url: "<sm_url>"

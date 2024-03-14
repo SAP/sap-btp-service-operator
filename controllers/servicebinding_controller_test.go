@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"strings"
 
+	authv1 "k8s.io/api/authentication/v1"
+
 	"github.com/SAP/sap-btp-service-operator/api/common"
 	"github.com/SAP/sap-btp-service-operator/internal/utils"
 	"k8s.io/utils/pointer"
@@ -636,6 +638,18 @@ var _ = Describe("ServiceBinding controller", func() {
 			It("should fail", func() {
 				secretKey := "not-nil"
 				createdBinding.Spec.SecretKey = &secretKey
+				err := k8sClient.Update(ctx, createdBinding)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("updating service bindings is not supported"))
+			})
+		})
+
+		When("UserInfo changed", func() {
+			It("should fail", func() {
+				createdBinding.Spec.UserInfo = &authv1.UserInfo{
+					Username: "aaa",
+					UID:      "111",
+				}
 				err := k8sClient.Update(ctx, createdBinding)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("updating service bindings is not supported"))
