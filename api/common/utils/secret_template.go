@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/SAP/sap-btp-service-operator/api/common"
 	"io"
 	"text/template"
+
+	"github.com/SAP/sap-btp-service-operator/api/common"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
@@ -37,7 +38,7 @@ func CreateSecretFromTemplate(templateName, secretTemplate string, option string
 
 	secret := &corev1.Secret{}
 	if err := yaml.Unmarshal(secretManifest, secret); err != nil {
-		return nil, errors.Wrap(err, "the Secret template is invalid: It does not result in a valid Secret YAML.")
+		return nil, errors.Wrap(err, "the Secret template is invalid: It does not result in a valid Secret YAML")
 	}
 
 	if err := validateSecret(secret); err != nil {
@@ -56,10 +57,10 @@ func validateSecret(secret *corev1.Secret) error {
 	metadataKeyValues := map[string]interface{}{}
 	secretMetadataBytes, err := json.Marshal(secret.ObjectMeta)
 	if err != nil {
-		return errors.Wrap(err, "the Secret template is invalid: It does not result in a valid Secret YAML.")
+		return errors.Wrap(err, "the Secret template is invalid: It does not result in a valid Secret YAML")
 	}
 	if err := json.Unmarshal(secretMetadataBytes, &metadataKeyValues); err != nil {
-		return errors.Wrap(err, "the Secret template is invalid: It does not result in a valid Secret YAML.")
+		return errors.Wrap(err, "the Secret template is invalid: It does not result in a valid Secret YAML")
 	}
 
 	for metadataKey := range metadataKeyValues {
