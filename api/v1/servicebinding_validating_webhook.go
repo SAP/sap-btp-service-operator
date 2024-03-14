@@ -146,12 +146,9 @@ func (sb *ServiceBinding) validateCredRotatingConfig() error {
 
 func (sb *ServiceBinding) validateSecretTemplate() error {
 	servicebindinglog.Info("validate specified secretTemplate")
-	x := make(map[string]string)
+	x := make(map[string]interface{})
 	y := make(map[string]string)
-	parameters := map[string]interface{}{
-		common.CredentialPropertiesKey: x,
-		common.InstancePropertiesKey:   y,
-	}
+	parameters := utils.GetSecretDataForTemplate(x, y)
 
 	templateName := fmt.Sprintf("%s/%s", sb.Namespace, sb.Name)
 	_, err := utils.CreateSecretFromTemplate(templateName, sb.Spec.SecretTemplate, "missingkey=zero", parameters)

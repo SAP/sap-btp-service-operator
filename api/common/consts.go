@@ -34,7 +34,7 @@ const (
 	CredPreparing = "Preparing"
 	CredRotating  = "Rotating"
 
-	CredentialPropertiesKey = "credentialProperties"
-	MetaDataPropertiesKey   = "metaDataProperties"
-	InstancePropertiesKey   = "instanceProperties"
+	// Constance for seceret template
+	InstanceKey    = "instance"
+	CredentialsKey = "credentials"
 )

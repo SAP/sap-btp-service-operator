@@ -30,7 +30,7 @@ metadata:
   annotations:
     instance_name: "a-new-instance-name"
 stringData:
-  newKey2: {{ .credentialProperties.secret_key }}`)
+  newKey2: {{ .credentials.secret_key }}`)
 				_, err := binding.ValidateCreate()
 
 				Expect(err).ToNot(HaveOccurred())
@@ -67,12 +67,12 @@ metadata:
   annotations:
     instance_name: "a-new-instance-name"
 stringData:
-  newKey2: {{ .credentialProperties.secret_key }}`)
+  newKey2: {{ .credentials.secret_key }}`)
 
 				_, err := binding.ValidateCreate()
 				Expect(err).To(HaveOccurred())
 				errMsg := err.Error()
-				Expect(errMsg).To(ContainSubstring("metadata field name is not allowed in generated secret manifest"))
+				Expect(errMsg).To(ContainSubstring("the Secret template is invalid: Secret's metadata field"))
 			})
 		})
 

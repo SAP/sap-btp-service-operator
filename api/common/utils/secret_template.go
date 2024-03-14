@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/SAP/sap-btp-service-operator/api/common"
 	"io"
 	"text/template"
 
@@ -31,12 +32,12 @@ func CreateSecretFromTemplate(templateName, secretTemplate string, option string
 
 	secretManifest, err := executeTemplate(templateName, secretTemplate, option, data)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not execute template")
+		return nil, errors.Wrap(err, "the Secret template is invalid")
 	}
 
 	secret := &corev1.Secret{}
 	if err := yaml.Unmarshal(secretManifest, secret); err != nil {
-		return nil, errors.Wrap(err, "secretTemplate is not a valid Secret yaml")
+		return nil, errors.Wrap(err, "the Secret template is invalid: It does not result in a valid Secret YAML.")
 	}
 
 	if err := validateSecret(secret); err != nil {
@@ -48,22 +49,22 @@ func CreateSecretFromTemplate(templateName, secretTemplate string, option string
 func validateSecret(secret *corev1.Secret) error {
 	// validate GroupVersionKind
 	gvk := secret.GetObjectKind().GroupVersionKind()
-	if gvk != validGroupVersionKind {
-		return fmt.Errorf("generated secret manifest has unexpected type: %s", gvk.String())
+	if (gvk.Kind != "" || gvk.Version != "") && gvk != validGroupVersionKind {
+		return fmt.Errorf("the Secret template is invalid: It is of kind '%s' but needs to be of kind 'Secret'", gvk.String())
 	}
 
 	metadataKeyValues := map[string]interface{}{}
 	secretMetadataBytes, err := json.Marshal(secret.ObjectMeta)
 	if err != nil {
-		return errors.Wrap(err, "could not marshal secret metadata")
+		return errors.Wrap(err, "the Secret template is invalid: It does not result in a valid Secret YAML.")
 	}
 	if err := json.Unmarshal(secretMetadataBytes, &metadataKeyValues); err != nil {
-		return errors.Wrap(err, "could not unmarshal secret metadata")
+		return errors.Wrap(err, "the Secret template is invalid: It does not result in a valid Secret YAML.")
 	}
 
 	for metadataKey := range metadataKeyValues {
 		if _, ok := allowedMetadataFields[metadataKey]; !ok {
-			return fmt.Errorf("metadata field %s is not allowed in generated secret manifest", metadataKey)
+			return fmt.Errorf("the Secret template is invalid: Secret's metadata field '%s' cannot be edited", metadataKey)
 		}
 	}
 
@@ -92,7 +93,7 @@ func executeTemplate(templateName, text, option string, parameters map[string]in
 		N: templateOutputMaxBytes,
 		Converter: func(err error) error {
 			if errors.Is(err, ErrLimitExceeded) {
-				return fmt.Errorf("the size of the generated secret manifest exceeds the limit of %d bytes", templateOutputMaxBytes)
+				return fmt.Errorf("the size of the generated Secret exceeds the limit of %d bytes", templateOutputMaxBytes)
 			}
 			return err
 		},
@@ -103,4 +104,11 @@ func executeTemplate(templateName, text, option string, parameters map[string]in
 	}
 
 	return buf.Bytes(), nil
+}
+
+func GetSecretDataForTemplate(Credential map[string]interface{}, instance map[string]string) map[string]interface{} {
+	return map[string]interface{}{
+		common.CredentialsKey: Credential,
+		common.InstanceKey:    instance,
+	}
 }

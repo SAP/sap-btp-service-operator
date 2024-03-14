@@ -651,8 +651,8 @@ func (r *ServiceBindingReconciler) createBindingSecret(ctx context.Context, k8sB
 		}
 	} else {
 		metadata := map[string][]utils.SecretMetadataProperty{
-			common.MetaDataPropertiesKey:   metaDataProperties,
-			common.CredentialPropertiesKey: credentialProperties,
+			"metaDataProperties":   metaDataProperties,
+			"credentialProperties": credentialProperties,
 		}
 		metadataByte, err := json.Marshal(metadata)
 		if err != nil {
@@ -694,11 +694,7 @@ func (r *ServiceBindingReconciler) createBindingSecretFromSecretTemplate(ctx con
 		return nil, errors.Wrap(err, "failed to add service instance info")
 	}
 
-	parameters := map[string]interface{}{
-		common.CredentialPropertiesKey: smBindingCredentials,
-		common.InstancePropertiesKey:   instanceInfos,
-	}
-
+	parameters := utils2.GetSecretDataForTemplate(smBindingCredentials, instanceInfos)
 	templateName := fmt.Sprintf("%s/%s", k8sBinding.Namespace, k8sBinding.Name)
 	secret, err := utils2.CreateSecretFromTemplate(templateName, k8sBinding.Spec.SecretTemplate, "missingkey=error", parameters)
 	if err != nil {

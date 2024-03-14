@@ -605,12 +605,12 @@ var _ = Describe("ServiceBinding controller", func() {
 kind: Secret
 metadata:
   labels:
-    instance_plan: {{ .instanceProperties.plan }}
+    instance_plan: {{ .instance.plan }}
   annotations:
-    instance_name: {{ .instanceProperties.instance_name }}
+    instance_name: {{ .instance.instance_name }}
 stringData:
-  newKey: {{ .credentialProperties.secret_key }}
-  tags: {{ .instanceProperties.tags }}`)
+  newKey: {{ .credentials.secret_key }}
+  tags: {{ .instance.tags }}`)
 
 				createdBinding, err := createBindingWithoutAssertionsAndWait(ctx, bindingName, bindingTestNamespace, instanceName, "", "", secretTemplate, true)
 				Expect(err).ToNot(HaveOccurred())
@@ -622,7 +622,28 @@ stringData:
 				Expect(bindingSecret.Labels["instance_plan"]).To(Equal("a-plan-name"))
 				Expect(bindingSecret.Annotations["instance_name"]).To(Equal(instanceExternalName))
 			})
+			It("should succeed to create the secret- when no kind", func() {
+				ctx := context.Background()
+				secretTemplate := dedent.Dedent(
+					`metadata:
+  labels:
+    instance_plan: {{ .instance.plan }}
+  annotations:
+    instance_name: {{ .instance.instance_name }}
+stringData:
+  newKey: {{ .credentials.secret_key }}
+  tags: {{ .instance.tags }}`)
 
+				createdBinding, err := createBindingWithoutAssertionsAndWait(ctx, bindingName, bindingTestNamespace, instanceName, "", "", secretTemplate, true)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(isResourceReady(createdBinding)).To(BeTrue())
+				By("Verify binding secret created")
+				bindingSecret := getSecret(ctx, createdBinding.Spec.SecretName, createdBinding.Namespace, true)
+				validateSecretData(bindingSecret, "newKey", "secret_value")
+				validateSecretData(bindingSecret, "tags", strings.Join(mergeInstanceTags(createdInstance.Status.Tags, createdInstance.Spec.CustomTags), ","))
+				Expect(bindingSecret.Labels["instance_plan"]).To(Equal("a-plan-name"))
+				Expect(bindingSecret.Annotations["instance_name"]).To(Equal(instanceExternalName))
+			})
 			It("should fail to create the secret if forbidden field is provided under spec.secretTemplate.metadata", func() {
 				ctx := context.Background()
 				secretTemplate := dedent.Dedent(`
@@ -631,7 +652,7 @@ stringData:
 				                                       metadata:
 				                                         name: my-secret-name`)
 				_, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "", secretTemplate)
-				Expect(err.Error()).To(ContainSubstring("metadata field name is not allowed in generated secret manifest"))
+				Expect(err.Error()).To(ContainSubstring("the Secret template is invalid: Secret's metadata field"))
 			})
 
 			It("should fail to create the secret if wrong template key in the spec.secretTemplate is provided", func() {
@@ -662,7 +683,7 @@ stringData:
 
 				_, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "", secretTemplate)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("generated secret manifest has unexpected type"))
+				Expect(err.Error()).To(ContainSubstring("but needs to be of kind 'Secret'"))
 			})
 		})
 	})
@@ -674,11 +695,11 @@ stringData:
 kind: Secret
 metadata:
   labels:
-    instance_plan: {{ .instanceProperties.plan }}
+    instance_plan: {{ .instance.plan }}
   annotations:
-    instance_name: {{ .instanceProperties.instance_name }}
+    instance_name: {{ .instance.instance_name }}
 stringData:
-  newKey: {{ .credentialProperties.secret_key }}`)
+  newKey: {{ .credentials.secret_key }}`)
 			createdBinding = createBinding(ctx, bindingName, bindingTestNamespace, instanceName, "", "binding-external-name", secretTemplate)
 			fakeClient.GetBindingByIDReturns(&smClientTypes.ServiceBinding{ID: fakeBindingID, Credentials: json.RawMessage("{\"secret_key\": \"secret_value\"}")}, nil)
 			Expect(isResourceReady(createdBinding)).To(BeTrue())
@@ -735,7 +756,7 @@ metadata:
   annotations:
     instance_name: "a-new-instance-name"
 stringData:
-  newKey2: {{ .credentialProperties.secret_key }}`)
+  newKey2: {{ .credentials.secret_key }}`)
 				createdBinding.Spec.SecretTemplate = secretTemplate
 				err := k8sClient.Update(ctx, createdBinding)
 				Expect(err).ToNot(HaveOccurred())
@@ -773,7 +794,7 @@ metadata:
   annotations:
     instance_name: "a-new-instance-name"
 stringData:
-  newKey2: {{ .credentialProperties.nonexistingKey }}`)
+  newKey2: {{ .credentials.nonexistingKey }}`)
 			createdBinding.Spec.SecretTemplate = secretTemplate
 			err := k8sClient.Update(ctx, createdBinding)
 			Expect(err).ToNot(HaveOccurred())
@@ -789,7 +810,7 @@ metadata:
   annotations:
     instance_name: "a-new-instance-name"
 stringData:
-  newKey2: {{ .credentialProperties.secret_key }}`)
+  newKey2: {{ .credentials.secret_key }}`)
 			createdBinding.Spec.SecretTemplate = secretTemplate
 			err = k8sClient.Update(ctx, createdBinding)
 			Expect(err).ToNot(HaveOccurred())
