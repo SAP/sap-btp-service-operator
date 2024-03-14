@@ -324,7 +324,7 @@ spec:
     ```bash
     kubectl get secrets
     NAME         TYPE     DATA   AGE
-    my-binding   Opaque   5      32s
+    my-secret   Opaque   5      32s
     ```
     
     See [Using Secrets](https://kubernetes.io/docs/concepts/configuration/secret/#using-secrets) to learn about different options on how to use the credentials from your application running in the Kubernetes cluster, 
@@ -388,6 +388,62 @@ your-secretRootKey-value:
     plan: sample-plan // The service plan name
     type: sample-service // The service offering name
 }
+```
+###### Custom Template Format
+To generate a custom-formatted secret, use the secretTemplate attribute in the service binding spec.
+The value of secretTemplate should be a Go template that will be employed to generate the secret. The template will operate on a map constructed from two fields:
+
+1. "credentials": Credentials received from Service Manager.
+2. "instance": Service instance information.
+
+For Go templates see https://pkg.go.dev/text/template
+
+*Note:<br> if secretTemplate is used, the secretKey and secretRootKey attributes are ignored.*
+
+Here is an example:
+
+Map structure:
+```json
+{
+  "credentials": {
+    "uri": "https://my-service.authentication.eu10.hana.ondemand.com",
+    "username": "admin",
+    "password": "********"
+  },
+    "instance": {
+        "instance_guid": "1234",
+        "instance_name": "my-service-btp-name",
+        "plan": "sample-plan",
+        "type": "sample-service"
+    }
+}
+```
+Template:
+
+```yaml
+secretTemplate: |
+  apiVersion: v1
+  kind: Secret
+  metadata:
+    labels:
+      instance_plan: {{ .instance.plan }}
+    annotations:
+      instance_name: {{ .instance.instance_name }}
+  stringData:
+    PASSWORD: {{ .credentials.password }}
+```
+Result: The generated Secret contains the following content:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    instance_plan: sample-plan
+  annotations:
+    instance_name: my-service-btp-name
+stringData: 
+  PASSWORD: ********
 ```
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
@@ -572,20 +628,21 @@ secret-parameter:
 
 ### Service Binding properties
 #### Spec
-| Parameter             | Type       | Description                                                                                                                                                                                                                                                                                                                              |
-|:-----------------|:---------|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| serviceInstanceName`*`   | `string`   | The Kubernetes name of the service instance to bind, should be in the namespace of the binding.                                                                                                                                                                                                                                          |
-| externalName       | `string`   | The name for the service binding in SAP BTP, defaults to the binding `metadata.name` if not specified.                                                                                                                                                                                                                                   |
-| secretName       | `string`   | The name of the secret where the credentials are stored, defaults to the binding `metadata.name` if not specified.                                                                                                                                                                                                                       |
-| secretKey | `string`  | The secret key is a part of the Secret object, which stores service binding data (credentials) received from the broker. When the secret key is used, all the credentials are stored under a single key. This makes it a convenient way to store credentials data in one file when using volumeMounts. [Example](#formats-of-secret-objects)                                                                                                                                    |
+| Parameter             | Type       | Description                                                                                                                                                                                                                                                                                                                                                         |
+|:-----------------|:---------|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| serviceInstanceName`*`   | `string`   | The Kubernetes name of the service instance to bind, should be in the namespace of the binding.                                                                                                                                                                                                                                                                     |
+| externalName       | `string`   | The name for the service binding in SAP BTP, defaults to the binding `metadata.name` if not specified.                                                                                                                                                                                                                                                              |
+| secretName       | `string`   | The name of the secret where the credentials are stored, defaults to the binding `metadata.name` if not specified.                                                                                                                                                                                                                                                  |
+| secretKey | `string`  | The secret key is a part of the Secret object, which stores service binding data (credentials) received from the broker. When the secret key is used, all the credentials are stored under a single key. This makes it a convenient way to store credentials data in one file when using volumeMounts. [Example](#formats-of-secret-objects)                        |
 | secretRootKey | `string`  | The root key is a part of the Secret object, which stores service binding data (credentials) received from the broker, as well as additional service instance information. When the root key is used, all data is stored under a single key. This makes it a convenient way to store data in one file when using volumeMounts. [Example](#formats-of-secret-objects) |
-| parameters       |  `[]object`  | Some services support the provisioning of additional configuration parameters during the bind request.<br/>For the list of supported parameters, check the documentation of the particular service offering.                                                                                                                             |
-| parametersFrom | `[]object` | List of sources to populate parameters.                                                                                                                                                                                                                                                                                                  |
-| userInfo | `object`  | Contains information about the user that last modified this service binding.                                                                                                                                                                                                                                                             |
-| credentialsRotationPolicy | `object`  | Holds automatic credentials rotation configuration.                                                                                                                                                                                                                                                                                      |
-| credentialsRotationPolicy.enabled | `boolean`  | Indicates whether automatic credentials rotation are enabled.                                                                                                                                                                                                                                                                            |
-| credentialsRotationPolicy.rotationFrequency | `duration`  | Specifies the frequency at which the binding rotation is performed.                                                                                                                                                                                                                                                                      |
-| credentialsRotationPolicy.rotatedBindingTTL | `duration`  | Specifies the time period for which to keep the rotated binding.                                                                                                                                                                                                                                                                         |
+| parameters       |  `[]object`  | Some services support the provisioning of additional configuration parameters during the bind request.<br/>For the list of supported parameters, check the documentation of the particular service offering.                                                                                                                                                        |
+| parametersFrom | `[]object` | List of sources to populate parameters.                                                                                                                                                                                                                                                                                                                             |
+| userInfo | `object`  | Contains information about the user that last modified this service binding.                                                                                                                                                                                                                                                                                        |
+| credentialsRotationPolicy | `object`  | Holds automatic credentials rotation configuration.                                                                                                                                                                                                                                                                                                                 |
+| credentialsRotationPolicy.enabled | `boolean`  | Indicates whether automatic credentials rotation are enabled.                                                                                                                                                                                                                                                                                                       |
+| credentialsRotationPolicy.rotationFrequency | `duration`  | Specifies the frequency at which the binding rotation is performed.                                                                                                                                                                                                                                                                                                 |
+| credentialsRotationPolicy.rotatedBindingTTL | `duration`  | Specifies the time period for which to keep the rotated binding.                                                                                                                                                                                                                                                                                                    |
+| SecretTemplate | `string`  | A Go template is used to generate a custom Kubernetes v1/Secret, using data from both the service binding returned by Service Manager and instance information.
 
 
 
