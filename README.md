@@ -334,7 +334,8 @@ spec:
 ##### Formats of Output Secret
 
 ###### Key- Value Pairs (Default)
-The binding object includes credentials returned from the broker and service instance info presented as key-value pairs.
+Binding triggers the creation of the Secret resource.
+The Secret includes credentials returned from the broker and the attributes of the service instance related to the binding:
 
 ```yaml
 apiVersion: services.cloud.sap.com/v1
@@ -360,7 +361,7 @@ stringData:
 
 ###### Credentials as JSON Object
 To show credentials returned from the broker as a JSON object, use the 'secretKey' attribute in the service binding spec.
-The value of 'secretKey' is the name of the key that stores the credentials in JSON format.
+The value of 'secretKey' must be the name of the key that stores the credentials in JSON format.
 
 ```yaml
 apiVersion: services.cloud.sap.com/v1
@@ -422,6 +423,7 @@ stringData:
     }
 ```
 ###### Custom Template Format
+You can model the Secret according to your specific needs.
 To generate a custom-formatted secret, use the secretTemplate attribute in the service binding spec.
 The value of secretTemplate should be a Go template that will be employed to generate the secret. The template will operate on a map constructed from two fields:
 
