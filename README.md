@@ -335,59 +335,91 @@ spec:
 
 ###### Key- Value Pairs (Default)
 The binding object includes credentials returned from the broker and service instance info presented as key-value pairs.
-```bash
-#Credentials
-uri: https://my-service.authentication.eu10.hana.ondemand.com
-username: admin
-password: ********
 
-#Service instance info
-instance_guid: <instance_guid> // The service instance ID
-instance_name: my-service-btp-name // Taken from the service instance external_name field if set. Otherwise from metadata.name
-plan: sample-plan // The service plan name                
-type: sample-service  // The service offering name
+```yaml
+apiVersion: services.cloud.sap.com/v1
+kind: ServiceBinding
+metadata:
+  name: sample-binding
+spec:
+  serviceInstanceName: sample-instance
+```
+
+```yaml
+apiVersion: v1
+kind: Secret
+stringData:
+  uri: https://my-service.authentication.eu10.hana.ondemand.com
+  client_id: admin
+  client_secret: ********
+  instance_guid: 06fc67f4-21d4-41bb-a5a9-647b4dcddf63 // The service instance ID
+  instance_name: sample-instance // Taken from the service instance external_name field if set. Otherwise from metadata.name
+  plan: sample-plan // The service plan name                
+  type: sample-service  // The service offering name
 ```
 
 ###### Credentials as JSON Object
 To show credentials returned from the broker as a JSON object, use the 'secretKey' attribute in the service binding spec.
-
 The value of 'secretKey' is the name of the key that stores the credentials in JSON format.
 
-```bash
-#Credentials
-your-secretKey-value:
-{
-  uri: https://my-service.authentication.eu10.hana.ondemand.com
-  username: admin
-  password: ********
-}
+```yaml
+apiVersion: services.cloud.sap.com/v1
+kind: ServiceBinding
+metadata:
+  name: sample-binding
+spec:
+  serviceInstanceName: sample-instance
+  secretKey: your-secretKey-value
+```
 
-#Service Instance info
-instance_guid: <instance_guid> // The service instance ID
-instance_name: my-service-btp-name // Taken from the service instance external_name field if set. Otherwise from metadata.name 
-plan: sample-plan // The service plan name
-type: sample-service // The service offering name
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sample-binding
+stringData:
+    your-secretKey-value:
+    {
+      uri: https://my-service.authentication.eu10.hana.ondemand.com,
+      client_id: admin,
+      client_secret: ********
+    }
+    instance_guid: 06fc67f4-21d4-41bb-a5a9-647b4dcddf63 // The service instance ID
+    instance_name: sample-binding // Taken from the service instance external_name field if set. Otherwise from metadata.name 
+    plan: sample-plan // The service plan name
+    type: sample-service // The service offering name
 ```
 
 ###### Credentials and Service Info as One JSON Object
 To show both credentials returned from the broker and service instance info as a JSON object, use the 'secretRootKey' attribute in the service binding spec.
 
 The value of 'secretRootKey' is the name of the key that stores both credentials and serivce instance info in JSON format.
+```yaml
+apiVersion: services.cloud.sap.com/v1
+kind: ServiceBinding
+metadata:
+  name: sample-binding
+spec:
+  serviceInstanceName: sample-instance
+  secretRootKey: your-secretRootKey-value
+```
 
-```bash
-your-secretRootKey-value:
-{
-    #Credentials
-    uri: https://my-service.authentication.eu10.hana.ondemand.com
-    username: admin
-    password: ********
-    
-    #Service Instance info
-    instance_guid: <instance_guid> // The service instance id
-    instance_name: my-service-btp-name // Taken from the service instance external_name field if set. Otherwise from metadata.name 
-    plan: sample-plan // The service plan name
-    type: sample-service // The service offering name
-}
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sample-binding
+stringData:
+    your-secretRootKey-value:
+    {
+        uri: https://my-service.authentication.eu10.hana.ondemand.com,
+        client_id: admin,
+        client_secret: ********,
+        instance_guid: 06fc67f4-21d4-41bb-a5a9-647b4dcddf63, // The service instance id
+        instance_name: sample-binding, // Taken from the service instance external_name field if set. Otherwise from metadata.name 
+        plan: sample-plan, // The service plan name
+        type: sample-service, // The service offering name
+    }
 ```
 ###### Custom Template Format
 To generate a custom-formatted secret, use the secretTemplate attribute in the service binding spec.
@@ -407,12 +439,12 @@ Map structure:
 {
   "credentials": {
     "uri": "https://my-service.authentication.eu10.hana.ondemand.com",
-    "username": "admin",
-    "password": "********"
+    "client_id": "admin",
+    "client_secret": "********"
   },
     "instance": {
-        "instance_guid": "1234",
-        "instance_name": "my-service-btp-name",
+        "instance_guid": 06fc67f4-21d4-41bb-a5a9-647b4dcddf63,
+        "instance_name": "sample-instance",
         "plan": "sample-plan",
         "type": "sample-service"
     }
@@ -421,16 +453,23 @@ Map structure:
 Template:
 
 ```yaml
-secretTemplate: |
-  apiVersion: v1
-  kind: Secret
-  metadata:
-    labels:
-      instance_plan: {{ .instance.plan }}
-    annotations:
-      instance_name: {{ .instance.instance_name }}
-  stringData:
-    PASSWORD: {{ .credentials.password }}
+apiVersion: services.cloud.sap.com/v1
+kind: ServiceBinding
+metadata:
+  name: sample-binding
+spec:
+  serviceInstanceName: sample-instance
+  secretTemplate: |
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      labels:
+        service_plan: {{ .instance.plan }}
+      annotations:
+        instance: {{ .instance.instance_name }}
+    stringData:
+      username: {{ .credentials.client_id }}
+      password: {{ .credentials.client_secret }}
 ```
 Result: The generated Secret contains the following content:
 
@@ -439,11 +478,12 @@ apiVersion: v1
 kind: Secret
 metadata:
   labels:
-    instance_plan: sample-plan
+    service_plan: sample-plan
   annotations:
-    instance_name: my-service-btp-name
-stringData: 
-  PASSWORD: ********
+    instance: sample-instance
+stringData:
+  username: admin
+  password: ********
 ```
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
