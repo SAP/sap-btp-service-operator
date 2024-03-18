@@ -366,7 +366,7 @@ stringData:
   uri: https://my-service.authentication.eu10.hana.ondemand.com
   client_id: admin
   client_secret: ********
-  instance_guid: 06fc67f4-21d4-41bb-a5a9-647b4dcddf63 // The service instance ID
+  instance_guid: your-sample-instance-guid // The service instance ID
   instance_name: sample-instance // Taken from the service instance external_name field if set. Otherwise from metadata.name
   plan: sample-plan // The service plan name                
   type: sample-service  // The service offering name
@@ -402,7 +402,7 @@ stringData:
       client_id: admin,
       client_secret: ********
     }
-    instance_guid: 06fc67f4-21d4-41bb-a5a9-647b4dcddf63 // The service instance ID
+    instance_guid: your-sample-instance-guid // The service instance ID
     instance_name: sample-binding // Taken from the service instance external_name field if set. Otherwise from metadata.name 
     plan: sample-plan // The service plan name
     type: sample-service // The service offering name
@@ -438,10 +438,10 @@ stringData:
         uri: https://my-service.authentication.eu10.hana.ondemand.com,
         client_id: admin,
         client_secret: ********,
-        instance_guid: 06fc67f4-21d4-41bb-a5a9-647b4dcddf63, // The service instance id
-        instance_name: sample-binding, // Taken from the service instance external_name field if set. Otherwise from metadata.name
-        plan: sample-plan, // The service plan name
-        type: sample-service, // The service offering name
+        instance_guid: your-sample-instance-guid, // The service instance id
+        instance_name: sample-instance-name, // Taken from the service instance external_name field if set. Otherwise from metadata.name
+        plan: sample-instance-plan, // The service plan name
+        type: sample-instance-offering, // The service offering name
     }
 ```
 ###### Custom Templates
