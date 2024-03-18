@@ -497,7 +497,7 @@ The sample-binding map on which your-Go-template operates is in the JSON format:
     "client_secret": "********"
   },
     "instance": {
-        "instance_guid": 06fc67f4-21d4-41bb-a5a9-647b4dcddf63,
+        "instance_guid": your-sample-instance-guid,
         "instance_name": "sample-instance",
         "plan": "sample-plan",
         "type": "sample-service"
