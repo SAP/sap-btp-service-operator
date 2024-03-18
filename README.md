@@ -19,7 +19,7 @@ The SAP BTP service operator is based on the [Kubernetes Operator pattern](https
 * [Using the SAP BTP Service Operator](#using-the-sap-btp-service-operator)
     * [Service Instance](#service-instance)
     * [Service Binding](#service-binding)
-      * [Formats of output Secret](#formats-of-output-secret)
+      * [Secret Formats](#secret-formats)
       * [Service Binding Rotation](#service-binding-rotation)
     * [Passing parameters](#passing-parameters)
 * [Reference Documentation](#reference-documentation)
@@ -286,31 +286,34 @@ SAP BTP service operator search for the credentials in the following order:
 
 #### Service Binding
 
-1.  To get access credentials to your service instance and make it available in the cluster so that your applications can use it, create a `ServiceBinding` custom resource, and set the `serviceInstanceName` field to the name of the `ServiceInstance` resource you created.
+To allow applications to access a service instance in your cluster, create a `ServiceBinding` custom resource. Set the `serviceInstanceName` field within the `ServiceBinding` to match the name of the `ServiceInstance` resource you previously created.
 
-   The credentials are stored in a secret created in your cluster.
+This `ServiceBinding` is then exposed to users through a generated output: a `Secret` resource that contains securely-stored access credentials needed to connect to the `ServiceInstance`. 
+
+##### Structure of the ServiceBinding Custom Resource
 
 ```yaml
 apiVersion: services.cloud.sap.com/v1
 kind: ServiceBinding
 metadata:
-  name: my-binding
+  name: sample-binding
 spec:
-  serviceInstanceName: my-service-instance
+  serviceInstanceName: sample-instance
   externalName: my-binding-external
   secretName: my-secret
   parameters:
     key1: val1
     key2: val2      
 ```
+##### Procedure
 
-2.  Apply the custom resource file in your cluster to create the binding.
+1.  Apply the custom resource file in your cluster to create the `ServiceBinding`:
 
     ```bash
     kubectl apply -f path/to/my-binding.yaml
     ```
 
-3.  Check that your binding status is **Created**.
+2.  Verify that your binding status is **Created** before you proceed:
 
     ```bash
     kubectl get servicebindings
@@ -319,7 +322,7 @@ spec:
     
     ```
 
-4.  Check that a secret with the same name as the name of your binding is created. The secret contains the service credentials that apps in your cluster can use to access the service.
+3.  Check that the `Secret` with the same name as the name of your `ServiceBinding` is created. Remember, you need this custom resource to obtain the access credentials needed for the apps to use the service:
 
     ```bash
     kubectl get secrets
@@ -331,11 +334,20 @@ spec:
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
-##### Formats of Output Secret
+##### Secret Formats
 
-###### Key- Value Pairs (Default)
-Binding triggers the creation of the Secret resource.
-The Secret includes credentials returned from the broker and the attributes of the service instance related to the binding:
+You can use different attributes in your `ServiceBinding` resource for the purpose of generating different formats of your `Secret` resources.
+
+Even though `Secret` resources can come in various formats, they all share a common basic content. The parameters within the `Secret` fall into two categories:
+
+- Credentials returned from the broker: These credentials allow your applications to connect to the `ServiceInstance`.
+- Attributes of the associated `ServiceInstance`: This information provides details about the service instance itself.
+  
+Now let's explore these various formats:
+
+###### Key-Value Pairs (Default)
+
+Input:
 
 ```yaml
 apiVersion: services.cloud.sap.com/v1
@@ -345,6 +357,7 @@ metadata:
 spec:
   serviceInstanceName: sample-instance
 ```
+Putput:
 
 ```yaml
 apiVersion: v1
@@ -360,8 +373,11 @@ stringData:
 ```
 
 ###### Credentials as JSON Object
-To show credentials returned from the broker as a JSON object, use the 'secretKey' attribute in the service binding spec.
-The value of 'secretKey' must be the name of the key that stores the credentials in JSON format.
+
+To show credentials returned from the broker within the `Secret` resource  as a JSON object, use the 'secretKey' attribute in the `ServiceBinding` spec.
+The value of this 'secretKey' must be the name of the key that stores the credentials in JSON format:
+
+Input:
 
 ```yaml
 apiVersion: services.cloud.sap.com/v1
@@ -372,6 +388,7 @@ spec:
   serviceInstanceName: sample-instance
   secretKey: your-secretKey-value
 ```
+Output:
 
 ```yaml
 apiVersion: v1
@@ -389,12 +406,15 @@ stringData:
     instance_name: sample-binding // Taken from the service instance external_name field if set. Otherwise from metadata.name 
     plan: sample-plan // The service plan name
     type: sample-service // The service offering name
-```
 
 ###### Credentials and Service Info as One JSON Object
-To show both credentials returned from the broker and service instance info as a JSON object, use the 'secretRootKey' attribute in the service binding spec.
 
-The value of 'secretRootKey' is the name of the key that stores both credentials and serivce instance info in JSON format.
+To show both credentials returned from the broker and additional `ServiceInstance` attributes as a JSON object, use the 'secretRootKey' attribute in the `ServiceBinding` spec.
+
+The value of 'secretRootKey' is the name of the key that stores both credentials and `ServiceInstance` info in JSON format.
+
+Input:
+
 ```yaml
 apiVersion: services.cloud.sap.com/v1
 kind: ServiceBinding
@@ -404,6 +424,7 @@ spec:
   serviceInstanceName: sample-instance
   secretRootKey: your-secretRootKey-value
 ```
+Output:
 
 ```yaml
 apiVersion: v1
@@ -417,42 +438,34 @@ stringData:
         client_id: admin,
         client_secret: ********,
         instance_guid: 06fc67f4-21d4-41bb-a5a9-647b4dcddf63, // The service instance id
-        instance_name: sample-binding, // Taken from the service instance external_name field if set. Otherwise from metadata.name 
+        instance_name: sample-binding, // Taken from the service instance external_name field if set. Otherwise from metadata.name
         plan: sample-plan, // The service plan name
         type: sample-service, // The service offering name
     }
 ```
-###### Custom Template Format
-You can model the Secret according to your specific needs.
-To generate a custom-formatted secret, use the secretTemplate attribute in the service binding spec.
-The value of secretTemplate should be a Go template that will be employed to generate the secret. The template will operate on a map constructed from two fields:
+###### Custom Templates
 
-1. "credentials": Credentials received from Service Manager.
-2. "instance": Service instance information.
+For additional flexibility, you can also model your `Secret` resources according to your specific needs.
+To generate a custom-formatted `Secret`, use the `secretTemplate` attribute in the `ServiceBinding` spec.
+The value of `secretTemplate` must be a Go template. 
 
-For Go templates see https://pkg.go.dev/text/template
+Refer to [Go Templates](https://pkg.go.dev/text/template) for more details.
 
-*Note:<br> if secretTemplate is used, the secretKey and secretRootKey attributes are ignored.*
+*Note:<br> if secretTemplate is used, the secretKey and secretRootKey attributes are ignored if provided.*
 
-Here is an example:
 
-Map structure:
-```json
-{
-  "credentials": {
-    "uri": "https://my-service.authentication.eu10.hana.ondemand.com",
-    "client_id": "admin",
-    "client_secret": "********"
-  },
-    "instance": {
-        "instance_guid": 06fc67f4-21d4-41bb-a5a9-647b4dcddf63,
-        "instance_name": "sample-instance",
-        "plan": "sample-plan",
-        "type": "sample-service"
-    }
-}
+Input:
+
+```yaml
+apiVersion: services.cloud.sap.com/v1
+kind: ServiceBinding
+metadata:
+  name: sample-binding
+spec:
+  serviceInstanceName: sample-instance
+  secretTemplate: your-Go-template
 ```
-Template:
+your-Go-template:
 
 ```yaml
 apiVersion: services.cloud.sap.com/v1
@@ -473,7 +486,25 @@ spec:
       username: {{ .credentials.client_id }}
       password: {{ .credentials.client_secret }}
 ```
-Result: The generated Secret contains the following content:
+The sample-binding map on which your-Go-template operates is in the JSON format:
+
+```json
+{
+  "credentials": {
+    "uri": "https://my-service.authentication.eu10.hana.ondemand.com",
+    "client_id": "admin",
+    "client_secret": "********"
+  },
+    "instance": {
+        "instance_guid": 06fc67f4-21d4-41bb-a5a9-647b4dcddf63,
+        "instance_name": "sample-instance",
+        "plan": "sample-plan",
+        "type": "sample-service"
+    }
+}
+```
+
+Output: 
 
 ```yaml
 apiVersion: v1
