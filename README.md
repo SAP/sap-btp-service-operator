@@ -336,7 +336,7 @@ spec:
 
 ##### Secret Formats
 
-You can use different attributes in your `ServiceBinding` resource for the purpose of generating different formats of your `Secret` resources.
+You can use different attributes in your `ServiceBinding` resource to generate different formats of your `Secret` resources.
 
 Even though `Secret` resources can come in various formats, they all share a common basic content. The parameters within the `Secret` fall into two categories:
 
