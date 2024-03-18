@@ -203,7 +203,7 @@ stringData:
 
 You can deploy service instances belonging to different subaccounts within the same namespace. To achieve this, follow these steps:
 
-1. Store access credentials: Securely store the access credentials for each subaccount in separate secrets within the centrally-managed namespace.
+1. Store access credentials: Securely store the access credentials for each subaccount in separate secrets within the centrally managed namespace.
 2. Specify subaccount per service: In the `ServiceInstance` resource, use the `btpAccessCredentialsSecret` property to reference the specific secret containing the relevant subaccount's credentials. This explicitly tells the operator which subaccount to use for provisioning the service instance.
 
 
@@ -286,9 +286,9 @@ SAP BTP service operator searches for the credentials in the following order:
 
 #### Service Binding
 
-To allow applications to obtain access credentials to communicate with a service, create a `ServiceBinding` custom resource. Set the `serviceInstanceName` field within the `ServiceBinding` to match the name of the `ServiceInstance` resource you previously created.
+To allow an application to obtain access credentials to communicate with a service, create a `ServiceBinding` custom resource. Set the `serviceInstanceName` field within the `ServiceBinding` to match the name of the `ServiceInstance` resource you previously created.
 
-These access credentials are then available to applications through a `Secret` resource that is generated in your cluster.
+These access credentials are available to applications through a `Secret` resource generated in your cluster.
 
 ##### Structure of the ServiceBinding Custom Resource
 
@@ -322,7 +322,7 @@ spec:
     
     ```
 
-3.  Check that the `Secret` with the same specified in the  `spec.secretName ` of the `ServiceBinding` custom resource is created. Remember, the `Secret` contains access credentials needed for the apps to use the service:
+3.  Check that the `Secret` with the same as specified in the  `spec.secretName field ` of the `ServiceBinding` custom resource is created. Remember, the `Secret` contains access credentials needed for the apps to use the service:
 
     ```bash
     kubectl get secrets
@@ -388,7 +388,7 @@ metadata:
   name: sample-binding
 spec:
   serviceInstanceName: sample-instance
-  secretKey: your-secretKey-value
+  secretKey: myCredentials
 ```
 `Secret`
 
@@ -398,7 +398,7 @@ kind: Secret
 metadata:
   name: sample-binding
 stringData:
-    your-secretKey-value:
+    myCredentials:
     {
       uri: https://my-service.authentication.eu10.hana.ondemand.com,
       client_id: admin,
@@ -425,7 +425,7 @@ metadata:
   name: sample-binding
 spec:
   serviceInstanceName: sample-instance
-  secretRootKey: your-secretRootKey-value
+  secretRootKey: myCredentialsAndInstance
 ```
 `Secret`
 
@@ -435,7 +435,7 @@ kind: Secret
 metadata:
   name: sample-binding
 stringData:
-    your-secretRootKey-value:
+    myCredentialsAndInstance:
     {
         uri: https://my-service.authentication.eu10.hana.ondemand.com,
         client_id: admin,
@@ -466,7 +466,7 @@ metadata:
   name: sample-binding
 spec:
   serviceInstanceName: sample-instance
-  secretTemplate: your-Go-template
+  secretTemplate: Go-template-spec
 ```
 Go template spec:
 
@@ -507,7 +507,7 @@ The sample-binding map on which your-Go-template operates is in the JSON format:
 }
 ```
 
-Output: 
+`Secret`: 
 
 ```yaml
 apiVersion: v1
@@ -518,8 +518,8 @@ metadata:
   annotations:
     instance: sample-instance
 stringData:
-  username: admin
-  password: ********
+  USERNAME: admin
+  PASSWORD: ********
 ```
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
