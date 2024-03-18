@@ -357,7 +357,7 @@ metadata:
 spec:
   serviceInstanceName: sample-instance
 ```
-Putput:
+Output:
 
 ```yaml
 apiVersion: v1
@@ -406,6 +406,7 @@ stringData:
     instance_name: sample-binding // Taken from the service instance external_name field if set. Otherwise from metadata.name 
     plan: sample-plan // The service plan name
     type: sample-service // The service offering name
+```
 
 ###### Credentials and Service Info as One JSON Object
 
