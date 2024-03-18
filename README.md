@@ -19,7 +19,7 @@ The SAP BTP service operator is based on the [Kubernetes Operator pattern](https
 * [Using the SAP BTP Service Operator](#using-the-sap-btp-service-operator)
     * [Service Instance](#service-instance)
     * [Service Binding](#service-binding)
-      * [Secret Formats](#secret-formats)
+      * [Formats of Service Binding Secrets](#formats-of-service-binding-secrets)
       * [Service Binding Rotation](#service-binding-rotation)
     * [Passing parameters](#passing-parameters)
 * [Reference Documentation](#reference-documentation)
@@ -45,8 +45,8 @@ It is implemented using a [CRDs-based](https://kubernetes.io/docs/concepts/exten
 
 ## Setup
 1. Install [cert-manager](https://cert-manager.io/docs/installation/kubernetes)
-   - for releases v0.1.18 or higher use cert manager v1.6.0 or higher 
-   - for releases v0.1.17 or lower use cert manager lower then v1.6.0
+   - for releases v0.1.18 or higher use cert-manager v1.6.0 or higher 
+   - for releases v0.1.17 or lower use cert-manager lower than v1.6.0
 
 2. Obtain the access credentials for the SAP BTP service operator:
 
@@ -98,12 +98,12 @@ It is implemented using a [CRDs-based](https://kubernetes.io/docs/concepts/exten
    ```bash
     helm repo add sap-btp-operator https://sap.github.io/sap-btp-service-operator
    ```
-4. Deploy the the SAP BTP service operator in the cluster using the obtained access credentials:<br>
+4. Deploy the SAP BTP service operator in the cluster using the obtained access credentials:<br>
    
    *Note:<br>
     If you are deploying the SAP BTP service operator in the registered cluster based on the Service Catalog (svcat) and Service Manager agent so that you can migrate svcat-based content to service operator-based content, add ```--set cluster.id=<clusterID>  ``` to your deployment script.*<br>*For more information, see the step 2 of the Setup section of [Migration to SAP BTP service operator](https://github.com/SAP/sap-btp-service-operator-migration/blob/main/README.md).*
    
-   The example of the deployment that uses the default access credentials type:
+   An example of the deployment that uses the default access credentials type:
     ```bash
     helm upgrade --install <release-name> sap-btp-operator/sap-btp-operator \
         --create-namespace \
@@ -113,7 +113,7 @@ It is implemented using a [CRDs-based](https://kubernetes.io/docs/concepts/exten
         --set manager.secret.sm_url=<sm_url> \
         --set manager.secret.tokenurl=<auth_url>
     ```
-   The example of the deployment that uses the X.509 access credentials type:
+   An example of the deployment that uses the X.509 access credentials type:
     ```bash
     helm upgrade --install <release-name> sap-btp-operator/sap-btp-operator \
         --create-namespace \
@@ -147,7 +147,7 @@ stringData:
 ```
 </details>
 
-**Note:**<br> In order to rotate the credentials between the BTP service operator and Service Manager, you have to create a new binding for the service-operator-access service instance, and then to execute the setup script again, with the new set of credentials. Afterwards you can delete the old binding.
+**Note:**<br> To rotate the credentials between the BTP service operator and Service Manager, you have to create a new binding for the service-operator-access service instance, and then to execute the setup script again, with the new set of credentials. Afterward, you can delete the old binding.
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
@@ -173,15 +173,15 @@ However, the SAP BTP service operator also supports multi-subaccount configurati
   
 - Explicit instance-level mapping: Define the specific subaccount for each service instance, regardless of the namespace context.
 
-  Both can be achieved through dedicated secrets managed in the centrally-managed namespace. Choosing the most suitable approach depends on your specific needs and application architecture.
+  Both can be achieved through dedicated secrets managed in the centrally managed namespace. Choosing the most suitable approach depends on your specific needs and application architecture.
 
 **Note:**
-The system's centrally-managed namespace is set by the value in `.Values.manager.management_namespace`. You can provide this value during installation (refer to step 4 in the [Setup](#setup) section).
+The system's centrally managed namespace is set by the value in `.Values.manager.management_namespace`. You can provide this value during installation (refer to step 4 in the [Setup](#setup) section).
 If you don't specify this value, the system will use the installation namespace as the default.
 
 ### Subaccount For a Namespace
 
-To associate namespace to a specific subaccount you maintain the access credentials to the subaccount in a secret which is dedicated to a specific namespace.
+To associate a namespace to a specific subaccount you maintain the access credentials to the subaccount in a secret that is dedicated to a specific namespace.
 Define a secret named: `<namespace-name>-sap-btp-service-operator` in the Centrally Managed Namespace.
 
 ```yaml
@@ -235,8 +235,8 @@ spec:
   btpAccessCredentialsSecret: mybtpsecret
 ```
 
-##### Secrets Presedence
-SAP BTP service operator search for the credentials in the following order:
+##### Secrets Precedence
+SAP BTP service operator searches for the credentials in the following order:
 1. Explicit secret defined in the `ServiceInstance`
 2. Default namespace secret
 3. Default cluster secret
@@ -269,7 +269,7 @@ SAP BTP service operator search for the credentials in the following order:
         Tip: Use the *Environment* filter to get all offerings that are relevant for Kubernetes.
    *   `<plan>` - The plan of the selected service offering that you want to create.
 
-2.  Apply the custom-resource file in your cluster to create the instance.
+2.  Apply the custom resource file in your cluster to create the instance.
 
     ```bash
     kubectl apply -f path/to/my-service-instance.yaml
@@ -286,9 +286,9 @@ SAP BTP service operator search for the credentials in the following order:
 
 #### Service Binding
 
-To allow applications to access a service instance in your cluster, create a `ServiceBinding` custom resource. Set the `serviceInstanceName` field within the `ServiceBinding` to match the name of the `ServiceInstance` resource you previously created.
+To allow applications to obtain access credentials to communicate with a service, create a `ServiceBinding` custom resource. Set the `serviceInstanceName` field within the `ServiceBinding` to match the name of the `ServiceInstance` resource you previously created.
 
-This `ServiceBinding` is then exposed to users through a generated output: a `Secret` resource that contains securely-stored access credentials needed to connect to the `ServiceInstance`. 
+These access credentials are then available to applications through a `Secret` resource that is generated in your cluster.
 
 ##### Structure of the ServiceBinding Custom Resource
 
@@ -313,7 +313,7 @@ spec:
     kubectl apply -f path/to/my-binding.yaml
     ```
 
-2.  Verify that your binding status is **Created** before you proceed:
+2.  Verify that your `ServiceBinding` status is **Created** before you proceed:
 
     ```bash
     kubectl get servicebindings
@@ -322,7 +322,7 @@ spec:
     
     ```
 
-3.  Check that the `Secret` with the same name as the name of your `ServiceBinding` is created. Remember, you need this custom resource to obtain the access credentials needed for the apps to use the service:
+3.  Check that the `Secret` with the same specified in the  `spec.secretName ` of the `ServiceBinding` custom resource is created. Remember, the `Secret` contains access credentials needed for the apps to use the service:
 
     ```bash
     kubectl get secrets
@@ -334,20 +334,20 @@ spec:
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
-##### Secret Formats
+##### Formats of Service Binding Secrets
 
 You can use different attributes in your `ServiceBinding` resource to generate different formats of your `Secret` resources.
 
 Even though `Secret` resources can come in various formats, they all share a common basic content. The parameters within the `Secret` fall into two categories:
 
-- Credentials returned from the broker: These credentials allow your applications to connect to the `ServiceInstance`.
+- Credentials returned from the broker: These credentials allow your applications to access and consume the service.
 - Attributes of the associated `ServiceInstance`: This information provides details about the service instance itself.
   
 Now let's explore these various formats:
 
 ###### Key-Value Pairs (Default)
 
-Input:
+`ServiceBinding`
 
 ```yaml
 apiVersion: services.cloud.sap.com/v1
@@ -357,10 +357,12 @@ metadata:
 spec:
   serviceInstanceName: sample-instance
 ```
-Output:
+`Secret`
 
 ```yaml
 apiVersion: v1
+metadata:
+  name: sample-binding
 kind: Secret
 stringData:
   uri: https://my-service.authentication.eu10.hana.ondemand.com
@@ -375,9 +377,9 @@ stringData:
 ###### Credentials as JSON Object
 
 To show credentials returned from the broker within the `Secret` resource  as a JSON object, use the 'secretKey' attribute in the `ServiceBinding` spec.
-The value of this 'secretKey' must be the name of the key that stores the credentials in JSON format:
+The value of this 'secretKey' is the name of the key that stores the credentials in JSON format:
 
-Input:
+`ServiceBinding`
 
 ```yaml
 apiVersion: services.cloud.sap.com/v1
@@ -388,7 +390,7 @@ spec:
   serviceInstanceName: sample-instance
   secretKey: your-secretKey-value
 ```
-Output:
+`Secret`
 
 ```yaml
 apiVersion: v1
@@ -414,7 +416,7 @@ To show both credentials returned from the broker and additional `ServiceInstanc
 
 The value of 'secretRootKey' is the name of the key that stores both credentials and `ServiceInstance` info in JSON format.
 
-Input:
+`ServiceBinding`
 
 ```yaml
 apiVersion: services.cloud.sap.com/v1
@@ -425,7 +427,7 @@ spec:
   serviceInstanceName: sample-instance
   secretRootKey: your-secretRootKey-value
 ```
-Output:
+`Secret`
 
 ```yaml
 apiVersion: v1
@@ -455,7 +457,7 @@ Refer to [Go Templates](https://pkg.go.dev/text/template) for more details.
 *Note:<br> if secretTemplate is used, the secretKey and secretRootKey attributes are ignored if provided.*
 
 
-Input:
+`ServiceBinding`
 
 ```yaml
 apiVersion: services.cloud.sap.com/v1
@@ -466,7 +468,7 @@ spec:
   serviceInstanceName: sample-instance
   secretTemplate: your-Go-template
 ```
-your-Go-template:
+Go template spec:
 
 ```yaml
 apiVersion: services.cloud.sap.com/v1
@@ -484,8 +486,8 @@ spec:
       annotations:
         instance: {{ .instance.instance_name }}
     stringData:
-      username: {{ .credentials.client_id }}
-      password: {{ .credentials.client_secret }}
+      USERNAME: {{ .credentials.client_id }}
+      PASSWORD: {{ .credentials.client_secret }}
 ```
 The sample-binding map on which your-Go-template operates is in the JSON format:
 
@@ -546,7 +548,7 @@ You can trigger an immediate rotation (regardless of the configured `rotationFre
 
 **Note**
 
-The `credentialsRotationPolicy` has no control over the credentials validity. The content and expiration time of the credentials is determined by the service you're using.
+The `credentialsRotationPolicy` has no control over the validity of the credentials. The content and expiration time of the credentials is determined by the service you're using.
 
 **Example**
 
@@ -578,8 +580,8 @@ To view the timestamp of the last service binding rotation, refer to the `status
 
 ### Limitations
 
-Automatic credential rotation cannot be enabled for a backup `ServiceBinding` (named: original-binding-name(variable)-guid(variable)) which marked with the `services.cloud.sap.com/stale` label.
-This backup service binding was created during the credentials rotation proces to facilitate the process.
+Automatic credential rotation cannot be enabled for a backup `ServiceBinding` (named: original-binding-name(variable)-guid(variable)) which is marked with the `services.cloud.sap.com/stale` label.
+This backup service binding was created during the credentials rotation process to facilitate the process.
 
 ### Further Information
 
@@ -591,24 +593,24 @@ For more details about `ServiceBinding`, refer to the dedicated [Service Binding
 ### Passing Parameters
 To set input parameters, you may use the `parameters` and `parametersFrom`
 fields in the `spec` field of the `ServiceInstance` or `ServiceBinding` resource:
-- `parameters` : can be used to specify a set of properties to be sent to the
+- `parameters`: can be used to specify a set of properties to be sent to the
   broker. The data specified will be passed "as-is" to the broker without any
   modifications - aside from converting it to JSON for transmission to the broker
   in the case of the `spec` field being specified as `YAML`. Any valid `YAML` or
-  `JSON` constructs are supported. Only one parameters field may be specified per
+  `JSON` constructs are supported. Only one parameter field may be specified per
   `spec`.
-- `parametersFrom` : can be used to specify which secret, and key in that secret,
-  which contains a `string` that represents the json to include in the set of
-  parameters to be sent to the broker. The `parametersFrom` field is a list which
+- `parametersFrom`: can be used to specify which secret, and key in that secret,
+  which contains a `string` that represents the JSON to include in the set of
+  parameters to be sent to the broker. The `parametersFrom` field is a list that
   supports multiple sources referenced per `spec`.
 
 You may use either, or both, of these fields as needed.
 
-If multiple sources in `parameters` and `parametersFrom` blocks are specified,
+If multiple sources in the `parameters` and `parametersFrom` blocks are specified,
 the final payload is a result of merging all of them at the top level.
 If there are any duplicate properties defined at the top level, the specification
 is considered to be invalid, the further processing of the `ServiceInstance`/`ServiceBinding`
-resource stops and its `status` is marked with error condition.
+resource stops and its `status` is marked with an error condition.
 
 The format of the `spec` in YAML
 ```yaml
@@ -646,14 +648,14 @@ type: Opaque
 stringData:
   secret-parameter:
     '{
-      "password": "letmein"
+      "password": "password"
     }'
 ```
 The final JSON payload to send to the broker:
 ```json
 {
   "name": "value",
-  "password": "letmein"
+  "password": "password"
 }
 ```
 
@@ -661,7 +663,7 @@ You can list multiple parameters in the `secret`. To do so, separate "key": "val
 ```yaml
 secret-parameter:
   '{
-    "password": "letmein",
+    "password": "password",
     "key2": "value2",
     "key3": "value3"
   }'
@@ -676,14 +678,14 @@ secret-parameter:
 |:-----------------|:---------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | serviceOfferingName`*` | `string` | The name of the SAP BTP service offering.                                                                                                                                                                         |
 | servicePlanName`*` | `string` | The plan to use for the service instance.                                                                                                                                                                         |
-| servicePlanID   |  `string`  | The plan ID in case service offering and plan name are ambiguous.                                                                                                                                                 |
+| servicePlanID   |  `string`  | The plan ID in case the service offering and plan name are ambiguous.                                                                                                                                                 |
 | externalName       | `string` | The name for the service instance in SAP BTP, defaults to the instance `metadata.name` if not specified.                                                                                                          |
 | parameters       | `[]object` | Some services support the provisioning of additional configuration parameters during the instance creation.<br/>For the list of supported parameters, check the documentation of the particular service offering. |
 | parametersFrom | `[]object` | List of sources to populate parameters.                                                                                                                                                                           |
-| customTags | `[]string` | List of custom tags describing the ServiceInstance, will be copied to `ServiceBinding` secret in the key called `tags`.                                                                                           |
+| customTags | `[]string` | A List of custom tags describing the ServiceInstance, will be copied to `ServiceBinding` secret in the key called `tags`.                                                                                           |
 | userInfo | `object` | Contains information about the user that last modified this service instance.                                                                                                                                     |
 | shared |  `*bool`   | The shared state. Possible values: true, false, or nil (value was not specified, counts as "false").                                                                                                              |
-| btpAccessCredentialsSecret |  `string`   | Name of a secret which contain access credentials for the SAP BTP service operator. see [Working with Multiple Subaccounts](#Working-with-multiple-subaccounts)                                                                                 |
+| btpAccessCredentialsSecret |  `string`   | Name of a secret that contains access credentials for the SAP BTP service operator. see [Working with Multiple Subaccounts](#Working-with-multiple-subaccounts)                                                                                 |
 
 
 #### Status
@@ -692,10 +694,10 @@ secret-parameter:
 | instanceID   | `string` | The service instance ID in SAP Service Manager service.  |
 | operationURL | `string` | The URL of the current operation performed on the service instance.  |
 | operationType   |  `string`| The type of the current operation. Possible values are CREATE, UPDATE, or DELETE. |
-| conditions       |  `[]condition`   | An array of conditions describing the status of the service instance.<br/>The possible condition types are:<br>- `Ready`: set to `true`  if the instance is ready and usable<br/>- `Failed`: set to `true` when an operation on the service instance fails.<br/> In the case of failure, the details about the error are available in the condition message.<br>- `Succeeded`: set to `true` when an operation on the service instance succeeded. In case of `false` operation considered as in progress unless `Failed` condition exists.<br>- `Shared`: set to `true` when sharing of the service instance succeeded. set to `false` when unsharing of the service instance succeeded or when service instance is not shared. |
-| tags       |  `[]string`   | Tags describing the ServiceInstance as provided in service catalog, will be copied to `ServiceBinding` secret in the key called `tags`.|
+| conditions       |  `[]condition`   | An array of conditions describing the status of the service instance.<br/>The possible condition types are:<br>- `Ready`: set to `true`  if the instance is ready and usable<br/>- `Failed`: set to `true` when an operation on the service instance fails.<br/> In the case of failure, the details about the error are available in the condition message.<br>- `Succeeded`: set to `true` when an operation on the service instance succeeded. In case of a `false` operation, it is considered as in progress unless a `Failed` condition exists.<br>- `Shared`: set to `true` when sharing of the service instance succeeded. set to `false` when unsharing of the service instance succeeded or when the service instance is not shared. |
+| tags       |  `[]string`   | Tags describing the ServiceInstance as provided in the service catalog, will be copied to the `ServiceBinding` secret in the key called `tags`.|
 
-#### Anotations
+#### Annotations
 | Parameter         | Type                 | Description                                                                                                                                                                                                                         |
 |:-----------------|:---------------------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | services.cloud.sap.com/preventDeletion   | `map[string] string` | You can prevent deletion of any service instance by adding the following annotation: services.cloud.sap.com/preventDeletion : "true". To enable back the deletion of the instance, either remove the annotation or set it to false. |
@@ -707,8 +709,8 @@ secret-parameter:
 | serviceInstanceName`*`   | `string`   | The Kubernetes name of the service instance to bind, should be in the namespace of the binding.                                                                                                                                                                                                                                                                     |
 | externalName       | `string`   | The name for the service binding in SAP BTP, defaults to the binding `metadata.name` if not specified.                                                                                                                                                                                                                                                              |
 | secretName       | `string`   | The name of the secret where the credentials are stored, defaults to the binding `metadata.name` if not specified.                                                                                                                                                                                                                                                  |
-| secretKey | `string`  | The secret key is a part of the Secret object, which stores service binding data (credentials) received from the broker. When the secret key is used, all the credentials are stored under a single key. This makes it a convenient way to store credentials data in one file when using volumeMounts. [Example](#formats-of-secret-objects)                        |
-| secretRootKey | `string`  | The root key is a part of the Secret object, which stores service binding data (credentials) received from the broker, as well as additional service instance information. When the root key is used, all data is stored under a single key. This makes it a convenient way to store data in one file when using volumeMounts. [Example](#formats-of-secret-objects) |
+| secretKey | `string`  | The secret key is a part of the Secret object, which stores service-binding data (credentials) received from the broker. When the secret key is used, all the credentials are stored under a single key. This makes it a convenient way to store credentials data in one file when using volumeMounts. [Example](#formats-of-secret-objects)                        |
+| secretRootKey | `string`  | The root key is a part of the Secret object, which stores service-binding data (credentials) received from the broker, as well as additional service instance information. When the root key is used, all data is stored under a single key. This makes it a convenient way to store data in one file when using volumeMounts. [Example](#formats-of-secret-objects) |
 | parameters       |  `[]object`  | Some services support the provisioning of additional configuration parameters during the bind request.<br/>For the list of supported parameters, check the documentation of the particular service offering.                                                                                                                                                        |
 | parametersFrom | `[]object` | List of sources to populate parameters.                                                                                                                                                                                                                                                                                                                             |
 | userInfo | `object`  | Contains information about the user that last modified this service binding.                                                                                                                                                                                                                                                                                        |
@@ -716,7 +718,7 @@ secret-parameter:
 | credentialsRotationPolicy.enabled | `boolean`  | Indicates whether automatic credentials rotation are enabled.                                                                                                                                                                                                                                                                                                       |
 | credentialsRotationPolicy.rotationFrequency | `duration`  | Specifies the frequency at which the binding rotation is performed.                                                                                                                                                                                                                                                                                                 |
 | credentialsRotationPolicy.rotatedBindingTTL | `duration`  | Specifies the time period for which to keep the rotated binding.                                                                                                                                                                                                                                                                                                    |
-| SecretTemplate | `string`  | A Go template is used to generate a custom Kubernetes v1/Secret, using data from both the service binding returned by Service Manager and instance information.
+| SecretTemplate | `string`  | A Go template used to generate a custom Kubernetes v1/Secret, working on both the access credentials returned by the broker and instance attributes. Refer to [Go Templates](https://pkg.go.dev/text/template) for more details.
 
 
 
@@ -727,7 +729,7 @@ secret-parameter:
 | bindingID   |  `string`  | The service binding ID in SAP Service Manager service. |
 | operationURL |`string`| The URL of the current operation performed on the service binding. |
 | operationType| `string `| The type of the current operation. Possible values are CREATE, UPDATE, or DELETE. |
-| conditions| `[]condition` | An array of conditions describing the status of the service instance.<br/>The possible conditions types are:<br/>- `Ready`: set to `true` if the binding is ready and usable<br/>- `Failed`: set to `true` when an operation on the service binding fails.<br/> In the case of failure, the details about the error are available in the condition message.<br>- `Succeeded`: set to `true` when an operation on the service binding succeeded. In case of `false` operation considered as in progress unless `Failed` condition exists.
+| conditions| `[]condition` | An array of conditions describing the status of the service instance.<br/>The possible conditions types are <br/>- `Ready`: set to `true` if the binding is ready and usable<br/>- `Failed`: set to `true` when an operation on the service binding fails.<br/> In the case of failure, the details about the error are available in the condition message.<br>- `Succeeded`: set to `true` when an operation on the service binding succeeded. In case of a `false` operation considered as in progress unless a `Failed` condition exists.
 | lastCredentialsRotationTime| `time` | Indicates the last time the binding secret was rotated.
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
@@ -769,7 +771,7 @@ Example:
      
       - What to do:
       
-        First find the service instance or binding in question and fix it, then re-trigger the uninstalation. 
+        First, locate the service instance or binding in question and fix it, then re-trigger the uninstallation. 
 
         To find it, log on to the cluster and check the pre-delete job, or check the logs by running the following two commands:
         
@@ -778,7 +780,7 @@ Example:
           
         Note that the pre-delete job is only visible for approximately one minute after the job execution is completed. 
   
-        If you don't have an access to the pre-delete job, use kubectl to view details about the failed resource and check its status by running:
+        If you don't have access to the pre-delete job, use kubectl to view details about the failed resource and check its status by running:
         
           - `kubectl describe <resource_type> <resource_name>` 
           
@@ -816,9 +818,9 @@ smctl Example
 >   ```bash
   >   smctl unbind INSTANCE_NAME BINDING_NAME --param force_k8s_binding=true
   >   ```
-**Note:** `force_k8s_binding` is supported only for the Kubernetes instances that are in `Delete Failed` state.<br>
+**Note:** `force_k8s_binding` is supported only for the Kubernetes instances that are in the `Delete Failed` state.<br>
 
-You're welcome to raise issues related to feature requests, bugs, or give us general feedback on this project's GitHub Issues page.
+You're welcome to raise issues related to feature requests, or bugs, or give us general feedback on this project's GitHub Issues page.
 The SAP BTP service operator project maintainers will respond to the best of their abilities.
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
