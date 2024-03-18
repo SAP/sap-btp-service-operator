@@ -448,9 +448,9 @@ stringData:
 ```
 ###### Custom Templates
 
-For additional flexibility, you can also model your `Secret` resources according to your specific needs.
+For additional flexibility, you can model your `Secret` resources according to your specific needs.
 To generate a custom-formatted `Secret`, use the `secretTemplate` attribute in the `ServiceBinding` spec.
-The value of `secretTemplate` must be a Go template. 
+The value of the `secretTemplate` must be a Go template. 
 
 Refer to [Go Templates](https://pkg.go.dev/text/template) for more details.
 
@@ -468,7 +468,7 @@ spec:
   serviceInstanceName: sample-instance
   secretTemplate: Go-template-spec
 ```
-Go template spec:
+Go Template Spec:
 
 ```yaml
 apiVersion: services.cloud.sap.com/v1
@@ -507,7 +507,7 @@ The sample-binding map on which your-Go-template operates is in the JSON format:
 }
 ```
 
-`Secret`: 
+Generated `Secret`: 
 
 ```yaml
 apiVersion: v1
