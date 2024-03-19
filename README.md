@@ -267,7 +267,7 @@ SAP BTP service operator searches for the credentials in the following order:
        To learn more about viewing and managing the available services for your subaccount in the SAP BTP cockpit, see [Service Marketplace](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/affcc245c332433ba71917ff715b9971.html). 
         
         Tip: Use the *Environment* filter to get all offerings that are relevant for Kubernetes.
-   *   `<plan>` - The plan of the selected service offering that you want to create.
+   *   `<plan>` - The plan of the selected service offering you want to create.
 
 2.  Apply the custom resource file in your cluster to create the instance.
 
@@ -275,7 +275,7 @@ SAP BTP service operator searches for the credentials in the following order:
     kubectl apply -f path/to/my-service-instance.yaml
     ```
 
-3.  Check that the status of the service in your cluster is **Created**.
+3.  Check that the service's status in your cluster is **Created**.
 
     ```bash
     kubectl get serviceinstances
@@ -322,7 +322,7 @@ spec:
     
     ```
 
-3.  Check that the `Secret` with the same as specified in the  `spec.secretName field ` of the `ServiceBinding` custom resource is created. Remember, the `Secret` contains access credentials needed for the apps to use the service:
+3.  Check that the `Secret` with the same as specified in the  `spec.secretName` field  of the `ServiceBinding` custom resource is created. Remember, the `Secret` contains access credentials needed for the apps to use the service:
 
     ```bash
     kubectl get secrets
