@@ -322,7 +322,7 @@ spec:
     
     ```
 
-3.  Check that the `Secret` with the same as specified in the  `spec.secretName` field  of the `ServiceBinding` custom resource is created. Remember, the `Secret` contains access credentials needed for the apps to use the service:
+3.  Check that the `Secret` with the name as specified in the  `spec.secretName` field  of the `ServiceBinding` custom resource is created. Remember, the `Secret` contains access credentials needed for the apps to use the service:
 
     ```bash
     kubectl get secrets
