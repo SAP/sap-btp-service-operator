@@ -347,6 +347,8 @@ Now let's explore these various formats:
 
 ###### Key-Value Pairs (Default)
 
+If you do not use any of the attributes, the generated `Secret' will be in a key-value pair format. 
+
 `ServiceBinding`
 
 ```yaml
