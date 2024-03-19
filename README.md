@@ -347,7 +347,7 @@ Now let's explore these various formats:
 
 ###### Key-Value Pairs (Default)
 
-If you do not use any of the attributes, the generated `Secret' will be in a key-value pair format. 
+If you do not use any of the attributes, the generated `Secret` will be in a key-value pair format. 
 
 `ServiceBinding`
 
@@ -378,8 +378,8 @@ stringData:
 
 ###### Credentials as JSON Object
 
-To show credentials returned from the broker within the `Secret` resource  as a JSON object, use the 'secretKey' attribute in the `ServiceBinding` spec.
-The value of this 'secretKey' is the name of the key that stores the credentials in JSON format:
+To show credentials returned from the broker within the `Secret` resource  as a JSON object, use the `secretKey` attribute in the `ServiceBinding` spec.
+The value of this `secretKey` is the name of the key that stores the credentials in JSON format:
 
 `ServiceBinding`
 
@@ -414,9 +414,9 @@ stringData:
 
 ###### Credentials and Service Info as One JSON Object
 
-To show both credentials returned from the broker and additional `ServiceInstance` attributes as a JSON object, use the 'secretRootKey' attribute in the `ServiceBinding` spec.
+To show both credentials returned from the broker and additional `ServiceInstance` attributes as a JSON object, use the `secretRootKey` attribute in the `ServiceBinding` spec.
 
-The value of 'secretRootKey' is the name of the key that stores both credentials and `ServiceInstance` info in JSON format.
+The value of `secretRootKey` is the name of the key that stores both credentials and `ServiceInstance` info in JSON format.
 
 `ServiceBinding`
 
