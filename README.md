@@ -456,7 +456,7 @@ The value of the `secretTemplate` must be a Go template.
 
 Refer to [Go Templates](https://pkg.go.dev/text/template) for more details.
 
-*Note:<br> if secretTemplate is used, the secretKey and secretRootKey attributes are ignored if provided.*
+*Note:<br> If secretTemplate is used, the secretKey and secretRootKey attributes are ignored if provided.*
 
 
 `ServiceBinding`
@@ -491,24 +491,8 @@ spec:
       USERNAME: {{ .credentials.client_id }}
       PASSWORD: {{ .credentials.client_secret }}
 ```
-The sample-binding map on which your-Go-template operates is in the JSON format:
-
-```json
-{
-  "credentials": {
-    "uri": "https://my-service.authentication.eu10.hana.ondemand.com",
-    "client_id": "admin",
-    "client_secret": "********"
-  },
-    "instance": {
-        "instance_guid": your-sample-instance-guid,
-        "instance_name": "sample-instance",
-        "plan": "sample-plan",
-        "type": "sample-service"
-    }
-}
-```
-
+**Note**
+To see which credentials and `ServiceInstance` attributes you have at your disposal to generate a customized `Secret`, refer to the 
 Generated `Secret`: 
 
 ```yaml
