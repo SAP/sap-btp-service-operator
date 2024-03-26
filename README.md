@@ -467,7 +467,6 @@ The template can use the following data:
 | `instance.instance_name` |  The service instance name.   |                                                
 | `instance.plan`   |  The name of the service plan used to create this service instance. |  
 | `instance.type`   |  The name of the associated service offering. |  
-| `instance.type`   |  The name of the associated service offering. |  
 | `credentials.attributes(var)`   |  The content of the credentials depends on a service. For more details, refer to the documentation of the service you're using. |  
 
 `ServiceBinding`
