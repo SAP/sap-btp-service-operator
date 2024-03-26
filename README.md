@@ -456,21 +456,21 @@ The value of the `secretTemplate` must be a Go template.
 
 Refer to [Go Templates](https://pkg.go.dev/text/template) for more details.
 
-*Note:<br> If secretTemplate is used, the secretKey and secretRootKey attributes are ignored if provided.*
+**Note** 
+If `secretTemplate` is used, both `secretKey` and `secretRootKey` attributes are ignored when provided.
 
+The template can use the following data: 
+
+| Reference         | Description                                |                                                                          
+|:-----------------|:--------------------------------------------|
+| `instance.instance_guid` |  The service instance ID.     |
+| `instance.instance_name` |  The service instance name.   |                                                
+| `instance.plan`   |  The name of the service plan used to create this service instance. |  
+| `instance.type`   |  The name of the associated service offering. |  
+| `instance.type`   |  The name of the associated service offering. |  
+| `credentials.attributes(var)`   |  The content of the credentials depends on a service. For more details, refer to the documentation of the service you're using. |  
 
 `ServiceBinding`
-
-```yaml
-apiVersion: services.cloud.sap.com/v1
-kind: ServiceBinding
-metadata:
-  name: sample-binding
-spec:
-  serviceInstanceName: sample-instance
-  secretTemplate: Go-template-spec
-```
-Go Template Spec:
 
 ```yaml
 apiVersion: services.cloud.sap.com/v1
@@ -491,9 +491,8 @@ spec:
       USERNAME: {{ .credentials.client_id }}
       PASSWORD: {{ .credentials.client_secret }}
 ```
-**Note**
-To see which credentials and `ServiceInstance` attributes you have at your disposal to generate a customized `Secret`, refer to the 
-Generated `Secret`: 
+
+`Secret`
 
 ```yaml
 apiVersion: v1
