@@ -146,7 +146,7 @@ stringData:
   tokenurl: "<auth_url>"
   tokenurlsuffix: "/oauth/token"
 ```
-X.509 Certificate 
+mTLS Access Credentials
 
 ```yaml
 apiVersion: v1
@@ -218,7 +218,7 @@ stringData:
   tokenurl: "<auth_url>"
   tokenurlsuffix: "/oauth/token"
 ```
-X.509 Certificate 
+mTLS Access Credentials
 
 ```yaml
 apiVersion: v1
@@ -243,6 +243,23 @@ You can deploy service instances belonging to different subaccounts within the s
 
 
 #### Define a new secret
+
+Default Access Credentials
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sap-btp-service-operator
+  namespace: sap-btp-operator
+type: Opaque
+stringData:
+  clientid: "<clientid>"
+  clientsecret: "<clientsecret>"
+  sm_url: "<sm_url>"
+  tokenurl: "<auth_url>"
+  tokenurlsuffix: "/oauth/token"
+```
+
 ```yaml
 apiVersion: v1
 kind: Secret
@@ -257,7 +274,22 @@ stringData:
   tokenurl: "<auth_url>"
   tokenurlsuffix: "/oauth/token"
 ```
+mTLS Access Credentials
 
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sap-btp-service-operator
+  namespace: sap-btp-operator
+type: kubernetes.io/tls
+stringdata:
+  clientid: <clientid>
+  certificate: <certificate>
+  key: <key>
+  sm_url: <sm_url>
+  tokenurl: <auth_url>
+```
 #### Configure the secret name in the `ServiceInstance` resource within the property `btpAccessCredentialsSecret`:
 ```yaml
 apiVersion: services.cloud.sap.com/v1
