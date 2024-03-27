@@ -82,7 +82,7 @@ It is implemented using a [CRDs-based](https://kubernetes.io/docs/concepts/exten
          "sm_url": "https://service-manager.cfapps.eu10.hana.ondemand.com"
      }
     ```
-    The example of the binding object with the specified X.509 credentials type:
+    The example of the binding object with the specified X.509 certificate:
     
     ```json
     {
@@ -113,7 +113,7 @@ It is implemented using a [CRDs-based](https://kubernetes.io/docs/concepts/exten
         --set manager.secret.sm_url=<sm_url> \
         --set manager.secret.tokenurl=<auth_url>
     ```
-   An example of the deployment that uses the X.509 access credentials type:
+   An example of the deployment that uses the X.509 certificate:
     ```bash
     helm upgrade --install <release-name> sap-btp-operator/sap-btp-operator \
         --create-namespace \
@@ -131,6 +131,7 @@ These credentials are used by the BTP service operator to communicate with the S
 <details>
 <summary> BTP Access Secret Structure </summary>
 
+Default Access Credentials
 ```yaml
 apiVersion: v1
 kind: Secret
@@ -145,7 +146,25 @@ stringData:
   tokenurl: "<auth_url>"
   tokenurlsuffix: "/oauth/token"
 ```
+X.509 Certificate 
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sap-btp-service-operator
+  namespace: sap-btp-operator
+type: kubernetes.io/tls
+stringdata:
+  clientid: <clientid>
+  certificate: <certificate>
+  key: <key>
+  sm_url: <sm_url>
+  tokenurl: <auth_url>
+```
+
 </details>
+
 
 **Note:**<br> To rotate the credentials between the BTP service operator and Service Manager, you have to create a new binding for the service-operator-access service instance, and then to execute the setup script again, with the new set of credentials. Afterward, you can delete the old binding.
 
@@ -184,12 +203,13 @@ If you don't specify this value, the system will use the installation namespace 
 To associate a namespace to a specific subaccount you maintain the access credentials to the subaccount in a secret that is dedicated to a specific namespace.
 Define a secret named: `<namespace-name>-sap-btp-service-operator` in the Centrally Managed Namespace.
 
+Default Access Credentials
 ```yaml
 apiVersion: v1
 kind: Secret
 metadata:
-  name: <namespace-name>-sap-btp-service-operator
-  namespace: <centrally managed namespace>
+  name: sap-btp-service-operator
+  namespace: sap-btp-operator
 type: Opaque
 stringData:
   clientid: "<clientid>"
@@ -198,7 +218,22 @@ stringData:
   tokenurl: "<auth_url>"
   tokenurlsuffix: "/oauth/token"
 ```
+X.509 Certificate 
 
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sap-btp-service-operator
+  namespace: sap-btp-operator
+type: kubernetes.io/tls
+stringdata:
+  clientid: <clientid>
+  certificate: <certificate>
+  key: <key>
+  sm_url: <sm_url>
+  tokenurl: <auth_url>
+```
 ### Subaccount for a ServiceInstance Resource
 
 You can deploy service instances belonging to different subaccounts within the same namespace. To achieve this, follow these steps:
