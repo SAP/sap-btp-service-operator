@@ -33,4 +33,8 @@ const (
 	// Cred Rotation
 	CredPreparing = "Preparing"
 	CredRotating  = "Rotating"
+
+	// Constance for seceret template
+	InstanceKey    = "instance"
+	CredentialsKey = "credentials"
 )

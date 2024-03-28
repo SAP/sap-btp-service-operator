@@ -21,7 +21,10 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/SAP/sap-btp-service-operator/api/common/utils"
+
 	"github.com/SAP/sap-btp-service-operator/api/common"
+	"github.com/pkg/errors"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -32,7 +35,7 @@ import (
 
 // log is for logging in this package.
 var servicebindinglog = logf.Log.WithName("servicebinding-resource")
-var AnnotationNotSupportedError = "The specified annotation '%s' is not supported within the service binding object."
+var secretTemplateError = "spec.secretTemplate is invalid"
 
 func (sb *ServiceBinding) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
@@ -52,6 +55,11 @@ func (sb *ServiceBinding) ValidateCreate() (admission.Warnings, error) {
 	servicebindinglog.Info("validate create", "name", sb.Name)
 	if sb.Spec.CredRotationPolicy != nil {
 		if err := sb.validateCredRotatingConfig(); err != nil {
+			return nil, err
+		}
+	}
+	if sb.Spec.SecretTemplate != "" {
+		if err := sb.validateSecretTemplate(); err != nil {
 			return nil, err
 		}
 	}
@@ -85,6 +93,11 @@ func (sb *ServiceBinding) ValidateUpdate(old runtime.Object) (admission.Warnings
 	if specChanged && (sb.Status.BindingID != "" || isStale) {
 		return nil, fmt.Errorf("updating service bindings is not supported")
 	}
+	if sb.Spec.SecretTemplate != "" {
+		if err := sb.validateSecretTemplate(); err != nil {
+			return nil, err
+		}
+	}
 	return nil, nil
 }
 
@@ -102,6 +115,11 @@ func (sb *ServiceBinding) specChanged(oldBinding *ServiceBinding) bool {
 	//allow changing cred rotation config
 	oldSpec.CredRotationPolicy = nil
 	newSpec.CredRotationPolicy = nil
+
+	//allow changing SecretTemplate
+	oldSpec.SecretTemplate = ""
+	newSpec.SecretTemplate = ""
+
 	return !reflect.DeepEqual(oldSpec, newSpec)
 }
 
@@ -123,5 +141,20 @@ func (sb *ServiceBinding) validateCredRotatingConfig() error {
 		return err
 	}
 
+	return nil
+}
+
+func (sb *ServiceBinding) validateSecretTemplate() error {
+	servicebindinglog.Info("validate specified secretTemplate")
+	x := make(map[string]interface{})
+	y := make(map[string]string)
+	parameters := utils.GetSecretDataForTemplate(x, y)
+
+	templateName := fmt.Sprintf("%s/%s", sb.Namespace, sb.Name)
+	_, err := utils.CreateSecretFromTemplate(templateName, sb.Spec.SecretTemplate, "missingkey=zero", parameters)
+	if err != nil {
+		servicebindinglog.Error(err, "failed to create secret from template")
+		return errors.Wrap(err, secretTemplateError)
+	}
 	return nil
 }

@@ -74,6 +74,7 @@ spec:
             {{- if .Values.manager.enable_leader_election }}
             - --enable-leader-election
             {{- end}}
+            - --logger_use_dev_mode={{.Values.manager.logger_use_dev_mode}}
           command:
             - /manager
           envFrom:
