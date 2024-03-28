@@ -22,7 +22,7 @@ import (
 	"strings"
 	"time"
 
-	utils2 "github.com/SAP/sap-btp-service-operator/api/common/utils"
+	commonutils "github.com/SAP/sap-btp-service-operator/api/common/utils"
 
 	"github.com/pkg/errors"
 
@@ -626,14 +626,13 @@ func (r *ServiceBindingReconciler) createBindingSecret(ctx context.Context, k8sB
 }
 
 func (r *ServiceBindingReconciler) getSecretDefaultData(ctx context.Context, k8sBinding *servicesv1.ServiceBinding, smBinding *smClientTypes.ServiceBinding) (map[string][]byte, error) {
-	log := utils.GetLogger(ctx)
-	logger := log.WithValues("bindingName", k8sBinding.Name, "secretName", k8sBinding.Spec.SecretName)
+	log := utils.GetLogger(ctx).WithValues("bindingName", k8sBinding.Name, "secretName", k8sBinding.Spec.SecretName)
 
 	var credentialsMap map[string][]byte
 	var credentialProperties []utils.SecretMetadataProperty
 
 	if len(smBinding.Credentials) == 0 {
-		logger.Info("Binding credentials are empty")
+		log.Info("Binding credentials are empty")
 		credentialsMap = make(map[string][]byte)
 	} else if k8sBinding.Spec.SecretKey != nil {
 		credentialsMap = map[string][]byte{
@@ -650,14 +649,14 @@ func (r *ServiceBindingReconciler) getSecretDefaultData(ctx context.Context, k8s
 		var err error
 		credentialsMap, credentialProperties, err = utils.NormalizeCredentials(smBinding.Credentials)
 		if err != nil {
-			logger.Error(err, "Failed to store binding secret")
+			log.Error(err, "Failed to store binding secret")
 			return nil, fmt.Errorf("failed to create secret. Error: %v", err.Error())
 		}
 	}
 
 	metaDataProperties, err := r.addInstanceInfo(ctx, k8sBinding, credentialsMap)
 	if err != nil {
-		logger.Error(err, "failed to enrich binding with service instance info")
+		log.Error(err, "failed to enrich binding with service instance info")
 	}
 
 	if k8sBinding.Spec.SecretRootKey != nil {
@@ -673,7 +672,7 @@ func (r *ServiceBindingReconciler) getSecretDefaultData(ctx context.Context, k8s
 		}
 		metadataByte, err := json.Marshal(metadata)
 		if err != nil {
-			logger.Error(err, "failed to enrich binding with metadata")
+			log.Error(err, "failed to enrich binding with metadata")
 		} else {
 			credentialsMap[".metadata"] = metadataByte
 		}
@@ -702,9 +701,9 @@ func (r *ServiceBindingReconciler) createBindingSecretFromSecretTemplate(ctx con
 		return nil, errors.Wrap(err, "failed to add service instance info")
 	}
 
-	parameters := utils2.GetSecretDataForTemplate(smBindingCredentials, instanceInfos)
+	parameters := commonutils.GetSecretDataForTemplate(smBindingCredentials, instanceInfos)
 	templateName := fmt.Sprintf("%s/%s", k8sBinding.Namespace, k8sBinding.Name)
-	secret, err := utils2.CreateSecretFromTemplate(templateName, k8sBinding.Spec.SecretTemplate, "missingkey=error", parameters)
+	secret, err := commonutils.CreateSecretFromTemplate(templateName, k8sBinding.Spec.SecretTemplate, "missingkey=error", parameters)
 	if err != nil {
 		logger.Error(err, "failed to create secret from template")
 		return nil, errors.Wrap(err, "failed to create secret from template")
@@ -713,7 +712,7 @@ func (r *ServiceBindingReconciler) createBindingSecretFromSecretTemplate(ctx con
 	secret.SetName(k8sBinding.Spec.SecretName)
 
 	// if no data provided use the default data
-	if (secret.Data == nil || len(secret.Data) == 0) && (secret.StringData == nil || len(secret.StringData) == 0) {
+	if len(secret.Data) == 0 && len(secret.StringData) == 0 {
 		credentialsMap, err := r.getSecretDefaultData(ctx, k8sBinding, smBinding)
 		if err != nil {
 			return nil, err
