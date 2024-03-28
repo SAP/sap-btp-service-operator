@@ -592,7 +592,7 @@ func (r *ServiceBindingReconciler) storeBindingSecret(ctx context.Context, k8sBi
 	var err error
 
 	if k8sBinding.Spec.SecretTemplate != "" {
-		secret, err = r.createBindingSecretFromSecretTemplate(ctx, k8sBinding, smBinding.Credentials)
+		secret, err = r.createBindingSecretFromSecretTemplate(ctx, k8sBinding, smBinding)
 	} else {
 		secret, err = r.createBindingSecret(ctx, k8sBinding, smBinding)
 	}
@@ -609,6 +609,23 @@ func (r *ServiceBindingReconciler) storeBindingSecret(ctx context.Context, k8sBi
 }
 
 func (r *ServiceBindingReconciler) createBindingSecret(ctx context.Context, k8sBinding *servicesv1.ServiceBinding, smBinding *smClientTypes.ServiceBinding) (*corev1.Secret, error) {
+	credentialsMap, err := r.getSecretDefaultData(ctx, k8sBinding, smBinding)
+	if err != nil {
+		return nil, err
+	}
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        k8sBinding.Spec.SecretName,
+			Annotations: map[string]string{"binding": k8sBinding.Name},
+			Namespace:   k8sBinding.Namespace,
+		},
+		Data: credentialsMap,
+	}
+	return secret, nil
+}
+
+func (r *ServiceBindingReconciler) getSecretDefaultData(ctx context.Context, k8sBinding *servicesv1.ServiceBinding, smBinding *smClientTypes.ServiceBinding) (map[string][]byte, error) {
 	log := utils.GetLogger(ctx)
 	logger := log.WithValues("bindingName", k8sBinding.Name, "secretName", k8sBinding.Spec.SecretName)
 
@@ -616,7 +633,7 @@ func (r *ServiceBindingReconciler) createBindingSecret(ctx context.Context, k8sB
 	var credentialProperties []utils.SecretMetadataProperty
 
 	if len(smBinding.Credentials) == 0 {
-		log.Info("Binding credentials are empty")
+		logger.Info("Binding credentials are empty")
 		credentialsMap = make(map[string][]byte)
 	} else if k8sBinding.Spec.SecretKey != nil {
 		credentialsMap = map[string][]byte{
@@ -640,7 +657,7 @@ func (r *ServiceBindingReconciler) createBindingSecret(ctx context.Context, k8sB
 
 	metaDataProperties, err := r.addInstanceInfo(ctx, k8sBinding, credentialsMap)
 	if err != nil {
-		log.Error(err, "failed to enrich binding with service instance info")
+		logger.Error(err, "failed to enrich binding with service instance info")
 	}
 
 	if k8sBinding.Spec.SecretRootKey != nil {
@@ -656,29 +673,20 @@ func (r *ServiceBindingReconciler) createBindingSecret(ctx context.Context, k8sB
 		}
 		metadataByte, err := json.Marshal(metadata)
 		if err != nil {
-			log.Error(err, "failed to enrich binding with metadata")
+			logger.Error(err, "failed to enrich binding with metadata")
 		} else {
 			credentialsMap[".metadata"] = metadataByte
 		}
 	}
-
-	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        k8sBinding.Spec.SecretName,
-			Annotations: map[string]string{"binding": k8sBinding.Name},
-			Namespace:   k8sBinding.Namespace,
-		},
-		Data: credentialsMap,
-	}
-	return secret, nil
+	return credentialsMap, nil
 }
 
-func (r *ServiceBindingReconciler) createBindingSecretFromSecretTemplate(ctx context.Context, k8sBinding *servicesv1.ServiceBinding, inputSmCredentials json.RawMessage) (*corev1.Secret, error) {
+func (r *ServiceBindingReconciler) createBindingSecretFromSecretTemplate(ctx context.Context, k8sBinding *servicesv1.ServiceBinding, smBinding *smClientTypes.ServiceBinding) (*corev1.Secret, error) {
 	log := utils.GetLogger(ctx)
 	logger := log.WithValues("bindingName", k8sBinding.Name, "secretName", k8sBinding.Spec.SecretName)
 
 	logger.Info("Create Object using SecretTemplate from ServiceBinding Specs")
-
+	inputSmCredentials := smBinding.Credentials
 	smBindingCredentials := make(map[string]interface{})
 	if inputSmCredentials != nil {
 		err := json.Unmarshal(inputSmCredentials, &smBindingCredentials)
@@ -701,10 +709,17 @@ func (r *ServiceBindingReconciler) createBindingSecretFromSecretTemplate(ctx con
 		logger.Error(err, "failed to create secret from template")
 		return nil, errors.Wrap(err, "failed to create secret from template")
 	}
-
 	secret.SetNamespace(k8sBinding.Namespace)
 	secret.SetName(k8sBinding.Spec.SecretName)
 
+	// if no data provided use the default data
+	if (secret.Data == nil || len(secret.Data) == 0) && (secret.StringData == nil || len(secret.StringData) == 0) {
+		credentialsMap, err := r.getSecretDefaultData(ctx, k8sBinding, smBinding)
+		if err != nil {
+			return nil, err
+		}
+		secret.Data = credentialsMap
+	}
 	return secret, nil
 }
 
