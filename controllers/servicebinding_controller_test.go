@@ -654,7 +654,6 @@ stringData:
 				_, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "", secretTemplate)
 				Expect(err.Error()).To(ContainSubstring("the Secret template is invalid: Secret's metadata field"))
 			})
-
 			It("should fail to create the secret if wrong template key in the spec.secretTemplate is provided", func() {
 				ctx := context.Background()
 				secretTemplate := dedent.Dedent(`
@@ -674,7 +673,6 @@ stringData:
 					return cond != nil && cond.Reason == "CreateFailed" && strings.Contains(cond.Message, "map has no entry for key \"non_existing_key\"")
 				}, timeout*2, interval).Should(BeTrue())
 			})
-
 			It("should fail to create the secret if secretTemplate is an unexpected type", func() {
 				ctx := context.Background()
 				secretTemplate := dedent.Dedent(`
@@ -684,6 +682,73 @@ stringData:
 				_, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "", secretTemplate)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("but needs to be of kind 'Secret'"))
+			})
+			It("should succeed to create the secret- empty data", func() {
+				ctx := context.Background()
+				secretTemplate := dedent.Dedent(
+					`apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    instance_plan: {{ .instance.plan }}
+  annotations:
+    instance_name: {{ .instance.instance_name }}
+stringData:`)
+
+				createdBinding, err := createBindingWithoutAssertionsAndWait(ctx, bindingName, bindingTestNamespace, instanceName, "", "", secretTemplate, true)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(isResourceReady(createdBinding)).To(BeTrue())
+				By("Verify binding secret created")
+				bindingSecret := getSecret(ctx, createdBinding.Spec.SecretName, createdBinding.Namespace, true)
+				Expect(bindingSecret.Labels["instance_plan"]).To(Equal("a-plan-name"))
+				Expect(bindingSecret.Annotations["instance_name"]).To(Equal(instanceExternalName))
+				validateSecretData(bindingSecret, "secret_key", "secret_value")
+				validateSecretData(bindingSecret, "escaped", `{"escaped_key":"escaped_val"}`)
+				validateInstanceInfo(bindingSecret, instanceExternalName)
+				credentialProperties := []utils.SecretMetadataProperty{
+					{
+						Name:   "secret_key",
+						Format: string(utils.TEXT),
+					},
+					{
+						Name:   "escaped",
+						Format: string(utils.TEXT),
+					},
+				}
+				validateSecretMetadata(bindingSecret, credentialProperties)
+			})
+			It("should succeed to create the secret- no data", func() {
+				ctx := context.Background()
+				secretTemplate := dedent.Dedent(
+					`apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    instance_plan: {{ .instance.plan }}
+  annotations:
+    instance_name: {{ .instance.instance_name }}`)
+
+				createdBinding, err := createBindingWithoutAssertionsAndWait(ctx, bindingName, bindingTestNamespace, instanceName, "", "", secretTemplate, true)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(isResourceReady(createdBinding)).To(BeTrue())
+				By("Verify binding secret created")
+				bindingSecret := getSecret(ctx, createdBinding.Spec.SecretName, createdBinding.Namespace, true)
+				Expect(bindingSecret.Labels["instance_plan"]).To(Equal("a-plan-name"))
+				Expect(bindingSecret.Annotations["instance_name"]).To(Equal(instanceExternalName))
+				validateSecretData(bindingSecret, "secret_key", "secret_value")
+				validateSecretData(bindingSecret, "escaped", `{"escaped_key":"escaped_val"}`)
+				validateInstanceInfo(bindingSecret, instanceExternalName)
+				credentialProperties := []utils.SecretMetadataProperty{
+					{
+						Name:   "secret_key",
+						Format: string(utils.TEXT),
+					},
+					{
+						Name:   "escaped",
+						Format: string(utils.TEXT),
+					},
+				}
+				validateSecretMetadata(bindingSecret, credentialProperties)
 			})
 		})
 	})
