@@ -201,16 +201,16 @@ If you don't specify this value, the system will use the installation namespace 
 
 ### Subaccount For a Namespace
 
-To associate a namespace to a specific subaccount you maintain the access credentials to the subaccount in a secret that is dedicated to a specific namespace.
-Define a secret named: `<namespace-name>-sap-btp-service-operator` in the Centrally Managed Namespace.
+To associate a namespace to a specific subaccount you maintain the access credentials to the subaccount in a `Secret` that is dedicated to a specific namespace.
+Define a secret named: `<namespace-name>-sap-btp-service-operator` in the centrally-managed namespace.
 
 Default Access Credentials
 ```yaml
 apiVersion: v1
 kind: Secret
 metadata:
-  name: sap-btp-service-operator
-  namespace: sap-btp-operator
+  name: <namespace-name>-sap-btp-service-operator
+  namespace: <centrally-managed-namespace>
 type: Opaque
 stringData:
   clientid: "<clientid>"
@@ -225,8 +225,8 @@ mTLS Access Credentials
 apiVersion: v1
 kind: Secret
 metadata:
-  name: sap-btp-service-operator
-  namespace: sap-btp-operator
+  name: <namespace-name>-sap-btp-service-operator
+  namespace: <centrally-managed-namespace>
 type: Opaque
 stringdata:
   clientid: <clientid>
@@ -240,8 +240,8 @@ stringdata:
 
 You can deploy service instances belonging to different subaccounts within the same namespace. To achieve this, follow these steps:
 
-1. Store access credentials: Securely store the access credentials for each subaccount in separate secrets within the centrally managed namespace.
-2. Specify subaccount per service: In the `ServiceInstance` resource, use the `btpAccessCredentialsSecret` property to reference the specific secret containing the relevant subaccount's credentials. This explicitly tells the operator which subaccount to use for provisioning the service instance.
+1. Store access credentials: Securely store the access credentials for each subaccount in separate `Secret` resources within the centrally-managed namespace.
+2. Specify subaccount per service: In the `ServiceInstance` resource, use the `btpAccessCredentialsSecret` property to reference the specific `Secret` containing the relevant subaccount's credentials. This explicitly tells the operator which subaccount to use to provision the service instance.
 
 
 #### Define a new secret
@@ -268,8 +268,8 @@ mTLS Access Credentials
 apiVersion: v1
 kind: Secret
 metadata:
-  name: sap-btp-service-operator
-  namespace: sap-btp-operator
+  name: mybtpsecret
+  namespace: <centrally managed namespace>
 type: Opaque
 stringdata:
   clientid: <clientid>
