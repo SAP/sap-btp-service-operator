@@ -18,7 +18,7 @@ The SAP BTP service operator is based on the [Kubernetes Operator pattern](https
   * [Working with Multiple Subaccounts](#working-with-multiple-subaccounts)
 * [Using the SAP BTP Service Operator](#using-the-sap-btp-service-operator)
     * [Service Instance](#service-instance)
-    * [Service Binding](#service-bindingservice-binding)
+    * [Service Binding](#service-binding)
       * [Formats of Service Binding Secrets](#formats-of-service-binding-secrets)
       * [Service Binding Rotation](#service-binding-rotation)
     * [Passing parameters](#passing-parameters)
