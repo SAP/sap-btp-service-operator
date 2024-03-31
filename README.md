@@ -154,13 +154,14 @@ kind: Secret
 metadata:
   name: sap-btp-service-operator
   namespace: sap-btp-operator
-type: kubernetes.io/tls
+type: Opaque
 stringdata:
   clientid: <clientid>
-  certificate: <certificate>
-  key: <key>
+  tls.crt: <certificate>
+  tls.key: <key>
   sm_url: <sm_url>
   tokenurl: <auth_url>
+  tokenurlsuffix: "/oauth/token"
 ```
 
 </details>
@@ -226,13 +227,14 @@ kind: Secret
 metadata:
   name: sap-btp-service-operator
   namespace: sap-btp-operator
-type: kubernetes.io/tls
+type: Opaque
 stringdata:
   clientid: <clientid>
-  certificate: <certificate>
-  key: <key>
+  tls.crt: <certificate>
+  tls.key: <key>
   sm_url: <sm_url>
   tokenurl: <auth_url>
+  tokenurlsuffix: "/oauth/token"
 ```
 ### Subaccount for a ServiceInstance Resource
 
@@ -245,20 +247,6 @@ You can deploy service instances belonging to different subaccounts within the s
 #### Define a new secret
 
 Default Access Credentials
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: sap-btp-service-operator
-  namespace: sap-btp-operator
-type: Opaque
-stringData:
-  clientid: "<clientid>"
-  clientsecret: "<clientsecret>"
-  sm_url: "<sm_url>"
-  tokenurl: "<auth_url>"
-  tokenurlsuffix: "/oauth/token"
-```
 
 ```yaml
 apiVersion: v1
@@ -282,13 +270,14 @@ kind: Secret
 metadata:
   name: sap-btp-service-operator
   namespace: sap-btp-operator
-type: kubernetes.io/tls
+type: Opaque
 stringdata:
   clientid: <clientid>
-  certificate: <certificate>
-  key: <key>
+  tls.crt: <certificate>
+  tls.key: <key>
   sm_url: <sm_url>
   tokenurl: <auth_url>
+  tokenurlsuffix: "/oauth/token"
 ```
 #### Configure the secret name in the `ServiceInstance` resource within the property `btpAccessCredentialsSecret`:
 ```yaml
