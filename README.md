@@ -252,7 +252,7 @@ Default Access Credentials
 apiVersion: v1
 kind: Secret
 metadata:
-  name: mybtpsecret
+  name: <my-secret>
   namespace: <centrally managed namespace>
 type: Opaque
 stringData:
@@ -268,7 +268,7 @@ mTLS Access Credentials
 apiVersion: v1
 kind: Secret
 metadata:
-  name: mybtpsecret
+  name: <my-secret>
   namespace: <centrally managed namespace>
 type: Opaque
 stringdata:
