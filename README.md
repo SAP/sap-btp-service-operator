@@ -451,11 +451,11 @@ stringData:
 ```
 ###### Custom Templates
 
-For additional flexibility, you can model your `Secret` resources according to your specific needs.
+For additional flexibility, you can model your `Secret` resources according to your specific needs.<br>
 To generate a custom-formatted `Secret`, use the `secretTemplate` attribute in the `ServiceBinding` spec.
-The value of the `secretTemplate` attribute must be a Go template, The generated output of the template should be in YAML format, representing the desired 'Secret'.
-The secret will be created with the data provided in the template and if `secretKey` and `secretRootKey` attributes are provided, they will be ignored.
-To include the default data in the secret (as provided by us), you should not include the `data` and `stringData` fields in your `secretTemplate`.
+The value of the `secretTemplate` attribute must be a Go template, The generated output of the template should be in YAML format, representing the desired 'Secret', 
+The secret will be created with the data provided in the template and if `secretKey` and `secretRootKey` attributes are provided, they will be ignored.<br>
+To include the default data structure in the secret (see [Formats of Service Binding Secrets](#formats-of-service-binding-secrets)), you should not include the `data` and `stringData` fields in your `secretTemplate`.<br>
 Refer to [Go Templates](https://pkg.go.dev/text/template) for more details.
 
 Templates are executed by applying them to a data structure, which is a map with the following data:
