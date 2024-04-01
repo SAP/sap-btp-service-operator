@@ -35,6 +35,16 @@ stringData:
 
 				Expect(err).ToNot(HaveOccurred())
 			})
+			It("should succeed if using allowed sprig function", func() {
+				//write test for secretTemplateError
+				binding.Spec.SecretTemplate = dedent.Dedent(`
+				                                       apiVersion: v1
+				                                       kind: Secret
+				                                       stringData:
+				                                         secretKey: {{ .secretValue | quote }}`)
+				_, err := binding.ValidateCreate()
+				Expect(err).ToNot(HaveOccurred())
+			})
 			It("should fail if can't secretTemplate can be parsed", func() {
 				//write test for secretTemplateError
 				binding.Spec.SecretTemplate = "{{"
@@ -49,11 +59,11 @@ stringData:
 				                                       apiVersion: v1
 				                                       kind: Secret
 				                                       stringData:
-				                                         secretKey: {{ .secretValue | quote }}`)
+				                                         secretKey: {{ .secretValue | something }}`)
 				_, err := binding.ValidateCreate()
 				Expect(err).To(HaveOccurred())
 				errMsg := err.Error()
-				Expect(errMsg).To(ContainSubstring(" function \"quote\" not defined"))
+				Expect(errMsg).To(ContainSubstring(" function \"something\" not defined"))
 			})
 			It("should fail if template contains metadata.name", func() {
 				//write test for secretTemplateError

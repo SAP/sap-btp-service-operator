@@ -7,14 +7,12 @@ import (
 	"io"
 	"text/template"
 
+	"github.com/Masterminds/sprig/v3"
 	"github.com/SAP/sap-btp-service-operator/api/common"
-
-	"k8s.io/apimachinery/pkg/runtime/schema"
-
-	"sigs.k8s.io/yaml"
-
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/yaml"
 )
 
 const templateOutputMaxBytes int64 = 1 * 1024 * 1024
@@ -78,8 +76,7 @@ func ParseTemplate(templateName, text string) (*template.Template, error) {
 }
 
 func filteredFuncMap() template.FuncMap {
-
-	return template.FuncMap{}
+	return sprig.TxtFuncMap()
 }
 
 func executeTemplate(templateName, text, option string, parameters map[string]interface{}) ([]byte, error) {

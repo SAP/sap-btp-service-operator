@@ -78,7 +78,7 @@ var _ = Describe("Secret template", func() {
 
 	Context("With sprig functions", func() {
 
-		It("should fail if forbidden sprig func is used in the template", func() {
+		FIt("should fail if forbidden sprig func is used in the template", func() {
 			secretTemplate := dedent.Dedent(`
 					apiVersion: v1
 					kind: Secret
