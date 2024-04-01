@@ -506,6 +506,49 @@ stringData:
   PASSWORD: ********
 ```
 
+`ServiceBinding`
+
+```yaml
+apiVersion: services.cloud.sap.com/v1
+kind: ServiceBinding
+metadata:
+  name: sample-binding
+spec:
+  serviceInstanceName: sample-instance
+  secretKey: myCredentials
+  secretTemplate: |
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      labels:
+        service_plan: {{ .instance.plan }}
+      annotations:
+        instance: {{ .instance.instance_name }}
+```
+
+`Secret`
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    service_plan: sample-plan
+  annotations:
+    instance: sample-instance
+stringData:
+  myCredentials:
+  {
+    uri: https://my-service.authentication.eu10.hana.ondemand.com,
+    client_id: admin,
+    client_secret: ********
+  }
+  instance_guid: your-sample-instance-guid // The service instance ID
+  instance_name: sample-binding // Taken from the service instance external_name field if set. Otherwise from metadata.name
+  plan: sample-plan // The service plan name
+  type: sample-service // The service offering name
+```
+
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
 ## Service Binding Rotation
