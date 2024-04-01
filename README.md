@@ -306,7 +306,7 @@ spec:
     key2: val2      
 ```
 
-##### Procedure
+#### Procedure
 
 1.  Apply the custom resource file in your cluster to create the `ServiceBinding`:
 
@@ -335,7 +335,7 @@ spec:
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
-##### Formats of Service Binding Secrets
+#### Formats of Service Binding Secrets
 
 You can use different attributes in your `ServiceBinding` resource to generate different formats of your `Secret` resources.
 
@@ -346,7 +346,7 @@ Even though `Secret` resources can come in various formats, they all share a com
   
 Now let's explore these various formats:
 
-###### Key-Value Pairs (Default)
+##### Key-Value Pairs (Default)
 
 If you do not use any of the attributes, the generated `Secret` will be in a key-value pair format. 
 
@@ -377,7 +377,7 @@ stringData:
   type: sample-service  // The service offering name
 ```
 
-###### Credentials as JSON Object
+##### Credentials as JSON Object
 
 To show credentials returned from the broker within the `Secret` resource  as a JSON object, use the `secretKey` attribute in the `ServiceBinding` spec.
 The value of this `secretKey` is the name of the key that stores the credentials in JSON format:
@@ -413,7 +413,7 @@ stringData:
     type: sample-service // The service offering name
 ```
 
-###### Credentials and Service Info as One JSON Object
+##### Credentials and Service Info as One JSON Object
 
 To show both credentials returned from the broker and additional `ServiceInstance` attributes as a JSON object, use the `secretRootKey` attribute in the `ServiceBinding` spec.
 
@@ -449,16 +449,17 @@ stringData:
         type: sample-instance-offering, // The service offering name
     }
 ```
-###### Custom Templates
+##### Custom Templates
 
 For additional flexibility, you can model your `Secret` resources according to your specific needs.<br>
 To generate a custom-formatted `Secret`, use the `secretTemplate` attribute in the `ServiceBinding` spec.
-The value of the `secretTemplate` attribute must be a Go template, The generated output of the template should be in YAML format, representing the desired 'Secret', 
-The secret will be created with the data provided in the template and if `secretKey` and `secretRootKey` attributes are provided, they will be ignored.<br>
-To include the default data structure in the secret (see [Formats of Service Binding Secrets](#formats-of-service-binding-secrets)), you should not include the `data` and `stringData` fields in your `secretTemplate`.<br>
-Refer to [Go Templates](https://pkg.go.dev/text/template) for more details.
 
-Templates are executed by applying them to a data structure, which is a map with the following data:
+This attribute expects a Go template as its value (for more information, see [Go Templates](https://pkg.go.dev/text/template)).<br>
+
+**Note**<br>
+Make sure that the template is in YAML format, and that its structure is of a Kubernetes `Secret`. 
+
+Provided templates are then executed by applying them to a map with the following available attributes:
 | Reference         | Description                                |                                                                          
 |:-----------------|:--------------------------------------------|
 | `instance.instance_guid` |  The service instance ID.     |
@@ -467,7 +468,8 @@ Templates are executed by applying them to a data structure, which is a map with
 | `instance.type`   |  The name of the associated service offering. |  
 | `credentials.attributes(var)`   |  The content of the credentials depends on a service. For more details, refer to the documentation of the service you're using. |  
 
-Example:
+
+###### Example:
 
 `ServiceBinding`
 
@@ -506,6 +508,16 @@ stringData:
   PASSWORD: ********
 ```
 
+###### Additional Information about Customization
+
+You can customize `Secret`'s `metadata` and `stringData` sections.
+
+- In the `metadata`, you can customize only its labels and annotations.
+- You can customize `stringData` or utilize one of the available formatting options as detailed in the [Formats of Service Binding Secrets](#formats-of-service-binding-secrets) section.
+
+**Important**:  If you customize `stringData`, your customization takes precedence over the predefined formats.
+
+Example
 `ServiceBinding`
 
 ```yaml
