@@ -335,7 +335,7 @@ spec:
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
-#### Formats of Service Binding Secrets
+#### Formats of Service Binding Secrets 
 
 You can use different attributes in your `ServiceBinding` resource to generate different formats of your `Secret` resources.
 
@@ -449,7 +449,7 @@ stringData:
         type: sample-instance-offering, // The service offering name
     }
 ```
-##### Custom Templates
+##### Custom Formats 
 
 For additional flexibility, you can model your `Secret` resources according to your specific needs.<br>
 To generate a custom-formatted `Secret`, use the `secretTemplate` attribute in the `ServiceBinding` spec.
@@ -514,8 +514,9 @@ You can customize `Secret`'s `metadata` and `stringData` sections.
 
 - In the `metadata`, you can customize only its labels and annotations.
 - You can customize `stringData` or utilize one of the available formatting options as detailed in the [Formats of Service Binding Secrets](#formats-of-service-binding-secrets) section.
+  IF you do not customize `stringData` and do not specify 
 
-**Important**:  If you customize `stringData`, your customization takes precedence over the pre-defined formats (if you parallely provided one of them).
+**Important**:  If you customize `stringData`, your customization takes precedence over the pre-defined formats (if you parallelly provided one of them).
 
 Example of using both the pre-defined formats and customization of the Metadata section:
 
