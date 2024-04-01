@@ -68,7 +68,7 @@ var _ = Describe("Secret template", func() {
 
 			Expect(err).Should(MatchError(
 				SatisfyAll(
-					ContainSubstring("generated secret manifest has unexpected type"),
+					ContainSubstring("the Secret template is invalid: It is of kind"),
 					ContainSubstring("Pod"),
 				),
 			))
@@ -78,7 +78,7 @@ var _ = Describe("Secret template", func() {
 
 	Context("With sprig functions", func() {
 
-		FIt("should fail if forbidden sprig func is used in the template", func() {
+		It("should fail if forbidden sprig func is used in the template", func() {
 			secretTemplate := dedent.Dedent(`
 					apiVersion: v1
 					kind: Secret
@@ -115,7 +115,7 @@ var _ = Describe("Secret template", func() {
 
 				secret, err := CreateSecretFromTemplate("", secretTemplate, "missingkey=error", nil)
 
-				Expect(err).Should(MatchError(ContainSubstring("the size of the generated secret manifest exceeds the limit")))
+				Expect(err).Should(MatchError(ContainSubstring("the Secret template is invalid: the size of the generated Secret exceeds the limit of 1048576 bytes")))
 				Expect(secret).To(BeNil())
 			})
 		})

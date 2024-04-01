@@ -59,11 +59,11 @@ stringData:
 				                                       apiVersion: v1
 				                                       kind: Secret
 				                                       stringData:
-				                                         secretKey: {{ .secretValue | something }}`)
+				                                         secretKey: {{ .secretValue | env }}`)
 				_, err := binding.ValidateCreate()
 				Expect(err).To(HaveOccurred())
 				errMsg := err.Error()
-				Expect(errMsg).To(ContainSubstring(" function \"something\" not defined"))
+				Expect(errMsg).To(ContainSubstring(" function \"env\" not defined"))
 			})
 			It("should fail if template contains metadata.name", func() {
 				//write test for secretTemplateError
