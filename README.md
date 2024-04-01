@@ -515,9 +515,10 @@ You can customize `Secret`'s `metadata` and `stringData` sections.
 - In the `metadata`, you can customize only its labels and annotations.
 - You can customize `stringData` or utilize one of the available formatting options as detailed in the [Formats of Service Binding Secrets](#formats-of-service-binding-secrets) section.
 
-**Important**:  If you customize `stringData`, your customization takes precedence over the predefined formats.
+**Important**:  If you customize `stringData`, your customization takes precedence over the pre-defined formats.
 
-Example
+Example of using both the pre-defined formats and customization:
+
 `ServiceBinding`
 
 ```yaml
