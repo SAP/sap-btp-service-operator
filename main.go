@@ -73,7 +73,7 @@ func main() {
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.BoolVar(&loggerUseDevMode, "logger_use_dev_mode", true,
 		"Sets the logger to use dev mode, e.g. more friendly printing format")
-			
+
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(loggerUseDevMode)))

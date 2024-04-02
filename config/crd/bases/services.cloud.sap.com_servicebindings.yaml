@@ -131,8 +131,8 @@ spec:
                   by Service Manager and the instance information. The generated secret
                   is used instead of the default secret. This is useful if the consumer
                   of service binding data expects them in a specific format. For Go
-                  templates see https://pkg.go.dev/text/template. For supported funcs:
-                  https://pkg.go.dev/text/template#hdr-Functions'
+                  templates see https://pkg.go.dev/text/template. For supported funcs
+                  see: https://pkg.go.dev/text/template#hdr-Functions, https://masterminds.github.io/sprig/'
                 type: string
                 x-kubernetes-preserve-unknown-fields: true
               serviceInstanceName:
