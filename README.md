@@ -478,7 +478,7 @@ Provided templates are then executed on a map with the following available attri
 Below are two examples demonstrating 'ServiceBinding' and generated 'Secret' resources. The first `ServiceBinding` example utilizes a custom template, while the second example combines a custom template with a predefined formatting option:
 
 
-###### Example
+###### Example of a binding with customized metadata and stringData sections
 
 `ServiceBinding`
 
@@ -517,7 +517,7 @@ stringData:
   PASSWORD: ********
 ```
 
-Example of using both the pre-defined formats and customization of the Metadata section:
+###### Example of a binding with customized metadata and utilized existing formatting option for stringData
 
 `ServiceBinding`
 
