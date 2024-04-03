@@ -451,15 +451,22 @@ stringData:
 ```
 ##### Custom Formats 
 
-For additional flexibility, you can model your `Secret` resources according to your specific needs.<br>
+For additional flexibility, you can model the `Secret` resources according to your needs.<br>
 To generate a custom-formatted `Secret`, use the `secretTemplate` attribute in the `ServiceBinding` spec.
 
 This attribute expects a Go template as its value (for more information, see [Go Templates](https://pkg.go.dev/text/template)).<br>
+Ensure the template is in YAML format, and its structure is of a Kubernetes `Secret`. 
 
-**Note**<br>
-Make sure that the template is in YAML format, and that its structure is of a Kubernetes `Secret`. 
+In the provided `Secret`, you can customize the `metadata` and `stringData` sections with the following options:
 
-Provided templates are then executed by applying them to a map with the following available attributes:
+- `metadata`: labels and annotations
+- `stringData`: customize or utilize one of the available formatting options as detailed in the [Formats of Service Binding Secrets](#formats-of-service-binding-secrets) section.
+
+
+**Important**:  If you customize `stringData`, it takes precedence over the pre-defined formats (if you parallelly provided one of them).
+
+Provided templates are then executed on a map with the following available attributes:
+
 | Reference         | Description                                |                                                                          
 |:-----------------|:--------------------------------------------|
 | `instance.instance_guid` |  The service instance ID.     |
@@ -468,8 +475,10 @@ Provided templates are then executed by applying them to a map with the followin
 | `instance.type`   |  The name of the associated service offering. |  
 | `credentials.attributes(var)`   |  The content of the credentials depends on a service. For more details, refer to the documentation of the service you're using. |  
 
+Below are two examples demonstrating 'ServiceBinding' and generated 'Secret' resources. The first `ServiceBinding` example utilizes a custom template, while the second example combines a custom template with a predefined formatting option:
 
-###### Example:
+
+###### Example
 
 `ServiceBinding`
 
@@ -507,16 +516,6 @@ stringData:
   USERNAME: admin
   PASSWORD: ********
 ```
-
-###### Additional Information about Customization
-
-You can customize `Secret`'s `metadata` and `stringData` sections.
-
-- In the `metadata`, you can customize only its labels and annotations.
-- You can customize `stringData` or utilize one of the available formatting options as detailed in the [Formats of Service Binding Secrets](#formats-of-service-binding-secrets) section.
-  IF you do not customize `stringData` and do not specify 
-
-**Important**:  If you customize `stringData`, your customization takes precedence over the pre-defined formats (if you parallelly provided one of them).
 
 Example of using both the pre-defined formats and customization of the Metadata section:
 
