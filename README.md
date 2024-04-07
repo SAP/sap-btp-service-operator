@@ -480,6 +480,8 @@ Below are two examples demonstrating 'ServiceBinding' and generated 'Secret' res
 
 ###### Example of a binding with customized metadata and stringData sections
 
+In this example, you specify both `Metadata` and `stringData` in the `secretTemplate`:
+
 `ServiceBinding`
 
 ```yaml
@@ -517,9 +519,10 @@ stringData:
   PASSWORD: ********
 ```
 
-###### Example of a binding with customized metadata and one of the existing formatting options for stringData  (key-value as default, credentials as JSON Object, credentials and service instance info as JSON). 
+###### Example of a binding with customized metadata section and applied pre-existing formating option for stringData (credentials as JSON object):
 
-In this example, you customize the metadata section in the secretTemplate while 
+In this example, you omit the `stringData` field from the `secretTemplate` and use the `secretKey` to format your `stringData` instead. (see 
+
 
 `ServiceBinding`
 
