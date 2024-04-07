@@ -517,7 +517,9 @@ stringData:
   PASSWORD: ********
 ```
 
-###### Example of a binding with customized metadata and utilized existing formatting option for stringData
+###### Example of a binding with customized metadata and one of the existing formatting options for stringData  (key-value as default, credentials as JSON Object, credentials and service instance info as JSON). 
+
+In this example, you customize the metadata section in the secretTemplate while 
 
 `ServiceBinding`
 
