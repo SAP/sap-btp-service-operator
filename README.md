@@ -521,7 +521,7 @@ stringData:
 
 ###### Example of a binding with customized metadata section and applied pre-existing formating option for stringData (credentials as JSON object):
 
-In this example, you omit the `stringData` field from the `secretTemplate` and use the `secretKey` to format your `stringData` instead. (see 
+In this example, you omit `stringData` from the `secretTemplate` and use the `secretKey` to format your `stringData` instead. (remember: [Formats of Service Binding Secrets](https://github.com/SAP/sap-btp-service-operator/blob/fba58755e4e5b8a25510811349f08242b4b2a897/README.md#formats-of-service-binding-secrets)):
 
 
 `ServiceBinding`
