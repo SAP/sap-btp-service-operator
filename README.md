@@ -582,6 +582,7 @@ To enable automatic service binding rotation, use the `credentialsRotationPolicy
 | `enabled` | bool | Turns automatic rotation on or off.                                                                                                           |                          |
 | `rotationFrequency` | string | Defines the desired interval between binding rotations.                                                                                       | "m" (minute), "h" (hour) |                                                                                                                                                                |
 | `rotatedBindingTTL`   |  string | Determines how long to keep the old `ServiceBinding` after rotation (before deletion). The actual TTL may be slightly longer (details below). | "m" (minute), "h" (hour)                |   
+
 ** **The `credentialsRotationPolicy` has no control over the validity of the credentials. The content and expiration time of the credentials is determined by the service you're using.**
 
 ### Rotation Process
