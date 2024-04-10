@@ -577,11 +577,13 @@ Enhance security by automatically rotating the credentials associated with your 
 
 To enable automatic service binding rotation, use the `credentialsRotationPolicy` field within the `spec` section of the `ServiceBinding` resource. This field allows you to configure several parameters:
 
-| Parameter         | Type     | Description                                                                                                                            | Valid Values                                                                                                                                            |
-|:-----------------|:---------|:---------------------------------------------------------------------------------------------------------------------------------------|:--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `enabled` | bool | Turns automatic rotation on or off.                                                                                      |                                                                                                                                                         |
-| `rotationFrequency` | string | Defines the desired interval between binding rotations.  Specify time units using "m" (minutes) or "h" (hours). Note that | "m", "h"                                                                                                                                                |                                                                                                                                                                |
-| `rotatedBindingTTL`   |  string | Determines how long to keep the old `ServiceBinding` after rotation (before deletion). The actual TTL may be slightly longer (details below). Specify time units using "m" (minutes) or "h" (hours).   | "m", "h"                                                                                                                                                |   
+| Parameter         | Type     | Description                                                                                                                                   | Valid Values             |
+|:-----------------|:---------|:----------------------------------------------------------------------------------------------------------------------------------------------|:-------------------------|
+| `enabled` | bool | Turns automatic rotation on or off.                                                                                                           |                          |
+| `rotationFrequency` | string | Defines the desired interval between binding rotations.                                                                                       | "m" (minute), "h" (hour) |                                                                                                                                                                |
+| `rotatedBindingTTL`   |  string | Determines how long to keep the old `ServiceBinding` after rotation (before deletion). The actual TTL may be slightly longer (details below). | "m" (minute), "h" (hour)                |   
+
+** **The `credentialsRotationPolicy` has no control over the validity of the credentials. The content and expiration time of the credentials is determined by the service you're using.**
 
 ### Rotation Process
 
@@ -590,10 +592,6 @@ The `credentialsRotationPolicy` is evaluated periodically during a [control loop
 ### Immediate Rotation 
 
 You can trigger an immediate rotation (regardless of the configured `rotationFrequency`) by adding the services.cloud.sap.com/forceRotate: "true" annotation to the `ServiceBinding` resource. This immediate rotation only works if automatic rotation is already enabled. 
-
-**Note**
-
-The `credentialsRotationPolicy` has no control over the validity of the credentials. The content and expiration time of the credentials is determined by the service you're using.
 
 **Example**
 
