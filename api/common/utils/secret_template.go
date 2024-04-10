@@ -164,7 +164,7 @@ var allowedSprigFunctions = map[string]interface{}{
 	// "typeIsLike": nil,
 	// "kindOf":     nil,
 	// "kindIs":     nil,
-	"deepEqual":  nil,
+	"deepEqual": nil,
 
 	// OS:
 	// "env":       nil,
