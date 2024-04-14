@@ -17,12 +17,17 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"flag"
 	"os"
 
-	"github.com/SAP/sap-btp-service-operator/internal/utils"
-
+	"github.com/SAP/sap-btp-service-operator/api/v1/webhooks"
+	v1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	"github.com/SAP/sap-btp-service-operator/internal/utils"
 
 	"k8s.io/client-go/rest"
 
@@ -30,9 +35,6 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
-
-	"github.com/SAP/sap-btp-service-operator/api/v1/webhooks"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -102,6 +104,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	if len(config.Get().InitialClusterID) == 0 {
+		setupLog.Info("cluster secret not found, creating it")
+		createClusterSecret(mgr.GetClient())
+	} else if config.Get().InitialClusterID != config.Get().ClusterID {
+		panic(fmt.Sprintf("ClusterID changed, which is not supported. Please redeploy with --set cluster.id=%s", config.Get().InitialClusterID))
+	}
+
 	secretResolver := &utils.SecretResolver{
 		ManagementNamespace:    config.Get().ManagementNamespace,
 		ReleaseNamespace:       config.Get().ReleaseNamespace,
@@ -161,5 +170,16 @@ func main() {
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
+	}
+
+}
+
+func createClusterSecret(client client.Client) {
+	clusterSecret := &v1.Secret{}
+	clusterSecret.Name = "sap-btp-operator-clusterid"
+	clusterSecret.Namespace = config.Get().ReleaseNamespace
+	clusterSecret.StringData = map[string]string{"INITIAL_CLUSTER_ID": config.Get().ClusterID}
+	if err := client.Create(context.Background(), clusterSecret); err != nil {
+		setupLog.Error(err, "failed to create cluster secret")
 	}
 }
