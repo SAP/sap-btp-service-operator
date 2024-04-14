@@ -108,7 +108,7 @@ func main() {
 		setupLog.Info("cluster secret not found, creating it")
 		createClusterSecret(mgr.GetClient())
 	} else if config.Get().InitialClusterID != config.Get().ClusterID {
-		panic(fmt.Sprintf("clusterID changed, not supported! deploy with --set cluster.id=%s", config.Get().InitialClusterID))
+		panic(fmt.Sprintf("ClusterID changed, which is not supported. Please redeploy with --set cluster.id=%s", config.Get().InitialClusterID))
 	}
 
 	secretResolver := &utils.SecretResolver{
