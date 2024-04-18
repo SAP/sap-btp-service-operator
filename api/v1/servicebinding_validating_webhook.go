@@ -58,11 +58,6 @@ func (sb *ServiceBinding) ValidateCreate() (admission.Warnings, error) {
 			return nil, err
 		}
 	}
-	if sb.Spec.SecretTemplate != "" {
-		if err := sb.validateSecretTemplate(); err != nil {
-			return nil, err
-		}
-	}
 	return nil, nil
 }
 
@@ -92,11 +87,6 @@ func (sb *ServiceBinding) ValidateUpdate(old runtime.Object) (admission.Warnings
 	specChanged := sb.specChanged(oldBinding)
 	if specChanged && (sb.Status.BindingID != "" || isStale) {
 		return nil, fmt.Errorf("updating service bindings is not supported")
-	}
-	if sb.Spec.SecretTemplate != "" {
-		if err := sb.validateSecretTemplate(); err != nil {
-			return nil, err
-		}
 	}
 	return nil, nil
 }
