@@ -77,8 +77,8 @@ var _ = Describe("ServiceBinding controller", func() {
 		return createBindingWithoutAssertionsAndWait(ctx, name, namespace, instanceName, instanceNamespace, externalName, secretTemplate, false)
 	}
 
-	createBindingWithTransitError := func(ctx context.Context, name, namespace, instanceName, externalName, failureMessage string) {
-		binding, err := createBindingWithoutAssertions(ctx, name, namespace, instanceName, "", externalName, "")
+	createBindingWithTransitError := func(ctx context.Context, name, namespace, instanceName, externalName, failureMessage string, secretTemplate string) {
+		binding, err := createBindingWithoutAssertions(ctx, name, namespace, instanceName, "", externalName, secretTemplate)
 		if err != nil {
 			Expect(err.Error()).To(ContainSubstring(failureMessage))
 		} else {
@@ -86,8 +86,8 @@ var _ = Describe("ServiceBinding controller", func() {
 		}
 	}
 
-	createBindingWithError := func(ctx context.Context, name, namespace, instanceName, externalName, failureMessage string) {
-		binding, err := createBindingWithoutAssertions(ctx, name, namespace, instanceName, "", externalName, "")
+	createBindingWithError := func(ctx context.Context, name, namespace, instanceName, externalName, failureMessage string, secretTemplate string) {
+		binding, err := createBindingWithoutAssertions(ctx, name, namespace, instanceName, "", externalName, secretTemplate)
 		if err != nil {
 			Expect(err.Error()).To(ContainSubstring(failureMessage))
 		} else {
@@ -212,7 +212,7 @@ var _ = Describe("ServiceBinding controller", func() {
 			When("service instance name is not provided", func() {
 				It("should fail", func() {
 					createBindingWithTransitError(ctx, bindingName, bindingTestNamespace, "", "",
-						"spec.serviceInstanceName in body should be at least 1 chars long")
+						"spec.serviceInstanceName in body should be at least 1 chars long", "")
 				})
 			})
 
@@ -396,8 +396,7 @@ var _ = Describe("ServiceBinding controller", func() {
 					})
 
 					It("should fail with the error returned from SM", func() {
-						createBindingWithError(ctx, bindingName, bindingTestNamespace, instanceName, "binding-external-name",
-							errorMessage)
+						createBindingWithError(ctx, bindingName, bindingTestNamespace, instanceName, "binding-external-name", errorMessage, "")
 					})
 				})
 
@@ -428,7 +427,7 @@ var _ = Describe("ServiceBinding controller", func() {
 					})
 
 					It("should fail", func() {
-						createBindingWithTransitError(ctx, bindingName, bindingTestNamespace, instanceName, "binding-external-name", errorMessage)
+						createBindingWithTransitError(ctx, bindingName, bindingTestNamespace, instanceName, "binding-external-name", errorMessage, "")
 					})
 				})
 
@@ -466,7 +465,7 @@ var _ = Describe("ServiceBinding controller", func() {
 					})
 
 					It("should detect the error as non-transient and fail", func() {
-						createBindingWithTransitError(ctx, bindingName, bindingTestNamespace, instanceName, "binding-external-name", errorMessage)
+						createBindingWithTransitError(ctx, bindingName, bindingTestNamespace, instanceName, "binding-external-name", errorMessage, "")
 					})
 				})
 
@@ -504,7 +503,7 @@ var _ = Describe("ServiceBinding controller", func() {
 						State:       smClientTypes.FAILED,
 						Description: errorMessage,
 					}, nil)
-					createBindingWithError(ctx, bindingName, bindingTestNamespace, instanceName, "existing-name", errorMessage)
+					createBindingWithError(ctx, bindingName, bindingTestNamespace, instanceName, "existing-name", errorMessage, "")
 				})
 			})
 
@@ -651,8 +650,7 @@ stringData:
 				                                       kind: Secret
 				                                       metadata:
 				                                         name: my-secret-name`)
-				_, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "", secretTemplate)
-				Expect(err.Error()).To(ContainSubstring("the Secret template is invalid: Secret's metadata field"))
+				createBindingWithError(ctx, bindingName, bindingTestNamespace, instanceName, "", "the Secret template is invalid: Secret's metadata field", secretTemplate)
 			})
 			It("should fail to create the secret if wrong template key in the spec.secretTemplate is provided", func() {
 				ctx := context.Background()
@@ -678,10 +676,7 @@ stringData:
 				secretTemplate := dedent.Dedent(`
 				                                       apiVersion: v1
 				                                       kind: Pod`)
-
-				_, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "", secretTemplate)
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("but needs to be of kind 'Secret'"))
+				createBindingWithError(ctx, bindingName, bindingTestNamespace, instanceName, "", "but needs to be of kind 'Secret'", secretTemplate)
 			})
 			It("should succeed to create the secret- empty data", func() {
 				ctx := context.Background()
@@ -749,6 +744,33 @@ metadata:
 					},
 				}
 				validateSecretMetadata(bindingSecret, credentialProperties)
+			})
+			It("should succeed to create the secret, with depth key", func() {
+
+				fakeClient.BindReturns(&smClientTypes.ServiceBinding{ID: fakeBindingID, Credentials: json.RawMessage(`{ "auth":{ "basic":{ "password":"secret_value","userName":"name"}},"url":"yourluckyday.com"}`)}, "", nil)
+
+				ctx := context.Background()
+				secretTemplate := dedent.Dedent(
+					`apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    instance_plan: {{ .instance.plan }}
+  annotations:
+    instance_name: {{ .instance.instance_name }}
+stringData:
+  newKey: {{ .credentials.auth.basic.password }}
+  tags: {{ .instance.tags }}`)
+
+				createdBinding, err := createBindingWithoutAssertionsAndWait(ctx, bindingName, bindingTestNamespace, instanceName, "", "", secretTemplate, true)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(isResourceReady(createdBinding)).To(BeTrue())
+				By("Verify binding secret created")
+				bindingSecret := getSecret(ctx, createdBinding.Spec.SecretName, createdBinding.Namespace, true)
+				validateSecretData(bindingSecret, "newKey", "secret_value")
+				validateSecretData(bindingSecret, "tags", strings.Join(mergeInstanceTags(createdInstance.Status.Tags, createdInstance.Spec.CustomTags), ","))
+				Expect(bindingSecret.Labels["instance_plan"]).To(Equal("a-plan-name"))
+				Expect(bindingSecret.Annotations["instance_name"]).To(Equal(instanceExternalName))
 			})
 		})
 	})

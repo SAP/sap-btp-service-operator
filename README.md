@@ -362,7 +362,7 @@ spec:
     key2: val2      
 ```
 
-##### Procedure
+#### Procedure
 
 1.  Apply the custom resource file in your cluster to create the `ServiceBinding`:
 
@@ -391,7 +391,7 @@ spec:
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
-##### Formats of Service Binding Secrets
+#### Formats of Service Binding Secrets 
 
 You can use different attributes in your `ServiceBinding` resource to generate different formats of your `Secret` resources.
 
@@ -402,7 +402,7 @@ Even though `Secret` resources can come in various formats, they all share a com
   
 Now let's explore these various formats:
 
-###### Key-Value Pairs (Default)
+##### Key-Value Pairs (Default)
 
 If you do not use any of the attributes, the generated `Secret` will be in a key-value pair format. 
 
@@ -433,7 +433,7 @@ stringData:
   type: sample-service  // The service offering name
 ```
 
-###### Credentials as JSON Object
+##### Credentials as JSON Object
 
 To show credentials returned from the broker within the `Secret` resource  as a JSON object, use the `secretKey` attribute in the `ServiceBinding` spec.
 The value of this `secretKey` is the name of the key that stores the credentials in JSON format:
@@ -469,7 +469,7 @@ stringData:
     type: sample-service // The service offering name
 ```
 
-###### Credentials and Service Info as One JSON Object
+##### Credentials and Service Info as One JSON Object
 
 To show both credentials returned from the broker and additional `ServiceInstance` attributes as a JSON object, use the `secretRootKey` attribute in the `ServiceBinding` spec.
 
@@ -505,18 +505,23 @@ stringData:
         type: sample-instance-offering, // The service offering name
     }
 ```
-###### Custom Templates
+##### Custom Formats 
 
-For additional flexibility, you can model your `Secret` resources according to your specific needs.
+For additional flexibility, you can model the `Secret` resources according to your needs.<br>
 To generate a custom-formatted `Secret`, use the `secretTemplate` attribute in the `ServiceBinding` spec.
-The value of the `secretTemplate` must be a Go template. 
 
-Refer to [Go Templates](https://pkg.go.dev/text/template) for more details.
+This attribute expects a Go template as its value (for more information, see [Go Templates](https://pkg.go.dev/text/template)).<br>
+Ensure the template is in YAML format, and its structure is of a Kubernetes `Secret`. 
 
-**Note** 
-If `secretTemplate` is used, both `secretKey` and `secretRootKey` attributes are ignored when provided.
+In the provided `Secret`, you can customize the `metadata` and `stringData` sections with the following options:
 
-The template can use the following data: 
+- `metadata`: labels and annotations
+- `stringData`: customize or utilize one of the available formatting options as detailed in the [Formats of Service Binding Secrets](#formats-of-service-binding-secrets) section.
+
+
+**Important**:  If you customize `stringData`, it takes precedence over the pre-defined formats (if you parallelly provided one of them).
+
+Provided templates are then executed on a map with the following available attributes:
 
 | Reference         | Description                                |                                                                          
 |:-----------------|:--------------------------------------------|
@@ -525,6 +530,13 @@ The template can use the following data:
 | `instance.plan`   |  The name of the service plan used to create this service instance. |  
 | `instance.type`   |  The name of the associated service offering. |  
 | `credentials.attributes(var)`   |  The content of the credentials depends on a service. For more details, refer to the documentation of the service you're using. |  
+
+Below are two examples demonstrating 'ServiceBinding' and generated 'Secret' resources. The first `ServiceBinding` example utilizes a custom template, while the second example combines a custom template with a predefined formatting option:
+
+
+###### Example of a binding with customized metadata and stringData sections
+
+In this example, you specify both `Metadata` and `stringData` in the `secretTemplate`:
 
 `ServiceBinding`
 
@@ -563,6 +575,54 @@ stringData:
   PASSWORD: ********
 ```
 
+###### Example of a binding with customized metadata section and applied pre-existing formating option for stringData (credentials as JSON object):
+
+In this example, you omit `stringData` from the `secretTemplate` and use the `secretKey` to format your `stringData` instead. (remember: [Formats of Service Binding Secrets](https://github.com/SAP/sap-btp-service-operator/blob/fba58755e4e5b8a25510811349f08242b4b2a897/README.md#formats-of-service-binding-secrets)):
+
+
+`ServiceBinding`
+
+```yaml
+apiVersion: services.cloud.sap.com/v1
+kind: ServiceBinding
+metadata:
+  name: sample-binding
+spec:
+  serviceInstanceName: sample-instance
+  secretKey: myCredentials
+  secretTemplate: |
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      labels:
+        service_plan: {{ .instance.plan }}
+      annotations:
+        instance: {{ .instance.instance_name }}
+```
+
+`Secret`
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    service_plan: sample-plan
+  annotations:
+    instance: sample-instance
+stringData:
+  myCredentials:
+  {
+    uri: https://my-service.authentication.eu10.hana.ondemand.com,
+    client_id: admin,
+    client_secret: ********
+  }
+  instance_guid: your-sample-instance-guid // The service instance ID
+  instance_name: sample-binding // Taken from the service instance external_name field if set. Otherwise from metadata.name
+  plan: sample-plan // The service plan name
+  type: sample-service // The service offering name
+```
+
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
 ## Service Binding Rotation
@@ -571,13 +631,15 @@ Enhance security by automatically rotating the credentials associated with your 
 
 ### Enabling Automatic Rotation
 
-To enable automatic service binding rotation, use the `credentialsRotationPolicy` field within the `spec` section of the `ServiceBinding` resource. This field allows you to configure several parameters:
+To enable automatic rotation of service bindings, use the `credentialsRotationPolicy` field within the `spec` section of the `ServiceBinding` resource. This field allows you to configure several parameters:
 
-| Parameter         | Type     | Description                                                                                                                            | Valid Values                                                                                                                                            |
-|:-----------------|:---------|:---------------------------------------------------------------------------------------------------------------------------------------|:--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `enabled` | bool | Turns automatic rotation on or off.                                                                                      |                                                                                                                                                         |
-| `rotationFrequency` | string | Defines the desired interval between binding rotations.  Specify time units using "m" (minutes) or "h" (hours). Note that | "m", "h"                                                                                                                                                |                                                                                                                                                                |
-| `rotatedBindingTTL`   |  string | Determines how long to keep the old `ServiceBinding` after rotation (before deletion). The actual TTL may be slightly longer (details below). Specify time units using "m" (minutes) or "h" (hours).   | "m", "h"                                                                                                                                                |   
+| Parameter         | Type     | Description                                                                                                                                   | Valid Values             |
+|:-----------------|:---------|:----------------------------------------------------------------------------------------------------------------------------------------------|:-------------------------|
+| `enabled` | bool | Controls whether the automatic rotation is enabled or disabled.                                  |                          |
+| `rotationFrequency` | string | Specifies the desired time interval between binding rotations.                      | "m" (minute), "h" (hour) |                                   |
+| `rotatedBindingTTL`   |  string | Determines how long to keep the old `ServiceBinding` resource after rotation (prior to deletion). The actual TTL may be slightly longer (details below). | "m" (minute), "h" (hour)                |   
+
+**Note that the `credentialsRotationPolicy` does not manage the validity or expiration of the credentials themselves. This is determined by the specific service you are bound to.**
 
 ### Rotation Process
 
@@ -587,11 +649,7 @@ The `credentialsRotationPolicy` is evaluated periodically during a [control loop
 
 You can trigger an immediate rotation (regardless of the configured `rotationFrequency`) by adding the services.cloud.sap.com/forceRotate: "true" annotation to the `ServiceBinding` resource. This immediate rotation only works if automatic rotation is already enabled. 
 
-**Note**
-
-The `credentialsRotationPolicy` has no control over the validity of the credentials. The content and expiration time of the credentials is determined by the service you're using.
-
-**Example**
+#### Example
 
 This example configures a `ServiceBinding` to rotate credentials every 25 days (600 hours) and keep the old `ServiceBinding` for 2 days (48 hours) before deleting it:
 

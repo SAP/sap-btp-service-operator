@@ -159,12 +159,12 @@ var allowedSprigFunctions = map[string]interface{}{
 	"mustDeepCopy":     nil,
 
 	// Reflection
-	"typeOf":     nil,
-	"typeIs":     nil,
-	"typeIsLike": nil,
-	"kindOf":     nil,
-	"kindIs":     nil,
-	"deepEqual":  nil,
+	// "typeOf":     nil,
+	// "typeIs":     nil,
+	// "typeIsLike": nil,
+	// "kindOf":     nil,
+	// "kindIs":     nil,
+	"deepEqual": nil,
 
 	// OS:
 	// "env":       nil,
