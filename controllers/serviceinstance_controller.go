@@ -357,7 +357,7 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, serviceInstance *s
 	status, statusErr := smClient.Status(serviceInstance.Status.OperationURL, nil)
 	if statusErr != nil {
 		log.Info(fmt.Sprintf("failed to fetch operation, got error from SM: %s", statusErr.Error()), "operationURL", serviceInstance.Status.OperationURL)
-		utils.SetInProgressConditions(ctx, serviceInstance.Status.OperationType, statusErr.Error(), serviceInstance)
+		utils.SetInProgressConditions(ctx, serviceInstance.Status.OperationType, string(smClientTypes.INPROGRESS), serviceInstance)
 		// if failed to read operation status we cleanup the status to trigger re-sync from SM
 		freshStatus := servicesv1.ServiceInstanceStatus{Conditions: serviceInstance.GetConditions(), ObservedGeneration: serviceInstance.Generation}
 		if utils.IsMarkedForDeletion(serviceInstance.ObjectMeta) {
