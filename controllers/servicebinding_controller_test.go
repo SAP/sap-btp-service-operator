@@ -1082,8 +1082,8 @@ stringData:
 						if err != nil {
 							return false
 						}
-						failedCond := meta.FindStatusCondition(createdBinding.GetConditions(), common.ConditionFailed)
-						return failedCond != nil && strings.Contains(failedCond.Message, "no polling for you")
+						cond := meta.FindStatusCondition(createdBinding.GetConditions(), common.ConditionSucceeded)
+						return cond != nil && strings.Contains(cond.Message, string(smClientTypes.INPROGRESS))
 					}, timeout, interval).Should(BeTrue())
 					fakeClient.UnbindReturns("", nil)
 					deleteAndValidate(createdBinding)

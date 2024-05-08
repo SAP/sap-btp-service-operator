@@ -394,7 +394,7 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, serviceBinding *ser
 	status, statusErr := smClient.Status(serviceBinding.Status.OperationURL, nil)
 	if statusErr != nil {
 		log.Info(fmt.Sprintf("failed to fetch operation, got error from SM: %s", statusErr.Error()), "operationURL", serviceBinding.Status.OperationURL)
-		utils.SetFailureConditions(serviceBinding.Status.OperationType, string(smClientTypes.INPROGRESS), serviceBinding)
+		utils.SetInProgressConditions(ctx, serviceBinding.Status.OperationType, string(smClientTypes.INPROGRESS), serviceBinding)
 		freshStatus := servicesv1.ServiceBindingStatus{
 			Conditions: serviceBinding.GetConditions(),
 		}
