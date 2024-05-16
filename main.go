@@ -21,6 +21,8 @@ import (
 	"flag"
 	"os"
 
+	"k8s.io/apimachinery/pkg/labels"
+
 	"github.com/SAP/sap-btp-service-operator/api/v1/webhooks"
 	v1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -46,6 +48,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	"github.com/SAP/sap-btp-service-operator/api/common"
 	servicesv1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	"github.com/SAP/sap-btp-service-operator/controllers"
 	// +kubebuilder:scaffold:imports
@@ -87,6 +90,16 @@ func main() {
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "aa689ecc.cloud.sap.com",
+	}
+
+	if config.Get().EnableLimitedCache {
+		setupLog.Info("limited cache enabled")
+		mgrOptions.Cache = cache.Options{
+			ByObject: map[client.Object]cache.ByObject{
+				&v1.Secret{}:    {Label: labels.SelectorFromSet(map[string]string{common.ManagedByBTPOperatorLabel: "true"})},
+				&v1.ConfigMap{}: {Label: labels.SelectorFromSet(map[string]string{common.ManagedByBTPOperatorLabel: "true"})},
+			},
+		}
 	}
 
 	if !config.Get().AllowClusterAccess {

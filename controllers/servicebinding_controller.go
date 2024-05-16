@@ -605,6 +605,11 @@ func (r *ServiceBindingReconciler) storeBindingSecret(ctx context.Context, k8sBi
 		return err
 	}
 
+	if len(secret.Labels) == 0 {
+		secret.Labels = map[string]string{}
+	}
+	secret.Labels[common.ManagedByBTPOperatorLabel] = "true"
+
 	return r.createOrUpdateBindingSecret(ctx, k8sBinding, secret)
 }
 
