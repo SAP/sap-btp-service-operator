@@ -1,4 +1,10 @@
 apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sap-btp-operator-config
+  namespace: {{.Release.Namespace}}
+  labels:
+    "services.cloud.sap.com/managed-by-sap-btp-operator": "true"
 data:
   {{- if .Values.cluster.id }}
   CLUSTER_ID: {{ .Values.cluster.id }}
@@ -16,13 +22,10 @@ data:
   MANAGEMENT_NAMESPACE: {{.Release.Namespace}}
   {{- end }}
   RELEASE_NAMESPACE: {{.Release.Namespace}}
+  ENABLE_LIMITED_CACHE: {{ .Values.manager.enable_limited_cache | quote }}
   ALLOW_CLUSTER_ACCESS: {{ .Values.manager.allow_cluster_access | quote }}
   {{- if not .Values.manager.allow_cluster_access }}
   {{- if gt (len .Values.manager.allowed_namespaces) 0 }}
   ALLOWED_NAMESPACES: {{ join "," .Values.manager.allowed_namespaces }}
   {{- end }}
   {{- end }}
-kind: ConfigMap
-metadata:
-  name: sap-btp-operator-config
-  namespace: {{.Release.Namespace}}
