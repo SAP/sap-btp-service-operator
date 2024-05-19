@@ -80,6 +80,9 @@ spec:
           envFrom:
             - configMapRef:
                 name: sap-btp-operator-config
+            - secretRef:
+                name: sap-btp-operator-clusterid
+                optional: true
           {{- if and ( .Values.manager.image.sha ) ( .Values.manager.image.tag ) }}
           image: "{{.Values.manager.image.repository}}:{{.Values.manager.image.tag}}@sha256:{{.Values.manager.image.sha}}"
           {{- else if .Values.manager.image.sha}}

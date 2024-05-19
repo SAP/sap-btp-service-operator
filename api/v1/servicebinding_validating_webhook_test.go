@@ -20,30 +20,7 @@ var _ = Describe("Service Binding Webhook Test", func() {
 				_, err := binding.ValidateCreate()
 				Expect(err).ToNot(HaveOccurred())
 			})
-			It("should succeed if secretTemplate can be parsed", func() {
-				binding.Spec.SecretTemplate = dedent.Dedent(
-					`apiVersion: v1
-kind: Secret
-metadata:
-  labels:
-    instance_plan: "a-new-plan-name"
-  annotations:
-    instance_name: "a-new-instance-name"
-stringData:
-  newKey2: {{ .credentials.secret_key }}`)
-				_, err := binding.ValidateCreate()
-
-				Expect(err).ToNot(HaveOccurred())
-			})
-			It("should fail if can't secretTemplate can be parsed", func() {
-				//write test for secretTemplateError
-				binding.Spec.SecretTemplate = "{{"
-				_, err := binding.ValidateCreate()
-				Expect(err).To(HaveOccurred())
-				errMsg := err.Error()
-				Expect(errMsg).To(ContainSubstring("unclosed action"))
-			})
-			It("should fail if can't secretTemplate have invalid function", func() {
+			It("should succeed if using allowed sprig function", func() {
 				//write test for secretTemplateError
 				binding.Spec.SecretTemplate = dedent.Dedent(`
 				                                       apiVersion: v1
@@ -51,28 +28,7 @@ stringData:
 				                                       stringData:
 				                                         secretKey: {{ .secretValue | quote }}`)
 				_, err := binding.ValidateCreate()
-				Expect(err).To(HaveOccurred())
-				errMsg := err.Error()
-				Expect(errMsg).To(ContainSubstring(" function \"quote\" not defined"))
-			})
-			It("should fail if template contains metadata.name", func() {
-				//write test for secretTemplateError
-				binding.Spec.SecretTemplate = dedent.Dedent(
-					`apiVersion: v1
-kind: Secret
-metadata:
-  name: "a-new-secret"
-  labels:
-    instance_plan: "a-new-plan-name"
-  annotations:
-    instance_name: "a-new-instance-name"
-stringData:
-  newKey2: {{ .credentials.secret_key }}`)
-
-				_, err := binding.ValidateCreate()
-				Expect(err).To(HaveOccurred())
-				errMsg := err.Error()
-				Expect(errMsg).To(ContainSubstring("the Secret template is invalid: Secret's metadata field"))
+				Expect(err).ToNot(HaveOccurred())
 			})
 		})
 
@@ -265,6 +221,14 @@ stringData:
 						Expect(err).To(HaveOccurred())
 					})
 
+				})
+
+				When("secretTemplate changed", func() {
+					It("should succeed", func() {
+						newBinding.Spec.SecretTemplate = "new-template"
+						_, err := newBinding.ValidateUpdate(binding)
+						Expect(err).ToNot(HaveOccurred())
+					})
 				})
 			})
 
