@@ -280,7 +280,7 @@ stringData:
   tokenurlsuffix: "/oauth/token"
 ```
 #### Configure the secret name in the `ServiceInstance` resource within the property `btpAccessCredentialsSecret`:
-The secret must be located in the same namespace as the instance
+The secret must be located in the management namespace
 ```yaml
 apiVersion: services.cloud.sap.com/v1
 kind: ServiceInstance
