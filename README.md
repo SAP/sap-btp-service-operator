@@ -900,7 +900,7 @@ The deletion of my service instance failed. To fix the failure, I have to create
 
 **Solution**
 
-To overcome this issue, use the `force_k8s_binding` query param when you create a service binding and set it to `true` (`force_k8s_binding=true`). You can do & this   either with the Service Manager Control CLI (smctl) [bind](https://help.sap.com/docs/SERVICEMANAGEMENT/09cc82baadc542a688176dce601398de/f53ff2634e0a46d6bfc72ec075418dcd.html) command or 'Create a Service Binding' [Service Manager API](https://api.sap.com/api/APIServiceManagment/resource).
+To overcome this issue, use the `force_k8s_binding` query param when you create a service binding and set it to `true` (`force_k8s_binding=true`). You can do & this   either with the Service Manager Control CLI (smctl) [bind](https://help.sap.com/docs/SERVICEMANAGEMENT/09cc82baadc542a688176dce601398de/f53ff2634e0a46d6bfc72ec075418dcd.html) command or 'Create a Service Binding' [Service Manager API](https://api.sap.com/api/APIServiceManager/resource/Platforms).
 
 smctl Example
 
@@ -917,7 +917,30 @@ smctl Example
   >   ```
 **Note:** `force_k8s_binding` is supported only for the Kubernetes instances that are in the `Delete Failed` state.<br>
 
+#### Cannot delete instances and bindings created by the Operator because the cluster is no longer accessible
+
+Operator resources should be deleted through the cluster, but this cannot be done if the cluster is no longer accessible.
+
+**Solution**
+
+To overcome this issue, You can use dedicated API in Service Manager to delete cluster content:
+
+#### Request
+
+`DELETE /v1/platforms/{platformID}/clusters/{clusterID}?cascade=true`
+
+
+#### Parameters
+| Parameter                                   | Type       | Description                                                                               |
+|:--------------------------------------------|:-----------|:------------------------------------------------------------------------------------------|
+| platformID                                  | `string`   | The ID of the platform (same ID as the `service-operator-access` instance ID)             |
+| clusterID                                   | `string`   | The ID of the cluster (can be found in the context of operator resource).                 |
+| cascade                                     | `boolean`  | Whether to cascade-delete all the services and bindings that are related to the platform. |
+
+
 You're welcome to raise issues related to feature requests, or bugs, or give us general feedback on this project's GitHub Issues page.
 The SAP BTP service operator project maintainers will respond to the best of their abilities.
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
+
+
