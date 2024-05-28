@@ -887,7 +887,7 @@ This project is licensed under Apache 2.0 unless noted otherwise in the [license
 
 ## Troubleshooting and Support
 
-#### Cannot Create a Service Binding for Service Instance in `Delete Failed` State
+### Cannot Create a Service Binding for Service Instance in `Delete Failed` State
 
 The deletion of my service instance failed. To fix the failure, I have to create a service binding, but I can't do this because the instance is in the `Delete  Failed` state.
 
@@ -910,7 +910,8 @@ btp cli Example
   >   ```
 **Note:** `force_k8s_binding` is supported only for the Kubernetes instances that are in the `Delete Failed` state.<br>
 
-#### Cannot Delete Instances and Bindings Created by the Operator Because Cluster is no Longer Accessible
+
+### Cannot Delete Instances and Bindings Created by the Operator Because Cluster is no Longer Accessible
 
 Operator resources should be deleted through the cluster, but this cannot be done if the cluster is no longer accessible.
 
