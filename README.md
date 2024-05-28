@@ -941,9 +941,9 @@ To overcome this issue, You can use dedicated API in Service Manager to delete c
 ##### Status Code    
     `202 Accepted` - The request has been accepted for processing, but the processing has not been completed.
 ##### Headers:
-| Name         | Description                      |
-|:-------------|:---------------------------------|
-| Location     | A path to the operation status.  |
+| Name         | Description                                                                                                                                                                      |
+|:-------------|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Location     | A path to the operation status, For more information about operations, see:  [Service Manager operation API](https://api.sap.com/api/APIServiceManager/path/getSingleOperation). |
 
 
 You're welcome to raise issues related to feature requests, or bugs, or give us general feedback on this project's GitHub Issues page.
