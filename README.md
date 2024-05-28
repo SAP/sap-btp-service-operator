@@ -910,13 +910,13 @@ btp cli Example
   >   ```
 **Note:** `force_k8s_binding` is supported only for the Kubernetes instances that are in the `Delete Failed` state.<br>
 
-#### Cannot delete instances and bindings created by the Operator because the cluster is no longer accessible
+#### Cannot Delete Instances and Bindings Created by the Operator Because Cluster is no Longer Accessible
 
 Operator resources should be deleted through the cluster, but this cannot be done if the cluster is no longer accessible.
 
 **Solution**
 
-To overcome this issue, You can use dedicated API in Service Manager to delete cluster content:
+To overcome this issue, use a dedicated API in Service Manager to delete cluster content:
 
 #### Request
 
@@ -926,8 +926,8 @@ To overcome this issue, You can use dedicated API in Service Manager to delete c
 #### Parameters
 | Parameter                                   | Type       | Description                                                                               |
 |:--------------------------------------------|:-----------|:------------------------------------------------------------------------------------------|
-| platformID                                  | `string`   | The ID of the platform (same ID as the `service-operator-access` instance ID)             |
-| clusterID                                   | `string`   | The ID of the cluster (can be found in the context of operator resource).                 |
+| platformID                                  | `string`   | The ID of the platform (should be the `service-operator-access` instance ID)             |
+| clusterID                                   | `string`   | The ID of the cluster (can be found in the context of the operator resource).                 |
 | cascade                                     | `boolean`  | Whether to cascade-delete all the services and bindings that are related to the platform. |
 
 #### Response
