@@ -36,7 +36,7 @@ It is implemented using a [CRDs-based](https://kubernetes.io/docs/concepts/exten
 
 ## Prerequisites
 - SAP BTP [Global Account](https://help.sap.com/viewer/65de2977205c403bbc107264b8eccf4b/Cloud/en-US/d61c2819034b48e68145c45c36acba6e.html) and [Subaccount](https://help.sap.com/viewer/65de2977205c403bbc107264b8eccf4b/Cloud/en-US/55d0b6d8b96846b8ae93b85194df0944.html) 
-- Service Management Control (SMCTL) command line interface. See [Using the SMCTL](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/0107f3f8c1954a4e96802f556fc807e3.html).
+- [Working with SAP Service Manager](https://help.sap.com/docs/service-manager/sap-service-manager/working-with-sap-service-manager).
 - [Kubernetes cluster](https://kubernetes.io/) running version 1.17 or higher 
 - [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) v1.17 or higher
 - [helm](https://helm.sh/) v3.0 or higher
@@ -49,51 +49,44 @@ It is implemented using a [CRDs-based](https://kubernetes.io/docs/concepts/exten
    - for releases v0.1.17 or lower use cert-manager lower than v1.6.0
 
 2. Obtain the access credentials for the SAP BTP service operator:
-
-   a. Using the SAP BTP cockpit or CLI, create an instance of the SAP Service Manager service (technical name: `service-manager`) with the plan:
-    `service-operator-access`<br/><br>*Note*<br/><br>*If you can't see the needed plan, you need to entitle your subaccount to use SAP Service Manager service.*<br>
-
-      *For more information about how to entitle a service to a subaccount, see:*
-      * *[Configure Entitlements and Quotas for Subaccounts](https://help.sap.com/viewer/65de2977205c403bbc107264b8eccf4b/Cloud/en-US/5ba357b4fa1e4de4b9fcc4ae771609da.html)*
-      
-      
-      <br/>For more information about creating service instances, see:     
-      * [Creating Service Instances Using the SAP BTP Cockpit](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/bf71f6a7b7754dbd9dfc2569791ccc96.html)
-        
-      * [Creating Service Instances using SMCTL](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/b327b66b711746b085ec5d2ea16e608e.html)<br> 
+   * Create an instance of the SAP Service Manager service (technical name: `service-manager`) with the plan:
+       `service-operator-access`<br/>
+     *Note:<br> If you can't see the needed plan, you need to entitle your subaccount to use SAP Service Manager service.For more information about how to entitle a service to a subaccount, see:[Configure Entitlements and Quotas for Subaccounts](https://help.sap.com/viewer/65de2977205c403bbc107264b8eccf4b/Cloud/en-US/5ba357b4fa1e4de4b9fcc4ae771609da.html)<br>
+   For more information about creating service instances, see:
+     * [Creating Service Instances Using the SAP BTP Cockpit](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/bf71f6a7b7754dbd9dfc2569791ccc96.html)
+     * [Creating Service Instances using BTP CLI](https://help.sap.com/docs/btp/btp-cli-command-reference/btp-create-services-binding) 
    
-   b. Create a binding to the created service instance.
+   * Create a binding to the created service instance.
       
-   For more information about creating service bindings, see:  
-      * [Creating Service Bindings Using the SAP BTP Cockpit](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/55b31ea23c474f6ba2f64ee4848ab1b3.html) 
-       
-      * [Creating Service Bindings Using SMCTL](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/f53ff2634e0a46d6bfc72ec075418dcd.html). 
+      For more information about creating service bindings, see:  
+      * [Creating Service Bindings Using the SAP BTP Cockpit](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/55b31ea23c474f6ba2f64ee4848ab1b3.html)
+      * [Creating Service Bindings Using BTP CLI](https://help.sap.com/docs/btp/btp-cli-command-reference/btp-create-services-binding). 
    
-   c. Retrieve the generated access credentials from the created binding:
+   * Retrieve the generated access credentials from the created binding:
    
-      The example of the default binding object used if no credentials type is specified:
+         The example of the default binding object used if no credentials type is specified:
       
-    ```json
-     {
-         "clientid": "xxxxxxx",
-         "clientsecret": "xxxxxxx",
-         "url": "https://mysubaccount.authentication.eu10.hana.ondemand.com",
-         "xsappname": "b15166|service-manager!b1234",
-         "sm_url": "https://service-manager.cfapps.eu10.hana.ondemand.com"
-     }
-    ```
-    The example of the binding object with the specified X.509 certificate:
+       ```json
+        {
+            "clientid": "xxxxxxx",
+            "clientsecret": "xxxxxxx",
+            "url": "https://mysubaccount.authentication.eu10.hana.ondemand.com",
+            "xsappname": "b15166|service-manager!b1234",
+            "sm_url": "https://service-manager.cfapps.eu10.hana.ondemand.com"
+        }
+       ```
+       The example of the binding object with the specified X.509 certificate:
     
-    ```json
-    {
-         "clientid": "xxxxxxx",
-         "certificate": "-----BEGIN CERTIFICATE-----...-----END CERTIFICATE-----\n-----BEGIN CERTIFICATE-----..-----END CERTIFICATE-----\n-----BEGIN CERTIFICATE-----...-----END CERTIFICATE-----\n",
-         "key": "-----BEGIN RSA PRIVATE KEY-----...-----END RSA PRIVATE KEY-----\n",
-         "certurl": "https://mysubaccount.authentication.cert.eu10.hana.ondemand.com",
-         "xsappname": "b15166|service-manager!b1234",
-         "sm_url": "https://service-manager.cfapps.eu10.hana.ondemand.com"
-     }
-    ```
+       ```json
+       {
+            "clientid": "xxxxxxx",
+            "certificate": "-----BEGIN CERTIFICATE-----...-----END CERTIFICATE-----\n-----BEGIN CERTIFICATE-----..-----END CERTIFICATE-----\n-----BEGIN CERTIFICATE-----...-----END CERTIFICATE-----\n",
+            "key": "-----BEGIN RSA PRIVATE KEY-----...-----END RSA PRIVATE KEY-----\n",
+            "certurl": "https://mysubaccount.authentication.cert.eu10.hana.ondemand.com",
+            "xsappname": "b15166|service-manager!b1234",
+            "sm_url": "https://service-manager.cfapps.eu10.hana.ondemand.com"
+        }
+       ```
 3. Add SAP BTP service operator chart repository  
    ```bash
     helm repo add sap-btp-operator https://sap.github.io/sap-btp-service-operator
@@ -900,12 +893,12 @@ The deletion of my service instance failed. To fix the failure, I have to create
 
 **Solution**
 
-To overcome this issue, use the `force_k8s_binding` query param when you create a service binding and set it to `true` (`force_k8s_binding=true`). You can do & this   either with the Service Manager Control CLI (smctl) [bind](https://help.sap.com/docs/SERVICEMANAGEMENT/09cc82baadc542a688176dce601398de/f53ff2634e0a46d6bfc72ec075418dcd.html) command or 'Create a Service Binding' [Service Manager API](https://api.sap.com/api/APIServiceManager/resource/Platforms).
+To overcome this issue, use the `force_k8s_binding` query param when you create a service binding and set it to `true` (`force_k8s_binding=true`). You can do & this   either with the BTP CLI [bind](https://help.sap.com/docs/btp/btp-cli-command-reference/btp-create-services-binding) command or 'Create a Service Binding' [Service Manager API](https://api.sap.com/api/APIServiceManager/resource/Platforms).
 
-smctl Example
+btp cli Example
 
 >   ```bash
-  >   smctl bind INSTANCE_NAME BINDING_NAME --param force_k8s_binding=true
+  >   btp create binding --service-instance INSTANCE_NAME --binding BINDING_NAME --parameters  '{"force_k8s_binding":true}'
   >   ```
 
 <br>
@@ -913,7 +906,7 @@ smctl Example
 
 
 >   ```bash
-  >   smctl unbind INSTANCE_NAME BINDING_NAME --param force_k8s_binding=true
+  >   btp delete binding --name BINDING_NAME --subaccount SUBACCOUNT_NAME
   >   ```
 **Note:** `force_k8s_binding` is supported only for the Kubernetes instances that are in the `Delete Failed` state.<br>
 
