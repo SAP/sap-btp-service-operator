@@ -898,7 +898,7 @@ To overcome this issue, use the `force_k8s_binding` query param when you create 
 btp cli Example
 
 >   ```bash
-  >   btp create binding --service-instance INSTANCE_NAME --binding BINDING_NAME --parameters  '{"force_k8s_binding":true}'
+  >   btp create services/binding --binding BINDING_NAME --instance-name INSTANCE_NAME  --parameters  '{"force_k8s_binding":true}'
   >   ```
 
 <br>
@@ -906,7 +906,7 @@ btp cli Example
 
 
 >   ```bash
-  >   btp delete binding --name BINDING_NAME --subaccount SUBACCOUNT_NAME
+  >   btp delete services/binding --name BINDING_NAME
   >   ```
 **Note:** `force_k8s_binding` is supported only for the Kubernetes instances that are in the `Delete Failed` state.<br>
 
