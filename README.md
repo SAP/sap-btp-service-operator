@@ -937,6 +937,14 @@ To overcome this issue, You can use dedicated API in Service Manager to delete c
 | clusterID                                   | `string`   | The ID of the cluster (can be found in the context of operator resource).                 |
 | cascade                                     | `boolean`  | Whether to cascade-delete all the services and bindings that are related to the platform. |
 
+#### Response
+##### Status Code    
+    `202 Accepted` - The request has been accepted for processing, but the processing has not been completed.
+##### Headers:
+| Name         | Description                      |
+|:-------------|:---------------------------------|
+| Location     | A path to the operation status.  |
+
 
 You're welcome to raise issues related to feature requests, or bugs, or give us general feedback on this project's GitHub Issues page.
 The SAP BTP service operator project maintainers will respond to the best of their abilities.
