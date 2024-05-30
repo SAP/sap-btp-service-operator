@@ -23,7 +23,7 @@ all: manager
 
 # Run tests go test and coverage
 test: generate fmt vet manifests
-	KUBEBUILDER_ASSETS="$(shell setup-envtest use 1.30.0 -v debug --bin-dir /usr/local/bin)" $(GO_TEST)
+	KUBEBUILDER_ASSETS="$(shell setup-envtest use 1.30.0 -v debug --bin-dir /usr/local/bin -p path)" $(GO_TEST)
 
 # Build manager binary
 manager: generate fmt vet
