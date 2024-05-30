@@ -96,8 +96,10 @@ func main() {
 		setupLog.Info("limited cache enabled")
 		mgrOptions.Cache = cache.Options{
 			ByObject: map[client.Object]cache.ByObject{
-				&v1.Secret{}:    {Label: labels.SelectorFromSet(map[string]string{common.ManagedByBTPOperatorLabel: "true"})},
-				&v1.ConfigMap{}: {Label: labels.SelectorFromSet(map[string]string{common.ManagedByBTPOperatorLabel: "true"})},
+				&v1.Secret{}:                  {Label: labels.SelectorFromSet(map[string]string{common.ManagedByBTPOperatorLabel: "true"})},
+				&v1.ConfigMap{}:               {Label: labels.SelectorFromSet(map[string]string{common.ManagedByBTPOperatorLabel: "true"})},
+				&servicesv1.ServiceInstance{}: {},
+				&servicesv1.ServiceBinding{}:  {},
 			},
 		}
 	}
