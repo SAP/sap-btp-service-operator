@@ -138,6 +138,12 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 	}
 
+	if meta.IsStatusConditionTrue(serviceBinding.Status.Conditions, common.ConditionCredRotationInProgress) {
+		if err := r.rotateCredentials(ctx, serviceBinding, serviceInstance.Spec.BTPAccessCredentialsSecret); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
 	condition := meta.FindStatusCondition(serviceBinding.Status.Conditions, common.ConditionReady)
 	isBindingReady := condition != nil && condition.Status == metav1.ConditionTrue
 	if isBindingReady {
@@ -149,23 +155,15 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
 		}
 
-		// if secret template changed or secret is deleted, recreate it
-		if condition.ObservedGeneration != serviceBinding.Generation || !r.secretExists(ctx, serviceBinding) {
+		// if secret template changed, update the secret
+		if condition.ObservedGeneration != serviceBinding.Generation {
 			err := r.syncSecret(ctx, serviceBinding, serviceInstance, log)
 			if err != nil {
 				return r.handleSecretError(ctx, smClientTypes.UPDATE, err, serviceBinding)
 			}
 			return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
 		}
-	}
 
-	if meta.IsStatusConditionTrue(serviceBinding.Status.Conditions, common.ConditionCredRotationInProgress) {
-		if err := r.rotateCredentials(ctx, serviceBinding, serviceInstance.Spec.BTPAccessCredentialsSecret); err != nil {
-			return ctrl.Result{}, err
-		}
-	}
-
-	if isBindingReady {
 		log.Info("Binding in final state")
 		return r.maintain(ctx, serviceBinding)
 	}
@@ -1051,11 +1049,6 @@ func (r *ServiceBindingReconciler) recover(ctx context.Context, serviceBinding *
 	r.resyncBindingStatus(ctx, serviceBinding, smBinding)
 
 	return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
-}
-
-func (r *ServiceBindingReconciler) secretExists(ctx context.Context, binding *servicesv1.ServiceBinding) bool {
-	err := r.Client.Get(ctx, types.NamespacedName{Name: binding.Spec.SecretName, Namespace: binding.Namespace}, &corev1.Secret{})
-	return err == nil
 }
 
 func isStaleServiceBinding(binding *servicesv1.ServiceBinding) bool {
