@@ -53,7 +53,6 @@ type ServiceInstanceSpec struct {
 
 	// Indicates the desired shared state
 	// +optional
-	// +kubebuilder:default={}
 	Shared *bool `json:"shared,omitempty"`
 
 	// Provisioning parameters for the instance.
