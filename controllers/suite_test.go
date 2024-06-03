@@ -360,33 +360,3 @@ func eventuallyMsgForResource(message string, key types.NamespacedName, resource
 	gvk, _ := apiutil.GVKForObject(resource, scheme.Scheme)
 	return fmt.Sprintf("eventaully failure for %s %s. message: %s", gvk.Kind, key.String(), message)
 }
-
-func ListAndDeleteInstancesAndBindings(ctx context.Context, k8sClient client.Client) error {
-	// List all ServiceInstances
-	instanceList := &v1.ServiceInstanceList{}
-	if err := k8sClient.List(ctx, instanceList); err != nil {
-		return fmt.Errorf("failed to list ServiceInstances: %w", err)
-	}
-
-	// Delete each ServiceInstance
-	for _, instance := range instanceList.Items {
-		if err := k8sClient.Delete(ctx, &instance); err != nil {
-			return fmt.Errorf("failed to delete ServiceInstance %s: %w", instance.Name, err)
-		}
-	}
-
-	// List all ServiceBindings
-	bindingList := &v1.ServiceBindingList{}
-	if err := k8sClient.List(ctx, bindingList); err != nil {
-		return fmt.Errorf("failed to list ServiceBindings: %w", err)
-	}
-
-	// Delete each ServiceBinding
-	for _, binding := range bindingList.Items {
-		if err := k8sClient.Delete(ctx, &binding); err != nil {
-			return fmt.Errorf("failed to delete ServiceBinding %s: %w", binding.Name, err)
-		}
-	}
-
-	return nil
-}
