@@ -24,10 +24,11 @@ import (
 	"net"
 	"net/http"
 	"path/filepath"
-	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"strings"
 	"testing"
 	"time"
+
+	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/SAP/sap-btp-service-operator/api/common"
 	"github.com/SAP/sap-btp-service-operator/internal/utils"
@@ -212,13 +213,7 @@ var _ = BeforeSuite(func(done Done) {
 
 	printSection("Finished BeforeSuite")
 	close(done)
-}, 60)
-
-//var _ = AfterSuite(func(done Done) {
-//	Expect(testEnv.Stop()).NotTo(HaveOccurred())
-//
-//	close(done)
-//}, StopTimeout)
+}, StopTimeout)
 
 var _ = AfterSuite(func() {
 	printSection("Starting AfterSuite")
@@ -276,27 +271,6 @@ func waitForResourceCondition(ctx context.Context, resource common.SAPBTPResourc
 			resource),
 	)
 }
-
-//func waitForResourceAnnotationRemove(ctx context.Context, resource common.SAPBTPResource, annotationsKey ...string) {
-//	key := getResourceNamespacedName(resource)
-//	Eventually(func() bool {
-//		if err := k8sClient.Get(ctx, key, resource); err != nil {
-//			return false
-//		}
-//		for _, annotationKey := range annotationsKey {
-//			_, ok := resource.GetAnnotations()[annotationKey]
-//			if ok {
-//				return false
-//			}
-//		}
-//		return true
-//	}, timeout*2, interval).Should(BeTrue(),
-//		eventuallyMsgForResource(
-//			fmt.Sprintf("annotation %s was not removed", annotationsKey),
-//			key,
-//			resource),
-//	)
-//}
 
 func getResourceNamespacedName(resource client.Object) types.NamespacedName {
 	return types.NamespacedName{Namespace: resource.GetNamespace(), Name: resource.GetName()}

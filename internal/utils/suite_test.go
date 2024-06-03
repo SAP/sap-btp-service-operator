@@ -19,10 +19,11 @@ package utils
 import (
 	"context"
 	"path/filepath"
-	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"testing"
 	"time"
+
+	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	"k8s.io/client-go/rest"
