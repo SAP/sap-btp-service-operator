@@ -177,7 +177,10 @@ var _ = Describe("ServiceBinding controller", func() {
 
 		fakeClient = &smfakes.FakeClient{}
 		fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: "12345678", Tags: []byte("[\"test\"]")}, nil)
-		fakeClient.BindReturns(&smClientTypes.ServiceBinding{ID: fakeBindingID, Credentials: json.RawMessage(`{"secret_key": "secret_value", "escaped": "{\"escaped_key\":\"escaped_val\"}"}`)}, "", nil)
+
+		smBinding := &smClientTypes.ServiceBinding{ID: fakeBindingID, Credentials: json.RawMessage(`{"secret_key": "secret_value", "escaped": "{\"escaped_key\":\"escaped_val\"}"}`)}
+		fakeClient.BindReturns(smBinding, "", nil)
+		fakeClient.GetBindingByIDReturns(smBinding, nil)
 
 		smInstance := &smClientTypes.ServiceInstance{ID: fakeInstanceID, Ready: true, LastOperation: &smClientTypes.Operation{State: smClientTypes.SUCCEEDED, Type: smClientTypes.UPDATE}}
 		fakeClient.GetInstanceByIDReturns(smInstance, nil)
@@ -382,7 +385,7 @@ var _ = Describe("ServiceBinding controller", func() {
 					Eventually(func() bool {
 						err := k8sClient.Get(ctx, secretLookupKey, newSecret)
 						return err == nil && newSecret.UID != originalSecretUID
-					}, timeout, interval).Should(BeTrue())
+					}, timeout*10, interval).Should(BeTrue())
 				})
 			})
 

@@ -137,19 +137,8 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			return ctrl.Result{}, err
 		}
 	}
+
 	condition := meta.FindStatusCondition(serviceBinding.Status.Conditions, common.ConditionReady)
-
-	if serviceBinding.Status.BindingID != "" && condition != nil && condition.ObservedGeneration != serviceBinding.Generation {
-		err := r.updateSecret(ctx, serviceBinding, serviceInstance, log)
-		if err != nil {
-			return r.handleSecretError(ctx, smClientTypes.UPDATE, err, serviceBinding)
-		}
-		err = utils.UpdateStatus(ctx, r.Client, serviceBinding)
-		if err != nil {
-			return r.handleSecretError(ctx, smClientTypes.UPDATE, err, serviceBinding)
-		}
-	}
-
 	isBindingReady := condition != nil && condition.Status == metav1.ConditionTrue
 	if isBindingReady {
 		if isStaleServiceBinding(serviceBinding) {
@@ -157,6 +146,15 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 
 		if initCredRotationIfRequired(serviceBinding) {
+			return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
+		}
+
+		// if secret template changed or secret is deleted, recreate it
+		if condition.ObservedGeneration != serviceBinding.Generation || !r.secretExists(ctx, serviceBinding) {
+			err := r.syncSecret(ctx, serviceBinding, serviceInstance, log)
+			if err != nil {
+				return r.handleSecretError(ctx, smClientTypes.UPDATE, err, serviceBinding)
+			}
 			return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
 		}
 	}
@@ -226,8 +224,8 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	return ctrl.Result{}, nil
 }
 
-func (r *ServiceBindingReconciler) updateSecret(ctx context.Context, serviceBinding *servicesv1.ServiceBinding, serviceInstance *servicesv1.ServiceInstance, log logr.Logger) error {
-	log.Info("Updating secret according to the new template")
+func (r *ServiceBindingReconciler) syncSecret(ctx context.Context, serviceBinding *servicesv1.ServiceBinding, serviceInstance *servicesv1.ServiceInstance, log logr.Logger) error {
+	log.Info("fetching binding from SM for update secret")
 	smClient, err := r.GetSMClient(ctx, r.SecretResolver, serviceBinding.Namespace, serviceInstance.Spec.BTPAccessCredentialsSecret)
 	if err != nil {
 		return err
@@ -1053,6 +1051,11 @@ func (r *ServiceBindingReconciler) recover(ctx context.Context, serviceBinding *
 	r.resyncBindingStatus(ctx, serviceBinding, smBinding)
 
 	return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
+}
+
+func (r *ServiceBindingReconciler) secretExists(ctx context.Context, binding *servicesv1.ServiceBinding) bool {
+	err := r.Client.Get(ctx, types.NamespacedName{Name: binding.Spec.SecretName, Namespace: binding.Namespace}, &corev1.Secret{})
+	return err == nil
 }
 
 func isStaleServiceBinding(binding *servicesv1.ServiceBinding) bool {
