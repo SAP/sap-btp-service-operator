@@ -887,7 +887,7 @@ This project is licensed under Apache 2.0 unless noted otherwise in the [license
 
 ## Troubleshooting and Support
 
-### Cannot Create a Service Binding for Service Instance in `Delete Failed` State
+### Service Instance in `Delete Failed` State: Unable to Create Binding
 
 The deletion of my service instance failed. To fix the failure, I have to create a service binding, but I can't do this because the instance is in the `Delete  Failed` state.
 
@@ -911,27 +911,27 @@ btp cli Example
 **Note:** `force_k8s_binding` is supported only for the Kubernetes instances that are in the `Delete Failed` state.<br>
 
 
-### Cannot Delete Instances and Bindings Created by the Operator Because Cluster is no Longer Accessible
+### Cluster Unavailable: Unable to Clean Up Instances and Bindings
 
-Operator resources should be deleted through the cluster, but this cannot be done if the cluster is no longer accessible.
+I am trying to delete service instances and bindings but I can't do this as the cluster in which they were created is no longer available.
 
 **Solution**
 
-To overcome this issue, use a dedicated API in Service Manager to delete cluster content:
+Use a dedicated Service Manager API to delete cluster content:
 
-#### Request
+#### API Request
 
 `DELETE /v1/platforms/{platformID}/clusters/{clusterID}?cascade=true`
 
 
-#### Parameters
+#### API Parameters
 | Parameter                                   | Type       | Description                                                                               |
 |:--------------------------------------------|:-----------|:------------------------------------------------------------------------------------------|
 | platformID                                  | `string`   | The ID of the platform (should be the `service-operator-access` instance ID)             |
 | clusterID                                   | `string`   | The ID of the cluster (can be found in the context of the operator resource).                 |
 | cascade                                     | `boolean`  | Whether to cascade-delete all the services and bindings that are related to the platform. |
 
-#### Response
+#### API Response
 ##### Status Code    
     `202 Accepted` - The request has been accepted for processing, but the processing has not been completed.
 ##### Headers:
