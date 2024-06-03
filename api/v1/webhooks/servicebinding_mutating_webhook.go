@@ -17,7 +17,7 @@ import (
 var bindinglog = logf.Log.WithName("servicebinding-webhook")
 
 type ServiceBindingDefaulter struct {
-	Decoder *admission.Decoder
+	Decoder admission.Decoder
 }
 
 func (s *ServiceBindingDefaulter) Handle(_ context.Context, req admission.Request) admission.Response {

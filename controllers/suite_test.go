@@ -24,6 +24,7 @@ import (
 	"net"
 	"net/http"
 	"path/filepath"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"strings"
 	"testing"
 	"time"
@@ -72,6 +73,7 @@ const (
 
 	fakeBindingID        = "fake-binding-id"
 	bindingTestNamespace = "test-namespace"
+	StopTimeout          = 60
 )
 
 var (
@@ -79,6 +81,8 @@ var (
 	k8sClient  client.Client
 	testEnv    *envtest.Environment
 	fakeClient *smfakes.FakeClient
+	cancel     context.CancelFunc
+	ctx        context.Context
 )
 
 func TestAPIs(t *testing.T) {
@@ -117,12 +121,16 @@ var _ = BeforeSuite(func(done Done) {
 	webhookInstallOptions := &testEnv.WebhookInstallOptions
 
 	k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
-		Scheme:             scheme.Scheme,
-		Host:               webhookInstallOptions.LocalServingHost,
-		Port:               webhookInstallOptions.LocalServingPort,
-		CertDir:            webhookInstallOptions.LocalServingCertDir,
-		LeaderElection:     false,
-		MetricsBindAddress: "0",
+		Scheme: scheme.Scheme,
+		WebhookServer: webhook.NewServer(webhook.Options{
+			Host:    webhookInstallOptions.LocalServingHost,
+			Port:    webhookInstallOptions.LocalServingPort,
+			CertDir: webhookInstallOptions.LocalServingCertDir,
+		}),
+		LeaderElection: false,
+		Metrics: server.Options{
+			BindAddress: "0",
+		},
 	})
 	Expect(err).ToNot(HaveOccurred())
 
@@ -167,15 +175,17 @@ var _ = BeforeSuite(func(done Done) {
 	Expect(err).ToNot(HaveOccurred())
 
 	// +kubebuilder:scaffold:webhook
+	ctx, cancel = context.WithCancel(context.TODO())
 
 	By("starting the k8s manager")
 	go func() {
 		defer GinkgoRecover()
-		err = k8sManager.Start(ctrl.SetupSignalHandler())
+		err = k8sManager.Start(ctx)
 		Expect(err).ToNot(HaveOccurred())
 	}()
 
 	By("waiting for the webhook server to get ready")
+
 	dialer := &net.Dialer{Timeout: time.Second}
 	addrPort := fmt.Sprintf("%s:%d", webhookInstallOptions.LocalServingHost, webhookInstallOptions.LocalServingPort)
 	Eventually(func() error {
@@ -204,10 +214,17 @@ var _ = BeforeSuite(func(done Done) {
 	close(done)
 }, 60)
 
+//var _ = AfterSuite(func(done Done) {
+//	Expect(testEnv.Stop()).NotTo(HaveOccurred())
+//
+//	close(done)
+//}, StopTimeout)
+
 var _ = AfterSuite(func() {
 	printSection("Starting AfterSuite")
-
 	By("tearing down the test environment")
+	cancel()
+
 	err := testEnv.Stop()
 	Expect(err).ToNot(HaveOccurred())
 
@@ -259,26 +276,27 @@ func waitForResourceCondition(ctx context.Context, resource common.SAPBTPResourc
 			resource),
 	)
 }
-func waitForResourceAnnotationRemove(ctx context.Context, resource common.SAPBTPResource, annotationsKey ...string) {
-	key := getResourceNamespacedName(resource)
-	Eventually(func() bool {
-		if err := k8sClient.Get(ctx, key, resource); err != nil {
-			return false
-		}
-		for _, annotationKey := range annotationsKey {
-			_, ok := resource.GetAnnotations()[annotationKey]
-			if ok {
-				return false
-			}
-		}
-		return true
-	}, timeout*2, interval).Should(BeTrue(),
-		eventuallyMsgForResource(
-			fmt.Sprintf("annotation %s was not removed", annotationsKey),
-			key,
-			resource),
-	)
-}
+
+//func waitForResourceAnnotationRemove(ctx context.Context, resource common.SAPBTPResource, annotationsKey ...string) {
+//	key := getResourceNamespacedName(resource)
+//	Eventually(func() bool {
+//		if err := k8sClient.Get(ctx, key, resource); err != nil {
+//			return false
+//		}
+//		for _, annotationKey := range annotationsKey {
+//			_, ok := resource.GetAnnotations()[annotationKey]
+//			if ok {
+//				return false
+//			}
+//		}
+//		return true
+//	}, timeout*2, interval).Should(BeTrue(),
+//		eventuallyMsgForResource(
+//			fmt.Sprintf("annotation %s was not removed", annotationsKey),
+//			key,
+//			resource),
+//	)
+//}
 
 func getResourceNamespacedName(resource client.Object) types.NamespacedName {
 	return types.NamespacedName{Namespace: resource.GetNamespace(), Name: resource.GetName()}
@@ -367,4 +385,34 @@ func getTransientBrokerError(errorMessage string) error {
 func eventuallyMsgForResource(message string, key types.NamespacedName, resource client.Object) string {
 	gvk, _ := apiutil.GVKForObject(resource, scheme.Scheme)
 	return fmt.Sprintf("eventaully failure for %s %s. message: %s", gvk.Kind, key.String(), message)
+}
+
+func ListAndDeleteInstancesAndBindings(ctx context.Context, k8sClient client.Client) error {
+	// List all ServiceInstances
+	instanceList := &v1.ServiceInstanceList{}
+	if err := k8sClient.List(ctx, instanceList); err != nil {
+		return fmt.Errorf("failed to list ServiceInstances: %w", err)
+	}
+
+	// Delete each ServiceInstance
+	for _, instance := range instanceList.Items {
+		if err := k8sClient.Delete(ctx, &instance); err != nil {
+			return fmt.Errorf("failed to delete ServiceInstance %s: %w", instance.Name, err)
+		}
+	}
+
+	// List all ServiceBindings
+	bindingList := &v1.ServiceBindingList{}
+	if err := k8sClient.List(ctx, bindingList); err != nil {
+		return fmt.Errorf("failed to list ServiceBindings: %w", err)
+	}
+
+	// Delete each ServiceBinding
+	for _, binding := range bindingList.Items {
+		if err := k8sClient.Delete(ctx, &binding); err != nil {
+			return fmt.Errorf("failed to delete ServiceBinding %s: %w", binding.Name, err)
+		}
+	}
+
+	return nil
 }

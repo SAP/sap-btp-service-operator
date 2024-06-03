@@ -20,7 +20,7 @@ import (
 var instancelog = logf.Log.WithName("serviceinstance-webhook")
 
 type ServiceInstanceDefaulter struct {
-	Decoder *admission.Decoder
+	Decoder admission.Decoder
 }
 
 func (s *ServiceInstanceDefaulter) Handle(_ context.Context, req admission.Request) admission.Response {

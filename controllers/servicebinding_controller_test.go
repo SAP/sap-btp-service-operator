@@ -194,14 +194,8 @@ var _ = Describe("ServiceBinding controller", func() {
 	})
 
 	AfterEach(func() {
-		if createdBinding != nil {
-			fakeClient.UnbindReturns("", nil)
-			deleteAndWait(ctx, types.NamespacedName{Name: createdBinding.Name, Namespace: createdBinding.Namespace}, &v1.ServiceBinding{})
-		}
-
-		if createdInstance != nil {
-			deleteAndWait(ctx, types.NamespacedName{Name: instanceName, Namespace: bindingTestNamespace}, &v1.ServiceInstance{})
-		}
+		By("cleanup")
+		ListAndDeleteInstancesAndBindings(ctx, k8sClient)
 
 		createdBinding = nil
 		createdInstance = nil

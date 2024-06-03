@@ -147,9 +147,9 @@ var _ = Describe("ServiceInstance controller", func() {
 	})
 
 	AfterEach(func() {
-		if serviceInstance != nil {
-			deleteInstance(ctx, serviceInstance, true)
-		}
+		By("cleanup")
+		ListAndDeleteInstancesAndBindings(ctx, k8sClient)
+
 	})
 
 	Describe("Create", func() {

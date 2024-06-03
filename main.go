@@ -20,6 +20,7 @@ import (
 	"context"
 	"flag"
 	"os"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"k8s.io/apimachinery/pkg/labels"
 
@@ -84,9 +85,10 @@ func main() {
 	ctrl.SetLogger(zap.New(zap.UseDevMode(loggerUseDevMode)))
 
 	mgrOptions := ctrl.Options{
-		Scheme:                 scheme,
-		MetricsBindAddress:     metricsAddr,
-		Port:                   9443,
+		Scheme: scheme,
+		Metrics: server.Options{
+			BindAddress: fmt.Sprintf("%s:%d", metricsAddr, 9443),
+		},
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "aa689ecc.cloud.sap.com",
@@ -106,8 +108,12 @@ func main() {
 		allowedNamespaces := config.Get().AllowedNamespaces
 		allowedNamespaces = append(allowedNamespaces, config.Get().ReleaseNamespace)
 		setupLog.Info(fmt.Sprintf("Allowed namespaces are %v", allowedNamespaces))
+		result := make(map[string]cache.Config)
+		for _, s := range allowedNamespaces {
+			result[s] = cache.Config{}
+		}
 		mgrOptions.NewCache = func(config *rest.Config, opts cache.Options) (cache.Cache, error) {
-			opts.Namespaces = allowedNamespaces
+			opts.DefaultNamespaces = result
 			return cache.New(config, opts)
 		}
 	}
