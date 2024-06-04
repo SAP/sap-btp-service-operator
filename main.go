@@ -90,6 +90,9 @@ func main() {
 		Metrics: server.Options{
 			BindAddress: metricsAddr,
 		},
+		WebhookServer: webhook.NewServer(webhook.Options{
+			Port: 9443,
+		}),
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "aa689ecc.cloud.sap.com",
