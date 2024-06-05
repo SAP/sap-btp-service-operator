@@ -10,7 +10,7 @@ import (
 var _ = Describe("Parameters", func() {
 	Describe("BuildSMRequestParameters", func() {
 		It("handles empty parameters", func() {
-			parametersFrom := []v1.ParametersFromSource{}
+			var parametersFrom []v1.ParametersFromSource
 			parameters := (*runtime.RawExtension)(nil)
 
 			params, rawParam, err := BuildSMRequestParameters(nil, "", parametersFrom, parameters)
@@ -18,6 +18,18 @@ var _ = Describe("Parameters", func() {
 			Expect(err).To(BeNil())
 			Expect(params).To(BeNil())
 			Expect(rawParam).To(BeNil())
+		})
+		It("handles parameters from source", func() {
+			var parametersFrom []v1.ParametersFromSource
+			parameters := &runtime.RawExtension{
+				Raw: []byte(`{"key":"value"}`),
+			}
+
+			params, rawParam, err := BuildSMRequestParameters(nil, "", parametersFrom, parameters)
+
+			Expect(err).To(BeNil())
+			Expect(params).To(Equal(map[string]interface{}{"key": "value"}))
+			Expect(rawParam).To(Equal([]byte(`{"key":"value"}`)))
 		})
 	})
 })

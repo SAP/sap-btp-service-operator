@@ -24,6 +24,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"k8s.io/utils/ptr"
+
 	"github.com/SAP/sap-btp-service-operator/api/common"
 	"github.com/SAP/sap-btp-service-operator/internal/config"
 	"github.com/SAP/sap-btp-service-operator/internal/utils"
@@ -36,7 +38,6 @@ import (
 
 	servicesv1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/utils/pointer"
 
 	"github.com/google/uuid"
 
@@ -663,7 +664,7 @@ func getTags(tags []byte) ([]string, error) {
 
 func getSpecHash(serviceInstance *servicesv1.ServiceInstance) string {
 	spec := serviceInstance.Spec
-	spec.Shared = pointer.Bool(false)
+	spec.Shared = ptr.To(false)
 	specBytes, _ := json.Marshal(spec)
 	s := string(specBytes)
 	return generateEncodedMD5Hash(s)

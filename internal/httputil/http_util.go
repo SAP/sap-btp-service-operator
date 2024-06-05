@@ -27,7 +27,7 @@ func BuildHTTPClient(sslDisabled bool) *http.Client {
 	return client
 }
 
-// BuildHTTPClient builds custom http client with configured ssl validation
+// BuildHTTPClientTLS BuildHTTPClient builds custom http client with configured ssl validation
 func BuildHTTPClientTLS(tlsCertKey, tlsPrivateKey string) (*http.Client, error) {
 	client := getClient()
 

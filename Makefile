@@ -16,14 +16,15 @@ SED ?= sed -i
 ifeq ($(shell go env GOOS),darwin)
 SED = sed -i ''
 endif
+TEST_PACKAGES=$(shell go list ./... | egrep "controllers|internal/utils|api|client" | egrep -v "client/sm/smfakes" | paste -sd " " -)
 
-GO_TEST = go test ./... -coverpkg=$(go list ./... | egrep -v "fakes|test" | paste -sd "," -) -coverprofile=$(TEST_PROFILE) -ginkgo.flakeAttempts=3
+GO_TEST = go test $(TEST_PACKAGES) -coverprofile=$(TEST_PROFILE) -ginkgo.flakeAttempts=3
 
 all: manager
 
 # Run tests go test and coverage
 test: generate fmt vet manifests
-	KUBEBUILDER_ASSETS="$(shell setup-envtest use 1.19.2 --bin-dir /usr/local/bin -p path)" $(GO_TEST)
+	KUBEBUILDER_ASSETS="$(shell setup-envtest use --bin-dir /usr/local/bin -p path)" $(GO_TEST)
 
 # Build manager binary
 manager: generate fmt vet
@@ -86,7 +87,7 @@ ifeq (, $(shell which controller-gen))
 	CONTROLLER_GEN_TMP_DIR=$$(mktemp -d) ;\
 	cd $$CONTROLLER_GEN_TMP_DIR ;\
 	go mod init tmp ;\
-	go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.9.0 ;\
+	go install sigs.k8s.io/controller-tools/cmd/controller-gen@latest ;\
 	rm -rf $$CONTROLLER_GEN_TMP_DIR ;\
 	}
 CONTROLLER_GEN=$(GOBIN)/controller-gen

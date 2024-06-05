@@ -22,6 +22,9 @@ import (
 	"testing"
 	"time"
 
+	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
+
 	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	"k8s.io/client-go/rest"
 
@@ -93,12 +96,16 @@ var _ = BeforeSuite(func(done Done) {
 	webhookInstallOptions := &testEnv.WebhookInstallOptions
 
 	k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
-		Scheme:             scheme.Scheme,
-		Host:               webhookInstallOptions.LocalServingHost,
-		Port:               webhookInstallOptions.LocalServingPort,
-		CertDir:            webhookInstallOptions.LocalServingCertDir,
-		LeaderElection:     false,
-		MetricsBindAddress: "0",
+		Scheme: scheme.Scheme,
+		WebhookServer: webhook.NewServer(webhook.Options{
+			Host:    webhookInstallOptions.LocalServingHost,
+			Port:    webhookInstallOptions.LocalServingPort,
+			CertDir: webhookInstallOptions.LocalServingCertDir,
+		}),
+		LeaderElection: false,
+		Metrics: server.Options{
+			BindAddress: "0",
+		},
 	})
 	Expect(err).ToNot(HaveOccurred())
 
