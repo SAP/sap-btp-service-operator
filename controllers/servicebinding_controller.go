@@ -499,6 +499,7 @@ func (r *ServiceBindingReconciler) maintain(ctx context.Context, binding *servic
 				binding.Status.Ready = metav1.ConditionFalse
 				utils.SetInProgressConditions(ctx, smClientTypes.CREATE, "recreating deleted secret", binding)
 				r.Recorder.Event(binding, corev1.EventTypeWarning, "SecretDeleted", "SecretDeleted")
+				return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, binding)
 			} else {
 				return ctrl.Result{}, err
 			}

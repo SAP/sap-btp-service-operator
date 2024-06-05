@@ -385,7 +385,7 @@ var _ = Describe("ServiceBinding controller", func() {
 					Eventually(func() bool {
 						err := k8sClient.Get(ctx, secretLookupKey, newSecret)
 						return err == nil && newSecret.UID != originalSecretUID
-					}, timeout*10, interval).Should(BeTrue())
+					}, timeout, interval).Should(BeTrue())
 				})
 			})
 
