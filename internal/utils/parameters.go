@@ -16,7 +16,7 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-// buildParameters generates the parameters JSON structure to be passed
+// BuildSMRequestParameters buildParameters generates the parameters JSON structure to be passed
 // to the broker.
 // The first return value is a map of parameters to send to the Broker, including
 // secret values.
