@@ -887,13 +887,13 @@ This project is licensed under Apache 2.0 unless noted otherwise in the [license
 
 ## Troubleshooting and Support
 
-### Service Instance in `Delete Failed` State: Unable to Create Binding
+### Cannot create a binding because service instance is in `Delete Failed` state
 
-The deletion of my service instance failed. To fix the failure, I have to create a service binding, but I can't do this because the instance is in the `Delete  Failed` state.
+The deletion of my service instance failed. To fix the failure, I have to create a service binding, but I can't do that because the instance is in the `Delete  Failed` state.
 
 **Solution**
 
-To overcome this issue, use the `force_k8s_binding` query param when you create a service binding and set it to `true` (`force_k8s_binding=true`). You can do & this   either with the BTP CLI [bind](https://help.sap.com/docs/btp/btp-cli-command-reference/btp-create-services-binding) command or 'Create a Service Binding' [Service Manager API](https://api.sap.com/api/APIServiceManager/resource/Platforms).
+Use the `force_k8s_binding` query param when creating the service binding and set it to `true` (`force_k8s_binding=true`). Use either the BTP CLI [bind](https://help.sap.com/docs/btp/btp-cli-command-reference/btp-create-services-binding) command or 'Create a Service Binding' [Service Manager API](https://api.sap.com/api/APIServiceManager/resource/Platforms).
 
 btp cli Example
 
@@ -911,7 +911,7 @@ btp cli Example
 **Note:** `force_k8s_binding` is supported only for the Kubernetes instances that are in the `Delete Failed` state.<br>
 
 
-### Cluster Unavailable: Unable to Clean Up Instances and Bindings
+### Cluster is unavailable and I cannot perform cleanup of instances and bindings
 
 I am trying to delete service instances and bindings but I can't do this as the cluster in which they were created is no longer available.
 
@@ -919,19 +919,19 @@ I am trying to delete service instances and bindings but I can't do this as the 
 
 Use a dedicated Service Manager API to delete cluster content:
 
-#### API Request
+#### Request
 
 `DELETE /v1/platforms/{platformID}/clusters/{clusterID}?cascade=true`
 
 
-#### API Parameters
+#### Parameters
 | Parameter                                   | Type       | Description                                                                               |
 |:--------------------------------------------|:-----------|:------------------------------------------------------------------------------------------|
 | platformID                                  | `string`   | The ID of the platform (should be the `service-operator-access` instance ID)             |
 | clusterID                                   | `string`   | The ID of the cluster (can be found in the context of the operator resource).                 |
-| cascade                                     | `boolean`  | Whether to cascade-delete all the services and bindings that are related to the platform. |
+| cascade                                     | `boolean`  | Whether to cascade-delete all the services and bindings that are related to the platform.<br>**Note<br> Use this option only when performing cleanup. Using it in an active and available cluster may create unintended resource leftovers.**  
 
-#### API Response
+#### Response
 ##### Status Code    
     `202 Accepted` - The request has been accepted for processing, but the processing has not been completed.
 ##### Headers:
