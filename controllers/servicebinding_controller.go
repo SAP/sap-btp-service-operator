@@ -155,15 +155,6 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
 		}
 
-		// if secret template changed, update the secret
-		if condition.ObservedGeneration != serviceBinding.Generation {
-			err := r.syncSecret(ctx, serviceBinding, serviceInstance, log)
-			if err != nil {
-				return r.handleSecretError(ctx, smClientTypes.UPDATE, err, serviceBinding)
-			}
-			return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
-		}
-
 		log.Info("Binding in final state")
 		return r.maintain(ctx, serviceBinding)
 	}
@@ -492,29 +483,26 @@ func (r *ServiceBindingReconciler) getBindingForRecovery(ctx context.Context, sm
 
 func (r *ServiceBindingReconciler) maintain(ctx context.Context, binding *servicesv1.ServiceBinding) (ctrl.Result, error) {
 	log := utils.GetLogger(ctx)
-	shouldUpdateStatus := false
-	if binding.Generation != binding.Status.ObservedGeneration {
-		binding.SetObservedGeneration(binding.Generation)
-		shouldUpdateStatus = true
-	}
+
 	if !utils.IsFailed(binding) {
+		if binding.Generation != binding.Status.ObservedGeneration {
+			log.Info("secret template changed")
+			binding.Status.BindingID = ""
+			binding.Status.Ready = metav1.ConditionFalse
+			utils.SetInProgressConditions(ctx, smClientTypes.CREATE, "updating secret", binding)
+			return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, binding)
+		}
 		if _, err := r.getSecret(ctx, binding.Namespace, binding.Spec.SecretName); err != nil {
 			if apierrors.IsNotFound(err) && !utils.IsMarkedForDeletion(binding.ObjectMeta) {
 				log.Info(fmt.Sprintf("secret not found recovering binding %s", binding.Name))
 				binding.Status.BindingID = ""
 				binding.Status.Ready = metav1.ConditionFalse
 				utils.SetInProgressConditions(ctx, smClientTypes.CREATE, "recreating deleted secret", binding)
-				shouldUpdateStatus = true
 				r.Recorder.Event(binding, corev1.EventTypeWarning, "SecretDeleted", "SecretDeleted")
 			} else {
 				return ctrl.Result{}, err
 			}
 		}
-	}
-
-	if shouldUpdateStatus {
-		log.Info(fmt.Sprintf("maintanance required for binding %s", binding.Name))
-		return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, binding)
 	}
 
 	return ctrl.Result{}, nil
