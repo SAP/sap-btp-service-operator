@@ -929,7 +929,6 @@ Use a dedicated Service Manager API to delete cluster content:
 |:--------------------------------------------|:-----------|:------------------------------------------------------------------------------------------|
 | platformID                                  | `string`   | The ID of the platform (should be the `service-operator-access` instance ID)             |
 | clusterID                                   | `string`   | The ID of the cluster (can be found in the context of the operator resource).                 |
-| cascade                                     | `boolean`  | Whether to cascade-delete all the services and bindings that are related to the platform.<br>**Note<br> Use this option only when performing cleanup. Using it in an active and available cluster may create unintended resource leftovers.**  
 
 #### Response
 ##### 
@@ -939,7 +938,7 @@ Use a dedicated Service Manager API to delete cluster content:
 | 404 Resource Not Found | Platform or Cluster not found                                                                                                                                                                                                                                                                                |
 | 429 Too Many Requests  | When the rate limit is exceeded, the client receives the HTTP 429 "Too Many Requests" response status code. <br>  <br> **Headers:** <br>  'Retry-After'-  indicates the time in seconds after which the client can retry the request.                                                                        |
                                 
-<b>Attention: This is a cascade action. All resources in the cluster will be deleted in BTP and brokers.
+<b>Attention: This is a cascade action. All resources in the cluster will be deleted in BTP and brokers. Use this option only for cleanup purposes for no longer available cluster. Applying it to an active and available cluster may result in unintended resource leftovers.</b>
 
 You're welcome to raise issues related to feature requests, or bugs, or give us general feedback on this project's GitHub Issues page.
 The SAP BTP service operator project maintainers will respond to the best of their abilities.
