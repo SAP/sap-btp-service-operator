@@ -921,7 +921,7 @@ Use a dedicated Service Manager API to delete cluster content:
 
 #### Request
 
-`DELETE /v1/platforms/{platformID}/clusters/{clusterID}?cascade=true`
+`DELETE /v1/platforms/{platformID}/clusters/{clusterID}`
 
 
 #### Parameters
@@ -932,13 +932,14 @@ Use a dedicated Service Manager API to delete cluster content:
 | cascade                                     | `boolean`  | Whether to cascade-delete all the services and bindings that are related to the platform.<br>**Note<br> Use this option only when performing cleanup. Using it in an active and available cluster may create unintended resource leftovers.**  
 
 #### Response
-##### Status Code    
-    `202 Accepted` - The request has been accepted for processing, but the processing has not been completed.
-##### Headers:
-| Name         | Description                                                                                                                                                                      |
-|:-------------|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Location     | A path to the operation status, For more information about operations, see:  [Service Manager operation API](https://api.sap.com/api/APIServiceManager/path/getSingleOperation). |
-
+##### 
+| Status Code            | Description                                                                                                                                                                                                                                                                                                  |
+|:-----------------------|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 202 Accepted           | The request has been accepted for processing, but the processing has not been completed.  <br>  <br> **Headers:** <br> 'Location'- A path to the operation status, For more information about operations, see:  [Service Manager operation API](https://api.sap.com/api/APIServiceManager/path/getSingleOperation). |
+| 404 Resource Not Found | Platform or Cluster not found                                                                                                                                                                                                                                                                                |
+| 429 Too Many Requests  | When the rate limit is exceeded, the client receives the HTTP 429 "Too Many Requests" response status code. <br>  <br> **Headers:** <br>  'Retry-After'-  indicates the time in seconds after which the client can retry the request.                                                                        |
+                                
+<b>Attention: This is a cascade action. All resources in the cluster will be deleted in BTP and brokers.
 
 You're welcome to raise issues related to feature requests, or bugs, or give us general feedback on this project's GitHub Issues page.
 The SAP BTP service operator project maintainers will respond to the best of their abilities.
