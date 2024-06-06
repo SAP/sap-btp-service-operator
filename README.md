@@ -911,9 +911,9 @@ btp cli Example
 **Note:** `force_k8s_binding` is supported only for the Kubernetes instances that are in the `Delete Failed` state.<br>
 
 
-### Cluster is unavailable and I cannot perform cleanup of instances and bindings
+### Cluster is unavailable and I cannot perform a cleanup of instances and bindings
 
-I am trying to delete service instances and bindings but I can't do this as the cluster in which they were created is no longer available.
+I am trying to delete service instances and bindings, but I can't because the cluster in which they were created is no longer available.
 
 **Solution**
 
@@ -934,11 +934,11 @@ Use a dedicated Service Manager API to delete cluster content:
 ##### 
 | Status Code            | Description                                                                                                                                                                                                                                                                                                  |
 |:-----------------------|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| 202 Accepted           | The request has been accepted for processing, but the processing has not been completed.  <br>  <br> **Headers:** <br> 'Location'- A path to the operation status, For more information about operations, see:  [Service Manager operation API](https://api.sap.com/api/APIServiceManager/path/getSingleOperation). |
-| 404 Resource Not Found | Platform or Cluster not found                                                                                                                                                                                                                                                                                |
-| 429 Too Many Requests  | When the rate limit is exceeded, the client receives the HTTP 429 "Too Many Requests" response status code. <br>  <br> **Headers:** <br>  'Retry-After'-  indicates the time in seconds after which the client can retry the request.                                                                        |
+| 202 Accepted           | The request has been accepted for processing but has not been completed.  <br>  <br> **Headers:** <br> 'Location'- A path to the operation status, For more information about operations, see:  [Service Manager operation API](https://api.sap.com/api/APIServiceManager/path/getSingleOperation). |
+| 404 Resource Not Found | Platform or cluster not found                                                                                                                                                                                                                                                                                |
+| 429 Too Many Requests  | When the rate limit is exceeded, the client receives the HTTP 429 "Too Many Requests" response status code. <br>  <br> **Headers:** <br>  'Retry-After'-  indicates the time in seconds after which the client can re-try the request.                                                                        |
                                 
-<b>Attention: This is a cascade action. All resources in the cluster will be deleted in BTP and brokers. Use this option only for cleanup purposes for no longer available cluster. Applying it to an active and available cluster may result in unintended resource leftovers.</b>
+<b>Attention: This is a cascade action. All cluster resources will be deleted in SAP BTP and service brokers. Use this option only for cleanup purposes for a cluster that's no longer available. Applying it to an active and available cluster may result in unintended resource leftovers.</b>
 
 You're welcome to raise issues related to feature requests, or bugs, or give us general feedback on this project's GitHub Issues page.
 The SAP BTP service operator project maintainers will respond to the best of their abilities.
