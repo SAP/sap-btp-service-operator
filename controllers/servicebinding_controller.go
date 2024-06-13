@@ -205,7 +205,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
 		}
 
-		smClient, err := r.GetSMClient(ctx, r.SecretResolver, serviceBinding.Namespace, serviceInstance.Spec.BTPAccessCredentialsSecret)
+		smClient, err := r.GetSMClient(ctx, r.SecretResolver, serviceInstance.Namespace, serviceInstance.Spec.BTPAccessCredentialsSecret)
 		if err != nil {
 			return utils.MarkAsTransientError(ctx, r.Client, common.Unknown, err, serviceBinding)
 		}
