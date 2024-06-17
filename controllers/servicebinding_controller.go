@@ -205,7 +205,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
 		}
 
-		smClient, err := r.GetSMClient(ctx, r.SecretResolver, serviceBinding.Namespace, serviceInstance.Spec.BTPAccessCredentialsSecret)
+		smClient, err := r.GetSMClient(ctx, r.SecretResolver, getBTPAccessSecretNamespace(serviceBinding), serviceInstance.Spec.BTPAccessCredentialsSecret)
 		if err != nil {
 			return utils.MarkAsTransientError(ctx, r.Client, common.Unknown, err, serviceBinding)
 		}
@@ -228,7 +228,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 func (r *ServiceBindingReconciler) updateSecret(ctx context.Context, serviceBinding *servicesv1.ServiceBinding, serviceInstance *servicesv1.ServiceInstance, log logr.Logger) error {
 	log.Info("Updating secret according to the new template")
-	smClient, err := r.GetSMClient(ctx, r.SecretResolver, serviceBinding.Namespace, serviceInstance.Spec.BTPAccessCredentialsSecret)
+	smClient, err := r.GetSMClient(ctx, r.SecretResolver, getBTPAccessSecretNamespace(serviceBinding), serviceInstance.Spec.BTPAccessCredentialsSecret)
 	if err != nil {
 		return err
 	}
@@ -323,7 +323,7 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 func (r *ServiceBindingReconciler) delete(ctx context.Context, serviceBinding *servicesv1.ServiceBinding, btpAccessCredentialsSecret string) (ctrl.Result, error) {
 	log := utils.GetLogger(ctx)
 	if controllerutil.ContainsFinalizer(serviceBinding, common.FinalizerName) {
-		smClient, err := r.GetSMClient(ctx, r.SecretResolver, serviceBinding.Namespace, btpAccessCredentialsSecret)
+		smClient, err := r.GetSMClient(ctx, r.SecretResolver, getBTPAccessSecretNamespace(serviceBinding), btpAccessCredentialsSecret)
 		if err != nil {
 			return utils.MarkAsTransientError(ctx, r.Client, common.Unknown, err, serviceBinding)
 		}
@@ -386,7 +386,7 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, serviceBinding *ser
 	log := utils.GetLogger(ctx)
 	log.Info(fmt.Sprintf("resource is in progress, found operation url %s", serviceBinding.Status.OperationURL))
 
-	smClient, err := r.GetSMClient(ctx, r.SecretResolver, serviceBinding.Namespace, btpAccessCredentialsSecret)
+	smClient, err := r.GetSMClient(ctx, r.SecretResolver, getBTPAccessSecretNamespace(serviceBinding), btpAccessCredentialsSecret)
 	if err != nil {
 		return utils.MarkAsTransientError(ctx, r.Client, common.Unknown, err, serviceBinding)
 	}
@@ -942,7 +942,7 @@ func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, bindin
 	}
 
 	if len(bindings.Items) == 0 {
-		smClient, err := r.GetSMClient(ctx, r.SecretResolver, binding.Namespace, btpAccessCredentialsSecret)
+		smClient, err := r.GetSMClient(ctx, r.SecretResolver, getBTPAccessSecretNamespace(binding), btpAccessCredentialsSecret)
 		if err != nil {
 			return err
 		}
@@ -1170,4 +1170,12 @@ func singleKeyMap(credentialsMap map[string][]byte, key string) (map[string][]by
 	return map[string][]byte{
 		key: credBytes,
 	}, nil
+}
+
+func getBTPAccessSecretNamespace(serviceBinding *servicesv1.ServiceBinding) string {
+	btpAccessSecretNamespace := serviceBinding.Namespace
+	if len(serviceBinding.Spec.ServiceInstanceNamespace) > 0 {
+		btpAccessSecretNamespace = serviceBinding.Spec.ServiceInstanceNamespace
+	}
+	return btpAccessSecretNamespace
 }
