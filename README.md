@@ -911,13 +911,13 @@ btp cli Example
 **Note:** `force_k8s_binding` is supported only for the Kubernetes instances that are in the `Delete Failed` state.<br>
 
 
-### Cluster is unavailable and I cannot perform a cleanup of instances and bindings
+### Cluster is unavailable and I still have service instances and bindings
 
-I am trying to delete service instances and bindings, but I can't because the cluster in which they were created is no longer available.
+I cannot delete service instances and bindings because the cluster in which they were created is no longer available.
 
 **Solution**
 
-Use a dedicated Service Manager API to delete cluster content:
+Use a dedicated Service Manager API to clean up cluster content:
 
 #### Request
 
@@ -928,20 +928,25 @@ Use a dedicated Service Manager API to delete cluster content:
 | Parameter                                   | Type       | Description                                                                               |
 |:--------------------------------------------|:-----------|:------------------------------------------------------------------------------------------|
 | platformID                                  | `string`   | The ID of the platform (should be the `service-operator-access` instance ID)             |
-| clusterID                                   | `string`   | The ID of the cluster (can be found in the context of the operator resource).                 |
+| clusterID                                   | `string`   | The ID of the cluster (can be found in the context of the operator resource, such as service instance or binding. Use GET serrvice instance or binding API or btp CLI and look at the response. Before that, explain they should use the ID from step 4 of the setup.).                 |
 
 #### Response
 ##### 
 | Status Code            | Description                                                                                                                                                                                                                                                                                                  |
 |:-----------------------|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| 202 Accepted           | The request has been accepted for processing but has not been completed.  <br>  <br> **Headers:** <br> 'Location'- A path to the operation status, For more information about operations, see:  [Service Manager operation API](https://api.sap.com/api/APIServiceManager/path/getSingleOperation). |
+| 202 Accepted           | The request has been accepted for processing.  <br>  <br> **Headers:** <br> 'Location'- A path to the operation status, For more information about operations, see:  [Service Manager operation API](https://api.sap.com/api/APIServiceManager/path/getSingleOperation). |
 | 404 Resource Not Found | Platform or cluster not found                                                                                                                                                                                                                                                                                |
-| 429 Too Many Requests  | When the rate limit is exceeded, the client receives the HTTP 429 "Too Many Requests" response status code. <br>  <br> **Headers:** <br>  'Retry-After'-  indicates the time in seconds after which the client can re-try the request.                                                                        |
+| 429 Too Many Requests  | When the rate limit is exceeded, the client receives the HTTP 429 "Too Many Requests" response status code. <br>  <br> **Headers:** <br>  'Retry-After'-  indicates the time in seconds after which the client can retry the request.                                                                        |
                                 
-<b>Attention: This is a cascade action. All cluster resources will be deleted in SAP BTP and service brokers. Use this option only for cleanup purposes for a cluster that's no longer available. Applying it to an active and available cluster may result in unintended resource leftovers.</b>
+<b>Attention: **Use this option only for cleanup purposes for a cluster that's no longer available.** Applying it to an active and available cluster may result in unintended resource leftovers in your cluster.</b>
+
 
 You're welcome to raise issues related to feature requests, or bugs, or give us general feedback on this project's GitHub Issues page.
 The SAP BTP service operator project maintainers will respond to the best of their abilities.
+
+- *CR doesnt exist, ("instance" in Kuberbernetes) but it does exist on BTP. Once we create CR, it connects to the existing instance.*
+- *same name, namespace, Instance exists in BTP, not in Kubernetes cluster. How can we recover it?*
+- Create CR with the same name, namespace, and cluster ID (GET instance details, context in the response)* - separate PR 
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
