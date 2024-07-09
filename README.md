@@ -928,7 +928,7 @@ Use a dedicated Service Manager API to clean up cluster content:
 | Parameter                                   | Type       | Description                                                                               |
 |:--------------------------------------------|:-----------|:------------------------------------------------------------------------------------------|
 | platformID                                  | `string`   | The ID of the platform (should be the `service-operator-access` instance ID)             |
-| clusterID                                   | `string`   | The ID of the cluster (can be found in the context of the operator resource, such as service instance or binding. Use GET serrvice instance or binding API or btp CLI and look at the response. Before that, explain they should use the ID from step 4 of the setup.).                 |
+| clusterID                                   | `string`   | The ID of the cluster. You should specify the ID from the step 4 of the [Setup](#setup) section. If you are unable to retrieve it, use the GET serrvice instance or binding API or equivalent btp CLI command and extract it from the response.                 |
 
 #### Response
 ##### 
