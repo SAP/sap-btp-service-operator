@@ -155,7 +155,7 @@ metadata:
   name: sap-btp-service-operator
   namespace: sap-btp-operator
 type: Opaque
-stringdata:
+stringData:
   clientid: <clientid>
   tls.crt: <certificate>
   tls.key: <key>
@@ -228,7 +228,7 @@ metadata:
   name: <namespace-name>-sap-btp-service-operator
   namespace: <centrally-managed-namespace>
 type: Opaque
-stringdata:
+stringData:
   clientid: <clientid>
   tls.crt: <certificate>
   tls.key: <key>
@@ -271,7 +271,7 @@ metadata:
   name: <my-secret>
   namespace: <centrally managed namespace>
 type: Opaque
-stringdata:
+stringData:
   clientid: <clientid>
   tls.crt: <certificate>
   tls.key: <key>
@@ -280,6 +280,7 @@ stringdata:
   tokenurlsuffix: "/oauth/token"
 ```
 #### Configure the secret name in the `ServiceInstance` resource within the property `btpAccessCredentialsSecret`:
+The secret must be located in the management namespace
 ```yaml
 apiVersion: services.cloud.sap.com/v1
 kind: ServiceInstance
@@ -458,11 +459,9 @@ metadata:
   name: sample-binding
 stringData:
     myCredentials:
-    {
       uri: https://my-service.authentication.eu10.hana.ondemand.com,
       client_id: admin,
       client_secret: ********
-    }
     instance_guid: your-sample-instance-guid // The service instance ID
     instance_name: sample-binding // Taken from the service instance external_name field if set. Otherwise from metadata.name 
     plan: sample-plan // The service plan name
@@ -495,7 +494,6 @@ metadata:
   name: sample-binding
 stringData:
     myCredentialsAndInstance:
-    {
         uri: https://my-service.authentication.eu10.hana.ondemand.com,
         client_id: admin,
         client_secret: ********,
@@ -503,7 +501,6 @@ stringData:
         instance_name: sample-instance-name, // Taken from the service instance external_name field if set. Otherwise from metadata.name
         plan: sample-instance-plan, // The service plan name
         type: sample-instance-offering, // The service offering name
-    }
 ```
 ##### Custom Formats 
 
@@ -612,11 +609,9 @@ metadata:
     instance: sample-instance
 stringData:
   myCredentials:
-  {
     uri: https://my-service.authentication.eu10.hana.ondemand.com,
     client_id: admin,
     client_secret: ********
-  }
   instance_guid: your-sample-instance-guid // The service instance ID
   instance_name: sample-binding // Taken from the service instance external_name field if set. Otherwise from metadata.name
   plan: sample-plan // The service plan name
@@ -725,16 +720,18 @@ spec:
 
 The format of the `spec` in JSON
 ```json
-"spec": {
-  "parameters": {
-    "name": "value"
-  },
-  "parametersFrom": {
-    "secretKeyRef": {
-      "name": "my-secret",
-      "key": "secret-parameter"
+{
+  "spec": {
+    "parameters": {
+      "name": "value"
+    },
+    "parametersFrom": {
+      "secretKeyRef": {
+        "name": "my-secret",
+        "key": "secret-parameter"
+      }
     }
-  }
+  } 
 }
 ```
 The `secret` with the `secret-parameter`- named key:

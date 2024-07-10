@@ -21,6 +21,7 @@ type Config struct {
 	AllowClusterAccess     bool          `envconfig:"allow_cluster_access"`
 	AllowedNamespaces      []string      `envconfig:"allowed_namespaces"`
 	EnableNamespaceSecrets bool          `envconfig:"enable_namespace_secrets"`
+	EnableLimitedCache     bool          `envconfig:"enable_limited_cache"`
 	ClusterID              string        `envconfig:"cluster_id"`
 	InitialClusterID       string        `envconfig:"initial_cluster_id"`
 	RetryBaseDelay         time.Duration
@@ -34,6 +35,7 @@ func Get() Config {
 			PollInterval:           10 * time.Second,
 			LongPollInterval:       5 * time.Minute,
 			EnableNamespaceSecrets: true,
+			EnableLimitedCache:     false,
 			AllowedNamespaces:      []string{},
 			AllowClusterAccess:     true,
 			RetryBaseDelay:         10 * time.Second,

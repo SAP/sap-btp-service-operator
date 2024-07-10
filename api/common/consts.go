@@ -1,6 +1,8 @@
 package common
 
 const (
+	ManagedByBTPOperatorLabel = "services.cloud.sap.com/managed-by-sap-btp-operator"
+
 	NamespaceLabel = "_namespace"
 	K8sNameLabel   = "_k8sname"
 	ClusterIDLabel = "_clusterid"

@@ -130,8 +130,8 @@ spec:
                   by Service Manager and the instance information. The generated secret
                   is used instead of the default secret. This is useful if the consumer
                   of service binding data expects them in a specific format. For Go
-                  templates see https://pkg.go.dev/text/template. For supported funcs:
-                  https://pkg.go.dev/text/template#hdr-Functions'
+                  templates see https://pkg.go.dev/text/template. For supported funcs
+                  see: https://pkg.go.dev/text/template#hdr-Functions, https://masterminds.github.io/sprig/'
                 type: string
                 x-kubernetes-preserve-unknown-fields: true
               serviceInstanceName:
@@ -162,6 +162,7 @@ spec:
                     items:
                       type: string
                     type: array
+                    x-kubernetes-list-type: atomic
                   uid:
                     description: A unique value that identifies this user across time.
                       If this user is deleted and another user by the same name is
@@ -417,6 +418,7 @@ spec:
                     items:
                       type: string
                     type: array
+                    x-kubernetes-list-type: atomic
                   uid:
                     description: A unique value that identifies this user across time.
                       If this user is deleted and another user by the same name is
@@ -687,6 +689,7 @@ spec:
                     items:
                       type: string
                     type: array
+                    x-kubernetes-list-type: atomic
                   uid:
                     description: A unique value that identifies this user across time.
                       If this user is deleted and another user by the same name is
@@ -934,6 +937,7 @@ spec:
                     items:
                       type: string
                     type: array
+                    x-kubernetes-list-type: atomic
                   uid:
                     description: A unique value that identifies this user across time.
                       If this user is deleted and another user by the same name is

@@ -21,6 +21,10 @@ import (
 	"flag"
 	"os"
 
+	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
+
+	"k8s.io/apimachinery/pkg/labels"
+
 	"github.com/SAP/sap-btp-service-operator/api/v1/webhooks"
 	v1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -46,6 +50,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	"github.com/SAP/sap-btp-service-operator/api/common"
 	servicesv1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	"github.com/SAP/sap-btp-service-operator/controllers"
 	// +kubebuilder:scaffold:imports
@@ -81,20 +86,40 @@ func main() {
 	ctrl.SetLogger(zap.New(zap.UseDevMode(loggerUseDevMode)))
 
 	mgrOptions := ctrl.Options{
-		Scheme:                 scheme,
-		MetricsBindAddress:     metricsAddr,
-		Port:                   9443,
+		Scheme: scheme,
+		Metrics: server.Options{
+			BindAddress: metricsAddr,
+		},
+		WebhookServer: webhook.NewServer(webhook.Options{
+			Port: 9443,
+		}),
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "aa689ecc.cloud.sap.com",
+	}
+
+	if config.Get().EnableLimitedCache {
+		setupLog.Info("limited cache enabled")
+		mgrOptions.Cache = cache.Options{
+			ByObject: map[client.Object]cache.ByObject{
+				&v1.Secret{}:                  {Label: labels.SelectorFromSet(map[string]string{common.ManagedByBTPOperatorLabel: "true"})},
+				&v1.ConfigMap{}:               {Label: labels.SelectorFromSet(map[string]string{common.ManagedByBTPOperatorLabel: "true"})},
+				&servicesv1.ServiceInstance{}: {},
+				&servicesv1.ServiceBinding{}:  {},
+			},
+		}
 	}
 
 	if !config.Get().AllowClusterAccess {
 		allowedNamespaces := config.Get().AllowedNamespaces
 		allowedNamespaces = append(allowedNamespaces, config.Get().ReleaseNamespace)
 		setupLog.Info(fmt.Sprintf("Allowed namespaces are %v", allowedNamespaces))
+		result := make(map[string]cache.Config)
+		for _, s := range allowedNamespaces {
+			result[s] = cache.Config{}
+		}
 		mgrOptions.NewCache = func(config *rest.Config, opts cache.Options) (cache.Cache, error) {
-			opts.Namespaces = allowedNamespaces
+			opts.DefaultNamespaces = result
 			return cache.New(config, opts)
 		}
 	}
