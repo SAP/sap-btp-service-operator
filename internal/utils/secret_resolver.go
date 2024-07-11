@@ -86,27 +86,20 @@ func (sr *SecretResolver) getDefaultSecret(ctx context.Context, name string) (*v
 }
 
 func (sr *SecretResolver) getWithClientFallback(ctx context.Context, key types.NamespacedName, secretForResource *v1.Secret) error {
-	if !sr.LimitedCacheEnabled {
-		err := sr.Client.Get(ctx, key, secretForResource)
-		return err
-	}
-
-	// Attempt to get the resource using the cached client
+	log := GetLogger(ctx)
 	err := sr.Client.Get(ctx, key, secretForResource)
 	if err != nil {
-		if errors.IsNotFound(err) {
-			// If not found in cache, attempt to get it directly from the API server
+		if errors.IsNotFound(err) && sr.LimitedCacheEnabled {
+			log.Info("Secret not found in cache, using non cached client", "key", key)
 			err = sr.NonCachedClient.Get(ctx, key, secretForResource)
 			if err != nil {
-				// Handle error (either not found or other errors)
 				return err
 			}
-			// Resource found on API server
+			log.Info("Secret found using non cached client", "key", key)
 			return nil
 		}
-		// Other errors from the cached client
 		return err
 	}
-	// Resource found in cache
+	log.Info("Secret found", "key", key)
 	return nil
 }
