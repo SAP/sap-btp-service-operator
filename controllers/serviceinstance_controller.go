@@ -180,15 +180,22 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 		return utils.MarkAsNonTransientError(ctx, r.Client, smClientTypes.CREATE, err.Error(), serviceInstance)
 	}
 
+	labels := smClientTypes.Labels{
+		common.NamespaceLabel: []string{serviceInstance.Namespace},
+		common.K8sNameLabel:   []string{serviceInstance.Name},
+		common.ClusterIDLabel: []string{r.Config.ClusterID},
+	}
+
+	// add custom labels if any
+	for _, item := range serviceInstance.Spec.CustomLabels {
+		labels[item.Name] = item.Values
+	}
+
 	provision, provisionErr := smClient.Provision(&smClientTypes.ServiceInstance{
 		Name:          serviceInstance.Spec.ExternalName,
 		ServicePlanID: serviceInstance.Spec.ServicePlanID,
 		Parameters:    instanceParameters,
-		Labels: smClientTypes.Labels{
-			common.NamespaceLabel: []string{serviceInstance.Namespace},
-			common.K8sNameLabel:   []string{serviceInstance.Name},
-			common.ClusterIDLabel: []string{r.Config.ClusterID},
-		},
+		Labels:        labels,
 	}, serviceInstance.Spec.ServiceOfferingName, serviceInstance.Spec.ServicePlanName, nil, utils.BuildUserInfo(ctx, serviceInstance.Spec.UserInfo), serviceInstance.Spec.DataCenter)
 
 	if provisionErr != nil {
