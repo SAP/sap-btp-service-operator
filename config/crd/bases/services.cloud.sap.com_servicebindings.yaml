@@ -78,10 +78,13 @@ spec:
               customLabels:
                 description: List of custom labels describing the ServiceBinding.
                 items:
+                  description: CustomLabel defines a custom given label to append
                   properties:
                     name:
+                      description: The name of the custom label
                       type: string
                     values:
+                      description: The value of the custom label
                       items:
                         type: string
                       type: array

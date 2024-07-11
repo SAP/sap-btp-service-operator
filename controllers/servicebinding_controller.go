@@ -266,16 +266,17 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 		return utils.MarkAsNonTransientError(ctx, r.Client, smClientTypes.CREATE, err.Error(), serviceBinding)
 	}
 
-	labels := smClientTypes.Labels{
-		common.NamespaceLabel: []string{serviceBinding.Namespace},
-		common.K8sNameLabel:   []string{serviceBinding.Name},
-		common.ClusterIDLabel: []string{r.Config.ClusterID},
-	}
+	labels := smClientTypes.Labels{}
 
 	// add custom labels if any
 	for _, item := range serviceBinding.Spec.CustomLabels {
 		labels[item.Name] = item.Values
 	}
+
+	// set required labels
+	labels[common.NamespaceLabel] = []string{serviceBinding.Namespace}
+	labels[common.K8sNameLabel] = []string{serviceBinding.Name}
+	labels[common.ClusterIDLabel] = []string{r.Config.ClusterID}
 
 	smBinding, operationURL, bindErr := smClient.Bind(&smClientTypes.ServiceBinding{
 		Name:              serviceBinding.Spec.ExternalName,
