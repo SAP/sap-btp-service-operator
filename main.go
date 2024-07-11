@@ -21,17 +21,17 @@ import (
 	"flag"
 	"os"
 
-	"github.com/SAP/sap-btp-service-operator/api/v1/webhooks"
-	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
-
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"k8s.io/apimachinery/pkg/labels"
 
-	"github.com/SAP/sap-btp-service-operator/internal/utils"
+	"github.com/SAP/sap-btp-service-operator/api/v1/webhooks"
 	v1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	"github.com/SAP/sap-btp-service-operator/internal/utils"
 
 	"k8s.io/client-go/rest"
 
@@ -128,6 +128,7 @@ func main() {
 			}
 		}
 	}
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), mgrOptions)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
@@ -147,6 +148,16 @@ func main() {
 		EnableNamespaceSecrets: config.Get().EnableNamespaceSecrets,
 		Client:                 mgr.GetClient(),
 		Log:                    logf.Log.WithName("secret-resolver"),
+	}
+
+	if config.Get().EnableLimitedCache {
+		secretResolver.LimitedCacheEnabled = true
+		nonCachedClient, clErr := client.New(mgr.GetConfig(), client.Options{Scheme: scheme})
+		if clErr != nil {
+			setupLog.Error(clErr, "unable to create non cached client")
+			os.Exit(1)
+		}
+		secretResolver.NonCachedClient = nonCachedClient
 	}
 
 	if err = (&controllers.ServiceInstanceReconciler{
@@ -208,7 +219,6 @@ func createClusterSecret(client client.Client) {
 	clusterSecret := &v1.Secret{}
 	clusterSecret.Name = "sap-btp-operator-clusterid"
 	clusterSecret.Namespace = config.Get().ReleaseNamespace
-	clusterSecret.Labels = map[string]string{common.ManagedByBTPOperatorLabel: "true"}
 	clusterSecret.StringData = map[string]string{"INITIAL_CLUSTER_ID": config.Get().ClusterID}
 	if err := client.Create(context.Background(), clusterSecret); err != nil {
 		setupLog.Error(err, "failed to create cluster secret")
