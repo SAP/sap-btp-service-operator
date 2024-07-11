@@ -1,8 +1,6 @@
 package utils
 
 import (
-	"context"
-
 	"github.com/google/uuid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -77,7 +75,6 @@ var _ = Describe("Secrets Resolver", func() {
 	}
 
 	BeforeEach(func() {
-		ctx = context.Background()
 		resolver = &SecretResolver{
 			ManagementNamespace: managementNamespace,
 			ReleaseNamespace:    managementNamespace,

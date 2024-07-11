@@ -10,9 +10,11 @@ import (
 )
 
 var _ = Describe("SM Utils", func() {
-	var resolver *SecretResolver
-	var secret *corev1.Secret
-	var tlsSecret *corev1.Secret
+	var (
+		resolver  *SecretResolver
+		secret    *corev1.Secret
+		tlsSecret *corev1.Secret
+	)
 
 	BeforeEach(func() {
 		resolver = &SecretResolver{
