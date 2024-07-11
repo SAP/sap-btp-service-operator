@@ -31,11 +31,10 @@ type SecretResolver struct {
 func (sr *SecretResolver) GetSecretFromManagementNamespace(ctx context.Context, name string) (*v1.Secret, error) {
 	secretForResource := &v1.Secret{}
 
-	sr.Log.Info(fmt.Sprintf("Searching for secret name %s in namespace %s",
-		name, sr.ManagementNamespace))
+	sr.Log.Info(fmt.Sprintf("Searching for secret %s in management namespace %s", name, sr.ManagementNamespace))
 	err := sr.getWithClientFallback(ctx, types.NamespacedName{Name: name, Namespace: sr.ManagementNamespace}, secretForResource)
 	if err != nil {
-		sr.Log.Error(err, fmt.Sprintf("Could not fetch secret named %s", name))
+		sr.Log.Error(err, fmt.Sprintf("Could not fetch secret %s from management namespace %s", name, sr.ManagementNamespace))
 		return nil, err
 	}
 	return secretForResource, nil
@@ -46,27 +45,27 @@ func (sr *SecretResolver) GetSecretForResource(ctx context.Context, namespace, n
 
 	// search namespace secret
 	if sr.EnableNamespaceSecrets {
-		sr.Log.Info("Searching for secret in resource namespace", "namespace", namespace, "name", name)
+		sr.Log.Info(fmt.Sprintf("Searching for secret %s in namespace %s", name, namespace))
 		err := sr.getWithClientFallback(ctx, types.NamespacedName{Name: name, Namespace: namespace}, secretForResource)
 		if err == nil {
 			return secretForResource, nil
 		}
 
 		if client.IgnoreNotFound(err) != nil {
-			sr.Log.Error(err, "Could not fetch secret in resource namespace")
+			sr.Log.Error(err, fmt.Sprintf("Could not fetch secret %s from namespace %s", name, namespace))
 			return nil, err
 		}
 	}
 
 	// secret not found in resource namespace, search for namespace-specific secret in management namespace
-	sr.Log.Info("Searching for namespace secret in management namespace", "namespace", namespace, "managementNamespace", sr.ManagementNamespace, "name", name)
+	sr.Log.Info(fmt.Sprintf("Searching a secret for namespace %s in the management namespace %s", namespace, sr.ManagementNamespace))
 	err := sr.getWithClientFallback(ctx, types.NamespacedName{Namespace: sr.ManagementNamespace, Name: fmt.Sprintf("%s-%s", namespace, name)}, secretForResource)
 	if err == nil {
 		return secretForResource, nil
 	}
 
 	if client.IgnoreNotFound(err) != nil {
-		sr.Log.Error(err, "Could not fetch secret in management namespace")
+		sr.Log.Error(err, fmt.Sprintf("Could not fetch secret %s-%s in the management namespace %s", namespace, name, sr.ManagementNamespace))
 		return nil, err
 	}
 
@@ -76,30 +75,29 @@ func (sr *SecretResolver) GetSecretForResource(ctx context.Context, namespace, n
 
 func (sr *SecretResolver) getDefaultSecret(ctx context.Context, name string) (*v1.Secret, error) {
 	secretForResource := &v1.Secret{}
-	sr.Log.Info("Searching for cluster secret", "releaseNamespace", sr.ReleaseNamespace, "name", name)
+	sr.Log.Info(fmt.Sprintf("Searching for cluster secret %s in releaseNamespace %s", name, sr.ReleaseNamespace))
 	err := sr.getWithClientFallback(ctx, types.NamespacedName{Namespace: sr.ReleaseNamespace, Name: name}, secretForResource)
 	if err != nil {
-		sr.Log.Error(err, "Could not fetch cluster secret")
+		sr.Log.Error(err, fmt.Sprintf("Could not fetch cluster secret %s from releaseNamespace %s", name, sr.ReleaseNamespace))
 		return nil, err
 	}
 	return secretForResource, nil
 }
 
 func (sr *SecretResolver) getWithClientFallback(ctx context.Context, key types.NamespacedName, secretForResource *v1.Secret) error {
-	log := GetLogger(ctx)
 	err := sr.Client.Get(ctx, key, secretForResource)
 	if err != nil {
 		if errors.IsNotFound(err) && sr.LimitedCacheEnabled {
-			log.Info("Secret not found in cache, using non cached client", "key", key)
+			sr.Log.Info(fmt.Sprintf("secret %s not found in cache, falling back to non-cached client", key.String()))
 			err = sr.NonCachedClient.Get(ctx, key, secretForResource)
 			if err != nil {
 				return err
 			}
-			log.Info("Secret found using non cached client", "key", key)
+			sr.Log.Info(fmt.Sprintf("secret %s found using non-cached client", key.String()))
 			return nil
 		}
 		return err
 	}
-	log.Info("Secret found", "key", key)
+
 	return nil
 }

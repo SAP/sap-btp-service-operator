@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"fmt"
@@ -19,11 +20,11 @@ import (
 // +kubebuilder:docs-gen:collapse=Imports
 
 var _ = Describe("Secrets Resolver", func() {
-
-	var ctx context.Context
-	var resolver *SecretResolver
-	var expectedClientID string
-	var secret *corev1.Secret
+	var (
+		resolver         *SecretResolver
+		expectedClientID string
+		secret           *corev1.Secret
+	)
 
 	createSecret := func(namePrefix string, namespace string) *corev1.Secret {
 		var name string
@@ -184,6 +185,43 @@ var _ = Describe("Secrets Resolver", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(resolvedSecret).ToNot(BeNil())
 			Expect(string(resolvedSecret.Data["clientid"])).To(Equal(expectedClientID))
+		})
+	})
+
+	Context("getWithClientFallback unit", func() {
+		When("LimitedCacheEnabled is false", func() {
+			It("should not fallback to NonCachedClient", func() {
+				resolver.NonCachedClient = nil // we will get nil pointer in case of fallback
+				err := resolver.getWithClientFallback(ctx, types.NamespacedName{Name: "some-name", Namespace: testNamespace}, &corev1.Secret{})
+				Expect(err).To(HaveOccurred())
+			})
+		})
+
+		When("LimitedCacheEnabled is true", func() {
+			It("should fallback to NonCachedClient and fail if not found", func() {
+				resolver.LimitedCacheEnabled = true
+				resolver.NonCachedClient = fake.NewFakeClient()
+				err := resolver.getWithClientFallback(ctx, types.NamespacedName{Name: "some-name", Namespace: testNamespace}, &corev1.Secret{})
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("should fallback to NonCachedClient and succeed if found", func() {
+				resolver.LimitedCacheEnabled = true
+				fakeClient := fake.NewFakeClient(&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "some-name",
+						Namespace: testNamespace,
+					},
+					Data: map[string][]byte{
+						"key": []byte("value"),
+					},
+				})
+				resolver.NonCachedClient = fakeClient
+				searchedSecret := &corev1.Secret{}
+				err := resolver.getWithClientFallback(ctx, types.NamespacedName{Name: "some-name", Namespace: testNamespace}, searchedSecret)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(searchedSecret.Data).To(HaveKey("key"))
+			})
 		})
 	})
 })
