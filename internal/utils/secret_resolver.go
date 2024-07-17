@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/SAP/sap-btp-service-operator/internal/config"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+
 	"k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/go-logr/logr"
@@ -19,7 +22,9 @@ const (
 	SAPBTPOperatorTLSSecretName = "sap-btp-service-operator-tls"
 )
 
-type SecretResolver struct {
+var SecretsClient secretClient
+
+type secretClient struct {
 	ManagementNamespace    string
 	ReleaseNamespace       string
 	EnableNamespaceSecrets bool
@@ -29,7 +34,20 @@ type SecretResolver struct {
 	Log                    logr.Logger
 }
 
-func (sr *SecretResolver) GetSecretFromManagementNamespace(ctx context.Context, name string) (*v1.Secret, error) {
+func InitializeSecretsClient(client, nonCachedClient client.Client, config config.Config) {
+	SecretsClient = secretClient{
+		Log:                    logf.Log.WithName("secret-resolver"),
+		ManagementNamespace:    config.ManagementNamespace,
+		ReleaseNamespace:       config.ReleaseNamespace,
+		EnableNamespaceSecrets: config.EnableNamespaceSecrets,
+		LimitedCacheEnabled:    config.EnableLimitedCache,
+		Client:                 client,
+		NonCachedClient:        nonCachedClient,
+	}
+
+}
+
+func (sr *secretClient) GetSecretFromManagementNamespace(ctx context.Context, name string) (*v1.Secret, error) {
 	secretForResource := &v1.Secret{}
 
 	sr.Log.Info(fmt.Sprintf("Searching for secret %s in management namespace %s", name, sr.ManagementNamespace))
@@ -41,7 +59,7 @@ func (sr *SecretResolver) GetSecretFromManagementNamespace(ctx context.Context, 
 	return secretForResource, nil
 }
 
-func (sr *SecretResolver) GetSecretForResource(ctx context.Context, namespace, name string) (*v1.Secret, error) {
+func (sr *secretClient) GetSecretForResource(ctx context.Context, namespace, name string) (*v1.Secret, error) {
 	secretForResource := &v1.Secret{}
 
 	// search namespace secret
@@ -74,7 +92,7 @@ func (sr *SecretResolver) GetSecretForResource(ctx context.Context, namespace, n
 	return sr.getDefaultSecret(ctx, name)
 }
 
-func (sr *SecretResolver) getDefaultSecret(ctx context.Context, name string) (*v1.Secret, error) {
+func (sr *secretClient) getDefaultSecret(ctx context.Context, name string) (*v1.Secret, error) {
 	secretForResource := &v1.Secret{}
 	sr.Log.Info(fmt.Sprintf("Searching for cluster secret %s in releaseNamespace %s", name, sr.ReleaseNamespace))
 	err := sr.getWithClientFallback(ctx, types.NamespacedName{Namespace: sr.ReleaseNamespace, Name: name}, secretForResource)
@@ -85,7 +103,7 @@ func (sr *SecretResolver) getDefaultSecret(ctx context.Context, name string) (*v
 	return secretForResource, nil
 }
 
-func (sr *SecretResolver) getWithClientFallback(ctx context.Context, key types.NamespacedName, secretForResource *v1.Secret) error {
+func (sr *secretClient) getWithClientFallback(ctx context.Context, key types.NamespacedName, secretForResource *v1.Secret) error {
 	err := sr.Client.Get(ctx, key, secretForResource)
 	if err != nil {
 		if errors.IsNotFound(err) && sr.LimitedCacheEnabled {
@@ -101,4 +119,8 @@ func (sr *SecretResolver) getWithClientFallback(ctx context.Context, key types.N
 	}
 
 	return nil
+}
+
+func (sr *secretClient) Get(ctx context.Context, namespacedName types.NamespacedName, secret *v1.Secret) error {
+	return sr.getWithClientFallback(ctx, namespacedName, secret)
 }

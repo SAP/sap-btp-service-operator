@@ -40,8 +40,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-
 	"github.com/SAP/sap-btp-service-operator/internal/config"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -142,44 +140,36 @@ func main() {
 		panic(fmt.Sprintf("ClusterID changed, which is not supported. Please redeploy with --set cluster.id=%s", config.Get().InitialClusterID))
 	}
 
-	secretResolver := &utils.SecretResolver{
-		ManagementNamespace:    config.Get().ManagementNamespace,
-		ReleaseNamespace:       config.Get().ReleaseNamespace,
-		EnableNamespaceSecrets: config.Get().EnableNamespaceSecrets,
-		Client:                 mgr.GetClient(),
-		Log:                    logf.Log.WithName("secret-resolver"),
-	}
-
+	var nonCachedClient client.Client
 	if config.Get().EnableLimitedCache {
-		secretResolver.LimitedCacheEnabled = true
-		nonCachedClient, clErr := client.New(mgr.GetConfig(), client.Options{Scheme: scheme})
+		var clErr error
+		nonCachedClient, clErr = client.New(mgr.GetConfig(), client.Options{Scheme: scheme})
 		if clErr != nil {
 			setupLog.Error(clErr, "unable to create non cached client")
 			os.Exit(1)
 		}
-		secretResolver.NonCachedClient = nonCachedClient
 	}
 
+	utils.InitializeSecretsClient(mgr.GetClient(), nonCachedClient, config.Get())
+
 	if err = (&controllers.ServiceInstanceReconciler{
-		Client:         mgr.GetClient(),
-		Log:            ctrl.Log.WithName("controllers").WithName("ServiceInstance"),
-		Scheme:         mgr.GetScheme(),
-		Config:         config.Get(),
-		SecretResolver: secretResolver,
-		Recorder:       mgr.GetEventRecorderFor("ServiceInstance"),
-		GetSMClient:    utils.GetSMClient,
+		Client:      mgr.GetClient(),
+		Log:         ctrl.Log.WithName("controllers").WithName("ServiceInstance"),
+		Scheme:      mgr.GetScheme(),
+		Config:      config.Get(),
+		Recorder:    mgr.GetEventRecorderFor("ServiceInstance"),
+		GetSMClient: utils.GetSMClient,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ServiceInstance")
 		os.Exit(1)
 	}
 	if err = (&controllers.ServiceBindingReconciler{
-		Client:         mgr.GetClient(),
-		Log:            ctrl.Log.WithName("controllers").WithName("ServiceBinding"),
-		Scheme:         mgr.GetScheme(),
-		Config:         config.Get(),
-		SecretResolver: secretResolver,
-		Recorder:       mgr.GetEventRecorderFor("ServiceBinding"),
-		GetSMClient:    utils.GetSMClient,
+		Client:      mgr.GetClient(),
+		Log:         ctrl.Log.WithName("controllers").WithName("ServiceBinding"),
+		Scheme:      mgr.GetScheme(),
+		Config:      config.Get(),
+		Recorder:    mgr.GetEventRecorderFor("ServiceBinding"),
+		GetSMClient: utils.GetSMClient,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ServiceBinding")
 		os.Exit(1)

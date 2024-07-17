@@ -9,14 +9,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func GetSMClient(ctx context.Context, secretResolver *SecretResolver, resourceNamespace, btpAccessSecretName string) (sm.Client, error) {
+func GetSMClient(ctx context.Context, resourceNamespace, btpAccessSecretName string) (sm.Client, error) {
 	log := GetLogger(ctx)
 
 	if len(btpAccessSecretName) > 0 {
-		return getBTPAccessClient(ctx, secretResolver, btpAccessSecretName)
+		return getBTPAccessClient(ctx, btpAccessSecretName)
 	}
 
-	secret, err := secretResolver.GetSecretForResource(ctx, resourceNamespace, SAPBTPOperatorSecretName)
+	secret, err := SecretsClient.GetSecretForResource(ctx, resourceNamespace, SAPBTPOperatorSecretName)
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +39,7 @@ func GetSMClient(ctx context.Context, secretResolver *SecretResolver, resourceNa
 
 	//backward compatibility (tls data in a dedicated secret)
 	if len(clientConfig.ClientSecret) == 0 && (len(clientConfig.TLSPrivateKey) == 0 || len(clientConfig.TLSCertKey) == 0) {
-		tlsSecret, err := secretResolver.GetSecretForResource(ctx, resourceNamespace, SAPBTPOperatorTLSSecretName)
+		tlsSecret, err := SecretsClient.GetSecretForResource(ctx, resourceNamespace, SAPBTPOperatorTLSSecretName)
 		if client.IgnoreNotFound(err) != nil {
 			return nil, err
 		}
@@ -57,9 +57,9 @@ func GetSMClient(ctx context.Context, secretResolver *SecretResolver, resourceNa
 	return sm.NewClient(ctx, clientConfig, nil)
 }
 
-func getBTPAccessClient(ctx context.Context, secretResolver *SecretResolver, secretName string) (sm.Client, error) {
+func getBTPAccessClient(ctx context.Context, secretName string) (sm.Client, error) {
 	log := GetLogger(ctx)
-	secret, err := secretResolver.GetSecretFromManagementNamespace(ctx, secretName)
+	secret, err := SecretsClient.GetSecretFromManagementNamespace(ctx, secretName)
 	if err != nil {
 		return nil, err
 	}
