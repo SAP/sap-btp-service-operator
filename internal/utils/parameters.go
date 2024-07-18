@@ -96,7 +96,7 @@ func unmarshalJSON(in []byte) (map[string]interface{}, error) {
 // fetchSecretKeyValue requests and returns the contents of the given secret key
 func fetchSecretKeyValue(namespace string, secretKeyRef *servicesv1.SecretKeyReference) ([]byte, error) {
 	secret := &corev1.Secret{}
-	err := GetSecretByKey(context.Background(), types.NamespacedName{Namespace: namespace, Name: secretKeyRef.Name}, secret)
+	err := GetSecretWithFallback(context.Background(), types.NamespacedName{Namespace: namespace, Name: secretKeyRef.Name}, secret)
 
 	if err != nil {
 		return nil, err

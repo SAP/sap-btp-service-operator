@@ -46,7 +46,7 @@ func InitializeSecretsClient(client, nonCachedClient client.Client, config confi
 	}
 }
 
-func GetSecretByKey(ctx context.Context, namespacedName types.NamespacedName, secret *v1.Secret) error {
+func GetSecretWithFallback(ctx context.Context, namespacedName types.NamespacedName, secret *v1.Secret) error {
 	return secretsClient.getWithClientFallback(ctx, namespacedName, secret)
 }
 

@@ -21,13 +21,14 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"github.com/SAP/sap-btp-service-operator/internal/utils"
 	"net"
 	"net/http"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/SAP/sap-btp-service-operator/internal/utils"
 
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 

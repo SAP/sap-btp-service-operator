@@ -501,12 +501,9 @@ func (r *ServiceBindingReconciler) maintain(ctx context.Context, binding *servic
 		shouldUpdateStatus = true
 	}
 	if !utils.IsFailed(binding) {
-		var (
-			err    error
-			secret *corev1.Secret
-		)
-
-		if secret, err = r.getSecret(ctx, binding.Namespace, binding.Spec.SecretName); err != nil {
+		secret, err := r.getSecret(ctx, binding.Namespace, binding.Spec.SecretName)
+		if err != nil {
+			// secret was deleted
 			if apierrors.IsNotFound(err) && !utils.IsMarkedForDeletion(binding.ObjectMeta) {
 				log.Info(fmt.Sprintf("secret not found recovering binding %s", binding.Name))
 				binding.Status.BindingID = ""
@@ -517,11 +514,10 @@ func (r *ServiceBindingReconciler) maintain(ctx context.Context, binding *servic
 			} else {
 				return ctrl.Result{}, err
 			}
-		} else {
+		} else { // secret exists, validate it has the required labels
 			if secret.Labels == nil {
 				secret.Labels = map[string]string{}
 			}
-			// migrating existing secrets
 			if secret.Labels[common.ManagedByBTPOperatorLabel] != "true" {
 				secret.Labels[common.ManagedByBTPOperatorLabel] = "true"
 				if err = r.Client.Update(ctx, secret); err != nil {
@@ -621,7 +617,7 @@ func (r *ServiceBindingReconciler) storeBindingSecret(ctx context.Context, k8sBi
 		return err
 	}
 
-	if len(secret.Labels) == 0 {
+	if secret.Labels == nil {
 		secret.Labels = map[string]string{}
 	}
 	secret.Labels[common.ManagedByBTPOperatorLabel] = "true"
@@ -732,7 +728,7 @@ func (r *ServiceBindingReconciler) createBindingSecretFromSecretTemplate(ctx con
 	}
 	secret.SetNamespace(k8sBinding.Namespace)
 	secret.SetName(k8sBinding.Spec.SecretName)
-	if len(secret.Labels) == 0 {
+	if secret.Labels == nil {
 		secret.Labels = map[string]string{}
 	}
 	secret.Labels[common.ManagedByBTPOperatorLabel] = "true"
@@ -818,7 +814,7 @@ func (r *ServiceBindingReconciler) deleteSecretAndRemoveFinalizer(ctx context.Co
 
 func (r *ServiceBindingReconciler) getSecret(ctx context.Context, namespace string, name string) (*corev1.Secret, error) {
 	secret := &corev1.Secret{}
-	err := utils.GetSecretByKey(ctx, types.NamespacedName{Namespace: namespace, Name: name}, secret)
+	err := utils.GetSecretWithFallback(ctx, types.NamespacedName{Namespace: namespace, Name: name}, secret)
 	return secret, err
 }
 
