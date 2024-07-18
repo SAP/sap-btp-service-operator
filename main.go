@@ -208,7 +208,7 @@ func createClusterSecret(client client.Client) {
 	clusterSecret := &v1.Secret{}
 	clusterSecret.Name = "sap-btp-operator-clusterid"
 	clusterSecret.Namespace = config.Get().ReleaseNamespace
-	clusterSecret.Labels = map[string]string{common.ManagedByBTPOperatorLabel: "true"}
+	clusterSecret.Labels = map[string]string{common.ManagedByBTPOperatorLabel: "true", common.ClusterSecretLabel: "true"}
 	clusterSecret.StringData = map[string]string{"INITIAL_CLUSTER_ID": config.Get().ClusterID}
 	if err := client.Create(context.Background(), clusterSecret); err != nil {
 		setupLog.Error(err, "failed to create cluster secret")
