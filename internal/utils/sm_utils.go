@@ -16,7 +16,7 @@ func GetSMClient(ctx context.Context, resourceNamespace, btpAccessSecretName str
 		return getBTPAccessClient(ctx, btpAccessSecretName)
 	}
 
-	secret, err := SecretsClient.GetSecretForResource(ctx, resourceNamespace, SAPBTPOperatorSecretName)
+	secret, err := GetSecretForResource(ctx, resourceNamespace, SAPBTPOperatorSecretName)
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +39,7 @@ func GetSMClient(ctx context.Context, resourceNamespace, btpAccessSecretName str
 
 	//backward compatibility (tls data in a dedicated secret)
 	if len(clientConfig.ClientSecret) == 0 && (len(clientConfig.TLSPrivateKey) == 0 || len(clientConfig.TLSCertKey) == 0) {
-		tlsSecret, err := SecretsClient.GetSecretForResource(ctx, resourceNamespace, SAPBTPOperatorTLSSecretName)
+		tlsSecret, err := GetSecretForResource(ctx, resourceNamespace, SAPBTPOperatorTLSSecretName)
 		if client.IgnoreNotFound(err) != nil {
 			return nil, err
 		}
@@ -59,7 +59,7 @@ func GetSMClient(ctx context.Context, resourceNamespace, btpAccessSecretName str
 
 func getBTPAccessClient(ctx context.Context, secretName string) (sm.Client, error) {
 	log := GetLogger(ctx)
-	secret, err := SecretsClient.GetSecretFromManagementNamespace(ctx, secretName)
+	secret, err := GetSecretFromManagementNamespace(ctx, secretName)
 	if err != nil {
 		return nil, err
 	}

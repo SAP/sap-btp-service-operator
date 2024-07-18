@@ -22,7 +22,7 @@ const (
 	SAPBTPOperatorTLSSecretName = "sap-btp-service-operator-tls"
 )
 
-var SecretsClient secretClient
+var secretsClient secretClient
 
 type secretClient struct {
 	ManagementNamespace    string
@@ -35,7 +35,7 @@ type secretClient struct {
 }
 
 func InitializeSecretsClient(client, nonCachedClient client.Client, config config.Config) {
-	SecretsClient = secretClient{
+	secretsClient = secretClient{
 		Log:                    logf.Log.WithName("secret-resolver"),
 		ManagementNamespace:    config.ManagementNamespace,
 		ReleaseNamespace:       config.ReleaseNamespace,
@@ -44,10 +44,21 @@ func InitializeSecretsClient(client, nonCachedClient client.Client, config confi
 		Client:                 client,
 		NonCachedClient:        nonCachedClient,
 	}
-
 }
 
-func (sr *secretClient) GetSecretFromManagementNamespace(ctx context.Context, name string) (*v1.Secret, error) {
+func GetSecretByKey(ctx context.Context, namespacedName types.NamespacedName, secret *v1.Secret) error {
+	return secretsClient.getWithClientFallback(ctx, namespacedName, secret)
+}
+
+func GetSecretFromManagementNamespace(ctx context.Context, name string) (*v1.Secret, error) {
+	return secretsClient.getSecretFromManagementNamespace(ctx, name)
+}
+
+func GetSecretForResource(ctx context.Context, namespace, name string) (*v1.Secret, error) {
+	return secretsClient.getSecretForResource(ctx, namespace, name)
+}
+
+func (sr *secretClient) getSecretFromManagementNamespace(ctx context.Context, name string) (*v1.Secret, error) {
 	secretForResource := &v1.Secret{}
 
 	sr.Log.Info(fmt.Sprintf("Searching for secret %s in management namespace %s", name, sr.ManagementNamespace))
@@ -59,7 +70,7 @@ func (sr *secretClient) GetSecretFromManagementNamespace(ctx context.Context, na
 	return secretForResource, nil
 }
 
-func (sr *secretClient) GetSecretForResource(ctx context.Context, namespace, name string) (*v1.Secret, error) {
+func (sr *secretClient) getSecretForResource(ctx context.Context, namespace, name string) (*v1.Secret, error) {
 	secretForResource := &v1.Secret{}
 
 	// search namespace secret
@@ -119,8 +130,4 @@ func (sr *secretClient) getWithClientFallback(ctx context.Context, key types.Nam
 	}
 
 	return nil
-}
-
-func (sr *secretClient) Get(ctx context.Context, namespacedName types.NamespacedName, secret *v1.Secret) error {
-	return sr.getWithClientFallback(ctx, namespacedName, secret)
 }

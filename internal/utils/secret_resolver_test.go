@@ -61,14 +61,14 @@ var _ = Describe("Secrets Resolver", func() {
 	}
 
 	validateSecretResolved := func() {
-		resolvedSecret, err := SecretsClient.GetSecretForResource(ctx, testNamespace, SAPBTPOperatorSecretName)
+		resolvedSecret, err := secretsClient.getSecretForResource(ctx, testNamespace, SAPBTPOperatorSecretName)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(resolvedSecret).ToNot(BeNil())
 		Expect(string(resolvedSecret.Data["clientid"])).To(Equal(expectedClientID))
 	}
 
 	validateSecretNotResolved := func() {
-		_, err := SecretsClient.GetSecretForResource(ctx, testNamespace, SAPBTPOperatorSecretName)
+		_, err := secretsClient.getSecretForResource(ctx, testNamespace, SAPBTPOperatorSecretName)
 		Expect(err).To(HaveOccurred())
 		Expect(err.Error()).To(ContainSubstring("not found"))
 	}
@@ -99,7 +99,7 @@ var _ = Describe("Secrets Resolver", func() {
 		})
 		Context("Namespace secrets enabled", func() {
 			BeforeEach(func() {
-				SecretsClient.EnableNamespaceSecrets = true
+				secretsClient.EnableNamespaceSecrets = true
 			})
 			It("should resolve the secret", func() {
 				fmt.Printf("secret %v", secret)
@@ -175,7 +175,7 @@ var _ = Describe("Secrets Resolver", func() {
 		})
 
 		It("should resolve the secret", func() {
-			resolvedSecret, err := SecretsClient.GetSecretFromManagementNamespace(ctx, secret.Name)
+			resolvedSecret, err := secretsClient.getSecretFromManagementNamespace(ctx, secret.Name)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(resolvedSecret).ToNot(BeNil())
 			Expect(string(resolvedSecret.Data["clientid"])).To(Equal(expectedClientID))
@@ -185,22 +185,22 @@ var _ = Describe("Secrets Resolver", func() {
 	Context("getWithClientFallback unit", func() {
 		When("LimitedCacheEnabled is false", func() {
 			It("should not fallback to NonCachedClient", func() {
-				SecretsClient.NonCachedClient = nil // we will get nil pointer in case of fallback
-				err := SecretsClient.getWithClientFallback(ctx, types.NamespacedName{Name: "some-name", Namespace: testNamespace}, &corev1.Secret{})
+				secretsClient.NonCachedClient = nil // we will get nil pointer in case of fallback
+				err := secretsClient.getWithClientFallback(ctx, types.NamespacedName{Name: "some-name", Namespace: testNamespace}, &corev1.Secret{})
 				Expect(err).To(HaveOccurred())
 			})
 		})
 
 		When("LimitedCacheEnabled is true", func() {
 			It("should fallback to NonCachedClient and fail if not found", func() {
-				SecretsClient.LimitedCacheEnabled = true
-				SecretsClient.NonCachedClient = fake.NewFakeClient()
-				err := SecretsClient.getWithClientFallback(ctx, types.NamespacedName{Name: "some-name", Namespace: testNamespace}, &corev1.Secret{})
+				secretsClient.LimitedCacheEnabled = true
+				secretsClient.NonCachedClient = fake.NewFakeClient()
+				err := secretsClient.getWithClientFallback(ctx, types.NamespacedName{Name: "some-name", Namespace: testNamespace}, &corev1.Secret{})
 				Expect(err).To(HaveOccurred())
 			})
 
 			It("should fallback to NonCachedClient and succeed if found", func() {
-				SecretsClient.LimitedCacheEnabled = true
+				secretsClient.LimitedCacheEnabled = true
 				fakeClient := fake.NewFakeClient(&corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "some-name",
@@ -210,9 +210,9 @@ var _ = Describe("Secrets Resolver", func() {
 						"key": []byte("value"),
 					},
 				})
-				SecretsClient.NonCachedClient = fakeClient
+				secretsClient.NonCachedClient = fakeClient
 				searchedSecret := &corev1.Secret{}
-				err := SecretsClient.getWithClientFallback(ctx, types.NamespacedName{Name: "some-name", Namespace: testNamespace}, searchedSecret)
+				err := secretsClient.getWithClientFallback(ctx, types.NamespacedName{Name: "some-name", Namespace: testNamespace}, searchedSecret)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(searchedSecret.Data).To(HaveKey("key"))
 			})

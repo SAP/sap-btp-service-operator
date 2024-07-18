@@ -818,7 +818,7 @@ func (r *ServiceBindingReconciler) deleteSecretAndRemoveFinalizer(ctx context.Co
 
 func (r *ServiceBindingReconciler) getSecret(ctx context.Context, namespace string, name string) (*corev1.Secret, error) {
 	secret := &corev1.Secret{}
-	err := utils.SecretsClient.Get(ctx, types.NamespacedName{Namespace: namespace, Name: name}, secret)
+	err := utils.GetSecretByKey(ctx, types.NamespacedName{Namespace: namespace, Name: name}, secret)
 	return secret, err
 }
 
