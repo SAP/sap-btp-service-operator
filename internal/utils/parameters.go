@@ -9,10 +9,8 @@ import (
 	servicesv1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	corev1 "k8s.io/api/core/v1"
 
-	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/yaml"
 )
 
@@ -22,11 +20,11 @@ import (
 // secret values.
 // The second return value is parameters marshalled to byt array
 // The third return value is any error that caused the function to fail.
-func BuildSMRequestParameters(kubeClient client.Client, namespace string, parametersFrom []servicesv1.ParametersFromSource, parameters *runtime.RawExtension) (map[string]interface{}, []byte, error) {
+func BuildSMRequestParameters(namespace string, parametersFrom []servicesv1.ParametersFromSource, parameters *runtime.RawExtension) (map[string]interface{}, []byte, error) {
 	params := make(map[string]interface{})
 	if len(parametersFrom) > 0 {
 		for _, p := range parametersFrom {
-			fps, err := fetchParametersFromSource(kubeClient, namespace, &p)
+			fps, err := fetchParametersFromSource(namespace, &p)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -96,9 +94,9 @@ func unmarshalJSON(in []byte) (map[string]interface{}, error) {
 }
 
 // fetchSecretKeyValue requests and returns the contents of the given secret key
-func fetchSecretKeyValue(kubeClient client.Client, namespace string, secretKeyRef *servicesv1.SecretKeyReference) ([]byte, error) {
+func fetchSecretKeyValue(namespace string, secretKeyRef *servicesv1.SecretKeyReference) ([]byte, error) {
 	secret := &corev1.Secret{}
-	err := kubeClient.Get(context.Background(), types.NamespacedName{Namespace: namespace, Name: secretKeyRef.Name}, secret)
+	err := GetSecretWithFallback(context.Background(), types.NamespacedName{Namespace: namespace, Name: secretKeyRef.Name}, secret)
 
 	if err != nil {
 		return nil, err
@@ -108,10 +106,10 @@ func fetchSecretKeyValue(kubeClient client.Client, namespace string, secretKeyRe
 
 // fetchParametersFromSource fetches data from a specified external source and
 // represents it in the parameters map format
-func fetchParametersFromSource(kubeClient client.Client, namespace string, parametersFrom *servicesv1.ParametersFromSource) (map[string]interface{}, error) {
+func fetchParametersFromSource(namespace string, parametersFrom *servicesv1.ParametersFromSource) (map[string]interface{}, error) {
 	var params map[string]interface{}
 	if parametersFrom.SecretKeyRef != nil {
-		data, err := fetchSecretKeyValue(kubeClient, namespace, parametersFrom.SecretKeyRef)
+		data, err := fetchSecretKeyValue(namespace, parametersFrom.SecretKeyRef)
 		if err != nil {
 			return nil, err
 		}

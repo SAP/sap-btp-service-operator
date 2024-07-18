@@ -1,29 +1,27 @@
 package utils
 
 import (
-	"context"
-
+	"github.com/SAP/sap-btp-service-operator/internal/config"
 	"github.com/google/uuid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+
+	"fmt"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-
-	"fmt"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 // +kubebuilder:docs-gen:collapse=Imports
 
 var _ = Describe("Secrets Resolver", func() {
-
-	var ctx context.Context
-	var resolver *SecretResolver
-	var expectedClientID string
-	var secret *corev1.Secret
+	var (
+		expectedClientID string
+		secret           *corev1.Secret
+	)
 
 	createSecret := func(namePrefix string, namespace string) *corev1.Secret {
 		var name string
@@ -63,26 +61,23 @@ var _ = Describe("Secrets Resolver", func() {
 	}
 
 	validateSecretResolved := func() {
-		resolvedSecret, err := resolver.GetSecretForResource(ctx, testNamespace, SAPBTPOperatorSecretName)
+		resolvedSecret, err := secretsClient.getSecretForResource(ctx, testNamespace, SAPBTPOperatorSecretName)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(resolvedSecret).ToNot(BeNil())
 		Expect(string(resolvedSecret.Data["clientid"])).To(Equal(expectedClientID))
 	}
 
 	validateSecretNotResolved := func() {
-		_, err := resolver.GetSecretForResource(ctx, testNamespace, SAPBTPOperatorSecretName)
+		_, err := secretsClient.getSecretForResource(ctx, testNamespace, SAPBTPOperatorSecretName)
 		Expect(err).To(HaveOccurred())
 		Expect(err.Error()).To(ContainSubstring("not found"))
 	}
 
 	BeforeEach(func() {
-		ctx = context.Background()
-		resolver = &SecretResolver{
+		InitializeSecretsClient(k8sClient, nil, config.Config{
 			ManagementNamespace: managementNamespace,
 			ReleaseNamespace:    managementNamespace,
-			Log:                 logf.Log.WithName("SecretResolver"),
-			Client:              k8sClient,
-		}
+		})
 	})
 
 	AfterEach(func() {
@@ -104,7 +99,7 @@ var _ = Describe("Secrets Resolver", func() {
 		})
 		Context("Namespace secrets enabled", func() {
 			BeforeEach(func() {
-				resolver.EnableNamespaceSecrets = true
+				secretsClient.EnableNamespaceSecrets = true
 			})
 			It("should resolve the secret", func() {
 				fmt.Printf("secret %v", secret)
@@ -180,10 +175,47 @@ var _ = Describe("Secrets Resolver", func() {
 		})
 
 		It("should resolve the secret", func() {
-			resolvedSecret, err := resolver.GetSecretFromManagementNamespace(ctx, secret.Name)
+			resolvedSecret, err := secretsClient.getSecretFromManagementNamespace(ctx, secret.Name)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(resolvedSecret).ToNot(BeNil())
 			Expect(string(resolvedSecret.Data["clientid"])).To(Equal(expectedClientID))
+		})
+	})
+
+	Context("getWithClientFallback unit", func() {
+		When("LimitedCacheEnabled is false", func() {
+			It("should not fallback to NonCachedClient", func() {
+				secretsClient.NonCachedClient = nil // we will get nil pointer in case of fallback
+				err := secretsClient.getWithClientFallback(ctx, types.NamespacedName{Name: "some-name", Namespace: testNamespace}, &corev1.Secret{})
+				Expect(err).To(HaveOccurred())
+			})
+		})
+
+		When("LimitedCacheEnabled is true", func() {
+			It("should fallback to NonCachedClient and fail if not found", func() {
+				secretsClient.LimitedCacheEnabled = true
+				secretsClient.NonCachedClient = fake.NewFakeClient()
+				err := secretsClient.getWithClientFallback(ctx, types.NamespacedName{Name: "some-name", Namespace: testNamespace}, &corev1.Secret{})
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("should fallback to NonCachedClient and succeed if found", func() {
+				secretsClient.LimitedCacheEnabled = true
+				fakeClient := fake.NewFakeClient(&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "some-name",
+						Namespace: testNamespace,
+					},
+					Data: map[string][]byte{
+						"key": []byte("value"),
+					},
+				})
+				secretsClient.NonCachedClient = fakeClient
+				searchedSecret := &corev1.Secret{}
+				err := secretsClient.getWithClientFallback(ctx, types.NamespacedName{Name: "some-name", Namespace: testNamespace}, searchedSecret)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(searchedSecret.Data).To(HaveKey("key"))
+			})
 		})
 	})
 })
