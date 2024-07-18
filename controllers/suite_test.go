@@ -28,10 +28,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/SAP/sap-btp-service-operator/internal/utils"
+
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/SAP/sap-btp-service-operator/api/common"
-	"github.com/SAP/sap-btp-service-operator/internal/utils"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	. "github.com/onsi/ginkgo"
@@ -119,6 +120,8 @@ var _ = BeforeSuite(func(done Done) {
 	Expect(err).ToNot(HaveOccurred())
 	Expect(k8sClient).ToNot(BeNil())
 
+	utils.InitializeSecretsClient(k8sClient, nil, config.Config{EnableLimitedCache: false})
+
 	webhookInstallOptions := &testEnv.WebhookInstallOptions
 
 	k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
@@ -155,7 +158,7 @@ var _ = BeforeSuite(func(done Done) {
 		Client: k8sManager.GetClient(),
 		Scheme: k8sManager.GetScheme(),
 		Log:    ctrl.Log.WithName("controllers").WithName("ServiceInstance"),
-		GetSMClient: func(_ context.Context, _ *utils.SecretResolver, _, _ string) (sm.Client, error) {
+		GetSMClient: func(_ context.Context, _, _ string) (sm.Client, error) {
 			return fakeClient, nil
 		},
 		Config:   testConfig,
@@ -167,7 +170,7 @@ var _ = BeforeSuite(func(done Done) {
 		Client: k8sManager.GetClient(),
 		Scheme: k8sManager.GetScheme(),
 		Log:    ctrl.Log.WithName("controllers").WithName("ServiceBinding"),
-		GetSMClient: func(_ context.Context, _ *utils.SecretResolver, _, _ string) (sm.Client, error) {
+		GetSMClient: func(_ context.Context, _, _ string) (sm.Client, error) {
 			return fakeClient, nil
 		},
 		Config:   testConfig,
