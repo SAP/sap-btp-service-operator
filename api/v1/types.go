@@ -1,5 +1,7 @@
 package v1
 
+import "k8s.io/apimachinery/pkg/types"
+
 // ParametersFromSource represents the source of a set of Parameters
 type ParametersFromSource struct {
 	// The Secret key to select from.
@@ -14,4 +16,16 @@ type SecretKeyReference struct {
 	Name string `json:"name"`
 	// The key of the secret to select from.  Must be a valid secret key.
 	Key string `json:"key"`
+}
+
+type ResourceKey struct {
+	Name      string `json:"name"`
+	Namespace string `json:"namespace"`
+}
+
+func (rk *ResourceKey) ToNamespaceName() types.NamespacedName {
+	return types.NamespacedName{
+		Namespace: rk.Namespace,
+		Name:      rk.Name,
+	}
 }
