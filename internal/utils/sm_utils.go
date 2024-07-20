@@ -3,7 +3,8 @@ package utils
 import (
 	"context"
 	"fmt"
-	"github.com/SAP/sap-btp-service-operator/api/v1"
+
+	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"

@@ -36,7 +36,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 
-	"github.com/SAP/sap-btp-service-operator/api/v1"
+	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 
 	"github.com/google/uuid"
