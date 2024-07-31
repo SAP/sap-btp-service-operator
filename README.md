@@ -1,3 +1,4 @@
+
 [![Coverage Status](https://coveralls.io/repos/github/SAP/sap-btp-service-operator/badge.svg?branch=main)](https://coveralls.io/github/SAP/sap-btp-service-operator?branch=main)
 [![Build Status](https://github.com/SAP/sap-btp-service-operator/workflows/Go/badge.svg)](https://github.com/SAP/sap-btp-service-operator/actions)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/SAP/sap-btp-service-operator/blob/master/LICENSE)
@@ -952,20 +953,24 @@ The service instance in SAP BTP acts as the source of truth for your CR's config
 
 1. Retrieve CR Details:
 
-  a) Access the service instance representing your CR in SAP BTP.
-  b) Obtain the following details from the service instance:
-     - The name of the custom resource.
-     - The Kubernetes namespace where the CR should reside.
-     - If applicable, retrieve the cluster ID or context associated with the CR in SAP BTP. This ensures the CR is recreated in the correct environment.
+   a) Access the service instance representing your CR in SAP BTP.
+  
+   b) Obtain the following details from the service instance:
+  
+     * The name of the custom resource.
+     * The Kubernetes namespace where the CR should reside.
+     * If applicable, retrieve the cluster ID or context associated with the CR in SAP BTP. This ensures the CR is recreated in the correct environment.
   
 2. Recreate the CR:
 
    a) If you have a YAML definition or manifest for your CR, ensure it includes the exact name, namespace, and (if applicable) cluster ID you retrieved from the SAP BTP service instance.
+   
    b) Use `kubectl apply -f <your_cr_manifest.yaml>` to create the CR in your Kubernetes cluster.
   
-3. Verification:
+4. Verification:
 
    a) Use `kubectl get <your_cr_kind> <your_cr_name> -n <your_namespace>` to verify that the CR is successfully created in Kubernetes.
+   
    b) Check the service instance in SAP BTP to confirm that it now recognizes the re-established connection with the CR in Kubernetes.
   
 #### Additional Considerations:
