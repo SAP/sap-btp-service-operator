@@ -940,13 +940,45 @@ Use a dedicated Service Manager API to clean up cluster content:
                                 
 <b>Attention: **Use this option only for cleanup purposes for a cluster that's no longer available.** Applying it to an active and available cluster may result in unintended resource leftovers in your cluster.</b>
 
+### I've lost a custom resource. How can I recover it?
+
+Let's break down how to recover your Kubernetes custom resource (CR) that exists in SAP BTP but not in your Kubernetes cluster:
+
+#### Core Concept
+
+The service instance in SAP BTP acts as the source of truth for your CR's configuration and state. By recreating the CR in Kubernetes with the exact same name, namespace, and cluster ID, you essentially re-establish the link between the Kubernetes representation and its counterpart in SAP BTP.
+
+#### Steps
+
+1. Retrieve CR Details:
+
+- SAP BTP Service Instance: Access the service instance representing your CR in SAP BTP.
+- Extract Key Information: Gather the following crucial details from the service instance:
+- CR Name: The exact name of the custom resource.
+- Namespace: The Kubernetes namespace where the CR should reside.
+- Cluster ID (Context): If applicable, retrieve the cluster ID or context associated with the CR in SAP BTP. This ensures the CR is recreated in the correct environment.
+  
+2. Recreate the CR:
+
+- YAML/Manifest: If you have a YAML definition or manifest for your CR, ensure it includes the exact name, namespace, and (if applicable) cluster ID you retrieved from the SAP BTP service instance.
+- Apply: Use kubectl apply -f <your_cr_manifest.yaml> to create the CR in your Kubernetes cluster.
+  
+3. Verification:
+
+- Kubernetes: Use kubectl get <your_cr_kind> <your_cr_name> -n <your_namespace> to verify that the CR is successfully created in Kubernetes.
+- SAP BTP: Check the service instance in SAP BTP to confirm that it now recognizes the re-established connection with the CR in Kubernetes.
+  
+#### Additional Considerations:
+
+- Custom Resource Definition (CRD): Ensure that the CRD defining your custom resource type is still present in your Kubernetes cluster. If it's missing, you'll need to recreate the CRD first.
+- Backup and Restore: Consider implementing backup and restore procedures for your Kubernetes custom resources in the future to prevent data loss.
 
 You're welcome to raise issues related to feature requests, or bugs, or give us general feedback on this project's GitHub Issues page.
 The SAP BTP service operator project maintainers will respond to the best of their abilities.
 
-- *CR doesnt exist, ("instance" in Kuberbernetes) but it does exist on BTP. Once we create CR, it connects to the existing instance.*
-- *same name, namespace, Instance exists in BTP, not in Kubernetes cluster. How can we recover it?*
-- Create CR with the same name, namespace, and cluster ID (GET instance details, context in the response)* - separate PR 
+#-CR doesnt exist, ("instance" in Kuberbernetes) but it does exist on BTP. Once we create CR, it connects to the existing instance.*
+#- *same name, namespace, Instance exists in BTP, not in Kubernetes cluster. How can we recover it?*
+#- Create CR with the same name, namespace, and cluster ID (GET instance details, context in the response)* - separate PR 
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
