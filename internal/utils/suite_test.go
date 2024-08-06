@@ -50,6 +50,7 @@ const (
 	timeout             = time.Second * 10
 	interval            = time.Millisecond * 250
 	managementNamespace = "test-management-namespace"
+	releaseNamespace    = "test-release-namespace"
 	testNamespace       = "test-namespace"
 )
 
