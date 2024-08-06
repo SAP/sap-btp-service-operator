@@ -55,7 +55,7 @@ type ServiceInstanceReconciler struct {
 	client.Client
 	Log         logr.Logger
 	Scheme      *runtime.Scheme
-	GetSMClient func(ctx context.Context, client client.Client, serviceInstance *v1.ServiceInstance) (sm.Client, error)
+	GetSMClient func(ctx context.Context, serviceInstance *v1.ServiceInstance) (sm.Client, error)
 	Config      config.Config
 	Recorder    record.EventRecorder
 }

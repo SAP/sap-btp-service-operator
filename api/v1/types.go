@@ -1,7 +1,5 @@
 package v1
 
-import "k8s.io/apimachinery/pkg/types"
-
 // ParametersFromSource represents the source of a set of Parameters
 type ParametersFromSource struct {
 	// The Secret key to select from.
@@ -21,11 +19,4 @@ type SecretKeyReference struct {
 type ResourceKey struct {
 	Name      string `json:"name"`
 	Namespace string `json:"namespace"`
-}
-
-func (rk *ResourceKey) ToNamespaceName() types.NamespacedName {
-	return types.NamespacedName{
-		Namespace: rk.Namespace,
-		Name:      rk.Name,
-	}
 }

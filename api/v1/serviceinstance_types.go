@@ -118,8 +118,6 @@ type ServiceInstanceStatus struct {
 
 	// The subaccount id of the service instance
 	SubaccountID string `json:"subaccountID,omitempty"`
-
-	SecretRef *ResourceKey `json:"secretRef,omitempty"`
 }
 
 // +kubebuilder:object:root=true

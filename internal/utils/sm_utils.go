@@ -16,34 +16,21 @@ func (ic *InvalidCredentialsError) Error() string {
 	return "invalid Service-Manager credentials, contact your cluster administrator"
 }
 
-func GetSMClient(ctx context.Context, k8sClient client.Client, serviceInstance *v1.ServiceInstance) (sm.Client, error) {
+func GetSMClient(ctx context.Context, serviceInstance *v1.ServiceInstance) (sm.Client, error) {
 	log := GetLogger(ctx)
 	var err error
 
-	secret := &corev1.Secret{}
-	if serviceInstance.Status.SecretRef != nil {
-		if err = GetSecretWithFallback(ctx, serviceInstance.Status.SecretRef.ToNamespaceName(), secret); err != nil {
-			log.Error(err, "failed to get secret using status.secretRef")
+	var secret *corev1.Secret
+	if len(serviceInstance.Spec.BTPAccessCredentialsSecret) > 0 {
+		secret, err = GetSecretFromManagementNamespace(ctx, serviceInstance.Spec.BTPAccessCredentialsSecret)
+		if err != nil {
+			log.Error(err, "failed to get secret BTPAccessCredentialsSecret")
 			return nil, err
 		}
 	} else {
-		if len(serviceInstance.Spec.BTPAccessCredentialsSecret) > 0 {
-			secret, err = GetSecretFromManagementNamespace(ctx, serviceInstance.Spec.BTPAccessCredentialsSecret)
-			if err != nil {
-				log.Error(err, "failed to get secret BTPAccessCredentialsSecret")
-				return nil, err
-			}
-		} else {
-			secret, err = GetSecretForResource(ctx, serviceInstance.Namespace, SAPBTPOperatorSecretName)
-			if err != nil {
-				log.Error(err, "failed to get secret for instance")
-				return nil, err
-			}
-		}
-
-		serviceInstance.Status.SecretRef = &v1.ResourceKey{Name: secret.Name, Namespace: secret.Namespace}
-		if err = k8sClient.Status().Update(ctx, serviceInstance); err != nil {
-			log.Error(err, "failed to update status with secretRef")
+		secret, err = GetSecretForResource(ctx, serviceInstance.Namespace, SAPBTPOperatorSecretName)
+		if err != nil {
+			log.Error(err, "failed to get secret for instance")
 			return nil, err
 		}
 	}

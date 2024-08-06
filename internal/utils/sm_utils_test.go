@@ -72,7 +72,7 @@ var _ = Describe("SM Utils", func() {
 						Expect(k8sClient.Create(ctx, secret)).To(Succeed())
 					})
 					It("should succeed", func() {
-						client, err := GetSMClient(ctx, k8sClient, serviceInstance)
+						client, err := GetSMClient(ctx, serviceInstance)
 						Expect(err).ToNot(HaveOccurred())
 						Expect(client).ToNot(BeNil())
 					})
@@ -96,7 +96,7 @@ var _ = Describe("SM Utils", func() {
 						Expect(k8sClient.Create(ctx, secret)).To(Succeed())
 					})
 					It("should succeed", func() {
-						client, err := GetSMClient(ctx, k8sClient, serviceInstance)
+						client, err := GetSMClient(ctx, serviceInstance)
 						Expect(err).ToNot(HaveOccurred())
 						Expect(client).ToNot(BeNil())
 					})
@@ -119,7 +119,7 @@ var _ = Describe("SM Utils", func() {
 					Expect(k8sClient.Create(ctx, secret)).To(Succeed())
 				})
 				It("should return error", func() {
-					client, err := GetSMClient(ctx, k8sClient, serviceInstance)
+					client, err := GetSMClient(ctx, serviceInstance)
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("invalid Service-Manager credentials, contact your cluster administrator"))
 					Expect(client).To(BeNil())
@@ -142,7 +142,7 @@ var _ = Describe("SM Utils", func() {
 					Expect(k8sClient.Create(ctx, secret)).To(Succeed())
 				})
 				It("should return error", func() {
-					client, err := GetSMClient(ctx, k8sClient, serviceInstance)
+					client, err := GetSMClient(ctx, serviceInstance)
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("invalid Service-Manager credentials, contact your cluster administrator"))
 					Expect(client).To(BeNil())
@@ -164,7 +164,7 @@ var _ = Describe("SM Utils", func() {
 					Expect(k8sClient.Create(ctx, secret)).To(Succeed())
 				})
 				It("should return error", func() {
-					client, err := GetSMClient(ctx, k8sClient, serviceInstance)
+					client, err := GetSMClient(ctx, serviceInstance)
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("invalid Service-Manager credentials, contact your cluster administrator"))
 					Expect(client).To(BeNil())
@@ -202,14 +202,14 @@ var _ = Describe("SM Utils", func() {
 					Expect(k8sClient.Create(ctx, tlsSecret)).To(Succeed())
 				})
 				It("should succeed", func() {
-					client, err := GetSMClient(ctx, k8sClient, serviceInstance)
+					client, err := GetSMClient(ctx, serviceInstance)
 					Expect(err).ToNot(HaveOccurred()) //tls: failed to find any PEM data in key input
 					Expect(client).ToNot(BeNil())
 				})
 			})
 			When("tls secret not found", func() {
 				It("should return error", func() {
-					client, err := GetSMClient(ctx, k8sClient, serviceInstance)
+					client, err := GetSMClient(ctx, serviceInstance)
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("invalid Service-Manager credentials, contact your cluster administrator"))
 					Expect(client).To(BeNil())
@@ -229,7 +229,7 @@ var _ = Describe("SM Utils", func() {
 					Expect(k8sClient.Create(ctx, tlsSecret)).To(Succeed())
 				})
 				It("should return error", func() {
-					client, err := GetSMClient(ctx, k8sClient, serviceInstance)
+					client, err := GetSMClient(ctx, serviceInstance)
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("invalid Service-Manager credentials, contact your cluster administrator"))
 					Expect(client).To(BeNil())
@@ -267,7 +267,7 @@ var _ = Describe("SM Utils", func() {
 					})
 
 					It("should succeed", func() {
-						client, err := GetSMClient(ctx, k8sClient, serviceInstance)
+						client, err := GetSMClient(ctx, serviceInstance)
 						Expect(err).ToNot(HaveOccurred())
 						Expect(client).ToNot(BeNil())
 					})
@@ -290,7 +290,7 @@ var _ = Describe("SM Utils", func() {
 						Expect(k8sClient.Create(ctx, secret)).To(Succeed())
 					})
 					It("should return error", func() {
-						client, err := GetSMClient(ctx, k8sClient, serviceInstance)
+						client, err := GetSMClient(ctx, serviceInstance)
 						Expect(err).To(HaveOccurred())
 						Expect(err.Error()).To(ContainSubstring("invalid Service-Manager credentials, contact your cluster administrator"))
 						Expect(client).To(BeNil())
@@ -313,7 +313,7 @@ var _ = Describe("SM Utils", func() {
 						Expect(k8sClient.Create(ctx, secret)).To(Succeed())
 					})
 					It("should return error", func() {
-						client, err := GetSMClient(ctx, k8sClient, serviceInstance)
+						client, err := GetSMClient(ctx, serviceInstance)
 						Expect(err).To(HaveOccurred())
 						Expect(err.Error()).To(ContainSubstring("invalid Service-Manager credentials, contact your cluster administrator"))
 						Expect(client).To(BeNil())
@@ -335,7 +335,7 @@ var _ = Describe("SM Utils", func() {
 						Expect(k8sClient.Create(ctx, secret)).To(Succeed())
 					})
 					It("should return error", func() {
-						client, err := GetSMClient(ctx, k8sClient, serviceInstance)
+						client, err := GetSMClient(ctx, serviceInstance)
 						Expect(err).To(HaveOccurred())
 						Expect(err.Error()).To(ContainSubstring("invalid Service-Manager credentials, contact your cluster administrator"))
 						Expect(client).To(BeNil())
@@ -362,7 +362,7 @@ var _ = Describe("SM Utils", func() {
 						Expect(k8sClient.Create(ctx, secret)).To(Succeed())
 					})
 					It("should succeed", func() {
-						client, err := GetSMClient(ctx, k8sClient, serviceInstance)
+						client, err := GetSMClient(ctx, serviceInstance)
 						Expect(err).ToNot(HaveOccurred())
 						Expect(client).ToNot(BeNil())
 					})
@@ -382,7 +382,7 @@ var _ = Describe("SM Utils", func() {
 						Expect(k8sClient.Create(ctx, tlsSecret)).To(Succeed())
 					})
 					It("should return error", func() {
-						client, err := GetSMClient(ctx, k8sClient, serviceInstance)
+						client, err := GetSMClient(ctx, serviceInstance)
 						Expect(err).To(HaveOccurred())
 						Expect(err.Error()).To(ContainSubstring("invalid Service-Manager credentials, contact your cluster administrator"))
 						Expect(client).To(BeNil())

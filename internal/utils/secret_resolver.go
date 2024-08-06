@@ -88,8 +88,8 @@ func (sr *secretClient) getSecretForResource(ctx context.Context, namespace, nam
 	}
 
 	// secret not found in resource namespace, search for namespace-specific secret in management namespace
-	sr.Log.Info(fmt.Sprintf("Searching a secret for namespace %s in the management namespace %s", namespace, sr.ManagementNamespace))
-	err := sr.getWithClientFallback(ctx, types.NamespacedName{Namespace: sr.ManagementNamespace, Name: fmt.Sprintf("%s-%s", namespace, name)}, secretForResource)
+	var err error
+	secretForResource, err = secretsClient.getSecretFromManagementNamespace(ctx, fmt.Sprintf("%s-%s", namespace, name))
 	if err == nil {
 		return secretForResource, nil
 	}
@@ -100,10 +100,10 @@ func (sr *secretClient) getSecretForResource(ctx context.Context, namespace, nam
 	}
 
 	// namespace-specific secret not found in management namespace, fallback to central cluster secret
-	return sr.getDefaultSecret(ctx, name)
+	return sr.getClusterDefaultSecret(ctx, name)
 }
 
-func (sr *secretClient) getDefaultSecret(ctx context.Context, name string) (*v1.Secret, error) {
+func (sr *secretClient) getClusterDefaultSecret(ctx context.Context, name string) (*v1.Secret, error) {
 	secretForResource := &v1.Secret{}
 	sr.Log.Info(fmt.Sprintf("Searching for cluster secret %s in releaseNamespace %s", name, sr.ReleaseNamespace))
 	err := sr.getWithClientFallback(ctx, types.NamespacedName{Namespace: sr.ReleaseNamespace, Name: name}, secretForResource)
