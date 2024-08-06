@@ -79,6 +79,10 @@ type ServiceBindingSpec struct {
 	// +optional
 	ParametersFrom []ParametersFromSource `json:"parametersFrom,omitempty"`
 
+	// List of custom labels describing the ServiceBinding.
+	// +optional
+	CustomLabels []CustomLabel `json:"customLabels,omitempty"`
+
 	// UserInfo contains information about the user that last modified this
 	// instance. This field is set by the API server and not settable by the
 	// end-user. User-provided values for this field are not saved.

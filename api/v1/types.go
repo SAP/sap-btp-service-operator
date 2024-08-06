@@ -15,3 +15,11 @@ type SecretKeyReference struct {
 	// The key of the secret to select from.  Must be a valid secret key.
 	Key string `json:"key"`
 }
+
+// CustomLabel defines a custom given label to append
+type CustomLabel struct {
+	// The name of the custom label
+	Name string `json:"name,omitempty"`
+	// The value of the custom label
+	Values []string `json:"values,omitempty"`
+}

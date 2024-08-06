@@ -227,6 +227,51 @@ var _ = Describe("ServiceInstance controller", func() {
 					Expect(params).To(ContainSubstring("\"key\":\"value\""))
 					Expect(params).To(ContainSubstring("\"secret-key\":\"secret-value\""))
 				})
+
+				It("should provision instance of the provided offering and plan name with labels successfully", func() {
+					instanceSpec := instanceSpec.DeepCopy()
+					instanceSpec.CustomLabels = []v1.CustomLabel{{
+						Name:   "tenant_id",
+						Values: []string{"test-abc"},
+					}}
+					serviceInstance = createInstance(ctx, *instanceSpec, nil, true)
+					Expect(serviceInstance.Status.InstanceID).To(Equal(fakeInstanceID))
+					Expect(serviceInstance.Status.SubaccountID).To(Equal(fakeSubaccountID))
+					Expect(serviceInstance.Spec.ExternalName).To(Equal(fakeInstanceExternalName))
+					Expect(serviceInstance.Name).To(Equal(fakeInstanceName))
+					Expect(serviceInstance.Status.HashedSpec).To(Not(BeNil()))
+					Expect(string(serviceInstance.Spec.Parameters.Raw)).To(ContainSubstring("\"key\":\"value\""))
+					Expect(serviceInstance.Status.HashedSpec).To(Equal(getSpecHash(serviceInstance)))
+					smInstance, _, _, _, _, _ := fakeClient.ProvisionArgsForCall(0)
+					params := smInstance.Parameters
+					Expect(params).To(ContainSubstring("\"key\":\"value\""))
+					Expect(params).To(ContainSubstring("\"secret-key\":\"secret-value\""))
+					Expect(smInstance.Labels).To(HaveKeyWithValue("tenant_id", []string{"test-abc"}))
+				})
+
+				It("should provision instance of the provided offering and plan name with labels with not overwritten required labels successfully", func() {
+					instanceSpec := instanceSpec.DeepCopy()
+					instanceSpec.CustomLabels = []v1.CustomLabel{{
+						Name:   "tenant_id",
+						Values: []string{"test-abc"},
+					}, {
+						Name:   "_k8sname",
+						Values: []string{"try-to-overwrite"},
+					}}
+					serviceInstance = createInstance(ctx, *instanceSpec, nil, true)
+					Expect(serviceInstance.Status.InstanceID).To(Equal(fakeInstanceID))
+					Expect(serviceInstance.Status.SubaccountID).To(Equal(fakeSubaccountID))
+					Expect(serviceInstance.Spec.ExternalName).To(Equal(fakeInstanceExternalName))
+					Expect(serviceInstance.Name).To(Equal(fakeInstanceName))
+					Expect(serviceInstance.Status.HashedSpec).To(Not(BeNil()))
+					Expect(string(serviceInstance.Spec.Parameters.Raw)).To(ContainSubstring("\"key\":\"value\""))
+					Expect(serviceInstance.Status.HashedSpec).To(Equal(getSpecHash(serviceInstance)))
+					smInstance, _, _, _, _, _ := fakeClient.ProvisionArgsForCall(0)
+					params := smInstance.Parameters
+					Expect(params).To(ContainSubstring("\"key\":\"value\""))
+					Expect(params).To(ContainSubstring("\"secret-key\":\"secret-value\""))
+					Expect(smInstance.Labels).To(HaveKeyWithValue("_k8sname", []string{serviceInstance.Name}))
+				})
 			})
 
 			When("provision request to SM fails", func() {
