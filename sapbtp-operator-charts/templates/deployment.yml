@@ -142,5 +142,5 @@ spec:
       tolerations: {{ toYaml .Values.manager.tolerations | nindent 8 }}
       {{- end }}
       {{- if .Values.manager.affinity }}
-      affinity: {{ - toYaml .Values.manager.affinity | nindent 8 }}
+      affinity: {{ toYaml .Values.manager.affinity | nindent 8 }}
       {{- end }}
