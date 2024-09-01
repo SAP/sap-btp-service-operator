@@ -32,27 +32,23 @@ spec:
           args:
             - "-c"
             - |
-              servicebindingsCRD="servicebindings.services.cloud.sap.com"
-              kubectl get $servicebindingsCRD -A
-              kubectl get $servicebindingsCRD -A --output=custom-columns=NAME:.metadata.name,NAMESPACE:.metadata.namespace | tail -n +2 | while read -r line; do
+              kubectl get servicebindings.services.cloud.sap.com -A --output=custom-columns=NAME:.metadata.name,NAMESPACE:.metadata.namespace | tail -n +2 | while read -r line; do
                 name=$(echo $line | awk '{print $1}')
                 namespace=$(echo $line | awk '{print $2}')
                 echo "Deleting binding with Name: $name, and Namespace: $namespace"
-                timeout 30 kubectl delete $servicebindingsCRD $name -n $namespace
+                timeout 30 kubectl delete servicebindings.services.cloud.sap.com $name -n $namespace
                 if [ $? -ne 0 ]; then
                   echo "Failed to delete service binding $name"
                   exit 1
                 fi
               done
-              echo "No more bindings found"
+              echo "Deleting bindings finished successfully"
 
-              serviceinstanceCRD="serviceinstances.services.cloud.sap.com"
-              kubectl get $serviceinstanceCRD -A
-              kubectl get $serviceinstanceCRD -A --output=custom-columns=NAME:.metadata.name,NAMESPACE:.metadata.namespace | tail -n +2 | while read -r line; do
+              kubectl get serviceinstances.services.cloud.sap.com -A --output=custom-columns=NAME:.metadata.name,NAMESPACE:.metadata.namespace | tail -n +2 | while read -r line; do
                 name=$(echo $line | awk '{print $1}')
                 namespace=$(echo $line | awk '{print $2}')
                 echo "Deleting instance with Name: $name, and Namespace: $namespace"
-                timeout 30 kubectl delete $serviceinstanceCRD $name -n $namespace
+                timeout 30 kubectl delete serviceinstances.services.cloud.sap.com $name -n $namespace
                 if [ $? -ne 0 ]; then
                   echo "Failed to delete service instance $name"
                   exit 1
@@ -62,8 +58,20 @@ spec:
               if [ $? -ne 0 ]; then
                 exit 1
               fi
+              echo "Deleting instances finished successfully"
 
-              echo "No more instances found"
+              kubectl get secrets -l "services.cloud.sap.com/cluster-secret" -A --output=custom-columns=NAME:.metadata.name,NAMESPACE:.metadata.namespace | tail -n +2 | while read -r line; do
+                name=$(echo $line | awk '{print $1}')
+                namespace=$(echo $line | awk '{print $2}')
+                echo "Deleting secret with Name: $name, and Namespace: $namespace"
+                timeout 30 kubectl delete secret $name -n $namespace
+                if [ $? -ne 0 ]; then
+                  echo "Failed to delete secret $name"
+                  exit 1
+                fi
+              done
+              echo "Cluster secret deletion finished successfully"
+
               exit 0
 
       restartPolicy: Never

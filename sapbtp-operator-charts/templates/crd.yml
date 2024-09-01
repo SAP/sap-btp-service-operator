@@ -2,8 +2,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.9.0
-  creationTimestamp: null
+    controller-gen.kubebuilder.io/version: v0.15.0
   name: servicebindings.services.cloud.sap.com
 spec:
   group: services.cloud.sap.com
@@ -41,14 +40,19 @@ spec:
         description: ServiceBinding is the Schema for the servicebindings API
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
@@ -74,25 +78,30 @@ spec:
                 description: The name of the binding in Service Manager
                 type: string
               parameters:
-                description: "Parameters for the binding. \n The Parameters field
-                  is NOT secret or secured in any way and should NEVER be used to
-                  hold sensitive information. To set parameters that contain secret
-                  information, you should ALWAYS store that information in a Secret
-                  and use the ParametersFrom field."
+                description: |-
+                  Parameters for the binding.
+
+
+                  The Parameters field is NOT secret or secured in any way and should
+                  NEVER be used to hold sensitive information. To set parameters that
+                  contain secret information, you should ALWAYS store that information
+                  in a Secret and use the ParametersFrom field.
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
               parametersFrom:
-                description: List of sources to populate parameters. If a top-level
-                  parameter name exists in multiples sources among `Parameters` and
-                  `ParametersFrom` fields, it is considered to be a user error in
-                  the specification
+                description: |-
+                  List of sources to populate parameters.
+                  If a top-level parameter name exists in multiples sources among
+                  `Parameters` and `ParametersFrom` fields, it is
+                  considered to be a user error in the specification
                 items:
                   description: ParametersFromSource represents the source of a set
                     of Parameters
                   properties:
                     secretKeyRef:
-                      description: The Secret key to select from. The value must be
-                        a JSON object.
+                      description: |-
+                        The Secret key to select from.
+                        The value must be a JSON object.
                       properties:
                         key:
                           description: The key of the secret to select from.  Must
@@ -109,29 +118,31 @@ spec:
                   type: object
                 type: array
               secretKey:
-                description: SecretKey is used as the key inside the secret to store
-                  the credentials returned by the broker encoded as json to support
-                  complex data structures. If not specified, the credentials returned
-                  by the broker will be used directly as the secrets data.
+                description: |-
+                  SecretKey is used as the key inside the secret to store the credentials
+                  returned by the broker encoded as json to support complex data structures.
+                  If not specified, the credentials returned by the broker will be used
+                  directly as the secrets data.
                 type: string
               secretName:
                 description: SecretName is the name of the secret where credentials
                   will be stored
                 type: string
               secretRootKey:
-                description: SecretRootKey is used as the key inside the secret to
-                  store all binding data including credentials returned by the broker
-                  and additional info under single key. Convenient way to store whole
-                  binding data in single file when using `volumeMounts`.
+                description: |-
+                  SecretRootKey is used as the key inside the secret to store all binding
+                  data including credentials returned by the broker and additional info under single key.
+                  Convenient way to store whole binding data in single file when using `volumeMounts`.
                 type: string
               secretTemplate:
-                description: 'SecretTemplate is a Go template that generates a custom
-                  Kubernetes v1/Secret based on data from the service binding returned
-                  by Service Manager and the instance information. The generated secret
-                  is used instead of the default secret. This is useful if the consumer
-                  of service binding data expects them in a specific format. For Go
-                  templates see https://pkg.go.dev/text/template. For supported funcs
-                  see: https://pkg.go.dev/text/template#hdr-Functions, https://masterminds.github.io/sprig/'
+                description: |-
+                  SecretTemplate is a Go template that generates a custom Kubernetes
+                  v1/Secret based on data from the service binding returned by Service Manager and the instance information.
+                  The generated secret is used instead of the default secret.
+                  This is useful if the consumer of service binding data expects them in
+                  a specific format.
+                  For Go templates see https://pkg.go.dev/text/template.
+                  For supported funcs see: https://pkg.go.dev/text/template#hdr-Functions, https://masterminds.github.io/sprig/
                 type: string
                 x-kubernetes-preserve-unknown-fields: true
               serviceInstanceName:
@@ -144,10 +155,10 @@ spec:
                   namespace will be used
                 type: string
               userInfo:
-                description: UserInfo contains information about the user that last
-                  modified this instance. This field is set by the API server and
-                  not settable by the end-user. User-provided values for this field
-                  are not saved.
+                description: |-
+                  UserInfo contains information about the user that last modified this
+                  instance. This field is set by the API server and not settable by the
+                  end-user. User-provided values for this field are not saved.
                 properties:
                   extra:
                     additionalProperties:
@@ -164,9 +175,10 @@ spec:
                     type: array
                     x-kubernetes-list-type: atomic
                   uid:
-                    description: A unique value that identifies this user across time.
-                      If this user is deleted and another user by the same name is
-                      added, they will have different UIDs.
+                    description: |-
+                      A unique value that identifies this user across time. If this user is
+                      deleted and another user by the same name is added, they will have
+                      different UIDs.
                     type: string
                   username:
                     description: The name that uniquely identifies this user among
@@ -187,42 +199,42 @@ spec:
                 description: Service binding conditions
                 items:
                   description: "Condition contains details for one aspect of the current
-                    state of this API Resource. --- This struct is intended for direct
-                    use as an array at the field path .status.conditions.  For example,
-                    \n type FooStatus struct{ // Represents the observations of a
-                    foo's current state. // Known .status.conditions.type are: \"Available\",
-                    \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge
-                    // +listType=map // +listMapKey=type Conditions []metav1.Condition
-                    `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
-                    protobuf:\"bytes,1,rep,name=conditions\"` \n // other fields }"
+                    state of this API Resource.\n---\nThis struct is intended for
+                    direct use as an array at the field path .status.conditions.  For
+                    example,\n\n\n\ttype FooStatus struct{\n\t    // Represents the
+                    observations of a foo's current state.\n\t    // Known .status.conditions.type
+                    are: \"Available\", \"Progressing\", and \"Degraded\"\n\t    //
+                    +patchMergeKey=type\n\t    // +patchStrategy=merge\n\t    // +listType=map\n\t
+                    \   // +listMapKey=type\n\t    Conditions []metav1.Condition `json:\"conditions,omitempty\"
+                    patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"`\n\n\n\t
+                    \   // other fields\n\t}"
                   properties:
                     lastTransitionTime:
-                      description: lastTransitionTime is the last time the condition
-                        transitioned from one status to another. This should be when
-                        the underlying condition changed.  If that is not known, then
-                        using the time when the API field changed is acceptable.
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
                       format: date-time
                       type: string
                     message:
-                      description: message is a human readable message indicating
-                        details about the transition. This may be an empty string.
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
                       maxLength: 32768
                       type: string
                     observedGeneration:
-                      description: observedGeneration represents the .metadata.generation
-                        that the condition was set based upon. For instance, if .metadata.generation
-                        is currently 12, but the .status.conditions[x].observedGeneration
-                        is 9, the condition is out of date with respect to the current
-                        state of the instance.
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
                       format: int64
                       minimum: 0
                       type: integer
                     reason:
-                      description: reason contains a programmatic identifier indicating
-                        the reason for the condition's last transition. Producers
-                        of specific condition types may define expected values and
-                        meanings for this field, and whether the values are considered
-                        a guaranteed API. The value should be a CamelCase string.
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
                         This field may not be empty.
                       maxLength: 1024
                       minLength: 1
@@ -236,11 +248,12 @@ spec:
                       - Unknown
                       type: string
                     type:
-                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
-                        --- Many .condition.type values are consistent across resources
-                        like Available, but because arbitrary conditions can be useful
-                        (see .node.status.conditions), the ability to deconflict is
-                        important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      description: |-
+                        type of condition in CamelCase or in foo.example.com/CamelCase.
+                        ---
+                        Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be
+                        useful (see .node.status.conditions), the ability to deconflict is important.
+                        The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
                       maxLength: 316
                       pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                       type: string
@@ -311,14 +324,19 @@ spec:
         description: ServiceBinding is the Schema for the servicebindings API
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
@@ -344,25 +362,30 @@ spec:
                 description: The name of the binding in Service Manager
                 type: string
               parameters:
-                description: "Parameters for the binding. \n The Parameters field
-                  is NOT secret or secured in any way and should NEVER be used to
-                  hold sensitive information. To set parameters that contain secret
-                  information, you should ALWAYS store that information in a Secret
-                  and use the ParametersFrom field."
+                description: |-
+                  Parameters for the binding.
+
+
+                  The Parameters field is NOT secret or secured in any way and should
+                  NEVER be used to hold sensitive information. To set parameters that
+                  contain secret information, you should ALWAYS store that information
+                  in a Secret and use the ParametersFrom field.
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
               parametersFrom:
-                description: List of sources to populate parameters. If a top-level
-                  parameter name exists in multiples sources among `Parameters` and
-                  `ParametersFrom` fields, it is considered to be a user error in
-                  the specification
+                description: |-
+                  List of sources to populate parameters.
+                  If a top-level parameter name exists in multiples sources among
+                  `Parameters` and `ParametersFrom` fields, it is
+                  considered to be a user error in the specification
                 items:
                   description: ParametersFromSource represents the source of a set
                     of Parameters
                   properties:
                     secretKeyRef:
-                      description: The Secret key to select from. The value must be
-                        a JSON object.
+                      description: |-
+                        The Secret key to select from.
+                        The value must be a JSON object.
                       properties:
                         key:
                           description: The key of the secret to select from.  Must
@@ -379,20 +402,21 @@ spec:
                   type: object
                 type: array
               secretKey:
-                description: SecretKey is used as the key inside the secret to store
-                  the credentials returned by the broker encoded as json to support
-                  complex data structures. If not specified, the credentials returned
-                  by the broker will be used directly as the secrets data.
+                description: |-
+                  SecretKey is used as the key inside the secret to store the credentials
+                  returned by the broker encoded as json to support complex data structures.
+                  If not specified, the credentials returned by the broker will be used
+                  directly as the secrets data.
                 type: string
               secretName:
                 description: SecretName is the name of the secret where credentials
                   will be stored
                 type: string
               secretRootKey:
-                description: SecretRootKey is used as the key inside the secret to
-                  store all binding data including credentials returned by the broker
-                  and additional info under single key. Convenient way to store whole
-                  binding data in single file when using `volumeMounts`.
+                description: |-
+                  SecretRootKey is used as the key inside the secret to store all binding
+                  data including credentials returned by the broker and additional info under single key.
+                  Convenient way to store whole binding data in single file when using `volumeMounts`.
                 type: string
               serviceInstanceName:
                 description: The k8s name of the service instance to bind, should
@@ -400,10 +424,10 @@ spec:
                 minLength: 1
                 type: string
               userInfo:
-                description: UserInfo contains information about the user that last
-                  modified this instance. This field is set by the API server and
-                  not settable by the end-user. User-provided values for this field
-                  are not saved.
+                description: |-
+                  UserInfo contains information about the user that last modified this
+                  instance. This field is set by the API server and not settable by the
+                  end-user. User-provided values for this field are not saved.
                 properties:
                   extra:
                     additionalProperties:
@@ -420,9 +444,10 @@ spec:
                     type: array
                     x-kubernetes-list-type: atomic
                   uid:
-                    description: A unique value that identifies this user across time.
-                      If this user is deleted and another user by the same name is
-                      added, they will have different UIDs.
+                    description: |-
+                      A unique value that identifies this user across time. If this user is
+                      deleted and another user by the same name is added, they will have
+                      different UIDs.
                     type: string
                   username:
                     description: The name that uniquely identifies this user among
@@ -443,42 +468,42 @@ spec:
                 description: Service binding conditions
                 items:
                   description: "Condition contains details for one aspect of the current
-                    state of this API Resource. --- This struct is intended for direct
-                    use as an array at the field path .status.conditions.  For example,
-                    \n type FooStatus struct{ // Represents the observations of a
-                    foo's current state. // Known .status.conditions.type are: \"Available\",
-                    \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge
-                    // +listType=map // +listMapKey=type Conditions []metav1.Condition
-                    `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
-                    protobuf:\"bytes,1,rep,name=conditions\"` \n // other fields }"
+                    state of this API Resource.\n---\nThis struct is intended for
+                    direct use as an array at the field path .status.conditions.  For
+                    example,\n\n\n\ttype FooStatus struct{\n\t    // Represents the
+                    observations of a foo's current state.\n\t    // Known .status.conditions.type
+                    are: \"Available\", \"Progressing\", and \"Degraded\"\n\t    //
+                    +patchMergeKey=type\n\t    // +patchStrategy=merge\n\t    // +listType=map\n\t
+                    \   // +listMapKey=type\n\t    Conditions []metav1.Condition `json:\"conditions,omitempty\"
+                    patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"`\n\n\n\t
+                    \   // other fields\n\t}"
                   properties:
                     lastTransitionTime:
-                      description: lastTransitionTime is the last time the condition
-                        transitioned from one status to another. This should be when
-                        the underlying condition changed.  If that is not known, then
-                        using the time when the API field changed is acceptable.
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
                       format: date-time
                       type: string
                     message:
-                      description: message is a human readable message indicating
-                        details about the transition. This may be an empty string.
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
                       maxLength: 32768
                       type: string
                     observedGeneration:
-                      description: observedGeneration represents the .metadata.generation
-                        that the condition was set based upon. For instance, if .metadata.generation
-                        is currently 12, but the .status.conditions[x].observedGeneration
-                        is 9, the condition is out of date with respect to the current
-                        state of the instance.
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
                       format: int64
                       minimum: 0
                       type: integer
                     reason:
-                      description: reason contains a programmatic identifier indicating
-                        the reason for the condition's last transition. Producers
-                        of specific condition types may define expected values and
-                        meanings for this field, and whether the values are considered
-                        a guaranteed API. The value should be a CamelCase string.
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
                         This field may not be empty.
                       maxLength: 1024
                       minLength: 1
@@ -492,11 +517,12 @@ spec:
                       - Unknown
                       type: string
                     type:
-                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
-                        --- Many .condition.type values are consistent across resources
-                        like Available, but because arbitrary conditions can be useful
-                        (see .node.status.conditions), the ability to deconflict is
-                        important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      description: |-
+                        type of condition in CamelCase or in foo.example.com/CamelCase.
+                        ---
+                        Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be
+                        useful (see .node.status.conditions), the ability to deconflict is important.
+                        The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
                       maxLength: 316
                       pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                       type: string
@@ -542,8 +568,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.9.0
-  creationTimestamp: null
+    controller-gen.kubebuilder.io/version: v0.15.0
   name: serviceinstances.services.cloud.sap.com
 spec:
   group: services.cloud.sap.com
@@ -590,14 +615,19 @@ spec:
         description: ServiceInstance is the Schema for the serviceinstances API
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
@@ -621,25 +651,30 @@ spec:
                 description: The name of the instance in Service Manager
                 type: string
               parameters:
-                description: "Provisioning parameters for the instance. \n The Parameters
-                  field is NOT secret or secured in any way and should NEVER be used
-                  to hold sensitive information. To set parameters that contain secret
-                  information, you should ALWAYS store that information in a Secret
-                  and use the ParametersFrom field."
+                description: |-
+                  Provisioning parameters for the instance.
+
+
+                  The Parameters field is NOT secret or secured in any way and should
+                  NEVER be used to hold sensitive information. To set parameters that
+                  contain secret information, you should ALWAYS store that information
+                  in a Secret and use the ParametersFrom field.
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
               parametersFrom:
-                description: List of sources to populate parameters. If a top-level
-                  parameter name exists in multiples sources among `Parameters` and
-                  `ParametersFrom` fields, it is considered to be a user error in
-                  the specification
+                description: |-
+                  List of sources to populate parameters.
+                  If a top-level parameter name exists in multiples sources among
+                  `Parameters` and `ParametersFrom` fields, it is
+                  considered to be a user error in the specification
                 items:
                   description: ParametersFromSource represents the source of a set
                     of Parameters
                   properties:
                     secretKeyRef:
-                      description: The Secret key to select from. The value must be
-                        a JSON object.
+                      description: |-
+                        The Secret key to select from.
+                        The value must be a JSON object.
                       properties:
                         key:
                           description: The key of the secret to select from.  Must
@@ -671,10 +706,10 @@ spec:
                 description: Indicates the desired shared state
                 type: boolean
               userInfo:
-                description: UserInfo contains information about the user that last
-                  modified this instance. This field is set by the API server and
-                  not settable by the end-user. User-provided values for this field
-                  are not saved.
+                description: |-
+                  UserInfo contains information about the user that last modified this
+                  instance. This field is set by the API server and not settable by the
+                  end-user. User-provided values for this field are not saved.
                 properties:
                   extra:
                     additionalProperties:
@@ -691,9 +726,10 @@ spec:
                     type: array
                     x-kubernetes-list-type: atomic
                   uid:
-                    description: A unique value that identifies this user across time.
-                      If this user is deleted and another user by the same name is
-                      added, they will have different UIDs.
+                    description: |-
+                      A unique value that identifies this user across time. If this user is
+                      deleted and another user by the same name is added, they will have
+                      different UIDs.
                     type: string
                   username:
                     description: The name that uniquely identifies this user among
@@ -711,42 +747,42 @@ spec:
                 description: Service instance conditions
                 items:
                   description: "Condition contains details for one aspect of the current
-                    state of this API Resource. --- This struct is intended for direct
-                    use as an array at the field path .status.conditions.  For example,
-                    \n type FooStatus struct{ // Represents the observations of a
-                    foo's current state. // Known .status.conditions.type are: \"Available\",
-                    \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge
-                    // +listType=map // +listMapKey=type Conditions []metav1.Condition
-                    `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
-                    protobuf:\"bytes,1,rep,name=conditions\"` \n // other fields }"
+                    state of this API Resource.\n---\nThis struct is intended for
+                    direct use as an array at the field path .status.conditions.  For
+                    example,\n\n\n\ttype FooStatus struct{\n\t    // Represents the
+                    observations of a foo's current state.\n\t    // Known .status.conditions.type
+                    are: \"Available\", \"Progressing\", and \"Degraded\"\n\t    //
+                    +patchMergeKey=type\n\t    // +patchStrategy=merge\n\t    // +listType=map\n\t
+                    \   // +listMapKey=type\n\t    Conditions []metav1.Condition `json:\"conditions,omitempty\"
+                    patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"`\n\n\n\t
+                    \   // other fields\n\t}"
                   properties:
                     lastTransitionTime:
-                      description: lastTransitionTime is the last time the condition
-                        transitioned from one status to another. This should be when
-                        the underlying condition changed.  If that is not known, then
-                        using the time when the API field changed is acceptable.
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
                       format: date-time
                       type: string
                     message:
-                      description: message is a human readable message indicating
-                        details about the transition. This may be an empty string.
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
                       maxLength: 32768
                       type: string
                     observedGeneration:
-                      description: observedGeneration represents the .metadata.generation
-                        that the condition was set based upon. For instance, if .metadata.generation
-                        is currently 12, but the .status.conditions[x].observedGeneration
-                        is 9, the condition is out of date with respect to the current
-                        state of the instance.
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
                       format: int64
                       minimum: 0
                       type: integer
                     reason:
-                      description: reason contains a programmatic identifier indicating
-                        the reason for the condition's last transition. Producers
-                        of specific condition types may define expected values and
-                        meanings for this field, and whether the values are considered
-                        a guaranteed API. The value should be a CamelCase string.
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
                         This field may not be empty.
                       maxLength: 1024
                       minLength: 1
@@ -760,11 +796,12 @@ spec:
                       - Unknown
                       type: string
                     type:
-                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
-                        --- Many .condition.type values are consistent across resources
-                        like Available, but because arbitrary conditions can be useful
-                        (see .node.status.conditions), the ability to deconflict is
-                        important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      description: |-
+                        type of condition in CamelCase or in foo.example.com/CamelCase.
+                        ---
+                        Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be
+                        useful (see .node.status.conditions), the ability to deconflict is important.
+                        The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
                       maxLength: 316
                       pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                       type: string
@@ -845,14 +882,19 @@ spec:
         description: ServiceInstance is the Schema for the serviceinstances API
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
@@ -869,25 +911,30 @@ spec:
                 description: The name of the instance in Service Manager
                 type: string
               parameters:
-                description: "Provisioning parameters for the instance. \n The Parameters
-                  field is NOT secret or secured in any way and should NEVER be used
-                  to hold sensitive information. To set parameters that contain secret
-                  information, you should ALWAYS store that information in a Secret
-                  and use the ParametersFrom field."
+                description: |-
+                  Provisioning parameters for the instance.
+
+
+                  The Parameters field is NOT secret or secured in any way and should
+                  NEVER be used to hold sensitive information. To set parameters that
+                  contain secret information, you should ALWAYS store that information
+                  in a Secret and use the ParametersFrom field.
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
               parametersFrom:
-                description: List of sources to populate parameters. If a top-level
-                  parameter name exists in multiples sources among `Parameters` and
-                  `ParametersFrom` fields, it is considered to be a user error in
-                  the specification
+                description: |-
+                  List of sources to populate parameters.
+                  If a top-level parameter name exists in multiples sources among
+                  `Parameters` and `ParametersFrom` fields, it is
+                  considered to be a user error in the specification
                 items:
                   description: ParametersFromSource represents the source of a set
                     of Parameters
                   properties:
                     secretKeyRef:
-                      description: The Secret key to select from. The value must be
-                        a JSON object.
+                      description: |-
+                        The Secret key to select from.
+                        The value must be a JSON object.
                       properties:
                         key:
                           description: The key of the secret to select from.  Must
@@ -919,10 +966,10 @@ spec:
                 description: Indicates the desired shared state
                 type: boolean
               userInfo:
-                description: UserInfo contains information about the user that last
-                  modified this instance. This field is set by the API server and
-                  not settable by the end-user. User-provided values for this field
-                  are not saved.
+                description: |-
+                  UserInfo contains information about the user that last modified this
+                  instance. This field is set by the API server and not settable by the
+                  end-user. User-provided values for this field are not saved.
                 properties:
                   extra:
                     additionalProperties:
@@ -939,9 +986,10 @@ spec:
                     type: array
                     x-kubernetes-list-type: atomic
                   uid:
-                    description: A unique value that identifies this user across time.
-                      If this user is deleted and another user by the same name is
-                      added, they will have different UIDs.
+                    description: |-
+                      A unique value that identifies this user across time. If this user is
+                      deleted and another user by the same name is added, they will have
+                      different UIDs.
                     type: string
                   username:
                     description: The name that uniquely identifies this user among
@@ -959,42 +1007,42 @@ spec:
                 description: Service instance conditions
                 items:
                   description: "Condition contains details for one aspect of the current
-                    state of this API Resource. --- This struct is intended for direct
-                    use as an array at the field path .status.conditions.  For example,
-                    \n type FooStatus struct{ // Represents the observations of a
-                    foo's current state. // Known .status.conditions.type are: \"Available\",
-                    \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge
-                    // +listType=map // +listMapKey=type Conditions []metav1.Condition
-                    `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
-                    protobuf:\"bytes,1,rep,name=conditions\"` \n // other fields }"
+                    state of this API Resource.\n---\nThis struct is intended for
+                    direct use as an array at the field path .status.conditions.  For
+                    example,\n\n\n\ttype FooStatus struct{\n\t    // Represents the
+                    observations of a foo's current state.\n\t    // Known .status.conditions.type
+                    are: \"Available\", \"Progressing\", and \"Degraded\"\n\t    //
+                    +patchMergeKey=type\n\t    // +patchStrategy=merge\n\t    // +listType=map\n\t
+                    \   // +listMapKey=type\n\t    Conditions []metav1.Condition `json:\"conditions,omitempty\"
+                    patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"`\n\n\n\t
+                    \   // other fields\n\t}"
                   properties:
                     lastTransitionTime:
-                      description: lastTransitionTime is the last time the condition
-                        transitioned from one status to another. This should be when
-                        the underlying condition changed.  If that is not known, then
-                        using the time when the API field changed is acceptable.
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
                       format: date-time
                       type: string
                     message:
-                      description: message is a human readable message indicating
-                        details about the transition. This may be an empty string.
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
                       maxLength: 32768
                       type: string
                     observedGeneration:
-                      description: observedGeneration represents the .metadata.generation
-                        that the condition was set based upon. For instance, if .metadata.generation
-                        is currently 12, but the .status.conditions[x].observedGeneration
-                        is 9, the condition is out of date with respect to the current
-                        state of the instance.
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
                       format: int64
                       minimum: 0
                       type: integer
                     reason:
-                      description: reason contains a programmatic identifier indicating
-                        the reason for the condition's last transition. Producers
-                        of specific condition types may define expected values and
-                        meanings for this field, and whether the values are considered
-                        a guaranteed API. The value should be a CamelCase string.
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
                         This field may not be empty.
                       maxLength: 1024
                       minLength: 1
@@ -1008,11 +1056,12 @@ spec:
                       - Unknown
                       type: string
                     type:
-                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
-                        --- Many .condition.type values are consistent across resources
-                        like Available, but because arbitrary conditions can be useful
-                        (see .node.status.conditions), the ability to deconflict is
-                        important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      description: |-
+                        type of condition in CamelCase or in foo.example.com/CamelCase.
+                        ---
+                        Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be
+                        useful (see .node.status.conditions), the ability to deconflict is important.
+                        The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
                       maxLength: 316
                       pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                       type: string

@@ -13,7 +13,7 @@ var _ = Describe("Parameters", func() {
 			var parametersFrom []v1.ParametersFromSource
 			parameters := (*runtime.RawExtension)(nil)
 
-			params, rawParam, err := BuildSMRequestParameters(nil, "", parametersFrom, parameters)
+			params, rawParam, err := BuildSMRequestParameters("", parametersFrom, parameters)
 
 			Expect(err).To(BeNil())
 			Expect(params).To(BeNil())
@@ -25,7 +25,7 @@ var _ = Describe("Parameters", func() {
 				Raw: []byte(`{"key":"value"}`),
 			}
 
-			params, rawParam, err := BuildSMRequestParameters(nil, "", parametersFrom, parameters)
+			params, rawParam, err := BuildSMRequestParameters("", parametersFrom, parameters)
 
 			Expect(err).To(BeNil())
 			Expect(params).To(Equal(map[string]interface{}{"key": "value"}))

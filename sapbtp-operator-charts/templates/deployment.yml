@@ -136,8 +136,14 @@ spec:
             defaultMode: 420
             secretName: webhook-server-cert
       {{- if .Values.manager.nodeSelector }}
-      nodeSelector: {{ toYaml .Values.deployment.nodeSelector | nindent 8 }}
+      nodeSelector: {{ toYaml .Values.manager.nodeSelector | nindent 8 }}
       {{- end }}
       {{- if .Values.manager.tolerations }}
-      tolerations: {{ toYaml .Values.deployment.tolerations | nindent 8 }}
+      tolerations: {{ toYaml .Values.manager.tolerations | nindent 8 }}
       {{- end }}
+      {{- if .Values.manager.affinity }}
+      affinity: {{ toYaml .Values.manager.affinity | nindent 8 }}
+      {{- end }}
+      { { - if .Values.manager.topologySpreadConstraints } }
+      topologySpreadConstraints: { { toYaml .Values.manager.topologySpreadConstraints | nindent 8 } }
+      { { - end } }

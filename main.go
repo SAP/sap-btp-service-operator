@@ -40,8 +40,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-
 	"github.com/SAP/sap-btp-service-operator/internal/config"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -102,8 +100,10 @@ func main() {
 		setupLog.Info("limited cache enabled")
 		mgrOptions.Cache = cache.Options{
 			ByObject: map[client.Object]cache.ByObject{
-				&v1.Secret{}:    {Label: labels.SelectorFromSet(map[string]string{common.ManagedByBTPOperatorLabel: "true"})},
-				&v1.ConfigMap{}: {Label: labels.SelectorFromSet(map[string]string{common.ManagedByBTPOperatorLabel: "true"})},
+				&v1.Secret{}:                  {Label: labels.SelectorFromSet(map[string]string{common.ManagedByBTPOperatorLabel: "true"})},
+				&v1.ConfigMap{}:               {Label: labels.SelectorFromSet(map[string]string{common.ManagedByBTPOperatorLabel: "true"})},
+				&servicesv1.ServiceInstance{}: {},
+				&servicesv1.ServiceBinding{}:  {},
 			},
 		}
 	}
@@ -116,11 +116,17 @@ func main() {
 		for _, s := range allowedNamespaces {
 			result[s] = cache.Config{}
 		}
-		mgrOptions.NewCache = func(config *rest.Config, opts cache.Options) (cache.Cache, error) {
-			opts.DefaultNamespaces = result
-			return cache.New(config, opts)
+
+		if config.Get().EnableLimitedCache {
+			mgrOptions.Cache.DefaultNamespaces = result
+		} else {
+			mgrOptions.NewCache = func(config *rest.Config, opts cache.Options) (cache.Cache, error) {
+				opts.DefaultNamespaces = result
+				return cache.New(config, opts)
+			}
 		}
 	}
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), mgrOptions)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
@@ -134,34 +140,36 @@ func main() {
 		panic(fmt.Sprintf("ClusterID changed, which is not supported. Please redeploy with --set cluster.id=%s", config.Get().InitialClusterID))
 	}
 
-	secretResolver := &utils.SecretResolver{
-		ManagementNamespace:    config.Get().ManagementNamespace,
-		ReleaseNamespace:       config.Get().ReleaseNamespace,
-		EnableNamespaceSecrets: config.Get().EnableNamespaceSecrets,
-		Client:                 mgr.GetClient(),
-		Log:                    logf.Log.WithName("secret-resolver"),
+	var nonCachedClient client.Client
+	if config.Get().EnableLimitedCache {
+		var clErr error
+		nonCachedClient, clErr = client.New(mgr.GetConfig(), client.Options{Scheme: scheme})
+		if clErr != nil {
+			setupLog.Error(clErr, "unable to create non cached client")
+			os.Exit(1)
+		}
 	}
 
+	utils.InitializeSecretsClient(mgr.GetClient(), nonCachedClient, config.Get())
+
 	if err = (&controllers.ServiceInstanceReconciler{
-		Client:         mgr.GetClient(),
-		Log:            ctrl.Log.WithName("controllers").WithName("ServiceInstance"),
-		Scheme:         mgr.GetScheme(),
-		Config:         config.Get(),
-		SecretResolver: secretResolver,
-		Recorder:       mgr.GetEventRecorderFor("ServiceInstance"),
-		GetSMClient:    utils.GetSMClient,
+		Client:      mgr.GetClient(),
+		Log:         ctrl.Log.WithName("controllers").WithName("ServiceInstance"),
+		Scheme:      mgr.GetScheme(),
+		Config:      config.Get(),
+		Recorder:    mgr.GetEventRecorderFor("ServiceInstance"),
+		GetSMClient: utils.GetSMClient,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ServiceInstance")
 		os.Exit(1)
 	}
 	if err = (&controllers.ServiceBindingReconciler{
-		Client:         mgr.GetClient(),
-		Log:            ctrl.Log.WithName("controllers").WithName("ServiceBinding"),
-		Scheme:         mgr.GetScheme(),
-		Config:         config.Get(),
-		SecretResolver: secretResolver,
-		Recorder:       mgr.GetEventRecorderFor("ServiceBinding"),
-		GetSMClient:    utils.GetSMClient,
+		Client:      mgr.GetClient(),
+		Log:         ctrl.Log.WithName("controllers").WithName("ServiceBinding"),
+		Scheme:      mgr.GetScheme(),
+		Config:      config.Get(),
+		Recorder:    mgr.GetEventRecorderFor("ServiceBinding"),
+		GetSMClient: utils.GetSMClient,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ServiceBinding")
 		os.Exit(1)
@@ -201,7 +209,9 @@ func createClusterSecret(client client.Client) {
 	clusterSecret := &v1.Secret{}
 	clusterSecret.Name = "sap-btp-operator-clusterid"
 	clusterSecret.Namespace = config.Get().ReleaseNamespace
+	clusterSecret.Labels = map[string]string{common.ManagedByBTPOperatorLabel: "true", common.ClusterSecretLabel: "true"}
 	clusterSecret.StringData = map[string]string{"INITIAL_CLUSTER_ID": config.Get().ClusterID}
+	clusterSecret.Labels = map[string]string{common.ManagedByBTPOperatorLabel: "true"}
 	if err := client.Create(context.Background(), clusterSecret); err != nil {
 		setupLog.Error(err, "failed to create cluster secret")
 	}
