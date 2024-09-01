@@ -144,6 +144,6 @@ spec:
       {{- if .Values.manager.affinity }}
       affinity: {{ toYaml .Values.manager.affinity | nindent 8 }}
       {{- end }}
-      { { - if .Values.manager.topologySpreadConstraints } }
-      topologySpreadConstraints: { { toYaml .Values.manager.topologySpreadConstraints | nindent 8 } }
-      { { - end } }
+      {{- if .Values.manager.topologySpreadConstraints }}
+      topologySpreadConstraints: {{ toYaml .Values.manager.topologySpreadConstraints | nindent 8 }}
+      {{ - end }}
