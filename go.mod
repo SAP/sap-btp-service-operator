@@ -1,6 +1,6 @@
 module github.com/SAP/sap-btp-service-operator
 
-go 1.22.5
+go 1.22.7
 
 require (
 	github.com/Masterminds/sprig/v3 v3.2.3
