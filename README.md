@@ -896,6 +896,9 @@ The deletion of my service instance failed. To fix the failure, I have to create
 
 Use the `force_k8s_binding` query param when creating the service binding and set it to `true` (`force_k8s_binding=true`). Use either the BTP CLI [bind](https://help.sap.com/docs/btp/btp-cli-command-reference/btp-create-services-binding) command or 'Create a Service Binding' [Service Manager API](https://api.sap.com/api/APIServiceManager/resource/Platforms).
 
+**Note:** <br>
+Do not use the service-operator-access plan credentials to run this command. 
+
 btp cli Example
 
 >   ```bash
@@ -918,7 +921,13 @@ I cannot delete service instances and bindings because the cluster in which they
 
 **Solution**
 
-Use a dedicated Service Manager API to clean up cluster content:
+Use a dedicated Service Manager API to clean up cluster content.
+Access the API with the subaccount-admin plan.<br>For more information, see [Technical Access](https://help.sap.com/docs/service-manager/sap-service-manager/sap-service-manager-broker-plans).
+
+**Note:** <br>
+Do not call this API with the service-operator-access plan credentials. 
+
+###
 
 #### Request
 
@@ -941,42 +950,6 @@ Use a dedicated Service Manager API to clean up cluster content:
                                 
 <b>Attention: **Use this option only for cleanup purposes for a cluster that's no longer available.** Applying it to an active and available cluster may result in unintended resource leftovers in your cluster.</b>
 
-### I've lost a custom resource. How can I recover it?
-
-Let's break down how to recover your Kubernetes custom resource (CR) that exists in SAP BTP but not in your Kubernetes cluster:
-
-#### Core Concept
-
-The service instance in SAP BTP acts as the source of truth for your CR's configuration and state. By recreating the CR in Kubernetes with the exact same name, namespace, and cluster ID, you essentially re-establish the link between the Kubernetes representation and its counterpart in SAP BTP.
-
-#### Steps
-
-1. Retrieve CR Details:
-
-   a) Access the service instance representing your CR in SAP BTP.
-  
-   b) Obtain the following details from the service instance:
-  
-     * The name of the custom resource.
-     * The Kubernetes namespace where the CR should reside.
-     * If applicable, retrieve the cluster ID or context associated with the CR in SAP BTP. This ensures the CR is recreated in the correct environment.
-  
-2. Recreate the CR:
-
-   a) If you have a YAML definition or manifest for your CR, ensure it includes the exact name, namespace, and (if applicable) cluster ID you retrieved from the SAP BTP service instance.
-   
-   b) Use `kubectl apply -f <your_cr_manifest.yaml>` to create the CR in your Kubernetes cluster.
-  
-4. Verification:
-
-   a) Use `kubectl get <your_cr_kind> <your_cr_name> -n <your_namespace>` to verify that the CR is successfully created in Kubernetes.
-   
-   b) Check the service instance in SAP BTP to confirm that it now recognizes the re-established connection with the CR in Kubernetes.
-  
-#### Additional Considerations:
-
-- Ensure that the CRD defining your custom resource type is still present in your Kubernetes cluster. If it's missing, you'll need to recreate the CRD first.
-- Consider implementing backup and restore procedures for your Kubernetes custom resources in the future to prevent data loss.
 
 
 
