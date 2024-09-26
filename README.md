@@ -1,3 +1,4 @@
+
 [![Coverage Status](https://coveralls.io/repos/github/SAP/sap-btp-service-operator/badge.svg?branch=main)](https://coveralls.io/github/SAP/sap-btp-service-operator?branch=main)
 [![Build Status](https://github.com/SAP/sap-btp-service-operator/workflows/Go/badge.svg)](https://github.com/SAP/sap-btp-service-operator/actions)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/SAP/sap-btp-service-operator/blob/master/LICENSE)
@@ -36,7 +37,7 @@ It is implemented using a [CRDs-based](https://kubernetes.io/docs/concepts/exten
 
 ## Prerequisites
 - SAP BTP [Global Account](https://help.sap.com/viewer/65de2977205c403bbc107264b8eccf4b/Cloud/en-US/d61c2819034b48e68145c45c36acba6e.html) and [Subaccount](https://help.sap.com/viewer/65de2977205c403bbc107264b8eccf4b/Cloud/en-US/55d0b6d8b96846b8ae93b85194df0944.html) 
-- Service Management Control (SMCTL) command line interface. See [Using the SMCTL](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/0107f3f8c1954a4e96802f556fc807e3.html).
+- [Working with SAP Service Manager](https://help.sap.com/docs/service-manager/sap-service-manager/working-with-sap-service-manager).
 - [Kubernetes cluster](https://kubernetes.io/) running version 1.17 or higher 
 - [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) v1.17 or higher
 - [helm](https://helm.sh/) v3.0 or higher
@@ -49,51 +50,44 @@ It is implemented using a [CRDs-based](https://kubernetes.io/docs/concepts/exten
    - for releases v0.1.17 or lower use cert-manager lower than v1.6.0
 
 2. Obtain the access credentials for the SAP BTP service operator:
-
-   a. Using the SAP BTP cockpit or CLI, create an instance of the SAP Service Manager service (technical name: `service-manager`) with the plan:
-    `service-operator-access`<br/><br>*Note*<br/><br>*If you can't see the needed plan, you need to entitle your subaccount to use SAP Service Manager service.*<br>
-
-      *For more information about how to entitle a service to a subaccount, see:*
-      * *[Configure Entitlements and Quotas for Subaccounts](https://help.sap.com/viewer/65de2977205c403bbc107264b8eccf4b/Cloud/en-US/5ba357b4fa1e4de4b9fcc4ae771609da.html)*
-      
-      
-      <br/>For more information about creating service instances, see:     
-      * [Creating Service Instances Using the SAP BTP Cockpit](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/bf71f6a7b7754dbd9dfc2569791ccc96.html)
-        
-      * [Creating Service Instances using SMCTL](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/b327b66b711746b085ec5d2ea16e608e.html)<br> 
+   * Create an instance of the SAP Service Manager service (technical name: `service-manager`) with the plan:
+       `service-operator-access`<br/>
+     *Note:<br> If you can't see the needed plan, you need to entitle your subaccount to use SAP Service Manager service.For more information about how to entitle a service to a subaccount, see:[Configure Entitlements and Quotas for Subaccounts](https://help.sap.com/viewer/65de2977205c403bbc107264b8eccf4b/Cloud/en-US/5ba357b4fa1e4de4b9fcc4ae771609da.html)<br>
+   For more information about creating service instances, see:
+     * [Creating Service Instances Using the SAP BTP Cockpit](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/bf71f6a7b7754dbd9dfc2569791ccc96.html)
+     * [Creating Service Instances using BTP CLI](https://help.sap.com/docs/btp/btp-cli-command-reference/btp-create-services-binding) 
    
-   b. Create a binding to the created service instance.
+   * Create a binding to the created service instance.
       
-   For more information about creating service bindings, see:  
-      * [Creating Service Bindings Using the SAP BTP Cockpit](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/55b31ea23c474f6ba2f64ee4848ab1b3.html) 
-       
-      * [Creating Service Bindings Using SMCTL](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/f53ff2634e0a46d6bfc72ec075418dcd.html). 
+      For more information about creating service bindings, see:  
+      * [Creating Service Bindings Using the SAP BTP Cockpit](https://help.sap.com/viewer/09cc82baadc542a688176dce601398de/Cloud/en-US/55b31ea23c474f6ba2f64ee4848ab1b3.html)
+      * [Creating Service Bindings Using BTP CLI](https://help.sap.com/docs/btp/btp-cli-command-reference/btp-create-services-binding). 
    
-   c. Retrieve the generated access credentials from the created binding:
+   * Retrieve the generated access credentials from the created binding:
    
-      The example of the default binding object used if no credentials type is specified:
+         The example of the default binding object used if no credentials type is specified:
       
-    ```json
-     {
-         "clientid": "xxxxxxx",
-         "clientsecret": "xxxxxxx",
-         "url": "https://mysubaccount.authentication.eu10.hana.ondemand.com",
-         "xsappname": "b15166|service-manager!b1234",
-         "sm_url": "https://service-manager.cfapps.eu10.hana.ondemand.com"
-     }
-    ```
-    The example of the binding object with the specified X.509 certificate:
+       ```json
+        {
+            "clientid": "xxxxxxx",
+            "clientsecret": "xxxxxxx",
+            "url": "https://mysubaccount.authentication.eu10.hana.ondemand.com",
+            "xsappname": "b15166|service-manager!b1234",
+            "sm_url": "https://service-manager.cfapps.eu10.hana.ondemand.com"
+        }
+       ```
+       The example of the binding object with the specified X.509 certificate:
     
-    ```json
-    {
-         "clientid": "xxxxxxx",
-         "certificate": "-----BEGIN CERTIFICATE-----...-----END CERTIFICATE-----\n-----BEGIN CERTIFICATE-----..-----END CERTIFICATE-----\n-----BEGIN CERTIFICATE-----...-----END CERTIFICATE-----\n",
-         "key": "-----BEGIN RSA PRIVATE KEY-----...-----END RSA PRIVATE KEY-----\n",
-         "certurl": "https://mysubaccount.authentication.cert.eu10.hana.ondemand.com",
-         "xsappname": "b15166|service-manager!b1234",
-         "sm_url": "https://service-manager.cfapps.eu10.hana.ondemand.com"
-     }
-    ```
+       ```json
+       {
+            "clientid": "xxxxxxx",
+            "certificate": "-----BEGIN CERTIFICATE-----...-----END CERTIFICATE-----\n-----BEGIN CERTIFICATE-----..-----END CERTIFICATE-----\n-----BEGIN CERTIFICATE-----...-----END CERTIFICATE-----\n",
+            "key": "-----BEGIN RSA PRIVATE KEY-----...-----END RSA PRIVATE KEY-----\n",
+            "certurl": "https://mysubaccount.authentication.cert.eu10.hana.ondemand.com",
+            "xsappname": "b15166|service-manager!b1234",
+            "sm_url": "https://service-manager.cfapps.eu10.hana.ondemand.com"
+        }
+       ```
 3. Add SAP BTP service operator chart repository  
    ```bash
     helm repo add sap-btp-operator https://sap.github.io/sap-btp-service-operator
@@ -894,18 +888,21 @@ This project is licensed under Apache 2.0 unless noted otherwise in the [license
 
 ## Troubleshooting and Support
 
-#### Cannot Create a Service Binding for Service Instance in `Delete Failed` State
+### Cannot create a binding because service instance is in `Delete Failed` state
 
-The deletion of my service instance failed. To fix the failure, I have to create a service binding, but I can't do this because the instance is in the `Delete  Failed` state.
+The deletion of my service instance failed. To fix the failure, I have to create a service binding, but I can't do that because the instance is in the `Delete  Failed` state.
 
 **Solution**
 
-To overcome this issue, use the `force_k8s_binding` query param when you create a service binding and set it to `true` (`force_k8s_binding=true`). You can do & this   either with the Service Manager Control CLI (smctl) [bind](https://help.sap.com/docs/SERVICEMANAGEMENT/09cc82baadc542a688176dce601398de/f53ff2634e0a46d6bfc72ec075418dcd.html) command or 'Create a Service Binding' [Service Manager API](https://api.sap.com/api/APIServiceManagment/resource).
+Use the `force_k8s_binding` query param when creating the service binding and set it to `true` (`force_k8s_binding=true`). Use either the BTP CLI [bind](https://help.sap.com/docs/btp/btp-cli-command-reference/btp-create-services-binding) command or 'Create a Service Binding' [Service Manager API](https://api.sap.com/api/APIServiceManager/resource/Platforms).
 
-smctl Example
+**Note:** <br>
+Do not use the service-operator-access plan credentials to run this command. 
+
+btp cli Example
 
 >   ```bash
-  >   smctl bind INSTANCE_NAME BINDING_NAME --param force_k8s_binding=true
+  >   btp create services/binding --binding BINDING_NAME --instance-name INSTANCE_NAME  --parameters  '{"force_k8s_binding":true}'
   >   ```
 
 <br>
@@ -913,11 +910,56 @@ smctl Example
 
 
 >   ```bash
-  >   smctl unbind INSTANCE_NAME BINDING_NAME --param force_k8s_binding=true
+  >   btp delete services/binding --name BINDING_NAME
   >   ```
 **Note:** `force_k8s_binding` is supported only for the Kubernetes instances that are in the `Delete Failed` state.<br>
+
+
+### Cluster is unavailable and I still have service instances and bindings
+
+I cannot delete service instances and bindings because the cluster in which they were created is no longer available.
+
+**Solution**
+
+Use a dedicated Service Manager API to clean up cluster content.
+Access the API with the subaccount-admin plan.<br>For more information, see [Technical Access](https://help.sap.com/docs/service-manager/sap-service-manager/sap-service-manager-broker-plans).
+
+**Note:** <br>
+Do not call this API with the service-operator-access plan credentials. 
+
+###
+
+#### Request
+
+`DELETE /v1/platforms/{platformID}/clusters/{clusterID}`
+
+
+#### Parameters
+| Parameter                                   | Type       | Description                                                                               |
+|:--------------------------------------------|:-----------|:------------------------------------------------------------------------------------------|
+| platformID                                  | `string`   | The ID of the platform (should be the `service-operator-access` instance ID)             |
+| clusterID                                   | `string`   | The ID of the cluster. You should specify the ID from the step 4 of the [Setup](#setup) section. If you are unable to retrieve it, use the GET serrvice instance or binding API or equivalent btp CLI command and extract it from the response.                 |
+
+#### Response
+##### 
+| Status Code            | Description                                                                                                                                                                                                                                                                                                  |
+|:-----------------------|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 202 Accepted           | The request has been accepted for processing.  <br>  <br> **Headers:** <br> 'Location'- A path to the operation status, For more information about operations, see:  [Service Manager operation API](https://api.sap.com/api/APIServiceManager/path/getSingleOperation). |
+| 404 Resource Not Found | Platform or cluster not found                                                                                                                                                                                                                                                                                |
+| 429 Too Many Requests  | When the rate limit is exceeded, the client receives the HTTP 429 "Too Many Requests" response status code. <br>  <br> **Headers:** <br>  'Retry-After'-  indicates the time in seconds after which the client can retry the request.                                                                        |
+                                
+<b>Attention: **Use this option only for cleanup purposes for a cluster that's no longer available.** Applying it to an active and available cluster may result in unintended resource leftovers in your cluster.</b>
+
+
+
 
 You're welcome to raise issues related to feature requests, or bugs, or give us general feedback on this project's GitHub Issues page.
 The SAP BTP service operator project maintainers will respond to the best of their abilities.
 
+#-CR doesnt exist, ("instance" in Kuberbernetes) but it does exist on BTP. Once we create CR, it connects to the existing instance.*
+#- *same name, namespace, Instance exists in BTP, not in Kubernetes cluster. How can we recover it?*
+#- Create CR with the same name, namespace, and cluster ID (GET instance details, context in the response)* - separate PR 
+
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
+
+
