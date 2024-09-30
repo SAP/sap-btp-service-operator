@@ -950,7 +950,7 @@ Do not call this API with the service-operator-access plan credentials.
                                 
 <b>Attention: **Use this option only for cleanup purposes for a cluster that's no longer available.** Applying it to an active and available cluster may result in unintended resource leftovers in your cluster.</b>
 
-### I can see my service instance in SAP BTP, but not its corresponding custom resource in a cluster. What can I do?
+### I can see my service instance in SAP BTP, but not its corresponding custom resource in my cluster. How can I restore the custom resource?
 
 Let's break down how to recover your Kubernetes custom resource that exists in SAP BTP but not in your Kubernetes cluster:
 
@@ -968,11 +968,10 @@ b) Obtain the following details from the service instance:
 
 - The name of the custom resource.
 - The Kubernetes namespace where the CR should reside.
-- If applicable, retrieve the cluster ID or context associated with the CR in SAP BTP. This ensures the CR is recreated in the correct environment.
   
 2. Recreate the CR:
 
-a) If you have a YAML definition or manifest for your CR, ensure it includes the exact name, namespace, and (if applicable) cluster ID you retrieved from the SAP BTP service instance.
+a) If you have a YAML definition or manifest for your CR, ensure it includes the exact name and namespace you retrieved from the SAP BTP service instance. 
 
 b) Use `kubectl apply -f <your_cr_manifest.yaml>` to create the CR in your Kubernetes cluster.
 
@@ -981,6 +980,8 @@ b) Use `kubectl apply -f <your_cr_manifest.yaml>` to create the CR in your Kuber
 a) Use `kubectl get <your_cr_kind> <your_cr_name> -n <your_namespace>` to verify that the CR is successfully created in Kubernetes.
 
 b) Check the service instance in SAP BTP to confirm that it now recognizes the re-established connection with the CR in Kubernetes.
+
+c) If the connection is not re-established, verify that the cluster ID in your Kubernetes cluster matches the one associated with the SAP BTP service instance. You can find the cluster ID in the context details visible in the cockpit or BTP CLI. If the IDs don't match, reconfigure your cluster with the correct ID.
 
 
 You're welcome to raise issues related to feature requests, or bugs, or give us general feedback on this project's GitHub Issues page.
