@@ -894,23 +894,24 @@ The deletion of my service instance failed. To fix the failure, I have to create
 
 **Solution**
 
-Use the `force_k8s_binding` query param when creating the service binding and set it to `true` (`force_k8s_binding=true`). Use either the BTP CLI [bind](https://help.sap.com/docs/btp/btp-cli-command-reference/btp-create-services-binding) command or 'Create a Service Binding' [Service Manager API](https://api.sap.com/api/APIServiceManager/resource/Platforms).
+Use the `force_k8s_binding` query param when creating the service binding and set it to `true` (`force_k8s_binding=true`).You can do & this   either with the Service Manager Control CLI (smctl) [bind](https://help.sap.com/docs/SERVICEMANAGEMENT/09cc82baadc542a688176dce601398de/f53ff2634e0a46d6bfc72ec075418dcd.html) command.
 
 **Note:** <br>
-Do not use the service-operator-access plan credentials to run this command. 
+Do not use the service-operator-access plan credentials to run this command.
 
-btp cli Example
+smctl Example
 
 >   ```bash
-  >   btp create services/binding --binding BINDING_NAME --instance-name INSTANCE_NAME  --parameters  '{"force_k8s_binding":true}'
+  >   smctl bind INSTANCE_NAME BINDING_NAME --param force_k8s_binding=true
   >   ```
+
 
 <br>
   Once you've finished working on the service instance, delete it by running the following command:
 
 
 >   ```bash
-  >   btp delete services/binding --name BINDING_NAME
+  >   smctl unbind INSTANCE_NAME BINDING_NAME --param force_k8s_binding=true
   >   ```
 **Note:** `force_k8s_binding` is supported only for the Kubernetes instances that are in the `Delete Failed` state.<br>
 
