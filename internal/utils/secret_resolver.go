@@ -64,7 +64,7 @@ func (sr *secretClient) getSecretFromManagementNamespace(ctx context.Context, na
 	sr.Log.Info(fmt.Sprintf("Searching for secret %s in management namespace %s", name, sr.ManagementNamespace))
 	err := sr.getWithClientFallback(ctx, types.NamespacedName{Name: name, Namespace: sr.ManagementNamespace}, secretForResource)
 	if err != nil {
-		sr.Log.Error(err, fmt.Sprintf("Could not fetch secret %s from management namespace %s", name, sr.ManagementNamespace))
+		sr.Log.Info(fmt.Sprintf("Could not fetch secret %s from management namespace %s", name, sr.ManagementNamespace))
 		return nil, err
 	}
 	return secretForResource, nil
