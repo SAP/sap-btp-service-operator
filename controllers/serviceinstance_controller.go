@@ -176,7 +176,7 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	if err != nil {
 		// if parameters are invalid there is nothing we can do, the user should fix it according to the error message in the condition
 		log.Error(err, "failed to parse instance parameters")
-		return utils.MarkAsNonTransientError(ctx, r.Client, smClientTypes.CREATE, err.Error(), serviceInstance)
+		return utils.MarkAsNonTransientError(ctx, r.Client, smClientTypes.CREATE, err, serviceInstance)
 	}
 
 	provision, provisionErr := smClient.Provision(&smClientTypes.ServiceInstance{
@@ -231,7 +231,7 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 	_, instanceParameters, err := utils.BuildSMRequestParameters(serviceInstance.Namespace, serviceInstance.Spec.ParametersFrom, serviceInstance.Spec.Parameters)
 	if err != nil {
 		log.Error(err, "failed to parse instance parameters")
-		return utils.MarkAsNonTransientError(ctx, r.Client, smClientTypes.UPDATE, fmt.Sprintf("failed to parse parameters: %v", err.Error()), serviceInstance)
+		return utils.MarkAsNonTransientError(ctx, r.Client, smClientTypes.UPDATE, err, serviceInstance)
 	}
 
 	_, operationURL, err := smClient.UpdateInstance(serviceInstance.Status.InstanceID, &smClientTypes.ServiceInstance{
@@ -296,7 +296,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, serviceI
 		operationURL, deprovisionErr := smClient.Deprovision(serviceInstance.Status.InstanceID, nil, utils.BuildUserInfo(ctx, serviceInstance.Spec.UserInfo))
 		if deprovisionErr != nil {
 			// delete will proceed anyway
-			return utils.MarkAsNonTransientError(ctx, r.Client, smClientTypes.DELETE, deprovisionErr.Error(), serviceInstance)
+			return utils.MarkAsNonTransientError(ctx, r.Client, smClientTypes.DELETE, deprovisionErr, serviceInstance)
 		}
 
 		if operationURL != "" {

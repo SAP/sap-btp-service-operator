@@ -134,13 +134,13 @@ func HandleError(ctx context.Context, k8sClient client.Client, operationType smC
 	ok := errors.As(err, &smError)
 	if !ok {
 		log.Info("unable to cast error to SM error, will be treated as non transient")
-		return MarkAsNonTransientError(ctx, k8sClient, operationType, err.Error(), resource)
+		return MarkAsNonTransientError(ctx, k8sClient, operationType, err, resource)
 	}
 	if ignoreNonTransient || IsTransientError(smError, log) {
 		return MarkAsTransientError(ctx, k8sClient, operationType, smError, resource)
 	}
 
-	return MarkAsNonTransientError(ctx, k8sClient, operationType, smError.Error(), resource)
+	return MarkAsNonTransientError(ctx, k8sClient, operationType, smError, resource)
 }
 
 func IsTransientError(smError *sm.ServiceManagerError, log logr.Logger) bool {

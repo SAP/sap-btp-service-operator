@@ -262,7 +262,7 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 	_, bindingParameters, err := utils.BuildSMRequestParameters(serviceBinding.Namespace, serviceBinding.Spec.ParametersFrom, serviceBinding.Spec.Parameters)
 	if err != nil {
 		log.Error(err, "failed to parse smBinding parameters")
-		return utils.MarkAsNonTransientError(ctx, r.Client, smClientTypes.CREATE, err.Error(), serviceBinding)
+		return utils.MarkAsNonTransientError(ctx, r.Client, smClientTypes.CREATE, err, serviceBinding)
 	}
 
 	smBinding, operationURL, bindErr := smClient.Bind(&smClientTypes.ServiceBinding{
@@ -284,7 +284,7 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 	if operationURL != "" {
 		var bindingID string
 		if bindingID = sm.ExtractBindingID(operationURL); len(bindingID) == 0 {
-			return utils.MarkAsNonTransientError(ctx, r.Client, smClientTypes.CREATE, fmt.Sprintf("failed to extract smBinding ID from operation URL %s", operationURL), serviceBinding)
+			return utils.MarkAsNonTransientError(ctx, r.Client, smClientTypes.CREATE, fmt.Errorf("failed to extract smBinding ID from operation URL %s", operationURL), serviceBinding)
 		}
 		serviceBinding.Status.BindingID = bindingID
 
@@ -361,7 +361,7 @@ func (r *ServiceBindingReconciler) delete(ctx context.Context, serviceBinding *v
 		operationURL, unbindErr := smClient.Unbind(serviceBinding.Status.BindingID, nil, utils.BuildUserInfo(ctx, serviceBinding.Spec.UserInfo))
 		if unbindErr != nil {
 			// delete will proceed anyway
-			return utils.MarkAsNonTransientError(ctx, r.Client, smClientTypes.DELETE, unbindErr.Error(), serviceBinding)
+			return utils.MarkAsNonTransientError(ctx, r.Client, smClientTypes.DELETE, unbindErr, serviceBinding)
 		}
 
 		if operationURL != "" {
@@ -847,7 +847,7 @@ func (r *ServiceBindingReconciler) handleSecretError(ctx context.Context, op smC
 	log := utils.GetLogger(ctx)
 	log.Error(err, fmt.Sprintf("failed to store secret %s for binding %s", binding.Spec.SecretName, binding.Name))
 	if apierrors.ReasonForError(err) == metav1.StatusReasonUnknown {
-		return utils.MarkAsNonTransientError(ctx, r.Client, op, err.Error(), binding)
+		return utils.MarkAsNonTransientError(ctx, r.Client, op, err, binding)
 	}
 	return utils.MarkAsTransientError(ctx, r.Client, op, err, binding)
 }

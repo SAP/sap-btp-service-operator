@@ -178,19 +178,22 @@ func SetFailureConditions(operationType smClientTypes.OperationCategory, errorMe
 	object.SetConditions(conditions)
 }
 
-func MarkAsNonTransientError(ctx context.Context, k8sClient client.Client, operationType smClientTypes.OperationCategory, errMsg string, object common.SAPBTPResource) (ctrl.Result, error) {
+func MarkAsNonTransientError(ctx context.Context, k8sClient client.Client, operationType smClientTypes.OperationCategory, err error, object common.SAPBTPResource) (ctrl.Result, error) {
 	log := GetLogger(ctx)
-	SetFailureConditions(operationType, errMsg, object)
-	if operationType != smClientTypes.DELETE {
-		log.Info(fmt.Sprintf("operation %s of %s encountered a non transient error %s, giving up operation :(", operationType, object.GetControllerName(), errMsg))
-	}
-	object.SetObservedGeneration(object.GetGeneration())
-	err := UpdateStatus(ctx, k8sClient, object)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	if operationType == smClientTypes.DELETE {
-		return ctrl.Result{}, fmt.Errorf(errMsg)
+	if smError, ok := err.(*sm.ServiceManagerError); !ok || smError.StatusCode != http.StatusTooManyRequests {
+		errMsg := err.Error()
+		SetFailureConditions(operationType, errMsg, object)
+		if operationType != smClientTypes.DELETE {
+			log.Info(fmt.Sprintf("operation %s of %s encountered a non transient error %s, giving up operation :(", operationType, object.GetControllerName(), errMsg))
+		}
+		object.SetObservedGeneration(object.GetGeneration())
+		updateErr := UpdateStatus(ctx, k8sClient, object)
+		if updateErr != nil {
+			return ctrl.Result{}, updateErr
+		}
+		if operationType == smClientTypes.DELETE {
+			return ctrl.Result{}, fmt.Errorf(errMsg)
+		}
 	}
 	return ctrl.Result{}, nil
 }
