@@ -2,6 +2,7 @@ package utils
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -180,7 +181,8 @@ func SetFailureConditions(operationType smClientTypes.OperationCategory, errorMe
 
 func MarkAsNonTransientError(ctx context.Context, k8sClient client.Client, operationType smClientTypes.OperationCategory, err error, object common.SAPBTPResource) (ctrl.Result, error) {
 	log := GetLogger(ctx)
-	if smError, ok := err.(*sm.ServiceManagerError); !ok || smError.StatusCode != http.StatusTooManyRequests {
+	var smError *sm.ServiceManagerError
+	if !errors.As(err, &smError) || smError.StatusCode != http.StatusTooManyRequests {
 		errMsg := err.Error()
 		SetFailureConditions(operationType, errMsg, object)
 		if operationType != smClientTypes.DELETE {
@@ -191,9 +193,9 @@ func MarkAsNonTransientError(ctx context.Context, k8sClient client.Client, opera
 		if updateErr != nil {
 			return ctrl.Result{}, updateErr
 		}
-		if operationType == smClientTypes.DELETE {
-			return ctrl.Result{}, fmt.Errorf(errMsg)
-		}
+	}
+	if operationType == smClientTypes.DELETE {
+		return ctrl.Result{}, err
 	}
 	return ctrl.Result{}, nil
 }
