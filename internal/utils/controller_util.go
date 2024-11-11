@@ -147,13 +147,15 @@ func HandleError(ctx context.Context, k8sClient client.Client, operationType smC
 }
 
 func handleRateLimitError(smError *sm.ServiceManagerError, log logr.Logger) (ctrl.Result, error) {
-	retryAfterStr, ok := smError.ResponseHeaders["Retry-After"]
-	if ok {
-		log.Info(fmt.Sprintf("SM returned 429 with Retry-After: %s, requeueing after it...", retryAfterStr[0]))
-		retryAfter, err := time.Parse(time.RFC1123, retryAfterStr[0])
-		if err == nil {
+	retryAfterStr := smError.ResponseHeaders.Get("Retry-After")
+	if len(retryAfterStr) > 0 {
+		log.Info(fmt.Sprintf("SM returned 429 with Retry-After: %s, requeueing after it...", retryAfterStr))
+		retryAfter, err := time.Parse(time.DateTime, retryAfterStr[:len(time.DateTime)]) // format 2024-11-11 14:59:33 +0000 UTC
+		if err != nil {
+			log.Error(err, "failed to parse Retry-After header, using default requeue time")
+		} else {
 			timeToRequeue := time.Until(retryAfter)
-			log.Info(fmt.Sprintf("requeueing after %.2f minutes", timeToRequeue.Minutes()))
+			log.Info(fmt.Sprintf("requeueing after %d minutes, %d seconds", int(timeToRequeue.Minutes()), int(timeToRequeue.Seconds())%60))
 			return ctrl.Result{RequeueAfter: timeToRequeue}, nil
 		}
 	}
