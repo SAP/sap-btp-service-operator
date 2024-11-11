@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/SAP/sap-btp-service-operator/api/common"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
@@ -131,28 +132,46 @@ func GetLogger(ctx context.Context) logr.Logger {
 func HandleError(ctx context.Context, k8sClient client.Client, operationType smClientTypes.OperationCategory, err error, resource common.SAPBTPResource) (ctrl.Result, error) {
 	log := GetLogger(ctx)
 	var smError *sm.ServiceManagerError
-	if ok := errors.As(err, &smError); !ok {
-		log.Info(fmt.Sprintf("unable to cast error to SM error, will be treated as non transient. (error: %v)", err))
-		return MarkAsNonTransientError(ctx, k8sClient, operationType, err, resource)
+	if ok := errors.As(err, &smError); ok {
+		if smError.StatusCode == http.StatusTooManyRequests {
+			log.Info(fmt.Sprintf("SM returned 429 (%s), requeueing...", smError.Error()))
+			return handleRateLimitError(smError, log)
+		}
+
+		log.Info(fmt.Sprintf("SM returned error: %s", smError.Error()))
+		return MarkAsTransientError(ctx, k8sClient, operationType, smError, resource)
 	}
 
-	if smError.StatusCode == http.StatusTooManyRequests {
-		log.Info(fmt.Sprintf("SM returned 429 (%s), requeueing...", smError.Error()))
-		return ctrl.Result{Requeue: true}, nil
+	log.Info(fmt.Sprintf("unable to cast error to SM error, will be treated as non transient. (error: %v)", err))
+	return MarkAsNonTransientError(ctx, k8sClient, operationType, err, resource)
+}
+
+func handleRateLimitError(smError *sm.ServiceManagerError, log logr.Logger) (ctrl.Result, error) {
+	retryAfterStr, ok := smError.ResponseHeaders["Retry-After"]
+	if ok {
+		log.Info(fmt.Sprintf("SM returned 429 with Retry-After: %s, requeueing after it...", retryAfterStr[0]))
+		retryAfter, err := time.Parse(time.RFC1123, retryAfterStr[0])
+		if err == nil {
+			timeToRequeue := time.Until(retryAfter)
+			log.Info(fmt.Sprintf("requeueing after %.2f minutes", timeToRequeue.Minutes()))
+			return ctrl.Result{RequeueAfter: timeToRequeue}, nil
+		}
 	}
-	log.Info(fmt.Sprintf("SM returned error: %s", smError.Error()))
-	return MarkAsTransientError(ctx, k8sClient, operationType, smError, resource)
+
+	return ctrl.Result{Requeue: true}, nil
 }
 
 func HandleDeleteError(ctx context.Context, k8sClient client.Client, err error, object common.SAPBTPResource) (ctrl.Result, error) {
 	log := GetLogger(ctx)
 	log.Info(fmt.Sprintf("handling delete error: %v", err))
 	var smError *sm.ServiceManagerError
-	if !errors.As(err, &smError) || smError.StatusCode != http.StatusTooManyRequests {
-		if _, updateErr := MarkAsNonTransientError(ctx, k8sClient, smClientTypes.DELETE, err, object); updateErr != nil {
-			log.Error(updateErr, "failed to update resource status")
-			return ctrl.Result{}, updateErr
-		}
+	if errors.As(err, &smError) && smError.StatusCode == http.StatusTooManyRequests {
+		return handleRateLimitError(smError, log)
+	}
+
+	if _, updateErr := MarkAsNonTransientError(ctx, k8sClient, smClientTypes.DELETE, err, object); updateErr != nil {
+		log.Error(updateErr, "failed to update resource status")
+		return ctrl.Result{}, updateErr
 	}
 	return ctrl.Result{}, err
 }
