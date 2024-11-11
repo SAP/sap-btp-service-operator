@@ -3,6 +3,7 @@ package utils
 import (
 	"context"
 	"fmt"
+
 	"github.com/SAP/sap-btp-service-operator/api/common"
 	smClientTypes "github.com/SAP/sap-btp-service-operator/client/sm/types"
 	"k8s.io/apimachinery/pkg/api/meta"
