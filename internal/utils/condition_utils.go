@@ -178,23 +178,21 @@ func SetFailureConditions(operationType smClientTypes.OperationCategory, errorMe
 func MarkAsNonTransientError(ctx context.Context, k8sClient client.Client, operationType smClientTypes.OperationCategory, err error, object common.SAPBTPResource) (ctrl.Result, error) {
 	log := GetLogger(ctx)
 	errMsg := err.Error()
+	log.Info(fmt.Sprintf("operation %s of %s encountered a non transient error %s, setting failure conditions", operationType, object.GetControllerName(), errMsg))
 	SetFailureConditions(operationType, errMsg, object)
-	if operationType != smClientTypes.DELETE {
-		log.Info(fmt.Sprintf("operation %s of %s encountered a non transient error %s, giving up operation :(", operationType, object.GetControllerName(), errMsg))
-	}
 	object.SetObservedGeneration(object.GetGeneration())
 	return ctrl.Result{}, UpdateStatus(ctx, k8sClient, object)
 }
 
 func MarkAsTransientError(ctx context.Context, k8sClient client.Client, operationType smClientTypes.OperationCategory, err error, object common.SAPBTPResource) (ctrl.Result, error) {
 	log := GetLogger(ctx)
-	SetInProgressConditions(ctx, operationType, err.Error(), object)
 	log.Info(fmt.Sprintf("operation %s of %s encountered a transient error %s, retrying operation :)", operationType, object.GetControllerName(), err.Error()))
+	SetInProgressConditions(ctx, operationType, err.Error(), object)
 	if updateErr := UpdateStatus(ctx, k8sClient, object); updateErr != nil {
 		return ctrl.Result{}, updateErr
 	}
 
-	return ctrl.Result{}, UpdateStatus(ctx, k8sClient, object)
+	return ctrl.Result{}, err
 }
 
 // blocked condition marks to the user that action from his side is required, this is considered as in progress operation

@@ -132,7 +132,7 @@ func HandleError(ctx context.Context, k8sClient client.Client, operationType smC
 	log := GetLogger(ctx)
 	var smError *sm.ServiceManagerError
 	if ok := errors.As(err, &smError); !ok {
-		log.Info("unable to cast error to SM error, will be treated as non transient")
+		log.Info(fmt.Sprintf("unable to cast error to SM error, will be treated as non transient. (error: %v)", err))
 		return MarkAsNonTransientError(ctx, k8sClient, operationType, err, resource)
 	}
 
@@ -140,6 +140,7 @@ func HandleError(ctx context.Context, k8sClient client.Client, operationType smC
 		log.Info(fmt.Sprintf("SM returned 429 (%s), requeueing...", smError.Error()))
 		return ctrl.Result{Requeue: true}, nil
 	}
+	log.Info(fmt.Sprintf("SM returned error: %s", smError.Error()))
 	return MarkAsTransientError(ctx, k8sClient, operationType, smError, resource)
 }
 
