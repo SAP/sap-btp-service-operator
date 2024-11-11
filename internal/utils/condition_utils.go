@@ -2,12 +2,8 @@ package utils
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"net/http"
-
 	"github.com/SAP/sap-btp-service-operator/api/common"
-	"github.com/SAP/sap-btp-service-operator/client/sm"
 	smClientTypes "github.com/SAP/sap-btp-service-operator/client/sm/types"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -181,37 +177,24 @@ func SetFailureConditions(operationType smClientTypes.OperationCategory, errorMe
 
 func MarkAsNonTransientError(ctx context.Context, k8sClient client.Client, operationType smClientTypes.OperationCategory, err error, object common.SAPBTPResource) (ctrl.Result, error) {
 	log := GetLogger(ctx)
-	var smError *sm.ServiceManagerError
-	if !errors.As(err, &smError) || smError.StatusCode != http.StatusTooManyRequests {
-		errMsg := err.Error()
-		SetFailureConditions(operationType, errMsg, object)
-		if operationType != smClientTypes.DELETE {
-			log.Info(fmt.Sprintf("operation %s of %s encountered a non transient error %s, giving up operation :(", operationType, object.GetControllerName(), errMsg))
-		}
-		object.SetObservedGeneration(object.GetGeneration())
-		updateErr := UpdateStatus(ctx, k8sClient, object)
-		if updateErr != nil {
-			return ctrl.Result{}, updateErr
-		}
+	errMsg := err.Error()
+	SetFailureConditions(operationType, errMsg, object)
+	if operationType != smClientTypes.DELETE {
+		log.Info(fmt.Sprintf("operation %s of %s encountered a non transient error %s, giving up operation :(", operationType, object.GetControllerName(), errMsg))
 	}
-	if operationType == smClientTypes.DELETE {
-		return ctrl.Result{}, err
-	}
-	return ctrl.Result{}, nil
+	object.SetObservedGeneration(object.GetGeneration())
+	return ctrl.Result{}, UpdateStatus(ctx, k8sClient, object)
 }
 
 func MarkAsTransientError(ctx context.Context, k8sClient client.Client, operationType smClientTypes.OperationCategory, err error, object common.SAPBTPResource) (ctrl.Result, error) {
 	log := GetLogger(ctx)
-	//DO NOT REMOVE - 429 error is not reflected to the status
-	if smError, ok := err.(*sm.ServiceManagerError); !ok || smError.StatusCode != http.StatusTooManyRequests {
-		SetInProgressConditions(ctx, operationType, err.Error(), object)
-		log.Info(fmt.Sprintf("operation %s of %s encountered a transient error %s, retrying operation :)", operationType, object.GetControllerName(), err.Error()))
-		if updateErr := UpdateStatus(ctx, k8sClient, object); updateErr != nil {
-			return ctrl.Result{}, updateErr
-		}
+	SetInProgressConditions(ctx, operationType, err.Error(), object)
+	log.Info(fmt.Sprintf("operation %s of %s encountered a transient error %s, retrying operation :)", operationType, object.GetControllerName(), err.Error()))
+	if updateErr := UpdateStatus(ctx, k8sClient, object); updateErr != nil {
+		return ctrl.Result{}, updateErr
 	}
 
-	return ctrl.Result{}, err
+	return ctrl.Result{}, UpdateStatus(ctx, k8sClient, object)
 }
 
 // blocked condition marks to the user that action from his side is required, this is considered as in progress operation

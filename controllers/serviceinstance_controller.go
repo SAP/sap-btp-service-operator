@@ -193,7 +193,7 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	if provisionErr != nil {
 		log.Error(provisionErr, "failed to create service instance", "serviceOfferingName", serviceInstance.Spec.ServiceOfferingName,
 			"servicePlanName", serviceInstance.Spec.ServicePlanName)
-		return utils.HandleError(ctx, r.Client, smClientTypes.CREATE, provisionErr, serviceInstance, true)
+		return utils.HandleError(ctx, r.Client, smClientTypes.CREATE, provisionErr, serviceInstance)
 	}
 
 	serviceInstance.Status.InstanceID = provision.InstanceID
@@ -242,7 +242,7 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 
 	if err != nil {
 		log.Error(err, fmt.Sprintf("failed to update service instance with ID %s", serviceInstance.Status.InstanceID))
-		return utils.HandleError(ctx, r.Client, smClientTypes.UPDATE, err, serviceInstance, true)
+		return utils.HandleError(ctx, r.Client, smClientTypes.UPDATE, err, serviceInstance)
 	}
 
 	if operationURL != "" {
@@ -296,7 +296,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, serviceI
 		operationURL, deprovisionErr := smClient.Deprovision(serviceInstance.Status.InstanceID, nil, utils.BuildUserInfo(ctx, serviceInstance.Spec.UserInfo))
 		if deprovisionErr != nil {
 			// delete will proceed anyway
-			return utils.MarkAsNonTransientError(ctx, r.Client, smClientTypes.DELETE, deprovisionErr, serviceInstance)
+			return utils.HandleDeleteError(ctx, r.Client, deprovisionErr, serviceInstance)
 		}
 
 		if operationURL != "" {

@@ -278,7 +278,7 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 
 	if bindErr != nil {
 		log.Error(err, "failed to create service binding", "serviceInstanceID", serviceInstance.Status.InstanceID)
-		return utils.HandleError(ctx, r.Client, smClientTypes.CREATE, bindErr, serviceBinding, true)
+		return utils.HandleError(ctx, r.Client, smClientTypes.CREATE, bindErr, serviceBinding)
 	}
 
 	if operationURL != "" {
@@ -360,8 +360,7 @@ func (r *ServiceBindingReconciler) delete(ctx context.Context, serviceBinding *v
 		log.Info(fmt.Sprintf("Deleting binding with id %v from SM", serviceBinding.Status.BindingID))
 		operationURL, unbindErr := smClient.Unbind(serviceBinding.Status.BindingID, nil, utils.BuildUserInfo(ctx, serviceBinding.Spec.UserInfo))
 		if unbindErr != nil {
-			// delete will proceed anyway
-			return utils.MarkAsNonTransientError(ctx, r.Client, smClientTypes.DELETE, unbindErr, serviceBinding)
+			return utils.HandleDeleteError(ctx, r.Client, unbindErr, serviceBinding)
 		}
 
 		if operationURL != "" {

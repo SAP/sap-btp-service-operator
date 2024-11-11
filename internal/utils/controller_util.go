@@ -128,19 +128,32 @@ func GetLogger(ctx context.Context) logr.Logger {
 	return ctx.Value(LogKey{}).(logr.Logger)
 }
 
-func HandleError(ctx context.Context, k8sClient client.Client, operationType smClientTypes.OperationCategory, err error, resource common.SAPBTPResource, ignoreNonTransient bool) (ctrl.Result, error) {
+func HandleError(ctx context.Context, k8sClient client.Client, operationType smClientTypes.OperationCategory, err error, resource common.SAPBTPResource) (ctrl.Result, error) {
 	log := GetLogger(ctx)
 	var smError *sm.ServiceManagerError
-	ok := errors.As(err, &smError)
-	if !ok {
+	if ok := errors.As(err, &smError); !ok {
 		log.Info("unable to cast error to SM error, will be treated as non transient")
 		return MarkAsNonTransientError(ctx, k8sClient, operationType, err, resource)
 	}
-	if ignoreNonTransient || IsTransientError(smError, log) {
-		return MarkAsTransientError(ctx, k8sClient, operationType, smError, resource)
-	}
 
-	return MarkAsNonTransientError(ctx, k8sClient, operationType, smError, resource)
+	if smError.StatusCode == http.StatusTooManyRequests {
+		log.Info(fmt.Sprintf("SM returned 429 (%s), requeueing...", smError.Error()))
+		return ctrl.Result{Requeue: true}, nil
+	}
+	return MarkAsTransientError(ctx, k8sClient, operationType, smError, resource)
+}
+
+func HandleDeleteError(ctx context.Context, k8sClient client.Client, err error, object common.SAPBTPResource) (ctrl.Result, error) {
+	log := GetLogger(ctx)
+	log.Info(fmt.Sprintf("handling delete error: %v", err))
+	var smError *sm.ServiceManagerError
+	if !errors.As(err, &smError) || smError.StatusCode != http.StatusTooManyRequests {
+		if _, updateErr := MarkAsNonTransientError(ctx, k8sClient, smClientTypes.DELETE, err, object); updateErr != nil {
+			log.Error(updateErr, "failed to update resource status")
+			return ctrl.Result{}, updateErr
+		}
+	}
+	return ctrl.Result{}, err
 }
 
 func IsTransientError(smError *sm.ServiceManagerError, log logr.Logger) bool {
