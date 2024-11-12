@@ -87,6 +87,8 @@ manager:
     enabled: false
   kubernetesMatchLabels:
     enabled: false
+# Option for adding annotations
+# annotations: {}
 cluster:
   id:
 externalImages:
