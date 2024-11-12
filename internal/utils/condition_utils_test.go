@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/SAP/sap-btp-service-operator/api/common"
@@ -168,9 +169,8 @@ var _ = Describe("Condition Utils", func() {
 	Context("MarkAsNonTransientError", func() {
 		It("should mark as non-transient error and update status", func() {
 			operationType := smClientTypes.CREATE
-			errorMessage := "Non-transient error"
 
-			result, err := MarkAsNonTransientError(ctx, k8sClient, operationType, errorMessage, resource)
+			result, err := MarkAsNonTransientError(ctx, k8sClient, operationType, fmt.Errorf("Non-transient error"), resource)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result).To(Equal(ctrl.Result{}))
 		})

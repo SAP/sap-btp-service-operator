@@ -3,10 +3,8 @@ package utils
 import (
 	"context"
 	"fmt"
-	"net/http"
 
 	"github.com/SAP/sap-btp-service-operator/api/common"
-	"github.com/SAP/sap-btp-service-operator/client/sm"
 	smClientTypes "github.com/SAP/sap-btp-service-operator/client/sm/types"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -178,32 +176,21 @@ func SetFailureConditions(operationType smClientTypes.OperationCategory, errorMe
 	object.SetConditions(conditions)
 }
 
-func MarkAsNonTransientError(ctx context.Context, k8sClient client.Client, operationType smClientTypes.OperationCategory, errMsg string, object common.SAPBTPResource) (ctrl.Result, error) {
+func MarkAsNonTransientError(ctx context.Context, k8sClient client.Client, operationType smClientTypes.OperationCategory, err error, object common.SAPBTPResource) (ctrl.Result, error) {
 	log := GetLogger(ctx)
+	errMsg := err.Error()
+	log.Info(fmt.Sprintf("operation %s of %s encountered a non transient error %s, setting failure conditions", operationType, object.GetControllerName(), errMsg))
 	SetFailureConditions(operationType, errMsg, object)
-	if operationType != smClientTypes.DELETE {
-		log.Info(fmt.Sprintf("operation %s of %s encountered a non transient error %s, giving up operation :(", operationType, object.GetControllerName(), errMsg))
-	}
 	object.SetObservedGeneration(object.GetGeneration())
-	err := UpdateStatus(ctx, k8sClient, object)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	if operationType == smClientTypes.DELETE {
-		return ctrl.Result{}, fmt.Errorf(errMsg)
-	}
-	return ctrl.Result{}, nil
+	return ctrl.Result{}, UpdateStatus(ctx, k8sClient, object)
 }
 
 func MarkAsTransientError(ctx context.Context, k8sClient client.Client, operationType smClientTypes.OperationCategory, err error, object common.SAPBTPResource) (ctrl.Result, error) {
 	log := GetLogger(ctx)
-	//DO NOT REMOVE - 429 error is not reflected to the status
-	if smError, ok := err.(*sm.ServiceManagerError); !ok || smError.StatusCode != http.StatusTooManyRequests {
-		SetInProgressConditions(ctx, operationType, err.Error(), object)
-		log.Info(fmt.Sprintf("operation %s of %s encountered a transient error %s, retrying operation :)", operationType, object.GetControllerName(), err.Error()))
-		if updateErr := UpdateStatus(ctx, k8sClient, object); updateErr != nil {
-			return ctrl.Result{}, updateErr
-		}
+	log.Info(fmt.Sprintf("operation %s of %s encountered a transient error %s, retrying operation :)", operationType, object.GetControllerName(), err.Error()))
+	SetInProgressConditions(ctx, operationType, err.Error(), object)
+	if updateErr := UpdateStatus(ctx, k8sClient, object); updateErr != nil {
+		return ctrl.Result{}, updateErr
 	}
 
 	return ctrl.Result{}, err

@@ -4,11 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"net/http"
-	"strings"
-
 	"github.com/lithammer/dedent"
 	authv1 "k8s.io/api/authentication/v1"
+	"net/http"
+	"strings"
 
 	"github.com/SAP/sap-btp-service-operator/api/common"
 	"github.com/SAP/sap-btp-service-operator/internal/utils"
@@ -400,7 +399,7 @@ var _ = Describe("ServiceBinding controller", func() {
 					})
 				})
 
-				When("SM returned transient error(429)", func() {
+				When("SM returned transient error(429) without retry-after header", func() {
 					BeforeEach(func() {
 						errorMessage = "too many requests"
 						fakeClient.BindReturnsOnCall(0, nil, "", &sm.ServiceManagerError{

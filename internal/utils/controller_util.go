@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/SAP/sap-btp-service-operator/api/common"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
@@ -128,19 +129,53 @@ func GetLogger(ctx context.Context) logr.Logger {
 	return ctx.Value(LogKey{}).(logr.Logger)
 }
 
-func HandleError(ctx context.Context, k8sClient client.Client, operationType smClientTypes.OperationCategory, err error, resource common.SAPBTPResource, ignoreNonTransient bool) (ctrl.Result, error) {
+func HandleError(ctx context.Context, k8sClient client.Client, operationType smClientTypes.OperationCategory, err error, resource common.SAPBTPResource) (ctrl.Result, error) {
 	log := GetLogger(ctx)
 	var smError *sm.ServiceManagerError
-	ok := errors.As(err, &smError)
-	if !ok {
-		log.Info("unable to cast error to SM error, will be treated as non transient")
-		return MarkAsNonTransientError(ctx, k8sClient, operationType, err.Error(), resource)
-	}
-	if ignoreNonTransient || IsTransientError(smError, log) {
+	if ok := errors.As(err, &smError); ok {
+		if smError.StatusCode == http.StatusTooManyRequests {
+			log.Info(fmt.Sprintf("SM returned 429 (%s), requeueing...", smError.Error()))
+			return handleRateLimitError(smError, log)
+		}
+
+		log.Info(fmt.Sprintf("SM returned error: %s", smError.Error()))
 		return MarkAsTransientError(ctx, k8sClient, operationType, smError, resource)
 	}
 
-	return MarkAsNonTransientError(ctx, k8sClient, operationType, smError.Error(), resource)
+	log.Info(fmt.Sprintf("unable to cast error to SM error, will be treated as non transient. (error: %v)", err))
+	return MarkAsNonTransientError(ctx, k8sClient, operationType, err, resource)
+}
+
+func handleRateLimitError(smError *sm.ServiceManagerError, log logr.Logger) (ctrl.Result, error) {
+	retryAfterStr := smError.ResponseHeaders.Get("Retry-After")
+	if len(retryAfterStr) > 0 {
+		log.Info(fmt.Sprintf("SM returned 429 with Retry-After: %s, requeueing after it...", retryAfterStr))
+		retryAfter, err := time.Parse(time.DateTime, retryAfterStr[:len(time.DateTime)]) // format 2024-11-11 14:59:33 +0000 UTC
+		if err != nil {
+			log.Error(err, "failed to parse Retry-After header, using default requeue time")
+		} else {
+			timeToRequeue := time.Until(retryAfter)
+			log.Info(fmt.Sprintf("requeueing after %d minutes, %d seconds", int(timeToRequeue.Minutes()), int(timeToRequeue.Seconds())%60))
+			return ctrl.Result{RequeueAfter: timeToRequeue}, nil
+		}
+	}
+
+	return ctrl.Result{Requeue: true}, nil
+}
+
+func HandleDeleteError(ctx context.Context, k8sClient client.Client, err error, object common.SAPBTPResource) (ctrl.Result, error) {
+	log := GetLogger(ctx)
+	log.Info(fmt.Sprintf("handling delete error: %v", err))
+	var smError *sm.ServiceManagerError
+	if errors.As(err, &smError) && smError.StatusCode == http.StatusTooManyRequests {
+		return handleRateLimitError(smError, log)
+	}
+
+	if _, updateErr := MarkAsNonTransientError(ctx, k8sClient, smClientTypes.DELETE, err, object); updateErr != nil {
+		log.Error(updateErr, "failed to update resource status")
+		return ctrl.Result{}, updateErr
+	}
+	return ctrl.Result{}, err
 }
 
 func IsTransientError(smError *sm.ServiceManagerError, log logr.Logger) bool {
