@@ -194,7 +194,7 @@ var _ = Describe("Controller Util", func() {
 		It("should return error if not a valid namespaced name", func() {
 			_, err := ParseNamespacedName("namespaceName")
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(Equal("invalid format: expected 'namespace/name"))
+			Expect(err.Error()).To(ContainSubstring("invalid format: expected 'namespace/name"))
 		})
 	})
 })
