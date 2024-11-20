@@ -2,6 +2,7 @@ package utils
 
 import (
 	"encoding/json"
+	"k8s.io/apimachinery/pkg/types"
 	"net/http"
 
 	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
@@ -176,6 +177,24 @@ var _ = Describe("Controller Util", func() {
 			got := BuildUserInfo(ctx, &authv1.UserInfo{Username: "user1", UID: "1"})
 			expected := `{"username":"user1","uid":"1"}`
 			Expect(got).To(Equal(expected))
+		})
+	})
+
+	Context("ParseNamespacedName", func() {
+		It("should return correct namespace and name", func() {
+			nsName, err := ParseNamespacedName(types.NamespacedName{
+				Namespace: "namespace",
+				Name:      "name",
+			}.String())
+			Expect(err).ToNot(HaveOccurred())
+			Expect(nsName.Namespace).To(Equal("namespace"))
+			Expect(nsName.Name).To(Equal("name"))
+		})
+
+		It("should return error if not a valid namespaced name", func() {
+			_, err := ParseNamespacedName("namespaceName")
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal("invalid format: expected 'namespace/name"))
 		})
 	})
 })

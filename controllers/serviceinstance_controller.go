@@ -22,7 +22,14 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	corev1 "k8s.io/api/core/v1"
 	"net/http"
+	"reflect"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"k8s.io/utils/ptr"
 
@@ -162,10 +169,34 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 }
 
 func (r *ServiceInstanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
+	c := ctrl.NewControllerManagedBy(mgr).
 		For(&v1.ServiceInstance{}).
-		WithOptions(controller.Options{RateLimiter: workqueue.NewItemExponentialFailureRateLimiter(r.Config.RetryBaseDelay, r.Config.RetryMaxDelay)}).
-		Complete(r)
+		WithOptions(controller.Options{RateLimiter: workqueue.NewItemExponentialFailureRateLimiter(r.Config.RetryBaseDelay, r.Config.RetryMaxDelay)})
+
+	secretPredicate := SecretPredicate{
+		Funcs: predicate.Funcs{
+			CreateFunc: func(e event.CreateEvent) bool {
+				return false
+			},
+			UpdateFunc: func(e event.UpdateEvent) bool {
+				return isSecretDataChanged(e)
+			},
+			DeleteFunc: func(e event.DeleteEvent) bool {
+				return false
+			},
+			GenericFunc: func(e event.GenericEvent) bool {
+				return false
+			},
+		},
+	}
+
+	c.Watches(
+		&corev1.Secret{},
+		handler.EnqueueRequestsFromMapFunc(r.findRequestsForSecret),
+		builder.WithPredicates(secretPredicate),
+	)
+
+	return c.Complete(r)
 }
 
 func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient sm.Client, serviceInstance *v1.ServiceInstance) (ctrl.Result, error) {
@@ -720,4 +751,27 @@ func getErrorMsgFromLastOperation(status *smClientTypes.Operation) string {
 		}
 	}
 	return errMsg
+}
+
+type SecretPredicate struct {
+	predicate.Funcs
+}
+
+func (r *ServiceInstanceReconciler) findRequestsForSecret(ctx context.Context, secret client.Object) []reconcile.Request {
+	instancesToUpdate := make([]reconcile.Request, 0)
+	// TODO
+	return instancesToUpdate
+}
+
+func isSecretDataChanged(e event.UpdateEvent) bool {
+	// Type assert to *v1.Secret
+	oldSecret, okOld := e.ObjectOld.(*corev1.Secret)
+	newSecret, okNew := e.ObjectNew.(*corev1.Secret)
+	if !okOld || !okNew {
+		// If the objects are not Secrets, skip the event
+		return false
+	}
+
+	// Compare the Data field (byte slices)
+	return !reflect.DeepEqual(oldSecret.Data, newSecret.Data)
 }

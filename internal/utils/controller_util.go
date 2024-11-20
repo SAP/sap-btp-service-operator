@@ -146,6 +146,15 @@ func HandleError(ctx context.Context, k8sClient client.Client, operationType smC
 	return MarkAsNonTransientError(ctx, k8sClient, operationType, err, resource)
 }
 
+// ParseNamespacedName converts a "namespace/name" string to a types.NamespacedName object.
+func ParseNamespacedName(input string) (apimachinerytypes.NamespacedName, error) {
+	parts := strings.SplitN(input, "/", 2)
+	if len(parts) != 2 {
+		return apimachinerytypes.NamespacedName{}, fmt.Errorf("invalid format: expected 'namespace/name', got '%s'", input)
+	}
+	return apimachinerytypes.NamespacedName{Namespace: parts[0], Name: parts[1]}, nil
+}
+
 func handleRateLimitError(smError *sm.ServiceManagerError, log logr.Logger) (ctrl.Result, error) {
 	retryAfterStr := smError.ResponseHeaders.Get("Retry-After")
 	if len(retryAfterStr) > 0 {
