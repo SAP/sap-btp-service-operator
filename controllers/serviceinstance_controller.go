@@ -22,8 +22,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"k8s.io/apimachinery/pkg/types"
 	"net/http"
 	"reflect"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -180,6 +182,9 @@ func (r *ServiceInstanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				return false
 			},
 			UpdateFunc: func(e event.UpdateEvent) bool {
+				if e.ObjectNew.GetLabels()[common.WatchSecretLabel] != "true" {
+					return false
+				}
 				return isSecretDataChanged(e)
 			},
 			DeleteFunc: func(e event.DeleteEvent) bool {
@@ -204,7 +209,7 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	log := utils.GetLogger(ctx)
 	log.Info("Creating instance in SM")
 	updateHashedSpecValue(serviceInstance)
-	_, instanceParameters, err := utils.BuildSMRequestParameters(serviceInstance.Namespace, serviceInstance.Spec.ParametersFrom, serviceInstance.Spec.Parameters)
+	_, instanceParameters, secrets, err := utils.BuildSMRequestParameters(serviceInstance.Namespace, serviceInstance.Spec.ParametersFrom, serviceInstance.Spec.Parameters)
 	if err != nil {
 		// if parameters are invalid there is nothing we can do, the user should fix it according to the error message in the condition
 		log.Error(err, "failed to parse instance parameters")
@@ -251,7 +256,29 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	log.Info(fmt.Sprintf("Instance provisioned successfully, instanceID: %s, subaccountID: %s", serviceInstance.Status.InstanceID,
 		serviceInstance.Status.SubaccountID))
 	utils.SetSuccessConditions(smClientTypes.CREATE, serviceInstance)
+	if len(secrets) > 0 {
+		if serviceInstance.Labels == nil {
+			serviceInstance.Labels = make(map[string]string)
+		}
+		for key := range secrets {
+			serviceInstance.Labels[common.InstanceSecretLabel+"-"+key] = "true"
+			verifySecretHaveWatchLabel(ctx, secrets[key], r, log)
+		}
+		return ctrl.Result{}, r.Client.Update(ctx, serviceInstance)
+	}
 	return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceInstance)
+}
+
+func verifySecretHaveWatchLabel(ctx context.Context, secret *corev1.Secret, r *ServiceInstanceReconciler, log logr.Logger) {
+	if secret != nil && (secret.Labels == nil || secret.Labels[common.WatchSecretLabel] != "true") {
+		if secret.Labels == nil {
+			secret.Labels = make(map[string]string)
+		}
+		secret.Labels[common.WatchSecretLabel] = "true"
+		if err := r.Client.Update(ctx, secret); err != nil {
+			log.Error(err, "failed to update secret with watch label")
+		}
+	}
 }
 
 func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient sm.Client, serviceInstance *v1.ServiceInstance) (ctrl.Result, error) {
@@ -260,7 +287,7 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 
 	updateHashedSpecValue(serviceInstance)
 
-	_, instanceParameters, err := utils.BuildSMRequestParameters(serviceInstance.Namespace, serviceInstance.Spec.ParametersFrom, serviceInstance.Spec.Parameters)
+	_, instanceParameters, secrets, err := utils.BuildSMRequestParameters(serviceInstance.Namespace, serviceInstance.Spec.ParametersFrom, serviceInstance.Spec.Parameters)
 	if err != nil {
 		log.Error(err, "failed to parse instance parameters")
 		return utils.MarkAsNonTransientError(ctx, r.Client, smClientTypes.UPDATE, err, serviceInstance)
@@ -291,6 +318,23 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 	}
 	log.Info("Instance updated successfully")
 	utils.SetSuccessConditions(smClientTypes.UPDATE, serviceInstance)
+	if len(secrets) > 0 {
+		if serviceInstance.Labels == nil {
+			serviceInstance.Labels = make(map[string]string)
+		} else { // remove old secret labels
+			for labelKey := range serviceInstance.Labels {
+				if strings.HasPrefix(labelKey, common.InstanceSecretLabel) {
+					delete(serviceInstance.Labels, labelKey)
+				}
+			}
+		}
+		// add new secret labels
+		for key := range secrets {
+			serviceInstance.Labels[common.InstanceSecretLabel+"-"+key] = "true"
+			verifySecretHaveWatchLabel(ctx, secrets[key], r, log)
+		}
+		return ctrl.Result{}, r.Client.Update(ctx, serviceInstance)
+	}
 	return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceInstance)
 }
 
@@ -766,7 +810,20 @@ type SecretPredicate struct {
 
 func (r *ServiceInstanceReconciler) findRequestsForSecret(ctx context.Context, secret client.Object) []reconcile.Request {
 	instancesToUpdate := make([]reconcile.Request, 0)
-	// TODO
+	var instances v1.ServiceInstanceList
+	labelSelector := client.MatchingLabels{common.InstanceSecretLabel + "-" + string(secret.GetUID()): "true"}
+	if err := r.Client.List(ctx, &instances, labelSelector); err != nil {
+		r.Log.Error(err, "failed to list service instances")
+		return nil
+	}
+	for _, instance := range instances.Items {
+		instancesToUpdate = append(instancesToUpdate, reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name:      instance.Name,
+				Namespace: instance.Namespace,
+			},
+		})
+	}
 	return instancesToUpdate
 }
 
