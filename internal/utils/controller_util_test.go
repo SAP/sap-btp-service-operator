@@ -2,8 +2,9 @@ package utils
 
 import (
 	"encoding/json"
-	"k8s.io/apimachinery/pkg/types"
 	"net/http"
+
+	"k8s.io/apimachinery/pkg/types"
 
 	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	"github.com/SAP/sap-btp-service-operator/client/sm"

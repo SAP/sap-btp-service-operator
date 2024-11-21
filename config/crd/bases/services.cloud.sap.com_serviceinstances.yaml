@@ -140,6 +140,8 @@ spec:
               shared:
                 description: Indicates the desired shared state
                 type: boolean
+              subscribeToChanges:
+                type: boolean
               userInfo:
                 description: |-
                   UserInfo contains information about the user that last modified this

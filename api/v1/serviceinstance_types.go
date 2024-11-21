@@ -72,6 +72,8 @@ type ServiceInstanceSpec struct {
 	// +optional
 	ParametersFrom []ParametersFromSource `json:"parametersFrom,omitempty"`
 
+	// +optional
+	SubscribeToSecretChanges *bool `json:"subscribeToChanges,omitempty"`
 	// List of custom tags describing the ServiceInstance, will be copied to `ServiceBinding` secret in the key called `tags`.
 	// +optional
 	CustomTags []string `json:"customTags,omitempty"`

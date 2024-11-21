@@ -22,9 +22,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	corev1 "k8s.io/api/core/v1"
 	"net/http"
 	"reflect"
+
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -605,7 +606,10 @@ func isFinalState(ctx context.Context, serviceInstance *v1.ServiceInstance) bool
 		}
 		return false
 	}
-
+	if serviceInstance.Spec.SubscribeToSecretChanges != nil && *serviceInstance.Spec.SubscribeToSecretChanges {
+		log.Info("instance is not in final state, SubscribeToSecretChanges is true")
+		return false
+	}
 	log.Info(fmt.Sprintf("instance is in final state (generation: %d)", serviceInstance.Generation))
 	return true
 }
@@ -618,6 +622,9 @@ func updateRequired(serviceInstance *v1.ServiceInstance) bool {
 
 	cond := meta.FindStatusCondition(serviceInstance.Status.Conditions, common.ConditionSucceeded)
 	if cond != nil && cond.Reason == common.UpdateInProgress { //in case of transient error occurred
+		return true
+	}
+	if serviceInstance.Spec.SubscribeToSecretChanges != nil && *serviceInstance.Spec.SubscribeToSecretChanges {
 		return true
 	}
 
