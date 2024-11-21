@@ -215,7 +215,7 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 		log.Error(err, "failed to parse instance parameters")
 		return utils.MarkAsNonTransientError(ctx, r.Client, smClientTypes.CREATE, err, serviceInstance)
 	}
-	if len(secrets) > 0 {
+	if len(secrets) > 0 && serviceInstance.Spec.SubscribeToSecretChanges != nil && *serviceInstance.Spec.SubscribeToSecretChanges {
 		if serviceInstance.Labels == nil {
 			serviceInstance.Labels = make(map[string]string)
 		}
@@ -296,7 +296,7 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 		log.Error(err, "failed to parse instance parameters")
 		return utils.MarkAsNonTransientError(ctx, r.Client, smClientTypes.UPDATE, err, serviceInstance)
 	}
-	if len(secrets) > 0 {
+	if len(secrets) > 0 && serviceInstance.Spec.SubscribeToSecretChanges != nil && *serviceInstance.Spec.SubscribeToSecretChanges {
 		if serviceInstance.Labels == nil {
 			serviceInstance.Labels = make(map[string]string)
 		} else { // remove old secret labels
