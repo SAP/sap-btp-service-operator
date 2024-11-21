@@ -222,7 +222,7 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 		}
 		for key := range secrets {
 			serviceInstance.Labels[common.InstanceSecretLabel+"-"+key] = "true"
-			verifySecretHaveWatchLabel(ctx, secrets[key], r, log)
+			utils.VerifySecretHaveWatchLabel(ctx, secrets[key], r.Client)
 		}
 		err = r.Client.Update(ctx, serviceInstance)
 		if err != nil {
@@ -274,18 +274,6 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceInstance)
 }
 
-func verifySecretHaveWatchLabel(ctx context.Context, secret *corev1.Secret, r *ServiceInstanceReconciler, log logr.Logger) {
-	if secret != nil && (secret.Labels == nil || secret.Labels[common.WatchSecretLabel] != "true") {
-		if secret.Labels == nil {
-			secret.Labels = make(map[string]string)
-		}
-		secret.Labels[common.WatchSecretLabel] = "true"
-		if err := r.Client.Update(ctx, secret); err != nil {
-			log.Error(err, "failed to update secret with watch label")
-		}
-	}
-}
-
 func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient sm.Client, serviceInstance *v1.ServiceInstance) (ctrl.Result, error) {
 	log := utils.GetLogger(ctx)
 	log.Info(fmt.Sprintf("updating instance %s in SM", serviceInstance.Status.InstanceID))
@@ -310,7 +298,7 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 		// add new secret labels
 		for key := range secrets {
 			serviceInstance.Labels[common.InstanceSecretLabel+"-"+key] = "true"
-			verifySecretHaveWatchLabel(ctx, secrets[key], r, log)
+			utils.VerifySecretHaveWatchLabel(ctx, secrets[key], r.Client)
 		}
 		err = r.Client.Update(ctx, serviceInstance)
 		if err != nil {

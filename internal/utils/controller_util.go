@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	v12 "k8s.io/api/core/v1"
 	"net/http"
 	"strings"
 	"time"
@@ -243,4 +244,17 @@ func serialize(value interface{}) ([]byte, format, error) {
 		return nil, UNKNOWN, err
 	}
 	return data, JSON, nil
+}
+
+func VerifySecretHaveWatchLabel(ctx context.Context, secret *v12.Secret, k8sClient client.Client) {
+	log := GetLogger(ctx)
+	if secret != nil && (secret.Labels == nil || secret.Labels[common.WatchSecretLabel] != "true") {
+		if secret.Labels == nil {
+			secret.Labels = make(map[string]string)
+		}
+		secret.Labels[common.WatchSecretLabel] = "true"
+		if err := k8sClient.Update(ctx, secret); err != nil {
+			log.Error(err, "failed to update secret with watch label")
+		}
+	}
 }

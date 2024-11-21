@@ -2,16 +2,17 @@ package utils
 
 import (
 	"encoding/json"
-	"net/http"
-
-	"k8s.io/apimachinery/pkg/types"
-
+	"github.com/SAP/sap-btp-service-operator/api/common"
 	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	authv1 "k8s.io/api/authentication/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -48,6 +49,7 @@ var _ = Describe("Controller Util", func() {
 		})
 
 	})
+
 	Context("SliceContains", func() {
 		It("slice contains", func() {
 			slice := []string{"element1", "element2", "element3"}
@@ -196,6 +198,32 @@ var _ = Describe("Controller Util", func() {
 			_, err := ParseNamespacedName("namespaceName")
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("invalid format: expected 'namespace/name"))
+		})
+	})
+
+	Context("VerifySecretHaveWatchLabel", func() {
+		It("should add the watch label to the secret if it is missing", func() {
+			// Create a fake client
+
+			// Create a secret without the watch label
+			secret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-secret",
+					Namespace: "default",
+				},
+			}
+			err := k8sClient.Create(ctx, secret)
+			Expect(err).ToNot(HaveOccurred())
+			// Call the function
+			VerifySecretHaveWatchLabel(ctx, secret, k8sClient)
+
+			// Get the updated secret
+			updatedSecret := &corev1.Secret{}
+			err = k8sClient.Get(ctx, types.NamespacedName{Name: "test-secret", Namespace: "default"}, updatedSecret)
+			Expect(err).ToNot(HaveOccurred())
+
+			// Verify the label was added
+			Expect(updatedSecret.Labels[common.WatchSecretLabel]).To(Equal("true"))
 		})
 	})
 })
