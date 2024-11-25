@@ -43,9 +43,6 @@ func BuildSMRequestParameters(namespace string, parameters *runtime.RawExtension
 				params[k] = v
 			}
 		}
-		if subscribeToSecretRefChanges {
-
-		}
 	}
 	if parameters != nil {
 		pp, err := UnmarshalRawParameters(parameters.Raw)

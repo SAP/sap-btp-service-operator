@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"net/http"
 	"reflect"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -338,7 +339,11 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, serviceI
 			log.Info("Deleting instance async")
 			return r.handleAsyncDelete(ctx, serviceInstance, operationURL)
 		}
-
+		for labelKey := range serviceInstance.Labels {
+			if strings.HasPrefix(labelKey, common.InstanceSecretLabel) {
+				utils.DecreaseSecretWatchLabel(ctx, r.Client, serviceInstance.Namespace, labelKey)
+			}
+		}
 		log.Info("Instance was deleted successfully, removing finalizer")
 		// remove our finalizer from the list and update it.
 		return ctrl.Result{}, utils.RemoveFinalizer(ctx, r.Client, serviceInstance, common.FinalizerName)
@@ -585,12 +590,30 @@ func (r *ServiceInstanceReconciler) buildSMRequestParameters(ctx context.Context
 	log := utils.GetLogger(ctx)
 	instanceParameters, secrets, err := utils.BuildSMRequestParameters(serviceInstance.Namespace, serviceInstance.Spec.Parameters, serviceInstance.Spec.ParametersFrom)
 	if serviceInstance.IsSubscribedToSecretKeyRefChange() && len(secrets) > 0 {
+		existingSecrets := make(map[string]string)
 		if serviceInstance.Labels == nil {
 			serviceInstance.Labels = make(map[string]string)
+		} else { // remove old secret labels
+			for labelKey := range serviceInstance.Labels {
+				if strings.HasPrefix(labelKey, common.InstanceSecretLabel) {
+					existingSecrets[labelKey] = "false"
+				}
+			}
 		}
 		for key := range secrets {
-			serviceInstance.Labels[common.InstanceSecretLabel+"-"+key] = "true"
-			utils.VerifySecretHaveWatchLabel(ctx, secrets[key], r.Client)
+			if _, ok := existingSecrets[common.InstanceSecretLabel+"-"+key]; ok {
+				// this secret was already on the instance and should stay
+				existingSecrets[common.InstanceSecretLabel+"-"+key] = "true"
+			} else {
+				// this is a new secret on the instance
+				serviceInstance.Labels[common.InstanceSecretLabel+"-"+key] = "true"
+				utils.IncreaseSecretHaveWatchLabel(ctx, secrets[key], r.Client)
+			}
+		}
+		for key := range existingSecrets {
+			if existingSecrets[key] == "false" {
+				utils.DecreaseSecretWatchLabel(ctx, r.Client, serviceInstance.Name, key)
+			}
 		}
 		err := r.Client.Update(ctx, serviceInstance)
 		if err != nil {
