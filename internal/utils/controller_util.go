@@ -5,10 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	v12 "k8s.io/api/core/v1"
 	"net/http"
 	"strings"
 	"time"
+
+	v12 "k8s.io/api/core/v1"
 
 	"github.com/SAP/sap-btp-service-operator/api/common"
 	"github.com/SAP/sap-btp-service-operator/client/sm"

@@ -22,11 +22,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"k8s.io/apimachinery/pkg/types"
 	"net/http"
 	"reflect"
-	"strings"
-
-	"k8s.io/apimachinery/pkg/types"
 
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -173,17 +171,13 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 }
 
 func (r *ServiceInstanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	c := ctrl.NewControllerManagedBy(mgr).
-		For(&v1.ServiceInstance{}).
-		WithOptions(controller.Options{RateLimiter: workqueue.NewItemExponentialFailureRateLimiter(r.Config.RetryBaseDelay, r.Config.RetryMaxDelay)})
-
 	secretPredicate := SecretPredicate{
 		Funcs: predicate.Funcs{
 			CreateFunc: func(e event.CreateEvent) bool {
 				return false
 			},
 			UpdateFunc: func(e event.UpdateEvent) bool {
-				if e.ObjectNew.GetLabels()[common.WatchSecretLabel] != "true" {
+				if _, ok := e.ObjectNew.GetLabels()[common.WatchSecretLabel]; !ok {
 					return false
 				}
 				return isSecretDataChanged(e)
@@ -197,39 +191,27 @@ func (r *ServiceInstanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		},
 	}
 
-	c.Watches(
-		&corev1.Secret{},
-		handler.EnqueueRequestsFromMapFunc(r.findRequestsForSecret),
-		builder.WithPredicates(secretPredicate),
-	)
-
-	return c.Complete(r)
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&v1.ServiceInstance{}).
+		WithOptions(controller.Options{RateLimiter: workqueue.NewItemExponentialFailureRateLimiter(r.Config.RetryBaseDelay, r.Config.RetryMaxDelay)}).
+		Watches(
+			&corev1.Secret{},
+			handler.EnqueueRequestsFromMapFunc(r.findRequestsForSecret),
+			builder.WithPredicates(secretPredicate),
+		).Complete(r)
 }
 
 func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient sm.Client, serviceInstance *v1.ServiceInstance) (ctrl.Result, error) {
 	log := utils.GetLogger(ctx)
 	log.Info("Creating instance in SM")
 	updateHashedSpecValue(serviceInstance)
-	_, instanceParameters, secrets, err := utils.BuildSMRequestParameters(serviceInstance.Namespace, serviceInstance.Spec.ParametersFrom, serviceInstance.Spec.Parameters)
+	instanceParameters, err := r.buildSMRequestParameters(ctx, serviceInstance)
 	if err != nil {
 		// if parameters are invalid there is nothing we can do, the user should fix it according to the error message in the condition
 		log.Error(err, "failed to parse instance parameters")
 		return utils.MarkAsNonTransientError(ctx, r.Client, smClientTypes.CREATE, err, serviceInstance)
 	}
-	if len(secrets) > 0 && serviceInstance.Spec.SubscribeToSecretChanges != nil && *serviceInstance.Spec.SubscribeToSecretChanges {
-		if serviceInstance.Labels == nil {
-			serviceInstance.Labels = make(map[string]string)
-		}
-		for key := range secrets {
-			serviceInstance.Labels[common.InstanceSecretLabel+"-"+key] = "true"
-			utils.VerifySecretHaveWatchLabel(ctx, secrets[key], r.Client)
-		}
-		err = r.Client.Update(ctx, serviceInstance)
-		if err != nil {
-			log.Error(err, "failed to Update instance with secret labels")
-			return ctrl.Result{}, err
-		}
-	}
+
 	provision, provisionErr := smClient.Provision(&smClientTypes.ServiceInstance{
 		Name:          serviceInstance.Spec.ExternalName,
 		ServicePlanID: serviceInstance.Spec.ServicePlanID,
@@ -280,32 +262,12 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 
 	updateHashedSpecValue(serviceInstance)
 
-	_, instanceParameters, secrets, err := utils.BuildSMRequestParameters(serviceInstance.Namespace, serviceInstance.Spec.ParametersFrom, serviceInstance.Spec.Parameters)
+	instanceParameters, err := r.buildSMRequestParameters(ctx, serviceInstance)
 	if err != nil {
 		log.Error(err, "failed to parse instance parameters")
 		return utils.MarkAsNonTransientError(ctx, r.Client, smClientTypes.UPDATE, err, serviceInstance)
 	}
-	if len(secrets) > 0 && serviceInstance.Spec.SubscribeToSecretChanges != nil && *serviceInstance.Spec.SubscribeToSecretChanges {
-		if serviceInstance.Labels == nil {
-			serviceInstance.Labels = make(map[string]string)
-		} else { // remove old secret labels
-			for labelKey := range serviceInstance.Labels {
-				if strings.HasPrefix(labelKey, common.InstanceSecretLabel) {
-					delete(serviceInstance.Labels, labelKey)
-				}
-			}
-		}
-		// add new secret labels
-		for key := range secrets {
-			serviceInstance.Labels[common.InstanceSecretLabel+"-"+key] = "true"
-			utils.VerifySecretHaveWatchLabel(ctx, secrets[key], r.Client)
-		}
-		err = r.Client.Update(ctx, serviceInstance)
-		if err != nil {
-			log.Error(err, "failed to Update instance with secret labels")
-			return ctrl.Result{}, err
-		}
-	}
+
 	_, operationURL, err := smClient.UpdateInstance(serviceInstance.Status.InstanceID, &smClientTypes.ServiceInstance{
 		Name:          serviceInstance.Spec.ExternalName,
 		ServicePlanID: serviceInstance.Spec.ServicePlanID,
@@ -617,6 +579,26 @@ func (r *ServiceInstanceReconciler) handleInstanceSharingError(ctx context.Conte
 
 	setSharedCondition(object, status, reason, errMsg)
 	return ctrl.Result{Requeue: isTransient}, utils.UpdateStatus(ctx, r.Client, object)
+}
+
+func (r *ServiceInstanceReconciler) buildSMRequestParameters(ctx context.Context, serviceInstance *v1.ServiceInstance) ([]byte, error) {
+	log := utils.GetLogger(ctx)
+	instanceParameters, secrets, err := utils.BuildSMRequestParameters(serviceInstance.Namespace, serviceInstance.Spec.Parameters, serviceInstance.Spec.ParametersFrom)
+	if serviceInstance.IsSubscribedToSecretKeyRefChange() && len(secrets) > 0 {
+		if serviceInstance.Labels == nil {
+			serviceInstance.Labels = make(map[string]string)
+		}
+		for key := range secrets {
+			serviceInstance.Labels[common.InstanceSecretLabel+"-"+key] = "true"
+			utils.VerifySecretHaveWatchLabel(ctx, secrets[key], r.Client)
+		}
+		err := r.Client.Update(ctx, serviceInstance)
+		if err != nil {
+			log.Error(err, "failed to Update instance with secret labels")
+			return nil, err
+		}
+	}
+	return instanceParameters, err
 }
 
 func isFinalState(ctx context.Context, serviceInstance *v1.ServiceInstance) bool {

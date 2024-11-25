@@ -21,14 +21,14 @@ import (
 // secret values.
 // The second return value is parameters marshalled to byt array
 // The third return value is any error that caused the function to fail.
-func BuildSMRequestParameters(namespace string, parametersFrom []servicesv1.ParametersFromSource, parameters *runtime.RawExtension) (map[string]interface{}, []byte, map[string]*corev1.Secret, error) {
+func BuildSMRequestParameters(namespace string, parameters *runtime.RawExtension, parametersFrom []servicesv1.ParametersFromSource) ([]byte, map[string]*corev1.Secret, error) {
 	params := make(map[string]interface{})
 	secretsSet := map[string]*corev1.Secret{}
 	if len(parametersFrom) > 0 {
 		for _, p := range parametersFrom {
 			fps, secret, err := fetchParametersFromSource(namespace, &p)
 			if err != nil {
-				return nil, nil, nil, err
+				return nil, nil, err
 			}
 			secretsSet[string(secret.UID)] = secret
 			for k, v := range fps {
@@ -38,20 +38,23 @@ func BuildSMRequestParameters(namespace string, parametersFrom []servicesv1.Para
 					continue
 				}
 				if _, ok := params[k]; ok {
-					return nil, nil, nil, fmt.Errorf("conflict: duplicate entry for parameter %q", k)
+					return nil, nil, fmt.Errorf("conflict: duplicate entry for parameter %q", k)
 				}
 				params[k] = v
 			}
+		}
+		if subscribeToSecretRefChanges {
+
 		}
 	}
 	if parameters != nil {
 		pp, err := UnmarshalRawParameters(parameters.Raw)
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, nil, err
 		}
 		for k, v := range pp {
 			if _, ok := params[k]; ok {
-				return nil, nil, nil, fmt.Errorf("conflict: duplicate entry for parameter %q", k)
+				return nil, nil, fmt.Errorf("conflict: duplicate entry for parameter %q", k)
 			}
 			params[k] = v
 		}
@@ -63,9 +66,9 @@ func BuildSMRequestParameters(namespace string, parametersFrom []servicesv1.Para
 
 	parametersRaw, err := MarshalRawParameters(params)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
-	return params, parametersRaw, secretsSet, nil
+	return parametersRaw, secretsSet, nil
 }
 
 // UnmarshalRawParameters produces a map structure from a given raw YAML/JSON input
