@@ -590,7 +590,7 @@ func (r *ServiceInstanceReconciler) handleInstanceSharingError(ctx context.Conte
 func (r *ServiceInstanceReconciler) buildSMRequestParameters(ctx context.Context, serviceInstance *v1.ServiceInstance) ([]byte, error) {
 	log := utils.GetLogger(ctx)
 	instanceParameters, secrets, err := utils.BuildSMRequestParameters(serviceInstance.Namespace, serviceInstance.Spec.Parameters, serviceInstance.Spec.ParametersFrom)
-	if serviceInstance.IsSubscribedToSecretKeyRefChange() && len(secrets) > 0 {
+	if serviceInstance.IsSubscribedToSecretKeyRefChange() {
 		existingSecrets := make(map[string]string)
 		if serviceInstance.Labels == nil {
 			serviceInstance.Labels = make(map[string]string)
