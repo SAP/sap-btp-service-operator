@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/SAP/sap-btp-service-operator/api/common"
-
 	servicesv1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	corev1 "k8s.io/api/core/v1"
 
@@ -104,10 +102,6 @@ func fetchSecretKeyValue(namespace string, secretKeyRef *servicesv1.SecretKeyRef
 	if err != nil {
 		return nil, nil, err
 	}
-	if secret.Labels == nil {
-		secret.Labels = make(map[string]string)
-	}
-	secret.Labels[common.WatchSecretLabel] = "true"
 
 	return secret.Data[secretKeyRef.Key], secret, nil
 }
