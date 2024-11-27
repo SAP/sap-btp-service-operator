@@ -270,22 +270,20 @@ func IncreaseSecretHaveWatchLabel(ctx context.Context, secret *v12.Secret, k8sCl
 	}
 }
 
-func DecreaseSecretWatchLabel(ctx context.Context, k8sClient client.Client, namespace string, name string) {
+func DecreaseSecretWatchLabel(ctx context.Context, k8sClient client.Client, namespace string, name string) error {
 	log := GetLogger(ctx)
 	secret := &v12.Secret{}
 	err := k8sClient.Get(ctx, apimachinerytypes.NamespacedName{Name: name, Namespace: namespace}, secret)
 	if err != nil {
-		log.Error(err, "failed to get secret with name %s and namespace %s", name, namespace)
-		return
+		return err
 	}
 	if secret.Labels == nil {
-		return
+		return nil
 	}
 	if _, exists := secret.Labels[common.WatchSecretLabel]; exists {
 		counter, err := strconv.Atoi(secret.Labels[common.WatchSecretLabel])
 		if err != nil {
-			log.Error(err, "failed to convert label value to integer")
-			return
+			return err
 		}
 		if counter == 1 {
 			log.Info(fmt.Sprintf("deleting watch label from secret %s", secret.UID))
@@ -293,8 +291,9 @@ func DecreaseSecretWatchLabel(ctx context.Context, k8sClient client.Client, name
 		} else {
 			secret.Labels[common.WatchSecretLabel] = strconv.Itoa(counter - 1)
 		}
-		if err := k8sClient.Update(ctx, secret); err != nil {
-			log.Error(err, "failed to update secret with watch label")
+		if err = k8sClient.Update(ctx, secret); err != nil {
+			return err
 		}
 	}
+	return nil
 }
