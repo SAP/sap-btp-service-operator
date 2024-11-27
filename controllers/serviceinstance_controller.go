@@ -342,7 +342,10 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, serviceI
 		}
 		for labelKey := range serviceInstance.Labels {
 			if strings.HasPrefix(labelKey, common.InstanceSecretLabel) {
-				utils.DecreaseSecretWatchLabel(ctx, r.Client, serviceInstance.Namespace, labelKey)
+				err := utils.DecreaseSecretWatchLabel(ctx, r.Client, serviceInstance.Namespace, serviceInstance.Labels[labelKey])
+				if err != nil {
+					return ctrl.Result{}, err
+				}
 			}
 		}
 		log.Info("Instance was deleted successfully, removing finalizer")
