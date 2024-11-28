@@ -638,16 +638,21 @@ func (r *ServiceInstanceReconciler) buildSMRequestParameters(ctx context.Context
 	} else {
 		if serviceInstance.Labels != nil {
 			// remove all secret labels
+			keysToDelete := []string{}
 			for key := range serviceInstance.Labels {
 				if strings.HasPrefix(key, common.InstanceSecretLabel) {
 					shouldUpdate = true
+					keysToDelete = append(keysToDelete, key)
 					err = utils.RemoveSecretWatch(ctx, r.Client, serviceInstance.Namespace, serviceInstance.Labels[key], serviceInstance.Name)
 					if err != nil {
 						log.Error(err, fmt.Sprintf("failed to decrease secret watch label with key %s", key))
 						return nil, err
 					}
-					delete(serviceInstance.Labels, key)
 				}
+			}
+			// Perform deletions after the iteration
+			for _, key := range keysToDelete {
+				delete(serviceInstance.Labels, key)
 			}
 		}
 	}
