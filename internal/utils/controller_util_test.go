@@ -231,7 +231,7 @@ var _ = Describe("Controller Util", func() {
 
 			Expect(IsSecretWatched(updatedSecret)).To(BeTrue())
 			// Verify the annotation was added
-			Expect(updatedSecret.Annotations[common.WatchSecretLabel+name]).To(Equal("true"))
+			Expect(updatedSecret.Annotations[common.WatchSecretLabel+common.Separator+name]).To(Equal("true"))
 
 			err = AddSecretHaveWatch(ctx, secret, k8sClient, "new-name")
 			Expect(err).ToNot(HaveOccurred())
@@ -241,7 +241,7 @@ var _ = Describe("Controller Util", func() {
 
 			Expect(IsSecretWatched(updatedSecret)).To(BeTrue())
 			// Verify the annotation was added
-			Expect(updatedSecret.Annotations[common.WatchSecretLabel+"new-name"]).To(Equal("true"))
+			Expect(updatedSecret.Annotations[common.WatchSecretLabel+common.Separator+"new-name"]).To(Equal("true"))
 
 			err = RemoveSecretWatch(ctx, k8sClient, secret.Namespace, secret.Name, name)
 			Expect(err).ToNot(HaveOccurred())
@@ -249,8 +249,8 @@ var _ = Describe("Controller Util", func() {
 			err = k8sClient.Get(ctx, types.NamespacedName{Name: "test-secret", Namespace: "default"}, updatedSecret)
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(updatedSecret.Annotations[common.WatchSecretLabel+"new-name"]).To(Equal("true"))
-			_, exist := updatedSecret.Annotations[common.WatchSecretLabel+name]
+			Expect(updatedSecret.Annotations[common.WatchSecretLabel+common.Separator+"new-name"]).To(Equal("true"))
+			_, exist := updatedSecret.Annotations[common.WatchSecretLabel+common.Separator+name]
 			Expect(exist).To(BeFalse())
 
 			Expect(IsSecretWatched(updatedSecret)).To(BeTrue())

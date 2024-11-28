@@ -208,7 +208,7 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	if err != nil {
 		// if parameters are invalid there is nothing we can do, the user should fix it according to the error message in the condition
 		log.Error(err, "failed to parse instance parameters")
-		return utils.MarkAsNonTransientError(ctx, r.Client, smClientTypes.CREATE, err, serviceInstance)
+		return utils.MarkAsTransientError(ctx, r.Client, smClientTypes.CREATE, err, serviceInstance)
 	}
 
 	provision, provisionErr := smClient.Provision(&smClientTypes.ServiceInstance{
@@ -608,14 +608,14 @@ func (r *ServiceInstanceReconciler) buildSMRequestParameters(ctx context.Context
 			}
 		}
 		for key := range newSecretsMap {
-			if _, ok := existingSecrets[common.InstanceSecretLabel+"-"+key]; ok {
+			if _, ok := existingSecrets[common.InstanceSecretLabel+common.Separator+key]; ok {
 				// this secret was already on the instance and should stay
-				existingSecrets[common.InstanceSecretLabel+"-"+key] = "true"
+				existingSecrets[common.InstanceSecretLabel+common.Separator+key] = "true"
 			} else {
 				// this is a new secret on the instance
 				shouldUpdate = true
 				secret := newSecretsMap[key]
-				serviceInstance.Labels[common.InstanceSecretLabel+"-"+key] = secret.Name
+				serviceInstance.Labels[common.InstanceSecretLabel+common.Separator+key] = secret.Name
 				err = utils.AddSecretHaveWatch(ctx, secret, r.Client, serviceInstance.Name)
 				if err != nil {
 					log.Error(err, fmt.Sprintf("failed to increase secret watch label with key %s", key))
@@ -638,7 +638,7 @@ func (r *ServiceInstanceReconciler) buildSMRequestParameters(ctx context.Context
 	} else {
 		if serviceInstance.Labels != nil {
 			// remove all secret labels
-			keysToDelete := []string{}
+			var keysToDelete []string
 			for key := range serviceInstance.Labels {
 				if strings.HasPrefix(key, common.InstanceSecretLabel) {
 					shouldUpdate = true
@@ -855,7 +855,7 @@ type SecretPredicate struct {
 func (r *ServiceInstanceReconciler) findRequestsForSecret(ctx context.Context, secret client.Object) []reconcile.Request {
 	instancesToUpdate := make([]reconcile.Request, 0)
 	var instances v1.ServiceInstanceList
-	labelSelector := client.MatchingLabels{common.InstanceSecretLabel + "-" + string(secret.GetUID()): "true"}
+	labelSelector := client.MatchingLabels{common.InstanceSecretLabel + common.Separator + string(secret.GetUID()): "true"}
 	if err := r.Client.List(ctx, &instances, labelSelector); err != nil {
 		r.Log.Error(err, "failed to list service instances")
 		return nil

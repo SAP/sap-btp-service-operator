@@ -252,8 +252,8 @@ func AddSecretHaveWatch(ctx context.Context, secret *v12.Secret, k8sClient clien
 		if secret.Annotations == nil {
 			secret.Annotations = make(map[string]string)
 		}
-		if _, exists := secret.Annotations[common.WatchSecretLabel+instanceName]; !exists {
-			secret.Annotations[common.WatchSecretLabel+instanceName] = "true"
+		if _, exists := secret.Annotations[common.WatchSecretLabel+common.Separator+instanceName]; !exists {
+			secret.Annotations[common.WatchSecretLabel+common.Separator+instanceName] = "true"
 			if err := k8sClient.Update(ctx, secret); err != nil {
 				return err
 			}
@@ -271,8 +271,8 @@ func RemoveSecretWatch(ctx context.Context, k8sClient client.Client, namespace s
 	if secret.Annotations == nil {
 		return nil
 	}
-	if _, exists := secret.Annotations[common.WatchSecretLabel+instanceName]; exists {
-		delete(secret.Annotations, common.WatchSecretLabel+instanceName)
+	if _, exists := secret.Annotations[common.WatchSecretLabel+common.Separator+instanceName]; exists {
+		delete(secret.Annotations, common.WatchSecretLabel+common.Separator+instanceName)
 		if err := k8sClient.Update(ctx, secret); err != nil {
 			return err
 		}
