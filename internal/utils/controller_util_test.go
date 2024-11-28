@@ -202,7 +202,7 @@ var _ = Describe("Controller Util", func() {
 		})
 	})
 
-	Context("IncreaseSecretHaveWatchLabel", func() {
+	Context("AddSecretHaveWatch", func() {
 		It("should add the watch label to the secret if it is missing", func() {
 			// Create a fake client
 
@@ -215,40 +215,53 @@ var _ = Describe("Controller Util", func() {
 			}
 			err := k8sClient.Create(ctx, secret)
 			Expect(err).ToNot(HaveOccurred())
+			err = k8sClient.Get(ctx, types.NamespacedName{Name: "test-secret", Namespace: "default"}, secret)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(IsSecretWatched(secret)).To(BeFalse())
+
 			// Call the function
-			IncreaseSecretHaveWatchLabel(ctx, secret, k8sClient)
+			name := "instancedName"
+			err = AddSecretHaveWatch(ctx, secret, k8sClient, name)
+			Expect(err).ToNot(HaveOccurred())
 
 			// Get the updated secret
 			updatedSecret := &corev1.Secret{}
 			err = k8sClient.Get(ctx, types.NamespacedName{Name: "test-secret", Namespace: "default"}, updatedSecret)
 			Expect(err).ToNot(HaveOccurred())
 
-			// Verify the label was added
-			Expect(updatedSecret.Labels[common.WatchSecretLabel]).To(Equal("1"))
+			Expect(IsSecretWatched(updatedSecret)).To(BeTrue())
+			// Verify the annotation was added
+			Expect(updatedSecret.Annotations[common.WatchSecretLabel+name]).To(Equal("true"))
 
-			IncreaseSecretHaveWatchLabel(ctx, secret, k8sClient)
+			err = AddSecretHaveWatch(ctx, secret, k8sClient, "new-name")
+			Expect(err).ToNot(HaveOccurred())
 
 			err = k8sClient.Get(ctx, types.NamespacedName{Name: "test-secret", Namespace: "default"}, updatedSecret)
 			Expect(err).ToNot(HaveOccurred())
 
-			// Verify the label was added
-			Expect(updatedSecret.Labels[common.WatchSecretLabel]).To(Equal("2"))
+			Expect(IsSecretWatched(updatedSecret)).To(BeTrue())
+			// Verify the annotation was added
+			Expect(updatedSecret.Annotations[common.WatchSecretLabel+"new-name"]).To(Equal("true"))
 
-			DecreaseSecretWatchLabel(ctx, k8sClient, secret.Namespace, secret.Name)
+			err = RemoveSecretWatch(ctx, k8sClient, secret.Namespace, secret.Name, name)
+			Expect(err).ToNot(HaveOccurred())
 
 			err = k8sClient.Get(ctx, types.NamespacedName{Name: "test-secret", Namespace: "default"}, updatedSecret)
 			Expect(err).ToNot(HaveOccurred())
 
-			// Verify the label was added
-			Expect(updatedSecret.Labels[common.WatchSecretLabel]).To(Equal("1"))
+			Expect(updatedSecret.Annotations[common.WatchSecretLabel+"new-name"]).To(Equal("true"))
+			_, exist := updatedSecret.Annotations[common.WatchSecretLabel+name]
+			Expect(exist).To(BeFalse())
 
-			DecreaseSecretWatchLabel(ctx, k8sClient, secret.Namespace, secret.Name)
+			Expect(IsSecretWatched(updatedSecret)).To(BeTrue())
+
+			err = RemoveSecretWatch(ctx, k8sClient, secret.Namespace, secret.Name, "new-name")
+			Expect(err).ToNot(HaveOccurred())
 
 			err = k8sClient.Get(ctx, types.NamespacedName{Name: "test-secret", Namespace: "default"}, updatedSecret)
 			Expect(err).ToNot(HaveOccurred())
 
-			// Verify the label was added
-			Expect(updatedSecret.Labels[common.WatchSecretLabel]).To(Equal(""))
+			Expect(IsSecretWatched(updatedSecret)).To(BeFalse())
 		})
 	})
 })

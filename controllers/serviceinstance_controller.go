@@ -179,10 +179,7 @@ func (r *ServiceInstanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				return false
 			},
 			UpdateFunc: func(e event.UpdateEvent) bool {
-				if _, ok := e.ObjectNew.GetLabels()[common.WatchSecretLabel]; !ok {
-					return false
-				}
-				return isSecretDataChanged(e)
+				return utils.IsSecretWatched(e.ObjectNew) && isSecretDataChanged(e)
 			},
 			DeleteFunc: func(e event.DeleteEvent) bool {
 				return false
@@ -342,8 +339,9 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, serviceI
 		}
 		for labelKey := range serviceInstance.Labels {
 			if strings.HasPrefix(labelKey, common.InstanceSecretLabel) {
-				err := utils.DecreaseSecretWatchLabel(ctx, r.Client, serviceInstance.Namespace, serviceInstance.Labels[labelKey])
+				err = utils.RemoveSecretWatch(ctx, r.Client, serviceInstance.Namespace, serviceInstance.Labels[labelKey], serviceInstance.Name)
 				if err != nil {
+					log.Error(err, fmt.Sprintf("failed to decrease secret watch label with key %s", labelKey))
 					return ctrl.Result{}, err
 				}
 			}
@@ -593,6 +591,10 @@ func (r *ServiceInstanceReconciler) handleInstanceSharingError(ctx context.Conte
 func (r *ServiceInstanceReconciler) buildSMRequestParameters(ctx context.Context, serviceInstance *v1.ServiceInstance) ([]byte, error) {
 	log := utils.GetLogger(ctx)
 	instanceParameters, newSecretsMap, err := utils.BuildSMRequestParameters(serviceInstance.Namespace, serviceInstance.Spec.Parameters, serviceInstance.Spec.ParametersFrom)
+	if err != nil {
+		log.Error(err, "failed to build instance parameters")
+		return nil, err
+	}
 	shouldUpdate := false
 	if serviceInstance.IsSubscribedToSecretKeyRefChange() {
 		existingSecrets := make(map[string]string)
@@ -614,19 +616,23 @@ func (r *ServiceInstanceReconciler) buildSMRequestParameters(ctx context.Context
 				shouldUpdate = true
 				secret := newSecretsMap[key]
 				serviceInstance.Labels[common.InstanceSecretLabel+"-"+key] = secret.Name
-				utils.IncreaseSecretHaveWatchLabel(ctx, secret, r.Client)
+				err = utils.AddSecretHaveWatch(ctx, secret, r.Client, serviceInstance.Name)
+				if err != nil {
+					log.Error(err, fmt.Sprintf("failed to increase secret watch label with key %s", key))
+					return nil, err
+				}
 			}
 		}
 		for key := range existingSecrets {
 			if existingSecrets[key] == "false" {
 				// this secret is not on the instance anymore and should be deleted
 				shouldUpdate = true
-				err = utils.DecreaseSecretWatchLabel(ctx, r.Client, serviceInstance.Namespace, serviceInstance.Labels[key])
+				err = utils.RemoveSecretWatch(ctx, r.Client, serviceInstance.Namespace, serviceInstance.Labels[key], serviceInstance.Name)
 				if err != nil {
 					log.Error(err, fmt.Sprintf("failed to decrease secret watch label with key %s", key))
-				} else {
-					delete(serviceInstance.Labels, key)
+					return nil, err
 				}
+				delete(serviceInstance.Labels, key)
 			}
 		}
 	} else {
@@ -635,12 +641,12 @@ func (r *ServiceInstanceReconciler) buildSMRequestParameters(ctx context.Context
 			for key := range serviceInstance.Labels {
 				if strings.HasPrefix(key, common.InstanceSecretLabel) {
 					shouldUpdate = true
-					err = utils.DecreaseSecretWatchLabel(ctx, r.Client, serviceInstance.Namespace, serviceInstance.Labels[key])
+					err = utils.RemoveSecretWatch(ctx, r.Client, serviceInstance.Namespace, serviceInstance.Labels[key], serviceInstance.Name)
 					if err != nil {
 						log.Error(err, fmt.Sprintf("failed to decrease secret watch label with key %s", key))
-					} else {
-						delete(serviceInstance.Labels, key)
+						return nil, err
 					}
+					delete(serviceInstance.Labels, key)
 				}
 			}
 		}

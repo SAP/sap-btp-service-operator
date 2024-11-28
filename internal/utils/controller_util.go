@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -248,52 +247,45 @@ func serialize(value interface{}) ([]byte, format, error) {
 	return data, JSON, nil
 }
 
-func IncreaseSecretHaveWatchLabel(ctx context.Context, secret *v12.Secret, k8sClient client.Client) {
-	log := GetLogger(ctx)
+func AddSecretHaveWatch(ctx context.Context, secret *v12.Secret, k8sClient client.Client, instanceName string) error {
 	if secret != nil {
-		if secret.Labels == nil {
-			secret.Labels = make(map[string]string)
+		if secret.Annotations == nil {
+			secret.Annotations = make(map[string]string)
 		}
-		if _, exists := secret.Labels[common.WatchSecretLabel]; exists {
-			counter, err := strconv.Atoi(secret.Labels[common.WatchSecretLabel])
-			if err != nil {
-				log.Error(err, "failed to convert label value to integer")
-				return
+		if _, exists := secret.Annotations[common.WatchSecretLabel+instanceName]; !exists {
+			secret.Annotations[common.WatchSecretLabel+instanceName] = "true"
+			if err := k8sClient.Update(ctx, secret); err != nil {
+				return err
 			}
-			secret.Labels[common.WatchSecretLabel] = strconv.Itoa(counter + 1)
-		} else {
-			secret.Labels[common.WatchSecretLabel] = "1"
-		}
-		if err := k8sClient.Update(ctx, secret); err != nil {
-			log.Error(err, "failed to update secret with watch label")
 		}
 	}
+	return nil
 }
 
-func DecreaseSecretWatchLabel(ctx context.Context, k8sClient client.Client, namespace string, name string) error {
-	log := GetLogger(ctx)
+func RemoveSecretWatch(ctx context.Context, k8sClient client.Client, namespace string, name string, instanceName string) error {
 	secret := &v12.Secret{}
 	err := k8sClient.Get(ctx, apimachinerytypes.NamespacedName{Name: name, Namespace: namespace}, secret)
 	if err != nil {
 		return err
 	}
-	if secret.Labels == nil {
+	if secret.Annotations == nil {
 		return nil
 	}
-	if _, exists := secret.Labels[common.WatchSecretLabel]; exists {
-		counter, err := strconv.Atoi(secret.Labels[common.WatchSecretLabel])
-		if err != nil {
-			return err
-		}
-		if counter == 1 {
-			log.Info(fmt.Sprintf("deleting watch label from secret %s", secret.UID))
-			delete(secret.Labels, common.WatchSecretLabel)
-		} else {
-			secret.Labels[common.WatchSecretLabel] = strconv.Itoa(counter - 1)
-		}
-		if err = k8sClient.Update(ctx, secret); err != nil {
+	if _, exists := secret.Annotations[common.WatchSecretLabel+instanceName]; exists {
+		delete(secret.Annotations, common.WatchSecretLabel+instanceName)
+		if err := k8sClient.Update(ctx, secret); err != nil {
 			return err
 		}
 	}
+
 	return nil
+}
+
+func IsSecretWatched(secret client.Object) bool {
+	for key := range secret.GetAnnotations() {
+		if strings.HasPrefix(key, common.WatchSecretLabel) {
+			return true
+		}
+	}
+	return false
 }
