@@ -122,6 +122,9 @@ type ServiceInstanceStatus struct {
 
 	// The subaccount id of the service instance
 	SubaccountID string `json:"subaccountID,omitempty"`
+
+	// if true need to update instance
+	SecretChange bool `json:"secretChange,omitempty"`
 }
 
 // +kubebuilder:object:root=true

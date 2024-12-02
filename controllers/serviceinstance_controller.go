@@ -23,19 +23,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"reflect"
 	"strings"
 
-	"k8s.io/apimachinery/pkg/types"
-
-	corev1 "k8s.io/api/core/v1"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
-	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/SAP/sap-btp-service-operator/api/common"
 	"github.com/SAP/sap-btp-service-operator/internal/config"
@@ -173,31 +164,9 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 }
 
 func (r *ServiceInstanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	secretPredicate := SecretPredicate{
-		Funcs: predicate.Funcs{
-			CreateFunc: func(e event.CreateEvent) bool {
-				return false
-			},
-			UpdateFunc: func(e event.UpdateEvent) bool {
-				return utils.IsSecretWatched(e.ObjectNew) && isSecretDataChanged(e)
-			},
-			DeleteFunc: func(e event.DeleteEvent) bool {
-				return false
-			},
-			GenericFunc: func(e event.GenericEvent) bool {
-				return false
-			},
-		},
-	}
-
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1.ServiceInstance{}).
-		WithOptions(controller.Options{RateLimiter: workqueue.NewItemExponentialFailureRateLimiter(r.Config.RetryBaseDelay, r.Config.RetryMaxDelay)}).
-		Watches(
-			&corev1.Secret{},
-			handler.EnqueueRequestsFromMapFunc(r.findRequestsForSecret),
-			builder.WithPredicates(secretPredicate),
-		).Complete(r)
+		WithOptions(controller.Options{RateLimiter: workqueue.NewItemExponentialFailureRateLimiter(r.Config.RetryBaseDelay, r.Config.RetryMaxDelay)}).Complete(r)
 }
 
 func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient sm.Client, serviceInstance *v1.ServiceInstance) (ctrl.Result, error) {
@@ -283,7 +252,7 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 		serviceInstance.Status.OperationURL = operationURL
 		serviceInstance.Status.OperationType = smClientTypes.UPDATE
 		utils.SetInProgressConditions(ctx, smClientTypes.UPDATE, "", serviceInstance)
-
+		serviceInstance.Status.SecretChange = false
 		if err := utils.UpdateStatus(ctx, r.Client, serviceInstance); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -292,7 +261,7 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 	}
 	log.Info("Instance updated successfully")
 	utils.SetSuccessConditions(smClientTypes.UPDATE, serviceInstance)
-
+	serviceInstance.Status.SecretChange = false
 	return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceInstance)
 }
 
@@ -694,7 +663,7 @@ func isFinalState(ctx context.Context, serviceInstance *v1.ServiceInstance) bool
 		}
 		return false
 	}
-	if serviceInstance.Spec.SubscribeToSecretChanges != nil && *serviceInstance.Spec.SubscribeToSecretChanges {
+	if serviceInstance.Spec.SubscribeToSecretChanges != nil && *serviceInstance.Spec.SubscribeToSecretChanges && serviceInstance.Status.SecretChange {
 		log.Info("instance is not in final state, SubscribeToSecretChanges is true")
 		return false
 	}
@@ -850,36 +819,4 @@ func getErrorMsgFromLastOperation(status *smClientTypes.Operation) string {
 
 type SecretPredicate struct {
 	predicate.Funcs
-}
-
-func (r *ServiceInstanceReconciler) findRequestsForSecret(ctx context.Context, secret client.Object) []reconcile.Request {
-	instancesToUpdate := make([]reconcile.Request, 0)
-	var instances v1.ServiceInstanceList
-	labelSelector := client.MatchingLabels{common.InstanceSecretLabel + common.Separator + string(secret.GetUID()): "true"}
-	if err := r.Client.List(ctx, &instances, labelSelector); err != nil {
-		r.Log.Error(err, "failed to list service instances")
-		return nil
-	}
-	for _, instance := range instances.Items {
-		instancesToUpdate = append(instancesToUpdate, reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Name:      instance.Name,
-				Namespace: instance.Namespace,
-			},
-		})
-	}
-	return instancesToUpdate
-}
-
-func isSecretDataChanged(e event.UpdateEvent) bool {
-	// Type assert to *v1.Secret
-	oldSecret, okOld := e.ObjectOld.(*corev1.Secret)
-	newSecret, okNew := e.ObjectNew.(*corev1.Secret)
-	if !okOld || !okNew {
-		// If the objects are not Secrets, skip the event
-		return false
-	}
-
-	// Compare the Data field (byte slices)
-	return !reflect.DeepEqual(oldSecret.Data, newSecret.Data)
 }

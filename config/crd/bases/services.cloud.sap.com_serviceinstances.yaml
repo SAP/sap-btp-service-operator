@@ -259,6 +259,9 @@ spec:
               ready:
                 description: Indicates whether instance is ready for usage
                 type: string
+              secretChange:
+                description: if true need to update instance
+                type: boolean
               subaccountID:
                 description: The subaccount id of the service instance
                 type: string
