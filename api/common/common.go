@@ -2,6 +2,7 @@ package common
 
 import (
 	"fmt"
+	"k8s.io/apimachinery/pkg/api/meta"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -74,11 +75,18 @@ type SAPBTPResource interface {
 	GetParameters() *runtime.RawExtension
 	GetStatus() interface{}
 	SetStatus(status interface{})
-	GetObservedGeneration() int64
-	SetObservedGeneration(int64)
 	DeepClone() SAPBTPResource
 	SetReady(metav1.ConditionStatus)
 	GetReady() metav1.ConditionStatus
 	GetAnnotations() map[string]string
 	SetAnnotations(map[string]string)
+}
+
+func GetObservedGeneration(obj SAPBTPResource) int64 {
+	cond := meta.FindStatusCondition(obj.GetConditions(), ConditionSucceeded)
+	observedGen := int64(0)
+	if cond != nil {
+		observedGen = cond.ObservedGeneration
+	}
+	return observedGen
 }

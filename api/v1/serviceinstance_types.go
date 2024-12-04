@@ -111,9 +111,6 @@ type ServiceInstanceStatus struct {
 	// Service instance conditions
 	Conditions []metav1.Condition `json:"conditions"`
 
-	// Last generation that was acted on
-	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
-
 	// Indicates whether instance is ready for usage
 	Ready metav1.ConditionStatus `json:"ready,omitempty"`
 
@@ -170,14 +167,6 @@ func (si *ServiceInstance) GetStatus() interface{} {
 
 func (si *ServiceInstance) SetStatus(status interface{}) {
 	si.Status = status.(ServiceInstanceStatus)
-}
-
-func (si *ServiceInstance) GetObservedGeneration() int64 {
-	return si.Status.ObservedGeneration
-}
-
-func (si *ServiceInstance) SetObservedGeneration(newObserved int64) {
-	si.Status.ObservedGeneration = newObserved
 }
 
 func (si *ServiceInstance) DeepClone() common.SAPBTPResource {

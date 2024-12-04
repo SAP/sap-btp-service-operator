@@ -91,8 +91,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	serviceBinding = serviceBinding.DeepCopy()
-	log.Info(fmt.Sprintf("Current generation is %v and observed is %v", serviceBinding.Generation, serviceBinding.GetObservedGeneration()))
-	serviceBinding.SetObservedGeneration(serviceBinding.Generation)
+	log.Info(fmt.Sprintf("Current generation is %v and observed is %v", serviceBinding.Generation, common.GetObservedGeneration(serviceBinding)))
 
 	if len(serviceBinding.GetConditions()) == 0 {
 		if err := utils.InitConditions(ctx, r.Client, serviceBinding); err != nil {
@@ -182,7 +181,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	if utils.IsInProgress(serviceInstance) {
 		log.Info(fmt.Sprintf("Service instance with k8s name %s is not ready for binding yet", serviceInstance.Name))
-		utils.SetInProgressConditions(ctx, smClientTypes.CREATE, fmt.Sprintf("creation in progress, waiting for service instance '%s' to be ready", serviceBinding.Spec.ServiceInstanceName), serviceBinding)
+		utils.SetInProgressConditions(ctx, smClientTypes.CREATE, fmt.Sprintf("creation in progress, waiting for service instance '%s' to be ready", serviceBinding.Spec.ServiceInstanceName), serviceBinding, false)
 
 		return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
 	}
@@ -242,7 +241,7 @@ func (r *ServiceBindingReconciler) updateSecret(ctx context.Context, serviceBind
 				return err
 			}
 			log.Info("Updating binding", "bindingID", smBinding.ID)
-			utils.SetSuccessConditions(smClientTypes.UPDATE, serviceBinding)
+			utils.SetSuccessConditions(smClientTypes.UPDATE, serviceBinding, false)
 		}
 	}
 	return nil
@@ -291,7 +290,7 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 		log.Info("Create smBinding request is async")
 		serviceBinding.Status.OperationURL = operationURL
 		serviceBinding.Status.OperationType = smClientTypes.CREATE
-		utils.SetInProgressConditions(ctx, smClientTypes.CREATE, "", serviceBinding)
+		utils.SetInProgressConditions(ctx, smClientTypes.CREATE, "", serviceBinding, false)
 		if err := utils.UpdateStatus(ctx, r.Client, serviceBinding); err != nil {
 			log.Error(err, "unable to update ServiceBinding status")
 			return ctrl.Result{}, err
@@ -313,7 +312,7 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 	serviceBinding.Status.BindingID = smBinding.ID
 	serviceBinding.Status.SubaccountID = subaccountID
 	serviceBinding.Status.Ready = metav1.ConditionTrue
-	utils.SetSuccessConditions(smClientTypes.CREATE, serviceBinding)
+	utils.SetSuccessConditions(smClientTypes.CREATE, serviceBinding, false)
 	log.Info("Updating binding", "bindingID", smBinding.ID)
 
 	return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
@@ -336,7 +335,7 @@ func (r *ServiceBindingReconciler) delete(ctx context.Context, serviceBinding *v
 			if smBinding != nil {
 				log.Info("binding exists in SM continue with deletion")
 				serviceBinding.Status.BindingID = smBinding.ID
-				utils.SetInProgressConditions(ctx, smClientTypes.DELETE, "delete after recovery", serviceBinding)
+				utils.SetInProgressConditions(ctx, smClientTypes.DELETE, "delete after recovery", serviceBinding, false)
 				return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
 			}
 
@@ -367,7 +366,7 @@ func (r *ServiceBindingReconciler) delete(ctx context.Context, serviceBinding *v
 			log.Info("Deleting binding async")
 			serviceBinding.Status.OperationURL = operationURL
 			serviceBinding.Status.OperationType = smClientTypes.DELETE
-			utils.SetInProgressConditions(ctx, smClientTypes.DELETE, "", serviceBinding)
+			utils.SetInProgressConditions(ctx, smClientTypes.DELETE, "", serviceBinding, false)
 			if err := utils.UpdateStatus(ctx, r.Client, serviceBinding); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -392,7 +391,7 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, serviceBinding *v1.
 	status, statusErr := smClient.Status(serviceBinding.Status.OperationURL, nil)
 	if statusErr != nil {
 		log.Info(fmt.Sprintf("failed to fetch operation, got error from SM: %s", statusErr.Error()), "operationURL", serviceBinding.Status.OperationURL)
-		utils.SetInProgressConditions(ctx, serviceBinding.Status.OperationType, string(smClientTypes.INPROGRESS), serviceBinding)
+		utils.SetInProgressConditions(ctx, serviceBinding.Status.OperationType, string(smClientTypes.INPROGRESS), serviceBinding, false)
 		freshStatus := v1.ServiceBindingStatus{
 			Conditions: serviceBinding.GetConditions(),
 		}
@@ -414,7 +413,7 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, serviceBinding *v1.
 		fallthrough
 	case smClientTypes.PENDING:
 		if len(status.Description) != 0 {
-			utils.SetInProgressConditions(ctx, status.Type, status.Description, serviceBinding)
+			utils.SetInProgressConditions(ctx, status.Type, status.Description, serviceBinding, true)
 			if err := utils.UpdateStatus(ctx, r.Client, serviceBinding); err != nil {
 				log.Error(err, "unable to update ServiceBinding polling description")
 				return ctrl.Result{}, err
@@ -423,7 +422,7 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, serviceBinding *v1.
 		return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, nil
 	case smClientTypes.FAILED:
 		// non transient error - should not retry
-		utils.SetFailureConditions(status.Type, status.Description, serviceBinding)
+		utils.SetFailureConditions(status.Type, status.Description, serviceBinding, true)
 		if serviceBinding.Status.OperationType == smClientTypes.DELETE {
 			serviceBinding.Status.OperationURL = ""
 			serviceBinding.Status.OperationType = ""
@@ -438,7 +437,7 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, serviceBinding *v1.
 			return ctrl.Result{}, fmt.Errorf(errMsg)
 		}
 	case smClientTypes.SUCCEEDED:
-		utils.SetSuccessConditions(status.Type, serviceBinding)
+		utils.SetSuccessConditions(status.Type, serviceBinding, true)
 		switch serviceBinding.Status.OperationType {
 		case smClientTypes.CREATE:
 			smBinding, err := smClient.GetBindingByID(serviceBinding.Status.BindingID, nil)
@@ -453,7 +452,7 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, serviceBinding *v1.
 			if err := r.storeBindingSecret(ctx, serviceBinding, smBinding); err != nil {
 				return r.handleSecretError(ctx, smClientTypes.CREATE, err, serviceBinding)
 			}
-			utils.SetSuccessConditions(status.Type, serviceBinding)
+			utils.SetSuccessConditions(status.Type, serviceBinding, false)
 		case smClientTypes.DELETE:
 			return r.deleteSecretAndRemoveFinalizer(ctx, serviceBinding)
 		}
@@ -495,10 +494,6 @@ func (r *ServiceBindingReconciler) getBindingForRecovery(ctx context.Context, sm
 func (r *ServiceBindingReconciler) maintain(ctx context.Context, binding *v1.ServiceBinding) (ctrl.Result, error) {
 	log := utils.GetLogger(ctx)
 	shouldUpdateStatus := false
-	if binding.Generation != binding.Status.ObservedGeneration {
-		binding.SetObservedGeneration(binding.Generation)
-		shouldUpdateStatus = true
-	}
 	if !utils.IsFailed(binding) {
 		secret, err := r.getSecret(ctx, binding.Namespace, binding.Spec.SecretName)
 		if err != nil {
@@ -507,7 +502,7 @@ func (r *ServiceBindingReconciler) maintain(ctx context.Context, binding *v1.Ser
 				log.Info(fmt.Sprintf("secret not found recovering binding %s", binding.Name))
 				binding.Status.BindingID = ""
 				binding.Status.Ready = metav1.ConditionFalse
-				utils.SetInProgressConditions(ctx, smClientTypes.CREATE, "recreating deleted secret", binding)
+				utils.SetInProgressConditions(ctx, smClientTypes.CREATE, "recreating deleted secret", binding, false)
 				shouldUpdateStatus = true
 				r.Recorder.Event(binding, corev1.EventTypeWarning, "SecretDeleted", "SecretDeleted")
 			} else {
@@ -565,7 +560,6 @@ func (r *ServiceBindingReconciler) setOwner(ctx context.Context, serviceInstance
 }
 
 func (r *ServiceBindingReconciler) resyncBindingStatus(ctx context.Context, k8sBinding *v1.ServiceBinding, smBinding *smClientTypes.ServiceBinding) {
-	k8sBinding.Status.ObservedGeneration = k8sBinding.Generation
 	k8sBinding.Status.BindingID = smBinding.ID
 	k8sBinding.Status.InstanceID = smBinding.ServiceInstanceID
 	k8sBinding.Status.OperationURL = ""
@@ -587,11 +581,11 @@ func (r *ServiceBindingReconciler) resyncBindingStatus(ctx context.Context, k8sB
 	case smClientTypes.INPROGRESS:
 		k8sBinding.Status.OperationURL = sm.BuildOperationURL(smBinding.LastOperation.ID, smBinding.ID, smClientTypes.ServiceBindingsURL)
 		k8sBinding.Status.OperationType = smBinding.LastOperation.Type
-		utils.SetInProgressConditions(ctx, smBinding.LastOperation.Type, smBinding.LastOperation.Description, k8sBinding)
+		utils.SetInProgressConditions(ctx, smBinding.LastOperation.Type, smBinding.LastOperation.Description, k8sBinding, false)
 	case smClientTypes.SUCCEEDED:
-		utils.SetSuccessConditions(operationType, k8sBinding)
+		utils.SetSuccessConditions(operationType, k8sBinding, false)
 	case smClientTypes.FAILED:
-		utils.SetFailureConditions(operationType, description, k8sBinding)
+		utils.SetFailureConditions(operationType, description, k8sBinding, false)
 	}
 }
 
@@ -988,7 +982,7 @@ func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, bindin
 
 	binding.Status.BindingID = ""
 	binding.Status.Ready = metav1.ConditionFalse
-	utils.SetInProgressConditions(ctx, smClientTypes.CREATE, "rotating binding credentials", binding)
+	utils.SetInProgressConditions(ctx, smClientTypes.CREATE, "rotating binding credentials", binding, false)
 	utils.SetCredRotationInProgressConditions(common.CredRotating, "", binding)
 	return utils.UpdateStatus(ctx, r.Client, binding)
 }

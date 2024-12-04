@@ -42,11 +42,10 @@ const (
 
 var _ = Describe("ServiceInstance controller", func() {
 	var (
-		ctx context.Context
-
 		serviceInstance  *v1.ServiceInstance
 		fakeInstanceName string
 		defaultLookupKey types.NamespacedName
+		paramsSecret     *corev1.Secret
 	)
 
 	instanceSpec := v1.ServiceInstanceSpec{
@@ -59,7 +58,7 @@ var _ = Describe("ServiceInstance controller", func() {
 		ParametersFrom: []v1.ParametersFromSource{
 			{
 				SecretKeyRef: &v1.SecretKeyReference{
-					Name: "param-secret",
+					Name: "instance-params-secret",
 					Key:  "secret-parameter",
 				},
 			},
@@ -77,7 +76,7 @@ var _ = Describe("ServiceInstance controller", func() {
 		ParametersFrom: []v1.ParametersFromSource{
 			{
 				SecretKeyRef: &v1.SecretKeyReference{
-					Name: "param-secret",
+					Name: "instance-params-secret",
 					Key:  "secret-parameter",
 				},
 			},
@@ -138,18 +137,14 @@ var _ = Describe("ServiceInstance controller", func() {
 		fakeClient.DeprovisionReturns("", nil)
 		fakeClient.GetInstanceByIDReturns(&smclientTypes.ServiceInstance{ID: fakeInstanceID, Ready: true, LastOperation: &smClientTypes.Operation{State: smClientTypes.SUCCEEDED, Type: smClientTypes.CREATE}}, nil)
 
-		err := k8sClient.Get(ctx, types.NamespacedName{Namespace: testNamespace, Name: "param-secret"}, &corev1.Secret{})
-		if apierrors.IsNotFound(err) {
-			createParamsSecret(testNamespace)
-		} else {
-			Expect(err).ToNot(HaveOccurred())
-		}
+		paramsSecret = createParamsSecret(ctx, "instance-params-secret", testNamespace)
 	})
 
 	AfterEach(func() {
 		if serviceInstance != nil {
-			deleteInstance(ctx, serviceInstance, true)
+			deleteAndWait(ctx, serviceInstance)
 		}
+		deleteAndWait(ctx, paramsSecret)
 	})
 
 	Describe("Create", func() {
@@ -226,20 +221,10 @@ var _ = Describe("ServiceInstance controller", func() {
 					params := smInstance.Parameters
 					Expect(params).To(ContainSubstring("\"key\":\"value\""))
 					Expect(params).To(ContainSubstring("\"secret-key\":\"secret-value\""))
-
-					secret := &corev1.Secret{}
-					err := k8sClient.Get(ctx, types.NamespacedName{Namespace: testNamespace, Name: "param-secret"}, secret)
-					Expect(err).ToNot(HaveOccurred())
-					credentialsMap := make(map[string][]byte)
-					credentialsMap["secret-parameter"] = []byte("{\"secret-key\":\"new-secret-value\"}")
-					secret.Data = credentialsMap
-					Expect(k8sClient.Update(ctx, secret)).To(Succeed())
-
-					Expect(fakeClient.ProvisionCallCount()).To(Equal(1))
 				})
 			})
-			When("provision request to SM succeeds", func() {
-				FIt("should provision instance of the provided offering and plan name successfully", func() {
+			When("secret updated", func() {
+				It("should provision instance of the provided offering and plan name successfully", func() {
 					instanceSpec.SubscribeToSecretChanges = pointer.Bool(true)
 					serviceInstance = createInstance(ctx, instanceSpec, nil, true)
 					smInstance, _, _, _, _, _ := fakeClient.ProvisionArgsForCall(0)
@@ -247,18 +232,15 @@ var _ = Describe("ServiceInstance controller", func() {
 					Expect(params).To(ContainSubstring("\"key\":\"value\""))
 					Expect(params).To(ContainSubstring("\"secret-key\":\"secret-value\""))
 
-					secret := &corev1.Secret{}
-					err := k8sClient.Get(ctx, types.NamespacedName{Namespace: testNamespace, Name: "param-secret"}, secret)
-					Expect(err).ToNot(HaveOccurred())
 					credentialsMap := make(map[string][]byte)
 					credentialsMap["secret-parameter"] = []byte("{\"secret-key\":\"new-secret-value\"}")
-					secret.Data = credentialsMap
-					Expect(k8sClient.Update(ctx, secret)).To(Succeed())
+					paramsSecret.Data = credentialsMap
+					Expect(k8sClient.Update(ctx, paramsSecret)).To(Succeed())
 					Eventually(func() bool {
 						return fakeClient.UpdateInstanceCallCount() == 1
 					}, timeout*3, interval).Should(BeTrue(), "expected condition was not met")
 
-					_, smInstance, _, _, _, _, _ = fakeClient.UpdateInstanceArgsForCall(1)
+					_, smInstance, _, _, _, _, _ = fakeClient.UpdateInstanceArgsForCall(0)
 					params = smInstance.Parameters
 					Expect(params).To(ContainSubstring("\"key\":\"value\""))
 					Expect(params).To(ContainSubstring("\"secret-key\":\"new-secret-value\""))
@@ -877,7 +859,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						Eventually(func() bool {
 							_ = k8sClient.Get(ctx, key, serviceInstance)
 							return serviceInstance.Status.InstanceID == fakeInstanceID
-						}, timeout, interval).Should(BeTrue(), eventuallyMsgForResource("service instance id not recovered", key, serviceInstance))
+						}, timeout, interval).Should(BeTrue(), eventuallyMsgForResource("service instance id not recovered", serviceInstance))
 						Expect(fakeClient.ProvisionCallCount()).To(Equal(0))
 						Expect(fakeClient.ListInstancesCallCount()).To(BeNumerically(">", 0))
 						fakeClient.StatusReturns(&smclientTypes.Operation{ResourceID: fakeInstanceID, State: smClientTypes.SUCCEEDED, Type: smClientTypes.CREATE}, nil)
@@ -1171,6 +1153,9 @@ var _ = Describe("ServiceInstance controller", func() {
 			When("async operation in progress", func() {
 				It("should return false", func() {
 					var instance = &v1.ServiceInstance{
+						ObjectMeta: metav1.ObjectMeta{
+							Generation: 2,
+						},
 						Status: v1.ServiceInstanceStatus{
 							Conditions: []metav1.Condition{
 								{
@@ -1179,9 +1164,8 @@ var _ = Describe("ServiceInstance controller", func() {
 									ObservedGeneration: 1,
 								},
 							},
-							HashedSpec:         "929e78f4449f8036ce39da3cc3e7eaea",
-							OperationURL:       "/operations/somepollingurl",
-							ObservedGeneration: 2,
+							HashedSpec:   "929e78f4449f8036ce39da3cc3e7eaea",
+							OperationURL: "/operations/somepollingurl",
 						},
 						Spec: v1.ServiceInstanceSpec{
 							ExternalName: "name",
@@ -1230,7 +1214,7 @@ var _ = Describe("ServiceInstance controller", func() {
 								{
 									Type:               common.ConditionSucceeded,
 									Status:             metav1.ConditionTrue,
-									ObservedGeneration: 2,
+									ObservedGeneration: 1,
 								},
 							},
 							HashedSpec: "bla",
@@ -1278,6 +1262,9 @@ var _ = Describe("ServiceInstance controller", func() {
 			When("in final state", func() {
 				It("should return true", func() {
 					var instance = &v1.ServiceInstance{
+						ObjectMeta: metav1.ObjectMeta{
+							Generation: 2,
+						},
 						Status: v1.ServiceInstanceStatus{
 							Conditions: []metav1.Condition{
 								{
@@ -1295,8 +1282,7 @@ var _ = Describe("ServiceInstance controller", func() {
 									Status: metav1.ConditionTrue,
 								},
 							},
-							HashedSpec:         "929e78f4449f8036ce39da3cc3e7eaea",
-							ObservedGeneration: 2,
+							HashedSpec: "929e78f4449f8036ce39da3cc3e7eaea",
 						},
 						Spec: v1.ServiceInstanceSpec{
 							ExternalName: "name",

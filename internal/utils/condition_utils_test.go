@@ -120,7 +120,7 @@ var _ = Describe("Condition Utils", func() {
 		It("should set in-progress conditions", func() {
 			resource = getBinding()
 
-			SetInProgressConditions(ctx, smClientTypes.CREATE, "Pending", resource)
+			SetInProgressConditions(ctx, smClientTypes.CREATE, "Pending", resource, false)
 
 			// Add assertions to check the state of the resource after calling SetInProgressConditions
 			Expect(resource.GetConditions()).ToNot(BeEmpty())
@@ -133,7 +133,7 @@ var _ = Describe("Condition Utils", func() {
 			operationType := smClientTypes.CREATE
 			resource = getBinding()
 
-			SetSuccessConditions(operationType, resource)
+			SetSuccessConditions(operationType, resource, false)
 
 			// Add assertions to check the state of the resource after calling SetSuccessConditions
 			Expect(resource.GetConditions()).ToNot(BeEmpty())
@@ -160,7 +160,7 @@ var _ = Describe("Condition Utils", func() {
 		It("should set failure conditions", func() {
 			operationType := smClientTypes.CREATE
 			errorMessage := "Operation failed"
-			SetFailureConditions(operationType, errorMessage, resource)
+			SetFailureConditions(operationType, errorMessage, resource, false)
 			Expect(resource.GetConditions()).ToNot(BeEmpty())
 			Expect(meta.IsStatusConditionPresentAndEqual(resource.GetConditions(), common.ConditionReady, metav1.ConditionFalse)).To(BeTrue())
 		})
