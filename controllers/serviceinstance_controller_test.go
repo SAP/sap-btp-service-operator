@@ -232,6 +232,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					Expect(params).To(ContainSubstring("\"key\":\"value\""))
 					Expect(params).To(ContainSubstring("\"secret-key\":\"secret-value\""))
 
+					Expect(k8sClient.Get(ctx, getResourceNamespacedName(paramsSecret), paramsSecret)).To(Succeed())
 					credentialsMap := make(map[string][]byte)
 					credentialsMap["secret-parameter"] = []byte("{\"secret-key\":\"new-secret-value\"}")
 					paramsSecret.Data = credentialsMap
