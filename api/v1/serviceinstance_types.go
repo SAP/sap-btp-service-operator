@@ -124,7 +124,7 @@ type ServiceInstanceStatus struct {
 	SubaccountID string `json:"subaccountID,omitempty"`
 
 	// if true need to update instance
-	SecretChange bool `json:"secretChange,omitempty"`
+	ForceReconcile bool `json:"forceReconcile,omitempty"`
 }
 
 // +kubebuilder:object:root=true

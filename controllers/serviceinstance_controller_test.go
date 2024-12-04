@@ -226,9 +226,44 @@ var _ = Describe("ServiceInstance controller", func() {
 					params := smInstance.Parameters
 					Expect(params).To(ContainSubstring("\"key\":\"value\""))
 					Expect(params).To(ContainSubstring("\"secret-key\":\"secret-value\""))
+
+					secret := &corev1.Secret{}
+					err := k8sClient.Get(ctx, types.NamespacedName{Namespace: testNamespace, Name: "param-secret"}, secret)
+					Expect(err).ToNot(HaveOccurred())
+					credentialsMap := make(map[string][]byte)
+					credentialsMap["secret-parameter"] = []byte("{\"secret-key\":\"new-secret-value\"}")
+					secret.Data = credentialsMap
+					Expect(k8sClient.Update(ctx, secret)).To(Succeed())
+
+					Expect(fakeClient.ProvisionCallCount()).To(Equal(1))
 				})
 			})
+			When("provision request to SM succeeds", func() {
+				FIt("should provision instance of the provided offering and plan name successfully", func() {
+					instanceSpec.SubscribeToSecretChanges = pointer.Bool(true)
+					serviceInstance = createInstance(ctx, instanceSpec, nil, true)
+					smInstance, _, _, _, _, _ := fakeClient.ProvisionArgsForCall(0)
+					params := smInstance.Parameters
+					Expect(params).To(ContainSubstring("\"key\":\"value\""))
+					Expect(params).To(ContainSubstring("\"secret-key\":\"secret-value\""))
 
+					secret := &corev1.Secret{}
+					err := k8sClient.Get(ctx, types.NamespacedName{Namespace: testNamespace, Name: "param-secret"}, secret)
+					Expect(err).ToNot(HaveOccurred())
+					credentialsMap := make(map[string][]byte)
+					credentialsMap["secret-parameter"] = []byte("{\"secret-key\":\"new-secret-value\"}")
+					secret.Data = credentialsMap
+					Expect(k8sClient.Update(ctx, secret)).To(Succeed())
+					Eventually(func() bool {
+						return fakeClient.UpdateInstanceCallCount() == 1
+					}, timeout*3, interval).Should(BeTrue(), "expected condition was not met")
+
+					_, smInstance, _, _, _, _, _ = fakeClient.UpdateInstanceArgsForCall(1)
+					params = smInstance.Parameters
+					Expect(params).To(ContainSubstring("\"key\":\"value\""))
+					Expect(params).To(ContainSubstring("\"secret-key\":\"new-secret-value\""))
+				})
+			})
 			When("provision request to SM fails", func() {
 				errMessage := "failed to provision instance"
 

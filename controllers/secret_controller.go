@@ -29,9 +29,11 @@ type SecretReconciler struct {
 	Log    logr.Logger
 }
 
-// +kubebuilder:rbac:groups=services.cloud.sap.com,resources=secret,verbs=update;patch;delete
-// +kubebuilder:rbac:groups=core,resources=events,verbs=update;patch;delete
-// +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=update
+// +kubebuilder:rbac:groups=services.cloud.sap.com,resources=servicebindings,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=services.cloud.sap.com,resources=servicebindings/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,resources=events,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;create;update
 
 func (r *SecretReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := r.Log.WithValues("secret", req.NamespacedName).WithValues("correlation_id", uuid.New().String())
@@ -48,7 +50,6 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 		// on deleted requests.
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-
 	var instances v1.ServiceInstanceList
 	labelSelector := client.MatchingLabels{common.InstanceSecretLabel + common.Separator + string(secret.GetUID()): secret.Name}
 	if err := r.Client.List(ctx, &instances, labelSelector); err != nil {
@@ -57,7 +58,7 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 	}
 	for _, instance := range instances.Items {
 		log.Info(fmt.Sprintf("waking up instance %s", instance.Name))
-		instance.Status.SecretChange = true
+		instance.Status.ForceReconcile = true
 		err := utils.UpdateStatus(ctx, r.Client, &instance)
 		if err != nil {
 			return reconcile.Result{}, err

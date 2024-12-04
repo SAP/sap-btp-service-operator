@@ -220,7 +220,6 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	log.Info(fmt.Sprintf("Instance provisioned successfully, instanceID: %s, subaccountID: %s", serviceInstance.Status.InstanceID,
 		serviceInstance.Status.SubaccountID))
 	utils.SetSuccessConditions(smClientTypes.CREATE, serviceInstance)
-
 	return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceInstance)
 }
 
@@ -252,7 +251,7 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 		serviceInstance.Status.OperationURL = operationURL
 		serviceInstance.Status.OperationType = smClientTypes.UPDATE
 		utils.SetInProgressConditions(ctx, smClientTypes.UPDATE, "", serviceInstance)
-		serviceInstance.Status.SecretChange = false
+		serviceInstance.Status.ForceReconcile = false
 		if err := utils.UpdateStatus(ctx, r.Client, serviceInstance); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -261,7 +260,7 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 	}
 	log.Info("Instance updated successfully")
 	utils.SetSuccessConditions(smClientTypes.UPDATE, serviceInstance)
-	serviceInstance.Status.SecretChange = false
+	serviceInstance.Status.ForceReconcile = false
 	return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceInstance)
 }
 
@@ -663,7 +662,7 @@ func isFinalState(ctx context.Context, serviceInstance *v1.ServiceInstance) bool
 		}
 		return false
 	}
-	if serviceInstance.Spec.SubscribeToSecretChanges != nil && *serviceInstance.Spec.SubscribeToSecretChanges && serviceInstance.Status.SecretChange {
+	if serviceInstance.Spec.SubscribeToSecretChanges != nil && *serviceInstance.Spec.SubscribeToSecretChanges && serviceInstance.Status.ForceReconcile {
 		log.Info("instance is not in final state, SubscribeToSecretChanges is true")
 		return false
 	}
@@ -681,7 +680,7 @@ func updateRequired(serviceInstance *v1.ServiceInstance) bool {
 	if cond != nil && cond.Reason == common.UpdateInProgress { //in case of transient error occurred
 		return true
 	}
-	if serviceInstance.Spec.SubscribeToSecretChanges != nil && *serviceInstance.Spec.SubscribeToSecretChanges {
+	if serviceInstance.Spec.SubscribeToSecretChanges != nil && *serviceInstance.Spec.SubscribeToSecretChanges && serviceInstance.Status.ForceReconcile {
 		return true
 	}
 
