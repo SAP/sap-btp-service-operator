@@ -433,7 +433,7 @@ var _ = Describe("ServiceBinding controller", func() {
 						fakeClient.BindReturns(nil, "", getNonTransientBrokerError(errorMessage))
 					})
 
-					FIt("should detect the error as non-transient and fail", func() {
+					It("should detect the error as non-transient and fail", func() {
 						binding, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "binding-external-name", "", false)
 						Expect(err).ToNot(HaveOccurred())
 						waitForResourceCondition(ctx, binding, common.ConditionSucceeded, metav1.ConditionFalse, common.CreateInProgress, errorMessage)
