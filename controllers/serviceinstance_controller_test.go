@@ -1275,7 +1275,7 @@ var _ = Describe("ServiceInstance controller", func() {
 	})
 
 	Context("secret watcher", func() {
-		When("secret updated", func() {
+		When("secret updated and instance watch secret", func() {
 			anotherInstanceName := "instance2"
 			var anotherInstance *v1.ServiceInstance
 			BeforeEach(func() {
@@ -1288,7 +1288,6 @@ var _ = Describe("ServiceInstance controller", func() {
 				}
 			})
 			It("should update instance with the secret change", func() {
-				instanceSpec.SubscribeToSecretChanges = pointer.Bool(true)
 				serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, true)
 				smInstance, _, _, _, _, _ := fakeClient.ProvisionArgsForCall(0)
 				checkParams(string(smInstance.Parameters), []string{"\"key\":\"value\"", "\"secret-key\":\"secret-value\""})
@@ -1309,7 +1308,6 @@ var _ = Describe("ServiceInstance controller", func() {
 				checkSecretAnnotationsAndLabels(ctx, k8sClient, paramsSecret, []*v1.ServiceInstance{})
 			})
 			It("should update two instances with the secret change", func() {
-				instanceSpec.SubscribeToSecretChanges = pointer.Bool(true)
 				serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, true)
 				smInstance, _, _, _, _, _ := fakeClient.ProvisionArgsForCall(0)
 				checkParams(string(smInstance.Parameters), []string{"\"key\":\"value\"", "\"secret-key\":\"secret-value\""})
@@ -1353,6 +1351,22 @@ var _ = Describe("ServiceInstance controller", func() {
 
 			})
 		})
+		When("secret updated and instance don't watch secret", func() {
+			It("should update instance with the secret change", func() {
+				serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, true)
+				smInstance, _, _, _, _, _ := fakeClient.ProvisionArgsForCall(0)
+				checkParams(string(smInstance.Parameters), []string{"\"key\":\"value\"", "\"secret-key\":\"secret-value\""})
+
+				checkSecretAnnotationsAndLabels(ctx, k8sClient, paramsSecret, []*v1.ServiceInstance{})
+
+				credentialsMap := make(map[string][]byte)
+				credentialsMap["secret-parameter"] = []byte("{\"secret-key\":\"new-secret-value\"}")
+				paramsSecret.Data = credentialsMap
+				Expect(k8sClient.Update(ctx, paramsSecret)).To(Succeed())
+				Expect(fakeClient.UpdateInstanceCallCount()).To(Equal(0))
+			})
+		})
+
 	})
 })
 
@@ -1433,6 +1447,7 @@ func checkSecretAnnotationsAndLabels(ctx context.Context, k8sClient client.Clien
 		Expect(instance.Labels[common.InstanceSecretLabel+common.Separator+string(paramsSecret.GetUID())]).To(Equal(paramsSecret.Name))
 	}
 }
+
 func checkParams(params string, substrings []string) {
 	for _, substring := range substrings {
 		Expect(params).To(ContainSubstring(substring))
