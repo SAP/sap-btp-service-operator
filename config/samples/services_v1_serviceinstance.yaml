@@ -2,17 +2,14 @@ apiVersion: services.cloud.sap.com/v1
 kind: ServiceInstance
 metadata:
   name: sample-instance-1
-  labels:
-    "services.cloud.sap.com/secretKeyRef-my-secret": "true"
-    "services.cloud.sap.com/secretKeyRef-my-secret1": "true"
 spec:
   serviceOfferingName: service-manager
   servicePlanName: subaccount-audit
   parametersFrom:
     - secretKeyRef:
         name: my-secret
-        key: secret-paramete
+        key: secret-parameter
     - secretKeyRef:
         name: my-secret1
-        key: secret-paramete
+        key: secret-parameter
 

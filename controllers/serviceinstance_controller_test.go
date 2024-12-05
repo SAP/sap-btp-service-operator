@@ -1291,9 +1291,7 @@ var _ = Describe("ServiceInstance controller", func() {
 				instanceSpec.SubscribeToSecretChanges = pointer.Bool(true)
 				serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, true)
 				smInstance, _, _, _, _, _ := fakeClient.ProvisionArgsForCall(0)
-				params := smInstance.Parameters
-				Expect(params).To(ContainSubstring("\"key\":\"value\""))
-				Expect(params).To(ContainSubstring("\"secret-key\":\"secret-value\""))
+				checkParams(string(smInstance.Parameters), []string{"\"key\":\"value\"", "\"secret-key\":\"secret-value\""})
 
 				checkSecretAnnotationsAndLabels(ctx, k8sClient, paramsSecret, []*v1.ServiceInstance{serviceInstance})
 
@@ -1306,9 +1304,7 @@ var _ = Describe("ServiceInstance controller", func() {
 				}, timeout*3, interval).Should(BeTrue(), "expected condition was not met")
 
 				_, smInstance, _, _, _, _, _ = fakeClient.UpdateInstanceArgsForCall(0)
-				params = smInstance.Parameters
-				Expect(params).To(ContainSubstring("\"key\":\"value\""))
-				Expect(params).To(ContainSubstring("\"secret-key\":\"new-secret-value\""))
+				checkParams(string(smInstance.Parameters), []string{"\"key\":\"value\"", "\"secret-key\":\"new-secret-value\""})
 				deleteAndWait(ctx, serviceInstance)
 				checkSecretAnnotationsAndLabels(ctx, k8sClient, paramsSecret, []*v1.ServiceInstance{})
 			})
