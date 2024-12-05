@@ -1278,6 +1278,7 @@ var _ = Describe("ServiceInstance controller", func() {
 		When("secret updated and instance watch secret", func() {
 			anotherInstanceName := "instance2"
 			var anotherInstance *v1.ServiceInstance
+			var anotherSecret *corev1.Secret
 			BeforeEach(func() {
 				instanceSpec.SubscribeToSecretChanges = pointer.Bool(true)
 			})
@@ -1285,6 +1286,9 @@ var _ = Describe("ServiceInstance controller", func() {
 				instanceSpec.SubscribeToSecretChanges = pointer.Bool(false)
 				if anotherInstance != nil {
 					deleteAndWait(ctx, anotherInstance)
+				}
+				if anotherSecret != nil {
+					deleteAndWait(ctx, anotherSecret)
 				}
 			})
 			It("should update instance with the secret change", func() {
@@ -1328,17 +1332,17 @@ var _ = Describe("ServiceInstance controller", func() {
 				serviceInstance = createInstance(ctx, anotherInstanceName, newInstanceSpec, nil, false)
 				Expect(fakeClient.ProvisionCallCount()).To(Equal(0))
 
-				paramsSecret = createParamsSecret(ctx, "instance-params-secret-new", testNamespace)
+				anotherSecret = createParamsSecret(ctx, "instance-params-secret-new", testNamespace)
 				waitForResourceToBeReady(ctx, serviceInstance)
 				smInstance, _, _, _, _, _ := fakeClient.ProvisionArgsForCall(0)
 				checkParams(string(smInstance.Parameters), []string{"\"key\":\"value\"", "\"secret-key\":\"secret-value\""})
 
-				checkSecretAnnotationsAndLabels(ctx, k8sClient, paramsSecret, []*v1.ServiceInstance{serviceInstance})
+				checkSecretAnnotationsAndLabels(ctx, k8sClient, anotherSecret, []*v1.ServiceInstance{serviceInstance})
 
 				credentialsMap := make(map[string][]byte)
 				credentialsMap["secret-parameter"] = []byte("{\"secret-key\":\"new-secret-value\"}")
-				paramsSecret.Data = credentialsMap
-				Expect(k8sClient.Update(ctx, paramsSecret)).To(Succeed())
+				anotherSecret.Data = credentialsMap
+				Expect(k8sClient.Update(ctx, anotherSecret)).To(Succeed())
 				Eventually(func() bool {
 					return fakeClient.UpdateInstanceCallCount() == 1
 				}, timeout*3, interval).Should(BeTrue(), "expected condition was not met")
@@ -1346,7 +1350,7 @@ var _ = Describe("ServiceInstance controller", func() {
 				_, smInstance, _, _, _, _, _ = fakeClient.UpdateInstanceArgsForCall(0)
 				checkParams(string(smInstance.Parameters), []string{"\"key\":\"value\"", "\"secret-key\":\"new-secret-value\""})
 				deleteAndWait(ctx, serviceInstance)
-				checkSecretAnnotationsAndLabels(ctx, k8sClient, paramsSecret, []*v1.ServiceInstance{})
+				checkSecretAnnotationsAndLabels(ctx, k8sClient, anotherSecret, []*v1.ServiceInstance{})
 			})
 
 			It("should update two instances with the secret change", func() {
