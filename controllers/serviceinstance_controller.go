@@ -229,7 +229,7 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 	instanceParameters, err := r.buildSMRequestParameters(ctx, serviceInstance)
 	if err != nil {
 		log.Error(err, "failed to parse instance parameters")
-		return utils.MarkAsNonTransientError(ctx, r.Client, smClientTypes.UPDATE, err, serviceInstance)
+		return utils.MarkAsTransientError(ctx, r.Client, smClientTypes.UPDATE, err, serviceInstance)
 	}
 
 	_, operationURL, err := smClient.UpdateInstance(serviceInstance.Status.InstanceID, &smClientTypes.ServiceInstance{

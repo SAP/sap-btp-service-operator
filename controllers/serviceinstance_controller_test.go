@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strings"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	authv1 "k8s.io/api/authentication/v1"
 
 	"github.com/SAP/sap-btp-service-operator/api/common"
@@ -83,14 +85,14 @@ var _ = Describe("ServiceInstance controller", func() {
 		},
 	}
 
-	createInstance := func(ctx context.Context, instanceSpec v1.ServiceInstanceSpec, annotations map[string]string, waitForReady bool) *v1.ServiceInstance {
+	createInstance := func(ctx context.Context, instanceName string, instanceSpec v1.ServiceInstanceSpec, annotations map[string]string, waitForReady bool) *v1.ServiceInstance {
 		instance := &v1.ServiceInstance{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "services.cloud.sap.com/v1",
 				Kind:       "ServiceInstance",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:        fakeInstanceName,
+				Name:        instanceName,
 				Namespace:   testNamespace,
 				Annotations: annotations,
 			},
@@ -199,7 +201,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					})
 
 					It("provisioning should fail", func() {
-						serviceInstance = createInstance(ctx, instanceSpec, nil, false)
+						serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, false)
 						waitForInstanceConditionAndMessage(ctx, defaultLookupKey, common.ConditionSucceeded, "provided plan id does not match")
 					})
 				})
@@ -209,7 +211,7 @@ var _ = Describe("ServiceInstance controller", func() {
 		Context("Sync", func() {
 			When("provision request to SM succeeds", func() {
 				It("should provision instance of the provided offering and plan name successfully", func() {
-					serviceInstance = createInstance(ctx, instanceSpec, nil, true)
+					serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, true)
 					Expect(serviceInstance.Status.InstanceID).To(Equal(fakeInstanceID))
 					Expect(serviceInstance.Status.SubaccountID).To(Equal(fakeSubaccountID))
 					Expect(serviceInstance.Spec.ExternalName).To(Equal(fakeInstanceExternalName))
@@ -221,30 +223,6 @@ var _ = Describe("ServiceInstance controller", func() {
 					params := smInstance.Parameters
 					Expect(params).To(ContainSubstring("\"key\":\"value\""))
 					Expect(params).To(ContainSubstring("\"secret-key\":\"secret-value\""))
-				})
-			})
-			When("secret updated", func() {
-				It("should provision instance of the provided offering and plan name successfully", func() {
-					instanceSpec.SubscribeToSecretChanges = pointer.Bool(true)
-					serviceInstance = createInstance(ctx, instanceSpec, nil, true)
-					smInstance, _, _, _, _, _ := fakeClient.ProvisionArgsForCall(0)
-					params := smInstance.Parameters
-					Expect(params).To(ContainSubstring("\"key\":\"value\""))
-					Expect(params).To(ContainSubstring("\"secret-key\":\"secret-value\""))
-
-					Expect(k8sClient.Get(ctx, getResourceNamespacedName(paramsSecret), paramsSecret)).To(Succeed())
-					credentialsMap := make(map[string][]byte)
-					credentialsMap["secret-parameter"] = []byte("{\"secret-key\":\"new-secret-value\"}")
-					paramsSecret.Data = credentialsMap
-					Expect(k8sClient.Update(ctx, paramsSecret)).To(Succeed())
-					Eventually(func() bool {
-						return fakeClient.UpdateInstanceCallCount() == 1
-					}, timeout*3, interval).Should(BeTrue(), "expected condition was not met")
-
-					_, smInstance, _, _, _, _, _ = fakeClient.UpdateInstanceArgsForCall(0)
-					params = smInstance.Parameters
-					Expect(params).To(ContainSubstring("\"key\":\"value\""))
-					Expect(params).To(ContainSubstring("\"secret-key\":\"new-secret-value\""))
 				})
 			})
 			When("provision request to SM fails", func() {
@@ -260,7 +238,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					})
 
 					It("should have failure condition", func() {
-						serviceInstance = createInstance(ctx, instanceSpec, nil, false)
+						serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, false)
 						waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionTrue, common.Created, "")
 					})
 				})
@@ -273,7 +251,7 @@ var _ = Describe("ServiceInstance controller", func() {
 							Description: errMessage,
 						})
 						fakeClient.ProvisionReturnsOnCall(1, &sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
-						serviceInstance = createInstance(ctx, instanceSpec, nil, false)
+						serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, false)
 						waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionTrue, common.Created, "")
 					})
 					It("provision fails until timeout", func() {
@@ -281,7 +259,7 @@ var _ = Describe("ServiceInstance controller", func() {
 							StatusCode:  http.StatusBadRequest,
 							Description: errMessage,
 						})
-						serviceInstance = createInstance(ctx, instanceSpec, nil, false)
+						serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, false)
 						waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.CreateInProgress, errMessage)
 					})
 				})
@@ -296,7 +274,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					})
 
 					It("should retry until success", func() {
-						serviceInstance = createInstance(ctx, instanceSpec, nil, true)
+						serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, true)
 						waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionTrue, common.Created, "")
 					})
 				})
@@ -308,7 +286,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					})
 
 					It("should be transient error and eventually succeed", func() {
-						serviceInstance = createInstance(ctx, instanceSpec, nil, false)
+						serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, false)
 						waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.CreateInProgress, tooManyRequestsError)
 						fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
 						waitForResourceToBeReady(ctx, serviceInstance)
@@ -321,7 +299,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						fakeClient.ProvisionReturnsOnCall(2, &sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
 					})
 					It("should fail first and then succeed", func() {
-						serviceInstance = createInstance(ctx, instanceSpec, nil, false)
+						serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, false)
 						waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionTrue, common.Created, "")
 						Expect(fakeClient.ProvisionCallCount()).To(BeNumerically(">", 1))
 					})
@@ -344,7 +322,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					fakeClient.GetInstanceByIDReturns(&smclientTypes.ServiceInstance{Labels: map[string][]string{"subaccount_id": {fakeSubaccountID}}}, nil)
 				})
 				It("should update in progress condition and provision the instance successfully", func() {
-					serviceInstance = createInstance(ctx, instanceSpec, nil, false)
+					serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, false)
 					fakeClient.StatusReturns(&smclientTypes.Operation{
 						ID:    "1234",
 						Type:  smClientTypes.CREATE,
@@ -357,7 +335,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 			When("polling ends with failure", func() {
 				It("should update to failure condition with the broker err description", func() {
-					serviceInstance = createInstance(ctx, instanceSpec, nil, false)
+					serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, false)
 					fakeClient.StatusReturns(&smclientTypes.Operation{
 						ID:     "1234",
 						Type:   smClientTypes.CREATE,
@@ -370,7 +348,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 			When("updating during create", func() {
 				It("should update the instance after created successfully", func() {
-					serviceInstance = createInstance(ctx, instanceSpec, nil, false)
+					serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, false)
 					waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.CreateInProgress, "")
 					newName := "new-name" + uuid.New().String()
 
@@ -398,7 +376,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 			When("deleting while create is in progress", func() {
 				It("should be deleted successfully", func() {
-					serviceInstance = createInstance(ctx, instanceSpec, nil, false)
+					serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, false)
 
 					By("waiting for instance to be CreateInProgress")
 					waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.CreateInProgress, "")
@@ -430,7 +408,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					ServicePlanName:     "a-plan-name",
 					ServiceOfferingName: "an-offering-name",
 				}
-				serviceInstance = createInstance(ctx, withoutExternal, nil, true)
+				serviceInstance = createInstance(ctx, fakeInstanceName, withoutExternal, nil, true)
 				Expect(serviceInstance.Status.InstanceID).To(Equal(fakeInstanceID))
 				Expect(serviceInstance.Spec.ExternalName).To(Equal(fakeInstanceName))
 				Expect(serviceInstance.Name).To(Equal(fakeInstanceName))
@@ -440,7 +418,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 	Describe("Update", func() {
 		BeforeEach(func() {
-			serviceInstance = createInstance(ctx, instanceSpec, nil, true)
+			serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, true)
 			Expect(serviceInstance.Spec.ExternalName).To(Equal(fakeInstanceExternalName))
 		})
 
@@ -629,7 +607,7 @@ var _ = Describe("ServiceInstance controller", func() {
 		When("subaccount id changed", func() {
 			It("should fail", func() {
 				deleteInstance(ctx, serviceInstance, true)
-				serviceInstance = createInstance(ctx, instanceSpec, nil, true)
+				serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, true)
 				serviceInstance.Spec.BTPAccessCredentialsSecret = "12345"
 				err := k8sClient.Update(ctx, serviceInstance)
 				Expect(err).To(HaveOccurred())
@@ -652,7 +630,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 	Describe("Delete", func() {
 		BeforeEach(func() {
-			serviceInstance = createInstance(ctx, instanceSpec, nil, true)
+			serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, true)
 			fakeClient.DeprovisionReturns("", nil)
 		})
 		AfterEach(func() {
@@ -801,7 +779,7 @@ var _ = Describe("ServiceInstance controller", func() {
 	Describe("full reconcile", func() {
 		When("instance hashedSpec is not initialized", func() {
 			BeforeEach(func() {
-				serviceInstance = createInstance(ctx, instanceSpec, nil, true)
+				serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, true)
 			})
 			It("should not send update request and update the hashed spec", func() {
 				hashed := serviceInstance.Status.HashedSpec
@@ -832,7 +810,7 @@ var _ = Describe("ServiceInstance controller", func() {
 			})
 
 			It("should call correctly to SM and recover the instance", func() {
-				serviceInstance = createInstance(ctx, instanceSpec, nil, true)
+				serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, true)
 				Expect(fakeClient.ProvisionCallCount()).To(Equal(0))
 				Expect(serviceInstance.Status.InstanceID).To(Equal(fakeInstanceID))
 				smCallArgs := fakeClient.ListInstancesArgsForCall(0)
@@ -855,7 +833,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					})
 
 					It("should recover the existing instance and poll until instance is ready", func() {
-						serviceInstance = createInstance(ctx, instanceSpec, nil, false)
+						serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, false)
 						key := getResourceNamespacedName(serviceInstance)
 						Eventually(func() bool {
 							_ = k8sClient.Get(ctx, key, serviceInstance)
@@ -876,7 +854,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					})
 
 					It("should recover the existing instance and update condition failure", func() {
-						serviceInstance = createInstance(ctx, instanceSpec, nil, false)
+						serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, false)
 						waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.CreateFailed, "")
 						Expect(serviceInstance.Status.InstanceID).To(Equal(fakeInstanceID))
 						Expect(fakeClient.ProvisionCallCount()).To(Equal(0))
@@ -894,7 +872,7 @@ var _ = Describe("ServiceInstance controller", func() {
 							recoveredInstance.Ready = true
 						})
 						It("should recover the instance with status Ready=true", func() {
-							serviceInstance = createInstance(ctx, instanceSpec, nil, false)
+							serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, false)
 							waitForResourceToBeReady(ctx, serviceInstance)
 							Expect(fakeClient.ProvisionCallCount()).To(Equal(0))
 							Expect(serviceInstance.Status.InstanceID).To(Equal(fakeInstanceID))
@@ -905,7 +883,7 @@ var _ = Describe("ServiceInstance controller", func() {
 							recoveredInstance.Ready = false
 						})
 						It("should recover the instance with status Ready=false", func() {
-							serviceInstance = createInstance(ctx, instanceSpec, nil, false)
+							serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, false)
 							waitForResourceCondition(ctx, serviceInstance, common.ConditionFailed, metav1.ConditionTrue, common.CreateFailed, "")
 							Expect(fakeClient.ProvisionCallCount()).To(Equal(0))
 							Expect(serviceInstance.Status.InstanceID).To(Equal(fakeInstanceID))
@@ -922,14 +900,14 @@ var _ = Describe("ServiceInstance controller", func() {
 			When("creating instance with shared=true", func() {
 				It("should succeed to provision and sharing the instance", func() {
 					fakeClient.ShareInstanceReturns(nil)
-					serviceInstance = createInstance(ctx, sharedInstanceSpec, nil, true)
+					serviceInstance = createInstance(ctx, fakeInstanceName, sharedInstanceSpec, nil, true)
 					waitForInstanceToBeShared(ctx, serviceInstance)
 				})
 			})
 
 			Context("sharing an existing instance", func() {
 				BeforeEach(func() {
-					serviceInstance = createInstance(ctx, instanceSpec, nil, true)
+					serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, true)
 				})
 
 				When("updating existing instance to shared", func() {
@@ -970,7 +948,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						StatusCode:  http.StatusBadRequest,
 						Description: "errMessage",
 					})
-					serviceInstance = createInstance(ctx, sharedInstanceSpec, nil, false)
+					serviceInstance = createInstance(ctx, fakeInstanceName, sharedInstanceSpec, nil, false)
 					waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.CreateInProgress, "")
 					Expect(fakeClient.ShareInstanceCallCount()).To(BeZero())
 				})
@@ -978,7 +956,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 			When("instance is valid and share failed", func() {
 				BeforeEach(func() {
-					serviceInstance = createInstance(ctx, instanceSpec, nil, true)
+					serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, true)
 				})
 
 				When("shared failed with rate limit error", func() {
@@ -1040,7 +1018,7 @@ var _ = Describe("ServiceInstance controller", func() {
 			Context("un-sharing an existing shared instance", func() {
 				BeforeEach(func() {
 					fakeClient.ShareInstanceReturns(nil)
-					serviceInstance = createInstance(ctx, sharedInstanceSpec, nil, true)
+					serviceInstance = createInstance(ctx, fakeInstanceName, sharedInstanceSpec, nil, true)
 					waitForInstanceToBeShared(ctx, serviceInstance)
 				})
 
@@ -1079,7 +1057,7 @@ var _ = Describe("ServiceInstance controller", func() {
 			When("instance is valid and un-share failed", func() {
 				BeforeEach(func() {
 					fakeClient.ShareInstanceReturns(nil)
-					serviceInstance = createInstance(ctx, sharedInstanceSpec, nil, true)
+					serviceInstance = createInstance(ctx, fakeInstanceName, sharedInstanceSpec, nil, true)
 					waitForInstanceToBeShared(ctx, serviceInstance)
 					fakeClient.UnShareInstanceReturns(&sm.ServiceManagerError{
 						StatusCode:  http.StatusBadRequest,
@@ -1295,6 +1273,91 @@ var _ = Describe("ServiceInstance controller", func() {
 			})
 		})
 	})
+
+	Context("secret watcher", func() {
+		When("secret updated", func() {
+			anotherInstanceName := "instance2"
+			var anotherInstance *v1.ServiceInstance
+			BeforeEach(func() {
+				instanceSpec.SubscribeToSecretChanges = pointer.Bool(true)
+			})
+			AfterEach(func() {
+				instanceSpec.SubscribeToSecretChanges = pointer.Bool(false)
+				if anotherInstance != nil {
+					deleteAndWait(ctx, anotherInstance)
+				}
+			})
+			It("should update instance with the secret change", func() {
+				instanceSpec.SubscribeToSecretChanges = pointer.Bool(true)
+				serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, true)
+				smInstance, _, _, _, _, _ := fakeClient.ProvisionArgsForCall(0)
+				params := smInstance.Parameters
+				Expect(params).To(ContainSubstring("\"key\":\"value\""))
+				Expect(params).To(ContainSubstring("\"secret-key\":\"secret-value\""))
+
+				checkSecretAnnotationsAndLabels(ctx, k8sClient, paramsSecret, []*v1.ServiceInstance{serviceInstance})
+
+				credentialsMap := make(map[string][]byte)
+				credentialsMap["secret-parameter"] = []byte("{\"secret-key\":\"new-secret-value\"}")
+				paramsSecret.Data = credentialsMap
+				Expect(k8sClient.Update(ctx, paramsSecret)).To(Succeed())
+				Eventually(func() bool {
+					return fakeClient.UpdateInstanceCallCount() == 1
+				}, timeout*3, interval).Should(BeTrue(), "expected condition was not met")
+
+				_, smInstance, _, _, _, _, _ = fakeClient.UpdateInstanceArgsForCall(0)
+				params = smInstance.Parameters
+				Expect(params).To(ContainSubstring("\"key\":\"value\""))
+				Expect(params).To(ContainSubstring("\"secret-key\":\"new-secret-value\""))
+				deleteAndWait(ctx, serviceInstance)
+				checkSecretAnnotationsAndLabels(ctx, k8sClient, paramsSecret, []*v1.ServiceInstance{})
+			})
+			It("should update two instances with the secret change", func() {
+				instanceSpec.SubscribeToSecretChanges = pointer.Bool(true)
+				serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, true)
+				smInstance, _, _, _, _, _ := fakeClient.ProvisionArgsForCall(0)
+				checkParams(string(smInstance.Parameters), []string{"\"key\":\"value\"", "\"secret-key\":\"secret-value\""})
+
+				anotherInstance = createInstance(ctx, anotherInstanceName, instanceSpec, nil, true)
+				smInstance, _, _, _, _, _ = fakeClient.ProvisionArgsForCall(1)
+				checkParams(string(smInstance.Parameters), []string{"\"key\":\"value\"", "\"secret-key\":\"secret-value\""})
+
+				checkSecretAnnotationsAndLabels(ctx, k8sClient, paramsSecret, []*v1.ServiceInstance{serviceInstance, anotherInstance})
+
+				credentialsMap := make(map[string][]byte)
+				credentialsMap["secret-parameter"] = []byte("{\"secret-key\":\"new-secret-value\"}")
+				paramsSecret.Data = credentialsMap
+				Expect(k8sClient.Update(ctx, paramsSecret)).To(Succeed())
+				Eventually(func() bool {
+					return fakeClient.UpdateInstanceCallCount() == 2
+				}, timeout*3, interval).Should(BeTrue(), "expected condition was not met")
+
+				_, smInstance, _, _, _, _, _ = fakeClient.UpdateInstanceArgsForCall(0)
+				checkParams(string(smInstance.Parameters), []string{"\"key\":\"value\"", "\"secret-key\":\"new-secret-value\""})
+
+				_, smInstance, _, _, _, _, _ = fakeClient.UpdateInstanceArgsForCall(1)
+				checkParams(string(smInstance.Parameters), []string{"\"key\":\"value\"", "\"secret-key\":\"new-secret-value\""})
+
+				deleteAndWait(ctx, anotherInstance)
+
+				checkSecretAnnotationsAndLabels(ctx, k8sClient, paramsSecret, []*v1.ServiceInstance{serviceInstance})
+			})
+			It("should prevent delete of secret when secret is watched", func() {
+
+				serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, true)
+				Expect(k8sClient.Get(ctx, getResourceNamespacedName(paramsSecret), paramsSecret)).To(Succeed())
+				Expect(k8sClient.Delete(ctx, paramsSecret)).To(Succeed())
+				Eventually(func() bool {
+					err := k8sClient.Get(ctx, types.NamespacedName{Name: paramsSecret.Name, Namespace: paramsSecret.Namespace}, paramsSecret)
+					if err != nil {
+						return false
+					}
+					return len(paramsSecret.Finalizers) == 1
+				}, timeout, interval).Should(BeTrue())
+
+			})
+		})
+	})
 })
 
 func waitForInstanceConditionAndMessage(ctx context.Context, key types.NamespacedName, conditionType, msg string) {
@@ -1355,4 +1418,27 @@ func updateInstanceStatus(ctx context.Context, instance *v1.ServiceInstance) *v1
 		return k8sClient.Status().Update(ctx, si) == nil
 	}, timeout, interval).Should(BeTrue())
 	return si
+}
+
+func checkSecretAnnotationsAndLabels(ctx context.Context, k8sClient client.Client, paramsSecret *corev1.Secret, instances []*v1.ServiceInstance) {
+	Expect(k8sClient.Get(ctx, getResourceNamespacedName(paramsSecret), paramsSecret)).To(Succeed())
+
+	if len(instances) == 0 {
+		Expect(len(paramsSecret.Finalizers)).To(Equal(0))
+		Expect(len(paramsSecret.Labels)).To(Equal(0))
+		Expect(len(paramsSecret.Annotations)).To(Equal(0))
+		return
+	}
+	Expect(paramsSecret.Finalizers[0]).To(Equal(common.FinalizerName))
+	Expect(paramsSecret.Labels[common.WatchSecretLabel]).To(Equal("true"))
+	Expect(len(paramsSecret.Annotations)).To(Equal(len(instances)))
+	for _, instance := range instances {
+		Expect(paramsSecret.Annotations[common.WatchSecretLabel+common.Separator+instance.Name]).To(Equal("true"))
+		Expect(instance.Labels[common.InstanceSecretLabel+common.Separator+string(paramsSecret.GetUID())]).To(Equal(paramsSecret.Name))
+	}
+}
+func checkParams(params string, substrings []string) {
+	for _, substring := range substrings {
+		Expect(params).To(ContainSubstring(substring))
+	}
 }

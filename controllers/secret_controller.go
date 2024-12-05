@@ -50,6 +50,10 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 		// on deleted requests.
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
+	if utils.IsMarkedForDeletion(secret.ObjectMeta) {
+		err := fmt.Errorf("secret %s is marked for deletion but have instance using it", secret.Name)
+		return reconcile.Result{}, err
+	}
 	var instances v1.ServiceInstanceList
 	labelSelector := client.MatchingLabels{common.InstanceSecretLabel + common.Separator + string(secret.GetUID()): secret.Name}
 	if err := r.Client.List(ctx, &instances, labelSelector); err != nil {
@@ -102,5 +106,5 @@ func isSecretDataChanged(e event.UpdateEvent) bool {
 	}
 
 	// Compare the Data field (byte slices)
-	return !reflect.DeepEqual(oldSecret.Data, newSecret.Data)
+	return !reflect.DeepEqual(oldSecret.Data, newSecret.Data) || !reflect.DeepEqual(oldSecret.StringData, newSecret.StringData)
 }

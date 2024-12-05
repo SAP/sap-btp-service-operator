@@ -256,6 +256,10 @@ func AddSecretHaveWatch(ctx context.Context, secret *v12.Secret, k8sClient clien
 			secret.Labels = make(map[string]string)
 		}
 		secret.Labels[common.WatchSecretLabel] = "true"
+		if !controllerutil.ContainsFinalizer(secret, common.FinalizerName) {
+			controllerutil.AddFinalizer(secret, common.FinalizerName)
+		}
+
 		if _, exists := secret.Annotations[common.WatchSecretLabel+common.Separator+instanceName]; !exists {
 			secret.Annotations[common.WatchSecretLabel+common.Separator+instanceName] = "true"
 			if err := k8sClient.Update(ctx, secret); err != nil {
@@ -279,6 +283,9 @@ func RemoveSecretWatch(ctx context.Context, k8sClient client.Client, namespace s
 		delete(secret.Annotations, common.WatchSecretLabel+common.Separator+instanceName)
 		if len(secret.Annotations) == 0 {
 			delete(secret.Labels, common.WatchSecretLabel)
+			if controllerutil.ContainsFinalizer(secret, common.FinalizerName) {
+				controllerutil.RemoveFinalizer(secret, common.FinalizerName)
+			}
 		}
 		if err := k8sClient.Update(ctx, secret); err != nil {
 			return err

@@ -29,14 +29,6 @@ rules:
 - apiGroups:
   - services.cloud.sap.com
   resources:
-  - secret
-  verbs:
-  - delete
-  - patch
-  - update
-- apiGroups:
-  - services.cloud.sap.com
-  resources:
   - servicebindings
   - serviceinstances
   verbs:
