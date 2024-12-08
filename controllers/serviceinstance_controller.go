@@ -83,6 +83,9 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 	serviceInstance = serviceInstance.DeepCopy()
 
+	if utils.IsMarkedForDeletion(serviceInstance.ObjectMeta) {
+		return r.deleteInstance(ctx, serviceInstance)
+	}
 	if len(serviceInstance.GetConditions()) == 0 {
 		err := utils.InitConditions(ctx, r.Client, serviceInstance)
 		if err != nil {
@@ -100,10 +103,6 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 
 		return ctrl.Result{}, nil
-	}
-
-	if utils.IsMarkedForDeletion(serviceInstance.ObjectMeta) {
-		return r.deleteInstance(ctx, serviceInstance)
 	}
 
 	if len(serviceInstance.Status.OperationURL) > 0 {
@@ -264,6 +263,7 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, serviceInstance *v1.ServiceInstance) (ctrl.Result, error) {
 	log := utils.GetLogger(ctx)
 
+	log.Info("deleting instance")
 	if controllerutil.ContainsFinalizer(serviceInstance, common.FinalizerName) {
 		smClient, err := r.GetSMClient(ctx, serviceInstance)
 		if err != nil {
@@ -625,10 +625,7 @@ func (r *ServiceInstanceReconciler) buildSMRequestParameters(ctx context.Context
 
 func isFinalState(ctx context.Context, serviceInstance *v1.ServiceInstance) bool {
 	log := utils.GetLogger(ctx)
-	if utils.IsMarkedForDeletion(serviceInstance.ObjectMeta) {
-		log.Info("instance is not in final state, it is marked for deletion")
-		return false
-	}
+
 	if len(serviceInstance.Status.OperationURL) > 0 {
 		log.Info(fmt.Sprintf("instance is not in final state, async operation is in progress (%s)", serviceInstance.Status.OperationURL))
 		return false
@@ -652,7 +649,7 @@ func isFinalState(ctx context.Context, serviceInstance *v1.ServiceInstance) bool
 		}
 		return false
 	}
-	if serviceInstance.Spec.SubscribeToSecretChanges != nil && *serviceInstance.Spec.SubscribeToSecretChanges && serviceInstance.Status.ForceReconcile {
+	if serviceInstance.Status.ForceReconcile {
 		log.Info("instance is not in final state, SubscribeToSecretChanges is true")
 		return false
 	}
@@ -670,7 +667,7 @@ func updateRequired(serviceInstance *v1.ServiceInstance) bool {
 	if cond != nil && cond.Reason == common.UpdateInProgress { //in case of transient error occurred
 		return true
 	}
-	if serviceInstance.Spec.SubscribeToSecretChanges != nil && *serviceInstance.Spec.SubscribeToSecretChanges && serviceInstance.Status.ForceReconcile {
+	if serviceInstance.Status.ForceReconcile {
 		return true
 	}
 
