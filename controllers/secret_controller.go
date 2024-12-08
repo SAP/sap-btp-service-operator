@@ -43,7 +43,7 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 	var secret corev1.Secret
 	if err := r.Get(ctx, req.NamespacedName, &secret); err != nil {
 		if !apierrors.IsNotFound(err) {
-			log.Error(err, "unable to fetch ServiceInstance")
+			log.Error(err, "unable to fetch Secret")
 		}
 		// we'll ignore not-found errors, since they can't be fixed by an immediate
 		// requeue (we'll need to wait for a new notification), and we can get them

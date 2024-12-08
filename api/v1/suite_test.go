@@ -77,6 +77,7 @@ func getInstance() *ServiceInstance {
 					},
 				},
 			},
+			SubscribeToSecretChanges: &[]bool{true}[0],
 			UserInfo: &v1.UserInfo{
 				Username: "test-user",
 				Groups:   []string{"test-group"},
