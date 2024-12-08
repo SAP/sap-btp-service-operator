@@ -123,4 +123,9 @@ var _ = Describe("Service Instance Type Test", func() {
 		instance.SetAnnotations(annotation)
 		Expect(instance.GetAnnotations()).To(Equal(annotation))
 	})
+
+	It("should update SubscribeToSecretChanges", func() {
+		instance.Spec.SubscribeToSecretChanges = &[]bool{true}[0]
+		Expect(instance.IsSubscribedToSecretChange()).To(BeTrue())
+	})
 })

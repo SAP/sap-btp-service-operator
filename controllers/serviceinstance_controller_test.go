@@ -1398,7 +1398,10 @@ var _ = Describe("ServiceInstance controller", func() {
 			})
 		})
 		When("secret updated and instance don't watch secret", func() {
-			It("should update instance with the secret change", func() {
+			AfterEach(func() {
+				instanceSpec.SubscribeToSecretChanges = pointer.Bool(false)
+			})
+			It("should not update instance with the secret change", func() {
 				serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, true)
 				smInstance, _, _, _, _, _ := fakeClient.ProvisionArgsForCall(0)
 				checkParams(string(smInstance.Parameters), []string{"\"key\":\"value\"", "\"secret-key\":\"secret-value\""})
@@ -1410,6 +1413,25 @@ var _ = Describe("ServiceInstance controller", func() {
 				paramsSecret.Data = credentialsMap
 				Expect(k8sClient.Update(ctx, paramsSecret)).To(Succeed())
 				Expect(fakeClient.UpdateInstanceCallCount()).To(Equal(0))
+			})
+			It("should not update instance with the secret change after removing SubscribeToSecretChanges", func() {
+				instanceSpec.SubscribeToSecretChanges = pointer.Bool(true)
+				serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, true)
+				smInstance, _, _, _, _, _ := fakeClient.ProvisionArgsForCall(0)
+				checkParams(string(smInstance.Parameters), []string{"\"key\":\"value\"", "\"secret-key\":\"secret-value\""})
+
+				checkSecretAnnotationsAndLabels(ctx, k8sClient, paramsSecret, []*v1.ServiceInstance{serviceInstance})
+
+				serviceInstance.Spec.SubscribeToSecretChanges = pointer.Bool(false)
+				updateInstance(ctx, serviceInstance)
+				waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionTrue, common.Updated, "")
+				checkSecretAnnotationsAndLabels(ctx, k8sClient, paramsSecret, []*v1.ServiceInstance{})
+
+				credentialsMap := make(map[string][]byte)
+				credentialsMap["secret-parameter"] = []byte("{\"secret-key\":\"new-secret-value\"}")
+				paramsSecret.Data = credentialsMap
+				Expect(k8sClient.Update(ctx, paramsSecret)).To(Succeed())
+				Expect(fakeClient.UpdateInstanceCallCount()).To(Equal(1))
 			})
 		})
 

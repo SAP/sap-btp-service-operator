@@ -553,7 +553,7 @@ func (r *ServiceInstanceReconciler) buildSMRequestParameters(ctx context.Context
 		return nil, err
 	}
 	shouldUpdate := false
-	if serviceInstance.IsSubscribedToSecretKeyRefChange() {
+	if serviceInstance.IsSubscribedToSecretChange() {
 		existingSecrets := make(map[string]string)
 		if serviceInstance.Labels == nil {
 			serviceInstance.Labels = make(map[string]string)

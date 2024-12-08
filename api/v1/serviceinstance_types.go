@@ -207,6 +207,6 @@ func (si *ServiceInstance) ShouldBeShared() bool {
 	return si.Spec.Shared != nil && *si.Spec.Shared
 }
 
-func (si *ServiceInstance) IsSubscribedToSecretKeyRefChange() bool {
+func (si *ServiceInstance) IsSubscribedToSecretChange() bool {
 	return si.Spec.SubscribeToSecretChanges != nil && *si.Spec.SubscribeToSecretChanges
 }
