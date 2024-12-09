@@ -283,7 +283,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, serviceI
 				return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceInstance)
 			}
 			log.Info("instance does not exists in SM, removing finalizer")
-			return ctrl.Result{}, utils.RemoveFinalizer(ctx, r.Client, serviceInstance, common.FinalizerName)
+			return ctrl.Result{}, utils.RemoveFinalizer(ctx, r.Client, serviceInstance, common.FinalizerName, serviceInstance.GetControllerName())
 		}
 
 		if len(serviceInstance.Status.OperationURL) > 0 && serviceInstance.Status.OperationType == smClientTypes.DELETE {
@@ -313,7 +313,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, serviceI
 		}
 		log.Info("Instance was deleted successfully, removing finalizer")
 		// remove our finalizer from the list and update it.
-		return ctrl.Result{}, utils.RemoveFinalizer(ctx, r.Client, serviceInstance, common.FinalizerName)
+		return ctrl.Result{}, utils.RemoveFinalizer(ctx, r.Client, serviceInstance, common.FinalizerName, serviceInstance.GetControllerName())
 	}
 	return ctrl.Result{}, nil
 }
@@ -419,7 +419,7 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, serviceInstance *v
 			serviceInstance.Status.Ready = metav1.ConditionTrue
 		} else if serviceInstance.Status.OperationType == smClientTypes.DELETE {
 			// delete was successful - remove our finalizer from the list and update it.
-			if err := utils.RemoveFinalizer(ctx, r.Client, serviceInstance, common.FinalizerName); err != nil {
+			if err := utils.RemoveFinalizer(ctx, r.Client, serviceInstance, common.FinalizerName, serviceInstance.GetControllerName()); err != nil {
 				return ctrl.Result{}, err
 			}
 		}

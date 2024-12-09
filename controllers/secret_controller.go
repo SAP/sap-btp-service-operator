@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"reflect"
 
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -29,8 +31,6 @@ type SecretReconciler struct {
 	Log    logr.Logger
 }
 
-// +kubebuilder:rbac:groups=services.cloud.sap.com,resources=servicebindings,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=services.cloud.sap.com,resources=servicebindings/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=events,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;create;update
@@ -40,8 +40,8 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 	ctx = context.WithValue(ctx, utils.LogKey{}, log)
 	log.Info(fmt.Sprintf("reconciling secret %s", req.NamespacedName))
 	// Fetch the Secret
-	var secret corev1.Secret
-	if err := r.Get(ctx, req.NamespacedName, &secret); err != nil {
+	secret := &corev1.Secret{}
+	if err := r.Get(ctx, req.NamespacedName, secret); err != nil {
 		if !apierrors.IsNotFound(err) {
 			log.Error(err, "unable to fetch Secret")
 		}
@@ -50,10 +50,7 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 		// on deleted requests.
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	if utils.IsMarkedForDeletion(secret.ObjectMeta) {
-		err := fmt.Errorf("secret %s is marked for deletion but have instance using it", secret.Name)
-		return reconcile.Result{}, err
-	}
+
 	var instances v1.ServiceInstanceList
 	labelSelector := client.MatchingLabels{common.InstanceSecretLabel + common.Separator + string(secret.GetUID()): secret.Name}
 	if err := r.Client.List(ctx, &instances, labelSelector); err != nil {
@@ -68,6 +65,9 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 			return reconcile.Result{}, err
 		}
 	}
+	if utils.IsMarkedForDeletion(secret.ObjectMeta) {
+		return ctrl.Result{}, utils.RemoveFinalizer(ctx, r.Client, secret, common.FinalizerName, common.SecretController)
+	}
 	return reconcile.Result{}, nil
 }
 
@@ -76,7 +76,7 @@ func (r *SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	labelSelector := labels.SelectorFromSet(map[string]string{common.WatchSecretLabel: "true"})
 	labelPredicate := predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			return labelSelector.Matches(labels.Set(e.ObjectNew.GetLabels())) && isSecretDataChanged(e)
+			return labelSelector.Matches(labels.Set(e.ObjectNew.GetLabels())) && (isSecretDataChanged(e) || isSecretInDelete(e))
 		},
 		CreateFunc: func(e event.CreateEvent) bool {
 			return false
@@ -107,4 +107,17 @@ func isSecretDataChanged(e event.UpdateEvent) bool {
 
 	// Compare the Data field (byte slices)
 	return !reflect.DeepEqual(oldSecret.Data, newSecret.Data) || !reflect.DeepEqual(oldSecret.StringData, newSecret.StringData)
+}
+
+func isSecretInDelete(e event.UpdateEvent) bool {
+	// Type assert to *v1.Secret
+
+	newSecret, okNew := e.ObjectNew.(*corev1.Secret)
+	if !okNew {
+		// If the objects are not Secrets, skip the event
+		return false
+	}
+
+	// Compare the Data field (byte slices)
+	return !newSecret.GetDeletionTimestamp().IsZero() && controllerutil.ContainsFinalizer(newSecret, common.FinalizerName)
 }

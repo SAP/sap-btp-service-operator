@@ -1330,6 +1330,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					SubscribeToSecretChanges: pointer.Bool(true),
 				}
 				serviceInstance = createInstance(ctx, anotherInstanceName, newInstanceSpec, nil, false)
+				waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.CreateInProgress, "secrets \"instance-params-secret-new\" not found")
 				Expect(fakeClient.ProvisionCallCount()).To(Equal(0))
 
 				anotherSecret = createParamsSecret(ctx, "instance-params-secret-new", testNamespace)
@@ -1352,7 +1353,6 @@ var _ = Describe("ServiceInstance controller", func() {
 				deleteAndWait(ctx, serviceInstance)
 				checkSecretAnnotationsAndLabels(ctx, k8sClient, anotherSecret, []*v1.ServiceInstance{})
 			})
-
 			It("should update two instances with the secret change", func() {
 				serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, true)
 				smInstance, _, _, _, _, _ := fakeClient.ProvisionArgsForCall(0)
@@ -1382,19 +1382,13 @@ var _ = Describe("ServiceInstance controller", func() {
 
 				checkSecretAnnotationsAndLabels(ctx, k8sClient, paramsSecret, []*v1.ServiceInstance{serviceInstance})
 			})
-			It("should prevent delete of secret when secret is watched", func() {
-
+			It("delete of secret when secret is watched", func() {
 				serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, true)
 				Expect(k8sClient.Get(ctx, getResourceNamespacedName(paramsSecret), paramsSecret)).To(Succeed())
-				Expect(k8sClient.Delete(ctx, paramsSecret)).To(Succeed())
-				Eventually(func() bool {
-					err := k8sClient.Get(ctx, types.NamespacedName{Name: paramsSecret.Name, Namespace: paramsSecret.Namespace}, paramsSecret)
-					if err != nil {
-						return false
-					}
-					return len(paramsSecret.Finalizers) == 1
-				}, timeout, interval).Should(BeTrue())
+				checkSecretAnnotationsAndLabels(ctx, k8sClient, paramsSecret, []*v1.ServiceInstance{serviceInstance})
 
+				deleteAndWait(ctx, paramsSecret)
+				waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.UpdateInProgress, "secrets \"instance-params-secret\" not found")
 			})
 		})
 		When("secret updated and instance don't watch secret", func() {
@@ -1419,7 +1413,6 @@ var _ = Describe("ServiceInstance controller", func() {
 				serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, true)
 				smInstance, _, _, _, _, _ := fakeClient.ProvisionArgsForCall(0)
 				checkParams(string(smInstance.Parameters), []string{"\"key\":\"value\"", "\"secret-key\":\"secret-value\""})
-
 				checkSecretAnnotationsAndLabels(ctx, k8sClient, paramsSecret, []*v1.ServiceInstance{serviceInstance})
 
 				serviceInstance.Spec.SubscribeToSecretChanges = pointer.Bool(false)

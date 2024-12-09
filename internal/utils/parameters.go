@@ -115,6 +115,9 @@ func fetchParametersFromSource(namespace string, parametersFrom *servicesv1.Para
 		if err != nil {
 			return nil, nil, err
 		}
+		if secret.DeletionTimestamp != nil {
+			return nil, nil, fmt.Errorf("secret %s is marked for deletion", secret.Name)
+		}
 		p, err := unmarshalJSON(data)
 		if err != nil {
 			return nil, nil, err
