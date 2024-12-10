@@ -304,6 +304,34 @@ var _ = Describe("Condition Utils", func() {
 			Expect(result).Should(BeFalse())
 		})
 	})
+
+	Context("getLastObservedGen", func() {
+		It("should return the last observed generation from the conditions", func() {
+			resource := &v1.ServiceBinding{
+				Status: v1.ServiceBindingStatus{
+					Conditions: []metav1.Condition{
+						{
+							Type:               common.ConditionSucceeded,
+							Status:             metav1.ConditionTrue,
+							ObservedGeneration: 5,
+						},
+					},
+				},
+			}
+
+			Expect(getLastObservedGen(resource)).To(Equal(int64(5)))
+		})
+
+		It("should return 0 if the ConditionSucceeded condition is not present", func() {
+			resource := &v1.ServiceBinding{
+				Status: v1.ServiceBindingStatus{
+					Conditions: []metav1.Condition{},
+				},
+			}
+
+			Expect(getLastObservedGen(resource)).To(Equal(int64(0)))
+		})
+	})
 })
 
 func getBinding() *v1.ServiceBinding {
