@@ -1311,6 +1311,31 @@ var _ = Describe("ServiceInstance controller", func() {
 				deleteAndWait(ctx, serviceInstance)
 				checkSecretAnnotationsAndLabels(ctx, k8sClient, paramsSecret, []*v1.ServiceInstance{})
 			})
+			It("should update instance with the secret change and secret have labels", func() {
+				paramsSecret.Labels = map[string]string{"label": "value"}
+				Expect(k8sClient.Update(ctx, paramsSecret)).To(Succeed())
+
+				serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, true)
+				smInstance, _, _, _, _, _ := fakeClient.ProvisionArgsForCall(0)
+				checkParams(string(smInstance.Parameters), []string{"\"key\":\"value\"", "\"secret-key\":\"secret-value\""})
+
+				checkSecretAnnotationsAndLabels(ctx, k8sClient, paramsSecret, []*v1.ServiceInstance{serviceInstance})
+
+				credentialsMap := make(map[string][]byte)
+				credentialsMap["secret-parameter"] = []byte("{\"secret-key\":\"new-secret-value\"}")
+				paramsSecret.Data = credentialsMap
+				Expect(k8sClient.Update(ctx, paramsSecret)).To(Succeed())
+				Eventually(func() bool {
+					return fakeClient.UpdateInstanceCallCount() == 1
+				}, timeout*3, interval).Should(BeTrue(), "expected condition was not met")
+
+				_, smInstance, _, _, _, _, _ = fakeClient.UpdateInstanceArgsForCall(0)
+				checkParams(string(smInstance.Parameters), []string{"\"key\":\"value\"", "\"secret-key\":\"new-secret-value\""})
+				deleteAndWait(ctx, serviceInstance)
+				checkSecretAnnotationsAndLabels(ctx, k8sClient, paramsSecret, []*v1.ServiceInstance{})
+				Expect(paramsSecret.Labels["label"]).To(Equal("value"))
+
+			})
 			It("create instance before secret", func() {
 				newInstanceSpec := v1.ServiceInstanceSpec{
 					ExternalName:        fakeInstanceExternalName,
@@ -1521,7 +1546,7 @@ func checkSecretAnnotationsAndLabels(ctx context.Context, k8sClient client.Clien
 
 	if len(instances) == 0 {
 		Expect(len(paramsSecret.Finalizers)).To(Equal(0))
-		Expect(len(paramsSecret.Labels)).To(Equal(0))
+		Expect(paramsSecret.Labels[common.WatchSecretLabel]).To(BeEmpty())
 		Expect(len(paramsSecret.Annotations)).To(Equal(0))
 		return
 	}
