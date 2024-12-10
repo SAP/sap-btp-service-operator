@@ -118,8 +118,6 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 	}
 
-	log.Info(fmt.Sprintf("instance is not in final state, handling... (generation: %d, observedGen: %d", serviceInstance.Generation, common.GetObservedGeneration(serviceInstance)))
-
 	smClient, err := r.GetSMClient(ctx, serviceInstance)
 	if err != nil {
 		log.Error(err, "failed to get sm client")
@@ -143,16 +141,11 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	// Update
 	if updateRequired(serviceInstance) {
-		if res, err := r.updateInstance(ctx, smClient, serviceInstance); err != nil {
-			log.Info("got error while trying to update instance")
-			return ctrl.Result{}, err
-		} else if res.Requeue {
-			return res, nil
-		}
+		return r.updateInstance(ctx, smClient, serviceInstance)
 	}
 
-	// Handle instance share if needed
-	if sharingUpdateRequired(serviceInstance) {
+	// share/unshare
+	if shareOrUnshareRequired(serviceInstance) {
 		return r.handleInstanceSharing(ctx, serviceInstance, smClient)
 	}
 
@@ -322,8 +315,8 @@ func (r *ServiceInstanceReconciler) handleInstanceSharing(ctx context.Context, s
 	log := utils.GetLogger(ctx)
 	log.Info("Handling change in instance sharing")
 
-	if serviceInstance.ShouldBeShared() {
-		log.Info("Service instance is shouldBeShared, sharing the instance")
+	if serviceInstance.GetShared() {
+		log.Info("Service instance appears to be unshared, sharing the instance")
 		err := smClient.ShareInstance(serviceInstance.Status.InstanceID, utils.BuildUserInfo(ctx, serviceInstance.Spec.UserInfo))
 		if err != nil {
 			log.Error(err, "failed to share instance")
@@ -332,7 +325,7 @@ func (r *ServiceInstanceReconciler) handleInstanceSharing(ctx context.Context, s
 		log.Info("instance shared successfully")
 		setSharedCondition(serviceInstance, metav1.ConditionTrue, common.ShareSucceeded, "instance shared successfully")
 	} else { //un-share
-		log.Info("Service instance is un-shouldBeShared, un-sharing the instance")
+		log.Info("Service instance appears to be shared, un-sharing the instance")
 		err := smClient.UnShareInstance(serviceInstance.Status.InstanceID, utils.BuildUserInfo(ctx, serviceInstance.Spec.UserInfo))
 		if err != nil {
 			log.Error(err, "failed to un-share instance")
@@ -626,10 +619,16 @@ func (r *ServiceInstanceReconciler) buildSMRequestParameters(ctx context.Context
 func isFinalState(ctx context.Context, serviceInstance *v1.ServiceInstance) bool {
 	log := utils.GetLogger(ctx)
 
+	if serviceInstance.Status.ForceReconcile {
+		log.Info("instance is not in final state, ForceReconcile is true")
+		return false
+	}
+
 	if len(serviceInstance.Status.OperationURL) > 0 {
 		log.Info(fmt.Sprintf("instance is not in final state, async operation is in progress (%s)", serviceInstance.Status.OperationURL))
 		return false
 	}
+
 	observedGen := common.GetObservedGeneration(serviceInstance)
 	if serviceInstance.Generation != observedGen {
 		log.Info(fmt.Sprintf("instance is not in final state, generation: %d, observedGen: %d", serviceInstance.Generation, observedGen))
@@ -642,17 +641,14 @@ func isFinalState(ctx context.Context, serviceInstance *v1.ServiceInstance) bool
 		return false
 	}
 
-	if sharingUpdateRequired(serviceInstance) {
+	if shareOrUnshareRequired(serviceInstance) {
 		log.Info("instance is not in final state, need to sync sharing status")
 		if len(serviceInstance.Status.HashedSpec) == 0 {
 			updateHashedSpecValue(serviceInstance)
 		}
 		return false
 	}
-	if serviceInstance.Status.ForceReconcile {
-		log.Info("instance is not in final state, SubscribeToSecretChanges is true")
-		return false
-	}
+
 	log.Info(fmt.Sprintf("instance is in final state (generation: %d)", serviceInstance.Generation))
 	return true
 }
@@ -663,43 +659,40 @@ func updateRequired(serviceInstance *v1.ServiceInstance) bool {
 		return false
 	}
 
-	cond := meta.FindStatusCondition(serviceInstance.Status.Conditions, common.ConditionSucceeded)
-	if cond != nil && cond.Reason == common.UpdateInProgress { //in case of transient error occurred
+	if serviceInstance.Status.ForceReconcile {
 		return true
 	}
-	if serviceInstance.Status.ForceReconcile {
+
+	cond := meta.FindStatusCondition(serviceInstance.Status.Conditions, common.ConditionSucceeded)
+	if cond != nil && cond.Reason == common.UpdateInProgress { //in case of transient error occurred
 		return true
 	}
 
 	return getSpecHash(serviceInstance) != serviceInstance.Status.HashedSpec
 }
 
-func sharingUpdateRequired(serviceInstance *v1.ServiceInstance) bool {
+func shareOrUnshareRequired(serviceInstance *v1.ServiceInstance) bool {
 	//relevant only for non-shared instances - sharing instance is possible only for usable instances
 	if serviceInstance.Status.Ready != metav1.ConditionTrue {
 		return false
 	}
 
 	sharedCondition := meta.FindStatusCondition(serviceInstance.GetConditions(), common.ConditionShared)
-	shouldBeShared := serviceInstance.ShouldBeShared()
-
 	if sharedCondition == nil {
-		return shouldBeShared
+		return serviceInstance.GetShared()
 	}
 
 	if sharedCondition.Reason == common.ShareNotSupported {
 		return false
 	}
 
-	if sharedCondition.Reason == common.InProgress || sharedCondition.Reason == common.ShareFailed || sharedCondition.Reason == common.UnShareFailed {
-		return true
+	if sharedCondition.Status == metav1.ConditionFalse {
+		// instance does not appear to be shared, should share it if shared is requested
+		return serviceInstance.GetShared()
 	}
 
-	if shouldBeShared {
-		return sharedCondition.Status == metav1.ConditionFalse
-	}
-
-	return sharedCondition.Status == metav1.ConditionTrue
+	// instance appears to be shared, should unshare it if shared is not requested
+	return !serviceInstance.GetShared()
 }
 
 func getOfferingTags(smClient sm.Client, planID string) ([]string, error) {
