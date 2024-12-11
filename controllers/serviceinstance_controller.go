@@ -546,26 +546,14 @@ func (r *ServiceInstanceReconciler) buildSMRequestParameters(ctx context.Context
 		return nil, err
 	}
 	shouldUpdate := false
+	newLabels := make(map[string]string)
 	if serviceInstance.IsSubscribedToSecretChange() {
-		existingSecrets := make(map[string]string)
-		if serviceInstance.Labels == nil {
-			serviceInstance.Labels = make(map[string]string)
-		} else { // remove old secret labels
-			for labelKey := range serviceInstance.Labels {
-				if strings.HasPrefix(labelKey, common.InstanceSecretLabel) {
-					existingSecrets[labelKey] = "false"
-				}
-			}
-		}
+		// find all new secrets on the instance
 		for key := range newSecretsMap {
-			if _, ok := existingSecrets[common.InstanceSecretLabel+common.Separator+key]; ok {
-				// this secret was already on the instance and should stay
-				existingSecrets[common.InstanceSecretLabel+common.Separator+key] = "true"
-			} else {
-				// this is a new secret on the instance
+			secret := newSecretsMap[key]
+			newLabels[common.InstanceSecretLabel+common.Separator+key] = secret.Name
+			if _, ok := serviceInstance.Labels[common.InstanceSecretLabel+common.Separator+key]; !ok {
 				shouldUpdate = true
-				secret := newSecretsMap[key]
-				serviceInstance.Labels[common.InstanceSecretLabel+common.Separator+key] = secret.Name
 				err = utils.AddSecretHaveWatch(ctx, secret, r.Client, serviceInstance.Name)
 				if err != nil {
 					log.Error(err, fmt.Sprintf("failed to increase secret watch label with key %s", key))
@@ -573,41 +561,41 @@ func (r *ServiceInstanceReconciler) buildSMRequestParameters(ctx context.Context
 				}
 			}
 		}
-		for key := range existingSecrets {
-			if existingSecrets[key] == "false" {
-				// this secret is not on the instance anymore and should be deleted
-				shouldUpdate = true
-				err = utils.RemoveSecretWatch(ctx, r.Client, serviceInstance.Namespace, serviceInstance.Labels[key], serviceInstance.Name)
-				if err != nil {
-					log.Error(err, fmt.Sprintf("failed to decrease secret watch label with key %s", key))
-					return nil, err
-				}
-				delete(serviceInstance.Labels, key)
-			}
-		}
-	} else {
-		if serviceInstance.Labels != nil {
-			// remove all secret labels
-			var keysToDelete []string
-			for key := range serviceInstance.Labels {
-				if strings.HasPrefix(key, common.InstanceSecretLabel) {
+		// find all removed secrets on the instance
+		for key := range serviceInstance.Labels {
+			if strings.HasPrefix(key, common.InstanceSecretLabel) {
+				if _, ok := newLabels[key]; !ok {
 					shouldUpdate = true
-					keysToDelete = append(keysToDelete, key)
+					// this secret is not on the instance anymore and should be deleted
 					err = utils.RemoveSecretWatch(ctx, r.Client, serviceInstance.Namespace, serviceInstance.Labels[key], serviceInstance.Name)
 					if err != nil {
 						log.Error(err, fmt.Sprintf("failed to decrease secret watch label with key %s", key))
 						return nil, err
 					}
 				}
+			} else {
+				newLabels[key] = serviceInstance.Labels[key]
 			}
-			// Perform deletions after the iteration
-			for _, key := range keysToDelete {
-				delete(serviceInstance.Labels, key)
+		}
+	} else {
+		if serviceInstance.Labels != nil {
+			for key := range serviceInstance.Labels {
+				if strings.HasPrefix(key, common.InstanceSecretLabel) {
+					shouldUpdate = true
+					err = utils.RemoveSecretWatch(ctx, r.Client, serviceInstance.Namespace, serviceInstance.Labels[key], serviceInstance.Name)
+					if err != nil {
+						log.Error(err, fmt.Sprintf("failed to decrease secret watch label with key %s", key))
+						return nil, err
+					}
+				} else {
+					newLabels[key] = serviceInstance.Labels[key]
+				}
 			}
 		}
 	}
 	if shouldUpdate {
-		err := r.Client.Update(ctx, serviceInstance)
+		serviceInstance.Labels = newLabels
+		err = r.Client.Update(ctx, serviceInstance)
 		if err != nil {
 			log.Error(err, "failed to Update instance with secret labels")
 			return nil, err
