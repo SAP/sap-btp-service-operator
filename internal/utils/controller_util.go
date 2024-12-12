@@ -281,13 +281,14 @@ func RemoveSecretWatch(ctx context.Context, k8sClient client.Client, namespace s
 	}
 	if _, exists := secret.Annotations[common.WatchSecretLabel+common.Separator+instanceName]; exists {
 		delete(secret.Annotations, common.WatchSecretLabel+common.Separator+instanceName)
-		if len(secret.Annotations) == 0 {
+
+		if HasNoWatchSecretAnnotations(secret) {
 			delete(secret.Labels, common.WatchSecretLabel)
 			if controllerutil.ContainsFinalizer(secret, common.FinalizerName) {
 				controllerutil.RemoveFinalizer(secret, common.FinalizerName)
 			}
 		}
-		if err := k8sClient.Update(ctx, secret); err != nil {
+		if err = k8sClient.Update(ctx, secret); err != nil {
 			return err
 		}
 	}
@@ -302,4 +303,13 @@ func IsSecretWatched(secret client.Object) bool {
 		}
 	}
 	return false
+}
+
+func HasNoWatchSecretAnnotations(secret *v12.Secret) bool {
+	for key := range secret.Annotations {
+		if strings.HasPrefix(key, common.WatchSecretLabel) {
+			return false
+		}
+	}
+	return true
 }
