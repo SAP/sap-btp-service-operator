@@ -306,6 +306,10 @@ func waitForResourceToBeDeleted(ctx context.Context, key types.NamespacedName, r
 func createParamsSecret(ctx context.Context, secretName, namespace string) *corev1.Secret {
 	credentialsMap := make(map[string][]byte)
 	credentialsMap["secret-parameter"] = []byte("{\"secret-key\":\"secret-value\"}")
+	return createSecret(ctx, secretName, namespace, credentialsMap)
+}
+
+func createSecret(ctx context.Context, secretName string, namespace string, credentialsMap map[string][]byte) *corev1.Secret {
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      secretName,
