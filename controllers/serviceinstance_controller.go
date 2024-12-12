@@ -18,14 +18,11 @@ package controllers
 
 import (
 	"context"
-	"crypto/md5"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
 
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/SAP/sap-btp-service-operator/api/common"
@@ -217,13 +214,12 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 	log := utils.GetLogger(ctx)
 	log.Info(fmt.Sprintf("updating instance %s in SM", serviceInstance.Status.InstanceID))
 
-	updateHashedSpecValue(serviceInstance)
-
 	instanceParameters, err := r.buildSMRequestParameters(ctx, serviceInstance)
 	if err != nil {
 		log.Error(err, "failed to parse instance parameters")
 		return utils.MarkAsTransientError(ctx, r.Client, smClientTypes.UPDATE, err, serviceInstance)
 	}
+	updateHashedSpecValue(serviceInstance)
 
 	_, operationURL, err := smClient.UpdateInstance(serviceInstance.Status.InstanceID, &smClientTypes.ServiceInstance{
 		Name:          serviceInstance.Spec.ExternalName,
@@ -663,7 +659,7 @@ func updateRequired(serviceInstance *v1.ServiceInstance) bool {
 		return true
 	}
 
-	return getSpecHash(serviceInstance) != serviceInstance.Status.HashedSpec
+	return serviceInstance.GetSpecHash() != serviceInstance.Status.HashedSpec
 }
 
 func shareOrUnshareRequired(serviceInstance *v1.ServiceInstance) bool {
@@ -730,19 +726,6 @@ func getTags(tags []byte) ([]string, error) {
 	return tagsArr, nil
 }
 
-func getSpecHash(serviceInstance *v1.ServiceInstance) string {
-	spec := serviceInstance.Spec
-	spec.Shared = ptr.To(false)
-	specBytes, _ := json.Marshal(spec)
-	s := string(specBytes)
-	return generateEncodedMD5Hash(s)
-}
-
-func generateEncodedMD5Hash(str string) string {
-	hash := md5.Sum([]byte(str))
-	return hex.EncodeToString(hash[:])
-}
-
 func setSharedCondition(object common.SAPBTPResource, status metav1.ConditionStatus, reason, msg string) {
 	conditions := object.GetConditions()
 	// align all conditions to latest generation
@@ -769,7 +752,7 @@ func setSharedCondition(object common.SAPBTPResource, status metav1.ConditionSta
 }
 
 func updateHashedSpecValue(serviceInstance *v1.ServiceInstance) {
-	serviceInstance.Status.HashedSpec = getSpecHash(serviceInstance)
+	serviceInstance.Status.HashedSpec = serviceInstance.GetSpecHash()
 }
 
 func getErrorMsgFromLastOperation(status *smClientTypes.Operation) string {

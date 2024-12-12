@@ -1,12 +1,17 @@
 package v1
 
 import (
+	"crypto/md5"
+	"encoding/hex"
+	"encoding/json"
+
 	"github.com/SAP/sap-btp-service-operator/api/common"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
 )
 
 var _ = Describe("Service Instance Type Test", func() {
@@ -127,5 +132,81 @@ var _ = Describe("Service Instance Type Test", func() {
 	It("should update SubscribeToSecretChanges", func() {
 		instance.Spec.SubscribeToSecretChanges = &[]bool{true}[0]
 		Expect(instance.IsSubscribedToSecretChange()).To(BeTrue())
+	})
+
+	It("should return correct spec hash", func() {
+		// Calculate expected hash
+		spec := instance.Spec
+		spec.Shared = ptr.To(false)
+		specBytes, _ := json.Marshal(spec)
+		hash := md5.Sum(specBytes)
+		expectedHash := hex.EncodeToString(hash[:])
+
+		// Get actual hash
+		actualHash := instance.GetSpecHash()
+
+		// Compare hashes
+		Expect(actualHash).To(Equal(expectedHash))
+	})
+	It("should update spec hash when spec changes", func() {
+		// Calculate initial hash
+		initialHash := instance.GetSpecHash()
+
+		// Modify the spec
+		instance.Spec.ServicePlanName = "new-plan"
+
+		// Calculate new hash
+		newHash := instance.GetSpecHash()
+
+		// Ensure the hash has changed
+		Expect(initialHash).NotTo(Equal(newHash))
+	})
+	It("should update spec hash when parametersFrom changes", func() {
+		// Calculate initial hash
+		initialHash := instance.GetSpecHash()
+
+		// Modify the parametersFrom field
+		instance.Spec.ParametersFrom = []ParametersFromSource{
+			{
+				SecretKeyRef: &SecretKeyReference{
+					Name: "new-param-secret",
+					Key:  "new-secret-parameter",
+				},
+			},
+		}
+
+		// Calculate new hash
+		newHash := instance.GetSpecHash()
+
+		// Ensure the hash has changed
+		Expect(initialHash).NotTo(Equal(newHash))
+	})
+	It("should update spec hash when parametersFrom changes with initial object", func() {
+		// Initialize ParametersFrom with an object
+		instance.Spec.ParametersFrom = []ParametersFromSource{
+			{
+				SecretKeyRef: &SecretKeyReference{
+					Name: "initial-param-secret",
+					Key:  "initial-secret-parameter",
+				},
+			},
+		}
+
+		// Calculate initial hash
+		initialHash := instance.GetSpecHash()
+
+		// Modify the parametersFrom field
+		instance.Spec.ParametersFrom = append(instance.Spec.ParametersFrom, ParametersFromSource{
+			SecretKeyRef: &SecretKeyReference{
+				Name: "new-param-secret",
+				Key:  "new-secret-parameter",
+			},
+		})
+
+		// Calculate new hash
+		newHash := instance.GetSpecHash()
+
+		// Ensure the hash has changed
+		Expect(initialHash).NotTo(Equal(newHash))
 	})
 })

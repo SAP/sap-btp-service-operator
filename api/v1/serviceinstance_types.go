@@ -17,11 +17,16 @@ limitations under the License.
 package v1
 
 import (
+	"crypto/md5"
+	"encoding/hex"
+	"encoding/json"
+
 	"github.com/SAP/sap-btp-service-operator/api/common"
 	"github.com/SAP/sap-btp-service-operator/client/sm/types"
 	v1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -209,4 +214,13 @@ func (si *ServiceInstance) GetShared() bool {
 
 func (si *ServiceInstance) IsSubscribedToSecretChange() bool {
 	return si.Spec.SubscribeToSecretChanges != nil && *si.Spec.SubscribeToSecretChanges
+}
+
+func (si *ServiceInstance) GetSpecHash() string {
+	spec := si.Spec
+	spec.Shared = ptr.To(false)
+	specBytes, _ := json.Marshal(spec)
+	s := string(specBytes)
+	hash := md5.Sum([]byte(s))
+	return hex.EncodeToString(hash[:])
 }
