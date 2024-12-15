@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/SAP/sap-btp-service-operator/api/common"
+
 	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
 	"github.com/go-logr/logr"
@@ -225,18 +227,8 @@ var _ = Describe("Controller Util", func() {
 			updatedSecret := &corev1.Secret{}
 			err = k8sClient.Get(ctx, types.NamespacedName{Name: "test-secret", Namespace: "default"}, updatedSecret)
 			Expect(err).ToNot(HaveOccurred())
-
-			err = LabelSecretForWatch(ctx, k8sClient, secret)
-			Expect(err).ToNot(HaveOccurred())
-
-			err = k8sClient.Get(ctx, types.NamespacedName{Name: "test-secret", Namespace: "default"}, updatedSecret)
-			Expect(err).ToNot(HaveOccurred())
-
-			err = k8sClient.Get(ctx, types.NamespacedName{Name: "test-secret", Namespace: "default"}, updatedSecret)
-			Expect(err).ToNot(HaveOccurred())
-
-			err = k8sClient.Get(ctx, types.NamespacedName{Name: "test-secret", Namespace: "default"}, updatedSecret)
-			Expect(err).ToNot(HaveOccurred())
+			Expect(updatedSecret.Finalizers[0]).To(Equal(common.FinalizerName))
+			Expect(updatedSecret.Labels[common.WatchSecretLabel]).To(Equal("true"))
 
 		})
 	})

@@ -89,13 +89,13 @@ func (r *SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			return labelSelector.Matches(labels.Set(e.ObjectNew.GetLabels())) && (isSecretDataChanged(e) || isSecretInDelete(e))
 		},
 		CreateFunc: func(e event.CreateEvent) bool {
-			return false
+			return labelSelector.Matches(labels.Set(e.Object.GetLabels()))
 		},
 		DeleteFunc: func(e event.DeleteEvent) bool {
 			return labelSelector.Matches(labels.Set(e.Object.GetLabels()))
 		},
 		GenericFunc: func(e event.GenericEvent) bool {
-			return false
+			return labelSelector.Matches(labels.Set(e.Object.GetLabels()))
 		},
 	}
 

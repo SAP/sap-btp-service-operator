@@ -248,9 +248,6 @@ func serialize(value interface{}) ([]byte, format, error) {
 }
 
 func LabelSecretForWatch(ctx context.Context, k8sClient client.Client, secret *corev1.Secret) error {
-	if secret.Annotations == nil {
-		secret.Annotations = make(map[string]string)
-	}
 	if secret.Labels == nil {
 		secret.Labels = make(map[string]string)
 	}

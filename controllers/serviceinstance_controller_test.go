@@ -1309,6 +1309,7 @@ var _ = Describe("ServiceInstance controller", func() {
 				_, smInstance, _, _, _, _, _ = fakeClient.UpdateInstanceArgsForCall(0)
 				checkParams(string(smInstance.Parameters), []string{"\"key\":\"value\"", "\"secret-key\":\"new-secret-value\""})
 				deleteAndWait(ctx, serviceInstance)
+
 				checkSecretAnnotationsAndLabels(ctx, k8sClient, paramsSecret, []*v1.ServiceInstance{})
 			})
 			It("should update instance with the secret change and secret have labels", func() {
@@ -1572,21 +1573,25 @@ func updateInstanceStatus(ctx context.Context, instance *v1.ServiceInstance) *v1
 }
 
 func checkSecretAnnotationsAndLabels(ctx context.Context, k8sClient client.Client, paramsSecret *corev1.Secret, instances []*v1.ServiceInstance) {
-	Expect(k8sClient.Get(ctx, getResourceNamespacedName(paramsSecret), paramsSecret)).To(Succeed())
 
 	if len(instances) == 0 {
-		Expect(len(paramsSecret.Finalizers)).To(Equal(0))
-		Expect(paramsSecret.Labels[common.WatchSecretLabel]).To(BeEmpty())
-		Expect(len(paramsSecret.Annotations)).To(Equal(0))
-		return
-	}
-	Expect(paramsSecret.Finalizers[0]).To(Equal(common.FinalizerName))
-	Expect(paramsSecret.Labels[common.WatchSecretLabel]).To(Equal("true"))
-	Expect(len(paramsSecret.Annotations)).To(Equal(len(instances)))
-	for _, instance := range instances {
-		Expect(k8sClient.Get(ctx, getResourceNamespacedName(instance), instance)).To(Succeed())
-		Expect(paramsSecret.Annotations[common.WatchSecretLabel+instance.Name]).To(Equal("true"))
-		Expect(instance.Labels[common.InstanceSecretRefLabel+string(paramsSecret.GetUID())]).To(Equal(paramsSecret.Name))
+		Expect(k8sClient.Get(ctx, getResourceNamespacedName(paramsSecret), paramsSecret)).To(Succeed())
+		// Add an data to wake up the secret
+		paramsSecret.Data["secret-parameter2"] = []byte("{\"secret-key\":\"new-secret-value\"}")
+		// Update the secret in the Kubernetes cluster
+		Expect(k8sClient.Update(ctx, paramsSecret)).To(Succeed())
+		Eventually(func() bool {
+			Expect(k8sClient.Get(ctx, getResourceNamespacedName(paramsSecret), paramsSecret)).To(Succeed())
+			return len(paramsSecret.Labels[common.WatchSecretLabel]) == 0 && len(paramsSecret.Finalizers) == 0
+		}, timeout, interval).Should(BeTrue())
+	} else {
+		Expect(k8sClient.Get(ctx, getResourceNamespacedName(paramsSecret), paramsSecret)).To(Succeed())
+		for _, instance := range instances {
+			Expect(k8sClient.Get(ctx, getResourceNamespacedName(instance), instance)).To(Succeed())
+			Expect(instance.Labels[common.InstanceSecretRefLabel+string(paramsSecret.GetUID())]).To(Equal(paramsSecret.Name))
+		}
+		Expect(paramsSecret.Finalizers[0]).To(Equal(common.FinalizerName))
+		Expect(paramsSecret.Labels[common.WatchSecretLabel]).To(Equal("true"))
 	}
 }
 
