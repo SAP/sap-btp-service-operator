@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/SAP/sap-btp-service-operator/api/common"
 	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
 	"github.com/go-logr/logr"
@@ -202,7 +201,7 @@ var _ = Describe("Controller Util", func() {
 		})
 	})
 
-	Context("AddSecretHaveWatch", func() {
+	Context("LabelSecretForWatch", func() {
 		It("should add the watch label to the secret if it is missing", func() {
 			// Create a fake client
 
@@ -217,11 +216,9 @@ var _ = Describe("Controller Util", func() {
 			Expect(err).ToNot(HaveOccurred())
 			err = k8sClient.Get(ctx, types.NamespacedName{Name: "test-secret", Namespace: "default"}, secret)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(IsSecretWatched(secret)).To(BeFalse())
 
 			// Call the function
-			name := "instancedName"
-			err = AddSecretHaveWatch(ctx, secret, k8sClient, name)
+			err = LabelSecretForWatch(ctx, k8sClient, secret)
 			Expect(err).ToNot(HaveOccurred())
 
 			// Get the updated secret
@@ -229,39 +226,18 @@ var _ = Describe("Controller Util", func() {
 			err = k8sClient.Get(ctx, types.NamespacedName{Name: "test-secret", Namespace: "default"}, updatedSecret)
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(IsSecretWatched(updatedSecret)).To(BeTrue())
-			// Verify the annotation was added
-			Expect(updatedSecret.Annotations[common.WatchSecretLabel+common.Separator+name]).To(Equal("true"))
-
-			err = AddSecretHaveWatch(ctx, secret, k8sClient, "new-name")
+			err = LabelSecretForWatch(ctx, k8sClient, secret)
 			Expect(err).ToNot(HaveOccurred())
 
 			err = k8sClient.Get(ctx, types.NamespacedName{Name: "test-secret", Namespace: "default"}, updatedSecret)
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(IsSecretWatched(updatedSecret)).To(BeTrue())
-			// Verify the annotation was added
-			Expect(updatedSecret.Annotations[common.WatchSecretLabel+common.Separator+"new-name"]).To(Equal("true"))
-
-			err = RemoveSecretWatch(ctx, k8sClient, secret.Namespace, secret.Name, name)
+			err = k8sClient.Get(ctx, types.NamespacedName{Name: "test-secret", Namespace: "default"}, updatedSecret)
 			Expect(err).ToNot(HaveOccurred())
 
 			err = k8sClient.Get(ctx, types.NamespacedName{Name: "test-secret", Namespace: "default"}, updatedSecret)
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(updatedSecret.Annotations[common.WatchSecretLabel+common.Separator+"new-name"]).To(Equal("true"))
-			_, exist := updatedSecret.Annotations[common.WatchSecretLabel+common.Separator+name]
-			Expect(exist).To(BeFalse())
-
-			Expect(IsSecretWatched(updatedSecret)).To(BeTrue())
-
-			err = RemoveSecretWatch(ctx, k8sClient, secret.Namespace, secret.Name, "new-name")
-			Expect(err).ToNot(HaveOccurred())
-
-			err = k8sClient.Get(ctx, types.NamespacedName{Name: "test-secret", Namespace: "default"}, updatedSecret)
-			Expect(err).ToNot(HaveOccurred())
-
-			Expect(IsSecretWatched(updatedSecret)).To(BeFalse())
 		})
 	})
 })

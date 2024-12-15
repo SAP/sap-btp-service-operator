@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	v12 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 
 	"github.com/SAP/sap-btp-service-operator/api/common"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
@@ -247,69 +247,16 @@ func serialize(value interface{}) ([]byte, format, error) {
 	return data, JSON, nil
 }
 
-func AddSecretHaveWatch(ctx context.Context, secret *v12.Secret, k8sClient client.Client, instanceName string) error {
-	if secret != nil {
-		if secret.Annotations == nil {
-			secret.Annotations = make(map[string]string)
-		}
-		if secret.Labels == nil {
-			secret.Labels = make(map[string]string)
-		}
-		secret.Labels[common.WatchSecretLabel] = "true"
-		if !controllerutil.ContainsFinalizer(secret, common.FinalizerName) {
-			controllerutil.AddFinalizer(secret, common.FinalizerName)
-		}
-
-		if _, exists := secret.Annotations[common.WatchSecretLabel+common.Separator+instanceName]; !exists {
-			secret.Annotations[common.WatchSecretLabel+common.Separator+instanceName] = "true"
-			if err := k8sClient.Update(ctx, secret); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-func RemoveSecretWatch(ctx context.Context, k8sClient client.Client, namespace string, name string, instanceName string) error {
-	secret := &v12.Secret{}
-	err := k8sClient.Get(ctx, apimachinerytypes.NamespacedName{Name: name, Namespace: namespace}, secret)
-	if err != nil {
-		return client.IgnoreNotFound(err)
-	}
+func LabelSecretForWatch(ctx context.Context, k8sClient client.Client, secret *corev1.Secret) error {
 	if secret.Annotations == nil {
-		return nil
+		secret.Annotations = make(map[string]string)
 	}
-	if _, exists := secret.Annotations[common.WatchSecretLabel+common.Separator+instanceName]; exists {
-		delete(secret.Annotations, common.WatchSecretLabel+common.Separator+instanceName)
-
-		if HasNoWatchSecretAnnotations(secret) {
-			delete(secret.Labels, common.WatchSecretLabel)
-			if controllerutil.ContainsFinalizer(secret, common.FinalizerName) {
-				controllerutil.RemoveFinalizer(secret, common.FinalizerName)
-			}
-		}
-		if err = k8sClient.Update(ctx, secret); err != nil {
-			return err
-		}
+	if secret.Labels == nil {
+		secret.Labels = make(map[string]string)
 	}
-
-	return nil
-}
-
-func IsSecretWatched(secret client.Object) bool {
-	for key := range secret.GetAnnotations() {
-		if strings.HasPrefix(key, common.WatchSecretLabel) {
-			return true
-		}
+	secret.Labels[common.WatchSecretLabel] = "true"
+	if !controllerutil.ContainsFinalizer(secret, common.FinalizerName) {
+		controllerutil.AddFinalizer(secret, common.FinalizerName)
 	}
-	return false
-}
-
-func HasNoWatchSecretAnnotations(secret *v12.Secret) bool {
-	for key := range secret.Annotations {
-		if strings.HasPrefix(key, common.WatchSecretLabel) {
-			return false
-		}
-	}
-	return true
+	return k8sClient.Update(ctx, secret)
 }

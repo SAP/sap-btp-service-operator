@@ -52,11 +52,19 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 	}
 
 	var instances v1.ServiceInstanceList
-	labelSelector := client.MatchingLabels{common.InstanceSecretLabel + common.Separator + string(secret.GetUID()): secret.Name}
+	labelSelector := client.MatchingLabels{common.InstanceSecretRefLabel + string(secret.GetUID()): secret.Name}
 	if err := r.Client.List(ctx, &instances, labelSelector); err != nil {
 		log.Error(err, "failed to list service instances")
 		return ctrl.Result{}, err
 	}
+
+	if len(instances.Items) == 0 {
+		// No instances are using this secret
+		log.Info(fmt.Sprintf("no instances are using secret %s, removing watch label and finalizer", req.NamespacedName))
+		delete(secret.Labels, common.WatchSecretLabel)
+		return ctrl.Result{}, utils.RemoveFinalizer(ctx, r.Client, secret, common.FinalizerName, common.SecretController)
+	}
+
 	for _, instance := range instances.Items {
 		log.Info(fmt.Sprintf("waking up instance %s", instance.Name))
 		instance.Status.ForceReconcile = true
@@ -65,9 +73,11 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 			return reconcile.Result{}, err
 		}
 	}
+
 	if utils.IsMarkedForDeletion(secret.ObjectMeta) {
 		return ctrl.Result{}, utils.RemoveFinalizer(ctx, r.Client, secret, common.FinalizerName, common.SecretController)
 	}
+
 	return reconcile.Result{}, nil
 }
 

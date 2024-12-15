@@ -1430,7 +1430,7 @@ var _ = Describe("ServiceInstance controller", func() {
 				checkSecretAnnotationsAndLabels(ctx, k8sClient, anotherSecret, []*v1.ServiceInstance{})
 				checkSecretAnnotationsAndLabels(ctx, k8sClient, paramsSecret, []*v1.ServiceInstance{serviceInstance})
 
-				Expect(serviceInstance.Labels[common.InstanceSecretLabel+common.Separator+string(anotherSecret.GetUID())]).To(BeEmpty())
+				Expect(serviceInstance.Labels[common.InstanceSecretRefLabel+string(anotherSecret.GetUID())]).To(BeEmpty())
 
 			})
 			It("should update two instances with the secret change", func() {
@@ -1585,8 +1585,8 @@ func checkSecretAnnotationsAndLabels(ctx context.Context, k8sClient client.Clien
 	Expect(len(paramsSecret.Annotations)).To(Equal(len(instances)))
 	for _, instance := range instances {
 		Expect(k8sClient.Get(ctx, getResourceNamespacedName(instance), instance)).To(Succeed())
-		Expect(paramsSecret.Annotations[common.WatchSecretLabel+common.Separator+instance.Name]).To(Equal("true"))
-		Expect(instance.Labels[common.InstanceSecretLabel+common.Separator+string(paramsSecret.GetUID())]).To(Equal(paramsSecret.Name))
+		Expect(paramsSecret.Annotations[common.WatchSecretLabel+instance.Name]).To(Equal("true"))
+		Expect(instance.Labels[common.InstanceSecretRefLabel+string(paramsSecret.GetUID())]).To(Equal(paramsSecret.Name))
 	}
 }
 

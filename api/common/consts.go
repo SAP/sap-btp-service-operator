@@ -3,9 +3,8 @@ package common
 const (
 	ManagedByBTPOperatorLabel = "services.cloud.sap.com/managed-by-sap-btp-operator"
 	ClusterSecretLabel        = "services.cloud.sap.com/cluster-secret"
-	InstanceSecretLabel       = "services.cloud.sap.com/secretRef"
-	WatchSecretLabel          = "services.cloud.sap.com/watchSecret"
-	Separator                 = "_"
+	InstanceSecretRefLabel    = "services.cloud.sap.com/secret-ref_"
+	WatchSecretLabel          = "services.cloud.sap.com/watch-secret"
 
 	NamespaceLabel = "_namespace"
 	K8sNameLabel   = "_k8sname"
