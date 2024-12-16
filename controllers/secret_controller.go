@@ -4,10 +4,8 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
@@ -58,13 +56,6 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 		return ctrl.Result{}, err
 	}
 
-	if len(instances.Items) == 0 {
-		// No instances are using this secret
-		log.Info(fmt.Sprintf("no instances are using secret %s, removing watch label and finalizer", req.NamespacedName))
-		delete(secret.Labels, common.WatchSecretLabel)
-		return ctrl.Result{}, utils.RemoveFinalizer(ctx, r.Client, secret, common.FinalizerName, common.SecretController)
-	}
-
 	for _, instance := range instances.Items {
 		log.Info(fmt.Sprintf("waking up instance %s", instance.Name))
 		instance.Status.ForceReconcile = true
@@ -83,25 +74,24 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	labelSelector := labels.SelectorFromSet(map[string]string{common.WatchSecretLabel: "true"})
-	labelPredicate := predicate.Funcs{
+	predicates := predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			return labelSelector.Matches(labels.Set(e.ObjectNew.GetLabels())) && (isSecretDataChanged(e) || isSecretInDelete(e))
+			return utils.IsSecretWatched(e.ObjectNew.GetAnnotations()) && (isSecretDataChanged(e) || isSecretInDelete(e))
 		},
 		CreateFunc: func(e event.CreateEvent) bool {
-			return labelSelector.Matches(labels.Set(e.Object.GetLabels()))
+			return utils.IsSecretWatched(e.Object.GetAnnotations())
 		},
 		DeleteFunc: func(e event.DeleteEvent) bool {
-			return labelSelector.Matches(labels.Set(e.Object.GetLabels()))
+			return utils.IsSecretWatched(e.Object.GetAnnotations())
 		},
 		GenericFunc: func(e event.GenericEvent) bool {
-			return labelSelector.Matches(labels.Set(e.Object.GetLabels()))
+			return utils.IsSecretWatched(e.Object.GetAnnotations())
 		},
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&corev1.Secret{}).
-		WithEventFilter(labelPredicate).
+		WithEventFilter(predicates).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
 		Complete(r)
 }

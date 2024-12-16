@@ -1582,7 +1582,7 @@ func checkSecretAnnotationsAndLabels(ctx context.Context, k8sClient client.Clien
 		Expect(k8sClient.Update(ctx, paramsSecret)).To(Succeed())
 		Eventually(func() bool {
 			Expect(k8sClient.Get(ctx, getResourceNamespacedName(paramsSecret), paramsSecret)).To(Succeed())
-			return len(paramsSecret.Labels[common.WatchSecretLabel]) == 0 && len(paramsSecret.Finalizers) == 0
+			return len(paramsSecret.Labels[common.WatchSecretAnnotation]) == 0 && len(paramsSecret.Finalizers) == 0
 		}, timeout, interval).Should(BeTrue())
 	} else {
 		Expect(k8sClient.Get(ctx, getResourceNamespacedName(paramsSecret), paramsSecret)).To(Succeed())
@@ -1591,7 +1591,7 @@ func checkSecretAnnotationsAndLabels(ctx context.Context, k8sClient client.Clien
 			Expect(instance.Labels[common.InstanceSecretRefLabel+string(paramsSecret.GetUID())]).To(Equal(paramsSecret.Name))
 		}
 		Expect(paramsSecret.Finalizers[0]).To(Equal(common.FinalizerName))
-		Expect(paramsSecret.Labels[common.WatchSecretLabel]).To(Equal("true"))
+		Expect(paramsSecret.Labels[common.WatchSecretAnnotation]).To(Equal("true"))
 	}
 }
 

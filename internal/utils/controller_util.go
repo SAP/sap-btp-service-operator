@@ -247,13 +247,34 @@ func serialize(value interface{}) ([]byte, format, error) {
 	return data, JSON, nil
 }
 
-func LabelSecretForWatch(ctx context.Context, k8sClient client.Client, secret *corev1.Secret) error {
-	if secret.Labels == nil {
-		secret.Labels = make(map[string]string)
+func AddWatchForSecret(ctx context.Context, k8sClient client.Client, secret *corev1.Secret, instanceUid string) error {
+	if secret.Annotations == nil {
+		secret.Annotations = make(map[string]string)
 	}
-	secret.Labels[common.WatchSecretLabel] = "true"
-	if !controllerutil.ContainsFinalizer(secret, common.FinalizerName) {
-		controllerutil.AddFinalizer(secret, common.FinalizerName)
-	}
+	secret.Annotations[common.WatchSecretAnnotation+instanceUid] = "true"
+	controllerutil.AddFinalizer(secret, common.FinalizerName)
+
 	return k8sClient.Update(ctx, secret)
+}
+
+func RemoveWatchForSecret(ctx context.Context, k8sClient client.Client, secretKey apimachinerytypes.NamespacedName, instanceUid string) error {
+	secret := &corev1.Secret{}
+	if err := k8sClient.Get(ctx, secretKey, secret); err != nil {
+		return err
+	}
+	delete(secret.Annotations, common.WatchSecretAnnotation+instanceUid)
+	if !IsSecretWatched(secret.Annotations) {
+		controllerutil.RemoveFinalizer(secret, common.FinalizerName)
+	}
+
+	return k8sClient.Update(ctx, secret)
+}
+
+func IsSecretWatched(secretAnnotations map[string]string) bool {
+	for key := range secretAnnotations {
+		if strings.HasPrefix(common.WatchSecretAnnotation, key) {
+			return true
+		}
+	}
+	return false
 }

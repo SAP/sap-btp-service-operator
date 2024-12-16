@@ -203,7 +203,7 @@ var _ = Describe("Controller Util", func() {
 		})
 	})
 
-	Context("LabelSecretForWatch", func() {
+	Context("AddWatchForSecret", func() {
 		It("should add the watch label to the secret if it is missing", func() {
 			// Create a fake client
 
@@ -220,7 +220,7 @@ var _ = Describe("Controller Util", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			// Call the function
-			err = LabelSecretForWatch(ctx, k8sClient, secret)
+			err = AddWatchForSecret(ctx, k8sClient, secret, "")
 			Expect(err).ToNot(HaveOccurred())
 
 			// Get the updated secret
@@ -228,7 +228,7 @@ var _ = Describe("Controller Util", func() {
 			err = k8sClient.Get(ctx, types.NamespacedName{Name: "test-secret", Namespace: "default"}, updatedSecret)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(updatedSecret.Finalizers[0]).To(Equal(common.FinalizerName))
-			Expect(updatedSecret.Labels[common.WatchSecretLabel]).To(Equal("true"))
+			Expect(updatedSecret.Labels[common.WatchSecretAnnotation]).To(Equal("true"))
 
 		})
 	})

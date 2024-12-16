@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"k8s.io/apimachinery/pkg/types"
 	"net/http"
 	"strings"
 
@@ -544,8 +545,8 @@ func (r *ServiceInstanceReconciler) buildSMRequestParameters(ctx context.Context
 			if _, ok := serviceInstance.Labels[common.InstanceSecretRefLabel+secretUID]; !ok {
 				log.Info(fmt.Sprintf("adding secret watch for secret %s", secret.Name))
 				instanceLabelsChanged = true
-				if err := utils.LabelSecretForWatch(ctx, r.Client, secret); err != nil {
-					log.Error(err, fmt.Sprintf("failed to mark secret for watch %s", secretUID))
+				if err := utils.AddWatchForSecret(ctx, r.Client, secret, string(serviceInstance.UID)); err != nil {
+					log.Error(err, fmt.Sprintf("failed to mark secret for watch %s", secret.Name))
 					return nil, err
 				}
 			}
@@ -555,8 +556,12 @@ func (r *ServiceInstanceReconciler) buildSMRequestParameters(ctx context.Context
 	//sync instance labels
 	for key := range serviceInstance.Labels {
 		if strings.HasPrefix(key, common.InstanceSecretRefLabel) {
-			if _, ok := instanceLabels[key]; !ok {
+			if secretName, ok := instanceLabels[key]; !ok {
 				instanceLabelsChanged = true
+				if err := utils.RemoveWatchForSecret(ctx, r.Client, types.NamespacedName{Name: secretName, Namespace: serviceInstance.Namespace}, string(serviceInstance.UID)); err != nil {
+					log.Error(err, fmt.Sprintf("failed to unwatch secret %s", secretName))
+					return nil, err
+				}
 			}
 		} else {
 			// this label not related to secrets, add it
