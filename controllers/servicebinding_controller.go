@@ -171,7 +171,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return r.maintain(ctx, serviceBinding)
 	}
 
-	if serviceInstanceNotUsable(serviceInstance) {
+	if !serviceInstanceUsable(serviceInstance) {
 		instanceErr := fmt.Errorf("service instance '%s' is not usable", serviceBinding.Spec.ServiceInstanceName)
 		utils.SetBlockedCondition(ctx, instanceErr.Error(), serviceBinding)
 		if err := utils.UpdateStatus(ctx, r.Client, serviceBinding); err != nil {
@@ -1148,11 +1148,11 @@ func bindingAlreadyOwnedByInstance(instance *v1.ServiceInstance, binding *v1.Ser
 	return false
 }
 
-func serviceInstanceNotUsable(instance *v1.ServiceInstance) bool {
+func serviceInstanceUsable(instance *v1.ServiceInstance) bool {
 	if utils.IsMarkedForDeletion(instance.ObjectMeta) {
-		return true
+		return false
 	}
-	return instance.Status.Ready != metav1.ConditionTrue
+	return instance.Status.Ready == metav1.ConditionTrue
 }
 
 func getInstanceNameForSecretCredentials(instance *v1.ServiceInstance) []byte {

@@ -4,15 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/lithammer/dedent"
-	authv1 "k8s.io/api/authentication/v1"
-	"net/http"
-	"strings"
-
 	"github.com/SAP/sap-btp-service-operator/api/common"
 	"github.com/SAP/sap-btp-service-operator/internal/utils"
+	"github.com/lithammer/dedent"
+	authv1 "k8s.io/api/authentication/v1"
 	"k8s.io/utils/pointer"
+	"net/http"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"strings"
 
 	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
@@ -564,34 +563,31 @@ var _ = Describe("ServiceBinding controller", func() {
 			})
 		})
 
-		When("referenced service instance is failed", func() {
-			It("should retry and succeed once the instance is ready", func() {
-				utils.SetFailureConditions(smClientTypes.CREATE, "Failed to create instance (test)", createdInstance)
-				updateInstanceStatus(ctx, createdInstance)
-				binding := createBindingWithBlockedError(ctx, bindingName, bindingTestNamespace, instanceName, "binding-external-name", "is not usable")
-				utils.SetSuccessConditions(smClientTypes.CREATE, createdInstance)
-				updateInstanceStatus(ctx, createdInstance)
-				waitForResourceToBeReady(ctx, binding)
-			})
-		})
-
 		When("referenced service instance is not ready", func() {
 			It("should retry and succeed once the instance is ready", func() {
-				fakeClient.StatusReturns(&smClientTypes.Operation{ResourceID: fakeInstanceID, State: smClientTypes.INPROGRESS}, nil)
-				utils.SetInProgressConditions(ctx, smClientTypes.CREATE, "", createdInstance)
-				createdInstance.Status.OperationURL = "/1234"
-				createdInstance.Status.OperationType = smClientTypes.CREATE
+				createdInstance.Status.Ready = metav1.ConditionFalse
 				updateInstanceStatus(ctx, createdInstance)
 
 				createdBinding, err := createBindingWithoutAssertionsAndWait(ctx, bindingName, bindingTestNamespace, instanceName, "", "binding-external-name", "", false)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(utils.IsInProgress(createdBinding)).To(BeTrue())
+				waitForResourceCondition(ctx, createdBinding, common.ConditionSucceeded, metav1.ConditionFalse, common.Blocked, "")
 
-				utils.SetSuccessConditions(smClientTypes.CREATE, createdInstance)
-				createdInstance.Status.OperationType = ""
-				createdInstance.Status.OperationURL = ""
+				createdInstance.Status.Ready = metav1.ConditionTrue
 				updateInstanceStatus(ctx, createdInstance)
 				waitForResourceToBeReady(ctx, createdBinding)
+			})
+		})
+
+		When("referenced service instance is being deleted", func() {
+			It("should fail", func() {
+				createdInstance.Finalizers = append(createdInstance.Finalizers, "fake/finalizer")
+				updateInstance(ctx, createdInstance)
+				Expect(k8sClient.Delete(ctx, createdInstance)).To(Succeed())
+
+				createdBinding, err := createBindingWithoutAssertionsAndWait(ctx, bindingName, bindingTestNamespace, instanceName, "", "binding-external-name", "", false)
+				Expect(err).ToNot(HaveOccurred())
+				waitForResourceCondition(ctx, createdBinding, common.ConditionSucceeded, metav1.ConditionFalse, common.Blocked, "")
+				Expect(utils.RemoveFinalizer(ctx, k8sClient, createdInstance, "fake/finalizer")).To(Succeed())
 			})
 		})
 
