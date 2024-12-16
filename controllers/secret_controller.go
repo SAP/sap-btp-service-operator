@@ -77,7 +77,7 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 func (r *SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	predicates := predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			return utils.IsSecretWatched(e.ObjectNew.GetAnnotations()) && (isSecretDataChanged(e) || isSecretInDelete(e))
+			return (utils.IsSecretWatched(e.ObjectNew.GetAnnotations()) && isSecretDataChanged(e)) || isSecretInDelete(e)
 		},
 		CreateFunc: func(e event.CreateEvent) bool {
 			return utils.IsSecretWatched(e.Object.GetAnnotations())
