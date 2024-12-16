@@ -1573,7 +1573,6 @@ func updateInstanceStatus(ctx context.Context, instance *v1.ServiceInstance) *v1
 }
 
 func checkSecretAnnotationsAndLabels(ctx context.Context, k8sClient client.Client, paramsSecret *corev1.Secret, instances []*v1.ServiceInstance) {
-
 	if len(instances) == 0 {
 		Expect(k8sClient.Get(ctx, getResourceNamespacedName(paramsSecret), paramsSecret)).To(Succeed())
 		// Add an data to wake up the secret
@@ -1582,16 +1581,16 @@ func checkSecretAnnotationsAndLabels(ctx context.Context, k8sClient client.Clien
 		Expect(k8sClient.Update(ctx, paramsSecret)).To(Succeed())
 		Eventually(func() bool {
 			Expect(k8sClient.Get(ctx, getResourceNamespacedName(paramsSecret), paramsSecret)).To(Succeed())
-			return len(paramsSecret.Labels[common.WatchSecretAnnotation]) == 0 && len(paramsSecret.Finalizers) == 0
+			return !utils.IsSecretWatched(paramsSecret.Annotations) && len(paramsSecret.Finalizers) == 0
 		}, timeout, interval).Should(BeTrue())
 	} else {
 		Expect(k8sClient.Get(ctx, getResourceNamespacedName(paramsSecret), paramsSecret)).To(Succeed())
 		for _, instance := range instances {
 			Expect(k8sClient.Get(ctx, getResourceNamespacedName(instance), instance)).To(Succeed())
 			Expect(instance.Labels[common.InstanceSecretRefLabel+string(paramsSecret.GetUID())]).To(Equal(paramsSecret.Name))
+			Expect(paramsSecret.Annotations[common.WatchSecretAnnotation+string(instance.GetUID())]).To(Equal("true"))
 		}
 		Expect(paramsSecret.Finalizers[0]).To(Equal(common.FinalizerName))
-		Expect(paramsSecret.Labels[common.WatchSecretAnnotation]).To(Equal("true"))
 	}
 }
 

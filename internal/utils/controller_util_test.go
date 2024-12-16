@@ -220,7 +220,7 @@ var _ = Describe("Controller Util", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			// Call the function
-			err = AddWatchForSecret(ctx, k8sClient, secret, "")
+			err = AddWatchForSecret(ctx, k8sClient, secret, "123")
 			Expect(err).ToNot(HaveOccurred())
 
 			// Get the updated secret
@@ -228,7 +228,7 @@ var _ = Describe("Controller Util", func() {
 			err = k8sClient.Get(ctx, types.NamespacedName{Name: "test-secret", Namespace: "default"}, updatedSecret)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(updatedSecret.Finalizers[0]).To(Equal(common.FinalizerName))
-			Expect(updatedSecret.Labels[common.WatchSecretAnnotation]).To(Equal("true"))
+			Expect(updatedSecret.Annotations[common.WatchSecretAnnotation+"123"]).To(Equal("true"))
 
 		})
 	})
