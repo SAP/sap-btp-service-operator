@@ -294,7 +294,17 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, serviceI
 			log.Info("Deleting instance async")
 			return r.handleAsyncDelete(ctx, serviceInstance, operationURL)
 		}
-
+		if serviceInstance.Labels != nil {
+			for key := range serviceInstance.Labels {
+				if strings.HasPrefix(key, common.InstanceSecretRefLabel) {
+					if secretName, ok := serviceInstance.Labels[key]; !ok {
+						if err := utils.RemoveWatchForSecret(ctx, r.Client, types.NamespacedName{Name: secretName, Namespace: serviceInstance.Namespace}, string(serviceInstance.UID)); err != nil {
+							log.Error(err, fmt.Sprintf("failed to unwatch secret %s", secretName))
+						}
+					}
+				}
+			}
+		}
 		log.Info("Instance was deleted successfully, removing finalizer")
 		// remove our finalizer from the list and update it.
 		return ctrl.Result{}, utils.RemoveFinalizer(ctx, r.Client, serviceInstance, common.FinalizerName, serviceInstance.GetControllerName())

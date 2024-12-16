@@ -272,7 +272,7 @@ func RemoveWatchForSecret(ctx context.Context, k8sClient client.Client, secretKe
 
 func IsSecretWatched(secretAnnotations map[string]string) bool {
 	for key := range secretAnnotations {
-		if strings.HasPrefix(common.WatchSecretAnnotation, key) {
+		if strings.HasPrefix(key, common.WatchSecretAnnotation) {
 			return true
 		}
 	}

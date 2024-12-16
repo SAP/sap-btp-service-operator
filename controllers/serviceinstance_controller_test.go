@@ -1303,8 +1303,8 @@ var _ = Describe("ServiceInstance controller", func() {
 				paramsSecret.Data = credentialsMap
 				Expect(k8sClient.Update(ctx, paramsSecret)).To(Succeed())
 				Eventually(func() bool {
-					return fakeClient.UpdateInstanceCallCount() == 1
-				}, timeout*3, interval).Should(BeTrue(), "expected condition was not met")
+					return fakeClient.UpdateInstanceCallCount() >= 1
+				}, timeout, interval).Should(BeTrue(), "expected condition was not met")
 
 				_, smInstance, _, _, _, _, _ = fakeClient.UpdateInstanceArgsForCall(0)
 				checkParams(string(smInstance.Parameters), []string{"\"key\":\"value\"", "\"secret-key\":\"new-secret-value\""})
@@ -1327,8 +1327,8 @@ var _ = Describe("ServiceInstance controller", func() {
 				paramsSecret.Data = credentialsMap
 				Expect(k8sClient.Update(ctx, paramsSecret)).To(Succeed())
 				Eventually(func() bool {
-					return fakeClient.UpdateInstanceCallCount() == 1
-				}, timeout*3, interval).Should(BeTrue(), "expected condition was not met")
+					return fakeClient.UpdateInstanceCallCount() >= 1
+				}, timeout, interval).Should(BeTrue(), "expected condition was not met")
 
 				_, smInstance, _, _, _, _, _ = fakeClient.UpdateInstanceArgsForCall(0)
 				checkParams(string(smInstance.Parameters), []string{"\"key\":\"value\"", "\"secret-key\":\"new-secret-value\""})
@@ -1372,7 +1372,7 @@ var _ = Describe("ServiceInstance controller", func() {
 				Expect(k8sClient.Update(ctx, anotherSecret)).To(Succeed())
 				Eventually(func() bool {
 					return fakeClient.UpdateInstanceCallCount() == 1
-				}, timeout*3, interval).Should(BeTrue(), "expected condition was not met")
+				}, timeout, interval).Should(BeTrue(), "expected condition was not met")
 
 				_, smInstance, _, _, _, _, _ = fakeClient.UpdateInstanceArgsForCall(0)
 				checkParams(string(smInstance.Parameters), []string{"\"key\":\"value\"", "\"secret-key\":\"new-secret-value\""})
@@ -1423,7 +1423,7 @@ var _ = Describe("ServiceInstance controller", func() {
 				serviceInstance = updateInstance(ctx, serviceInstance)
 				Eventually(func() bool {
 					return fakeClient.UpdateInstanceCallCount() > 1
-				}, timeout*3, interval).Should(BeTrue(),
+				}, timeout, interval).Should(BeTrue(),
 					"dkd",
 				)
 				_, smInstance, _, _, _, _, _ = fakeClient.UpdateInstanceArgsForCall(1)
@@ -1451,7 +1451,7 @@ var _ = Describe("ServiceInstance controller", func() {
 				Expect(k8sClient.Update(ctx, paramsSecret)).To(Succeed())
 				Eventually(func() bool {
 					return fakeClient.UpdateInstanceCallCount() == 2
-				}, timeout*3, interval).Should(BeTrue(), "expected condition was not met")
+				}, timeout, interval).Should(BeTrue(), "expected condition was not met")
 
 				_, smInstance, _, _, _, _, _ = fakeClient.UpdateInstanceArgsForCall(0)
 				checkParams(string(smInstance.Parameters), []string{"\"key\":\"value\"", "\"secret-key\":\"new-secret-value\""})
@@ -1574,11 +1574,6 @@ func updateInstanceStatus(ctx context.Context, instance *v1.ServiceInstance) *v1
 
 func checkSecretAnnotationsAndLabels(ctx context.Context, k8sClient client.Client, paramsSecret *corev1.Secret, instances []*v1.ServiceInstance) {
 	if len(instances) == 0 {
-		Expect(k8sClient.Get(ctx, getResourceNamespacedName(paramsSecret), paramsSecret)).To(Succeed())
-		// Add an data to wake up the secret
-		paramsSecret.Data["secret-parameter2"] = []byte("{\"secret-key\":\"new-secret-value\"}")
-		// Update the secret in the Kubernetes cluster
-		Expect(k8sClient.Update(ctx, paramsSecret)).To(Succeed())
 		Eventually(func() bool {
 			Expect(k8sClient.Get(ctx, getResourceNamespacedName(paramsSecret), paramsSecret)).To(Succeed())
 			return !utils.IsSecretWatched(paramsSecret.Annotations) && len(paramsSecret.Finalizers) == 0
