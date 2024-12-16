@@ -129,46 +129,42 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return r.poll(ctx, serviceBinding, serviceInstance)
 	}
 
-	if !controllerutil.ContainsFinalizer(serviceBinding, common.FinalizerName) {
-		controllerutil.AddFinalizer(serviceBinding, common.FinalizerName)
+	if controllerutil.AddFinalizer(serviceBinding, common.FinalizerName) {
 		log.Info(fmt.Sprintf("added finalizer '%s' to service binding", common.FinalizerName))
 		if err := r.Client.Update(ctx, serviceBinding); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
-	condition := meta.FindStatusCondition(serviceBinding.Status.Conditions, common.ConditionReady)
 
-	if serviceBinding.Status.BindingID != "" && condition != nil && condition.ObservedGeneration != serviceBinding.Generation {
-		err := r.updateSecret(ctx, serviceBinding, serviceInstance, log)
-		if err != nil {
-			return r.handleSecretError(ctx, smClientTypes.UPDATE, err, serviceBinding)
-		}
-		err = utils.UpdateStatus(ctx, r.Client, serviceBinding)
-		if err != nil {
-			return r.handleSecretError(ctx, smClientTypes.UPDATE, err, serviceBinding)
-		}
+	readyCond := meta.FindStatusCondition(serviceBinding.Status.Conditions, common.ConditionReady)
+	if serviceBinding.Status.BindingID != "" && readyCond != nil && readyCond.ObservedGeneration != serviceBinding.Generation {
+		// cred rotation or secret template changed
+		log.Info("binding's generation changed, maintaining secret")
+		return r.maintainSecret(ctx, serviceBinding, serviceInstance)
 	}
 
-	isBindingReady := condition != nil && condition.Status == metav1.ConditionTrue
+	isBindingReady := readyCond != nil && readyCond.Status == metav1.ConditionTrue
+	isCredRotationInProgress := meta.IsStatusConditionTrue(serviceBinding.Status.Conditions, common.ConditionCredRotationInProgress)
 	if isBindingReady {
 		if isStaleServiceBinding(serviceBinding) {
 			return r.handleStaleServiceBinding(ctx, serviceBinding)
 		}
 
-		if initCredRotationIfRequired(serviceBinding) {
-			return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
+		if !isCredRotationInProgress {
+			if initCredRotationIfRequired(serviceBinding) {
+				log.Info("cred rotation required, updating status")
+				return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
+			} else {
+				log.Info("Binding in final state, maintaining secret")
+				return r.maintain(ctx, serviceBinding)
+			}
 		}
 	}
 
-	if meta.IsStatusConditionTrue(serviceBinding.Status.Conditions, common.ConditionCredRotationInProgress) {
+	if isCredRotationInProgress {
 		if err := r.rotateCredentials(ctx, serviceBinding, serviceInstance); err != nil {
 			return ctrl.Result{}, err
 		}
-	}
-
-	if isBindingReady {
-		log.Info("Binding in final state")
-		return r.maintain(ctx, serviceBinding)
 	}
 
 	if !serviceInstanceUsable(serviceInstance) {
@@ -525,6 +521,17 @@ func (r *ServiceBindingReconciler) maintain(ctx context.Context, binding *v1.Ser
 		return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, binding)
 	}
 
+	return ctrl.Result{}, nil
+}
+
+func (r *ServiceBindingReconciler) maintainSecret(ctx context.Context, serviceBinding *v1.ServiceBinding, serviceInstance *v1.ServiceInstance) (ctrl.Result, error) {
+	log := utils.GetLogger(ctx)
+	if err := r.updateSecret(ctx, serviceBinding, serviceInstance, log); err != nil {
+		return r.handleSecretError(ctx, smClientTypes.UPDATE, err, serviceBinding)
+	}
+	if err := utils.UpdateStatus(ctx, r.Client, serviceBinding); err != nil {
+		return r.handleSecretError(ctx, smClientTypes.UPDATE, err, serviceBinding)
+	}
 	return ctrl.Result{}, nil
 }
 
@@ -1083,7 +1090,7 @@ func isStaleServiceBinding(binding *v1.ServiceBinding) bool {
 }
 
 func initCredRotationIfRequired(binding *v1.ServiceBinding) bool {
-	if utils.IsFailed(binding) || !credRotationEnabled(binding) || meta.IsStatusConditionTrue(binding.Status.Conditions, common.ConditionCredRotationInProgress) {
+	if utils.IsFailed(binding) || !credRotationEnabled(binding) {
 		return false
 	}
 	_, forceRotate := binding.Annotations[common.ForceRotateAnnotation]
