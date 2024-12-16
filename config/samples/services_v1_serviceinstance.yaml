@@ -5,11 +5,5 @@ metadata:
 spec:
   serviceOfferingName: service-manager
   servicePlanName: subaccount-audit
-  parametersFrom:
-    - secretKeyRef:
-        name: my-secret
-        key: secret-parameter
-    - secretKeyRef:
-        name: my-secret1
-        key: secret-parameter
+
 
