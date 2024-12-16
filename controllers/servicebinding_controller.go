@@ -171,20 +171,13 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return r.maintain(ctx, serviceBinding)
 	}
 
-	if serviceNotUsable(serviceInstance) {
+	if serviceInstanceNotUsable(serviceInstance) {
 		instanceErr := fmt.Errorf("service instance '%s' is not usable", serviceBinding.Spec.ServiceInstanceName)
 		utils.SetBlockedCondition(ctx, instanceErr.Error(), serviceBinding)
 		if err := utils.UpdateStatus(ctx, r.Client, serviceBinding); err != nil {
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, instanceErr
-	}
-
-	if utils.IsInProgress(serviceInstance) {
-		log.Info(fmt.Sprintf("Service instance with k8s name %s is not ready for binding yet", serviceInstance.Name))
-		utils.SetInProgressConditions(ctx, smClientTypes.CREATE, fmt.Sprintf("creation in progress, waiting for service instance '%s' to be ready", serviceBinding.Spec.ServiceInstanceName), serviceBinding)
-
-		return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
 	}
 
 	//set owner instance only for original bindings (not rotated)
@@ -1155,14 +1148,11 @@ func bindingAlreadyOwnedByInstance(instance *v1.ServiceInstance, binding *v1.Ser
 	return false
 }
 
-func serviceNotUsable(instance *v1.ServiceInstance) bool {
+func serviceInstanceNotUsable(instance *v1.ServiceInstance) bool {
 	if utils.IsMarkedForDeletion(instance.ObjectMeta) {
 		return true
 	}
-	if len(instance.Status.Conditions) != 0 {
-		return instance.Status.Conditions[0].Reason == utils.GetConditionReason(smClientTypes.CREATE, smClientTypes.FAILED)
-	}
-	return false
+	return instance.Status.Ready != metav1.ConditionTrue
 }
 
 func getInstanceNameForSecretCredentials(instance *v1.ServiceInstance) []byte {
