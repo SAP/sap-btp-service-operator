@@ -247,22 +247,22 @@ func serialize(value interface{}) ([]byte, format, error) {
 	return data, JSON, nil
 }
 
-func AddWatchForSecret(ctx context.Context, k8sClient client.Client, secret *corev1.Secret, instanceUid string) error {
+func AddWatchForSecret(ctx context.Context, k8sClient client.Client, secret *corev1.Secret, instanceUID string) error {
 	if secret.Annotations == nil {
 		secret.Annotations = make(map[string]string)
 	}
-	secret.Annotations[common.WatchSecretAnnotation+instanceUid] = "true"
+	secret.Annotations[common.WatchSecretAnnotation+instanceUID] = "true"
 	controllerutil.AddFinalizer(secret, common.FinalizerName)
 
 	return k8sClient.Update(ctx, secret)
 }
 
-func RemoveWatchForSecret(ctx context.Context, k8sClient client.Client, secretKey apimachinerytypes.NamespacedName, instanceUid string) error {
+func RemoveWatchForSecret(ctx context.Context, k8sClient client.Client, secretKey apimachinerytypes.NamespacedName, instanceUID string) error {
 	secret := &corev1.Secret{}
 	if err := k8sClient.Get(ctx, secretKey, secret); err != nil {
 		return err
 	}
-	delete(secret.Annotations, common.WatchSecretAnnotation+instanceUid)
+	delete(secret.Annotations, common.WatchSecretAnnotation+instanceUID)
 	if !IsSecretWatched(secret.Annotations) {
 		controllerutil.RemoveFinalizer(secret, common.FinalizerName)
 	}
