@@ -5,4 +5,3 @@ metadata:
 spec:
   serviceOfferingName: service-manager
   servicePlanName: subaccount-audit
-
