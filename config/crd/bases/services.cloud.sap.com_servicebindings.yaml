@@ -273,10 +273,6 @@ spec:
                 description: Indicates when binding secret was rotated
                 format: date-time
                 type: string
-              observedGeneration:
-                description: Last generation that was acted on
-                format: int64
-                type: integer
               operationType:
                 description: The operation type (CREATE/UPDATE/DELETE) for ongoing
                   operation
