@@ -96,12 +96,6 @@ var _ = Describe("Service Instance Type Test", func() {
 		Expect(instance.GetControllerName()).To(Equal(common.ServiceInstanceController))
 	})
 
-	It("should update observed generation", func() {
-		Expect(instance.Status.ObservedGeneration).To(Equal(int64(0)))
-		instance.SetObservedGeneration(2)
-		Expect(instance.GetObservedGeneration()).To(Equal(int64(2)))
-	})
-
 	It("should update ready", func() {
 		Expect(instance.Status.Ready).To(Equal(metav1.ConditionStatus("")))
 		instance.SetReady(metav1.ConditionTrue)

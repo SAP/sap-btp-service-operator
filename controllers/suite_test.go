@@ -230,7 +230,7 @@ var _ = AfterSuite(func() {
 })
 
 func isResourceReady(resource common.SAPBTPResource) bool {
-	return resource.GetObservedGeneration() == resource.GetGeneration() &&
+	return common.GetObservedGeneration(resource) == resource.GetGeneration() &&
 		meta.IsStatusConditionPresentAndEqual(resource.GetConditions(), common.ConditionReady, metav1.ConditionTrue)
 }
 
@@ -245,7 +245,7 @@ func waitForResourceCondition(ctx context.Context, resource common.SAPBTPResourc
 			return false
 		}
 
-		if resource.GetObservedGeneration() != resource.GetGeneration() {
+		if common.GetObservedGeneration(resource) != resource.GetGeneration() {
 			return false
 		}
 
@@ -268,10 +268,7 @@ func waitForResourceCondition(ctx context.Context, resource common.SAPBTPResourc
 
 		return true
 	}, timeout*3, interval).Should(BeTrue(),
-		eventuallyMsgForResource(
-			fmt.Sprintf("expected condition: {type: %s, status: %s, reason: %s, message: %s} was not met", conditionType, status, reason, message),
-			key,
-			resource),
+		eventuallyMsgForResource(fmt.Sprintf("expected condition: {type: %s, status: %s, reason: %s, message: %s} was not met. %v", conditionType, status, reason, message, resource.GetConditions()), resource),
 	)
 }
 
@@ -279,51 +276,48 @@ func getResourceNamespacedName(resource client.Object) types.NamespacedName {
 	return types.NamespacedName{Namespace: resource.GetNamespace(), Name: resource.GetName()}
 }
 
-func deleteAndWait(ctx context.Context, key types.NamespacedName, resource client.Object) {
-	wait := true
+func deleteAndWait(ctx context.Context, resource client.Object) {
 	Eventually(func() bool {
-		if err := k8sClient.Get(ctx, key, resource); err != nil {
+		if err := k8sClient.Get(ctx, getResourceNamespacedName(resource), resource); err != nil {
 			if apierrors.IsNotFound(err) {
-				wait = false
 				return true
 			}
 			return false
 		}
 
-		if err := k8sClient.Delete(ctx, resource); err != nil {
-			if apierrors.IsNotFound(err) {
-				wait = false
-				return true
-			}
-			return false
-		}
-
-		return true
-	}, timeout, interval).Should(BeTrue(), eventuallyMsgForResource("failed to mark for deletion", key, resource))
-
-	if wait {
-		waitForResourceToBeDeleted(ctx, key, resource)
-	}
+		err := k8sClient.Delete(ctx, resource)
+		return apierrors.IsNotFound(err)
+	}, timeout, interval).Should(BeTrue(), eventuallyMsgForResource("failed to delete resource", resource))
 }
 
 func waitForResourceToBeDeleted(ctx context.Context, key types.NamespacedName, resource client.Object) {
 	Eventually(func() bool {
 		return apierrors.IsNotFound(k8sClient.Get(ctx, key, resource))
-	}, timeout, interval).Should(BeTrue(), eventuallyMsgForResource("resource is not deleted", key, resource))
+	}, timeout, interval).Should(BeTrue(), eventuallyMsgForResource("resource is not deleted", resource))
 }
 
-func createParamsSecret(namespace string) {
+func createParamsSecret(ctx context.Context, secretName, namespace string) *corev1.Secret {
 	credentialsMap := make(map[string][]byte)
 	credentialsMap["secret-parameter"] = []byte("{\"secret-key\":\"secret-value\"}")
+	return createSecret(ctx, secretName, namespace, credentialsMap)
+}
+
+func createSecret(ctx context.Context, secretName string, namespace string, credentialsMap map[string][]byte) *corev1.Secret {
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "param-secret",
+			Name:      secretName,
 			Namespace: namespace,
 		},
 		Data: credentialsMap,
 	}
 
-	Expect(k8sClient.Create(context.Background(), secret)).ToNot(HaveOccurred())
+	Expect(k8sClient.Create(ctx, secret)).To(Succeed())
+
+	Eventually(func() bool {
+		err := k8sClient.Get(ctx, types.NamespacedName{Name: secretName, Namespace: namespace}, secret)
+		return err == nil
+	}, timeout, interval).Should(BeTrue())
+	return secret
 }
 
 func printSection(str string) {
@@ -359,7 +353,7 @@ func getTransientBrokerError(errorMessage string) error {
 	}
 }
 
-func eventuallyMsgForResource(message string, key types.NamespacedName, resource client.Object) string {
+func eventuallyMsgForResource(message string, resource client.Object) string {
 	gvk, _ := apiutil.GVKForObject(resource, scheme.Scheme)
-	return fmt.Sprintf("eventaully failure for %s %s. message: %s", gvk.Kind, key.String(), message)
+	return fmt.Sprintf("eventaully failure for %s %s. message: %s", gvk.Kind, getResourceNamespacedName(resource), message)
 }

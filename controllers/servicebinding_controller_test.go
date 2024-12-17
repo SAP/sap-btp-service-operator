@@ -4,14 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/SAP/sap-btp-service-operator/api/common"
-	"github.com/SAP/sap-btp-service-operator/internal/utils"
 	"github.com/lithammer/dedent"
 	authv1 "k8s.io/api/authentication/v1"
-	"k8s.io/utils/pointer"
 	"net/http"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"strings"
+
+	"github.com/SAP/sap-btp-service-operator/api/common"
+	"github.com/SAP/sap-btp-service-operator/internal/utils"
+	"k8s.io/utils/pointer"
+	ctrl "sigs.k8s.io/controller-runtime"
 
 	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
@@ -35,8 +36,6 @@ import (
 
 var _ = Describe("ServiceBinding controller", func() {
 	var (
-		ctx context.Context
-
 		createdInstance *v1.ServiceInstance
 		createdBinding  *v1.ServiceBinding
 
@@ -46,9 +45,10 @@ var _ = Describe("ServiceBinding controller", func() {
 		bindingName          string
 		instanceName         string
 		instanceExternalName string
+		paramsSecret         *corev1.Secret
 	)
 
-	createBindingWithoutAssertionsAndWait := func(ctx context.Context, name, namespace, instanceName, instanceNamespace, externalName string, secretTemplate string, wait bool) (*v1.ServiceBinding, error) {
+	createBindingWithoutAssertions := func(ctx context.Context, name, namespace, instanceName, instanceNamespace, externalName string, secretTemplate string, wait bool) (*v1.ServiceBinding, error) {
 		binding := generateBasicBindingTemplate(name, namespace, instanceName, instanceNamespace, externalName, secretTemplate)
 		if err := k8sClient.Create(ctx, binding); err != nil {
 			return nil, err
@@ -71,45 +71,13 @@ var _ = Describe("ServiceBinding controller", func() {
 		return createdBinding, nil
 	}
 
-	createBindingWithoutAssertions := func(ctx context.Context, name, namespace, instanceName, instanceNamespace, externalName string, secretTemplate string) (*v1.ServiceBinding, error) {
-		return createBindingWithoutAssertionsAndWait(ctx, name, namespace, instanceName, instanceNamespace, externalName, secretTemplate, false)
-	}
-
-	createBindingWithTransitError := func(ctx context.Context, name, namespace, instanceName, externalName, failureMessage string, secretTemplate string) {
-		binding, err := createBindingWithoutAssertions(ctx, name, namespace, instanceName, "", externalName, secretTemplate)
-		if err != nil {
-			Expect(err.Error()).To(ContainSubstring(failureMessage))
-		} else {
-			waitForResourceCondition(ctx, binding, common.ConditionSucceeded, metav1.ConditionFalse, common.CreateInProgress, failureMessage)
-		}
-	}
-
-	createBindingWithError := func(ctx context.Context, name, namespace, instanceName, externalName, failureMessage string, secretTemplate string) {
-		binding, err := createBindingWithoutAssertions(ctx, name, namespace, instanceName, "", externalName, secretTemplate)
-		if err != nil {
-			Expect(err.Error()).To(ContainSubstring(failureMessage))
-		} else {
-			waitForResourceCondition(ctx, binding, common.ConditionFailed, metav1.ConditionTrue, "", failureMessage)
-		}
-	}
-
-	createBindingWithBlockedError := func(ctx context.Context, name, namespace, instanceName, externalName, failureMessage string) *v1.ServiceBinding {
-		binding, err := createBindingWithoutAssertions(ctx, name, namespace, instanceName, "", externalName, "")
-		if err != nil {
-			Expect(err.Error()).To(ContainSubstring(failureMessage))
-		} else {
-			waitForResourceCondition(ctx, binding, common.ConditionSucceeded, metav1.ConditionFalse, "", failureMessage)
-		}
-		return binding
-	}
-
-	createBinding := func(ctx context.Context, name, namespace, instanceName, instanceNamespace, externalName string, secretTemplate string) *v1.ServiceBinding {
-		createdBinding, err := createBindingWithoutAssertions(ctx, name, namespace, instanceName, instanceNamespace, externalName, secretTemplate)
+	createAndValidateBinding := func(ctx context.Context, name, namespace, instanceName, instanceNamespace, externalName string, secretTemplate string) *v1.ServiceBinding {
+		createdBinding, err := createBindingWithoutAssertions(ctx, name, namespace, instanceName, instanceNamespace, externalName, secretTemplate, false)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(createdBinding.Status.InstanceID).ToNot(BeEmpty())
 		Expect(createdBinding.Status.BindingID).To(Equal(fakeBindingID))
 		Expect(createdBinding.Spec.SecretName).To(Not(BeEmpty()))
-		Expect(int(createdBinding.Status.ObservedGeneration)).To(Equal(1))
+		Expect(common.GetObservedGeneration(createdBinding)).To(Equal(int64(1)))
 		Expect(string(createdBinding.Spec.Parameters.Raw)).To(ContainSubstring("\"key\":\"value\""))
 		smBinding, _, _ := fakeClient.BindArgsForCall(0)
 		params := smBinding.Parameters
@@ -181,25 +149,23 @@ var _ = Describe("ServiceBinding controller", func() {
 		fakeClient.GetInstanceByIDReturns(smInstance, nil)
 
 		defaultLookupKey = types.NamespacedName{Namespace: bindingTestNamespace, Name: bindingName}
-		err := k8sClient.Get(ctx, types.NamespacedName{Namespace: bindingTestNamespace, Name: "param-secret"}, &corev1.Secret{})
-		if apierrors.IsNotFound(err) {
-			createParamsSecret(bindingTestNamespace)
-		} else {
-			Expect(err).ToNot(HaveOccurred())
-		}
-
 		createdInstance = createInstance(ctx, instanceName, bindingTestNamespace, instanceExternalName)
+		paramsSecret = createParamsSecret(ctx, "binding-params-secret", bindingTestNamespace)
+
 	})
 
 	AfterEach(func() {
 		if createdBinding != nil {
 			fakeClient.UnbindReturns("", nil)
-			deleteAndWait(ctx, types.NamespacedName{Name: createdBinding.Name, Namespace: createdBinding.Namespace}, &v1.ServiceBinding{})
+			deleteAndWait(ctx, createdBinding)
 		}
 
 		if createdInstance != nil {
-			deleteAndWait(ctx, types.NamespacedName{Name: instanceName, Namespace: bindingTestNamespace}, &v1.ServiceInstance{})
+			fakeClient.DeprovisionReturns("", nil)
+			deleteAndWait(ctx, createdInstance)
 		}
+
+		deleteAndWait(ctx, paramsSecret)
 
 		createdBinding = nil
 		createdInstance = nil
@@ -209,15 +175,17 @@ var _ = Describe("ServiceBinding controller", func() {
 		Context("invalid parameters", func() {
 			When("service instance name is not provided", func() {
 				It("should fail", func() {
-					createBindingWithTransitError(ctx, bindingName, bindingTestNamespace, "", "",
-						"spec.serviceInstanceName in body should be at least 1 chars long", "")
+					_, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, "", "", "", "", false)
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("spec.serviceInstanceName in body should be at least 1 chars long"))
 				})
 			})
 
 			When("referenced service instance does not exist", func() {
 				It("should fail", func() {
-					createBindingWithBlockedError(ctx, bindingName, bindingTestNamespace, "no-such-instance", "",
-						"couldn't find the service instance")
+					binding, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, "no-such-instance", "", "", "", false)
+					Expect(err).ToNot(HaveOccurred())
+					waitForResourceCondition(ctx, binding, common.ConditionSucceeded, metav1.ConditionFalse, "", "couldn't find the service instance")
 				})
 			})
 
@@ -234,7 +202,7 @@ var _ = Describe("ServiceBinding controller", func() {
 				})
 
 				AfterEach(func() {
-					deleteAndWait(ctx, types.NamespacedName{Name: secretName, Namespace: bindingTestNamespace}, &corev1.Secret{})
+					deleteAndWait(ctx, secret)
 				})
 
 				When("name is already taken", func() {
@@ -283,7 +251,7 @@ var _ = Describe("ServiceBinding controller", func() {
 
 		Context("sync", func() {
 			It("Should create binding and store the binding credentials in a secret", func() {
-				createdBinding = createBinding(ctx, bindingName, bindingTestNamespace, instanceName, "", "binding-external-name", "")
+				createdBinding = createAndValidateBinding(ctx, bindingName, bindingTestNamespace, instanceName, "", "binding-external-name", "")
 				Expect(createdBinding.Spec.ExternalName).To(Equal("binding-external-name"))
 				Expect(createdBinding.Spec.UserInfo).NotTo(BeNil())
 
@@ -353,7 +321,7 @@ var _ = Describe("ServiceBinding controller", func() {
 
 			When("secret deleted by user", func() {
 				It("should recreate the secret", func() {
-					createdBinding = createBinding(ctx, bindingName, bindingTestNamespace, instanceName, "", "binding-external-name", "")
+					createdBinding = createAndValidateBinding(ctx, bindingName, bindingTestNamespace, instanceName, "", "binding-external-name", "")
 					secretLookupKey := types.NamespacedName{Name: createdBinding.Spec.SecretName, Namespace: createdBinding.Namespace}
 					bindingSecret := getSecret(ctx, secretLookupKey.Name, secretLookupKey.Namespace, true)
 					originalSecretUID := bindingSecret.UID
@@ -394,7 +362,9 @@ var _ = Describe("ServiceBinding controller", func() {
 					})
 
 					It("should fail with the error returned from SM", func() {
-						createBindingWithError(ctx, bindingName, bindingTestNamespace, instanceName, "binding-external-name", errorMessage, "")
+						binding, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "binding-external-name", "", false)
+						Expect(err).ToNot(HaveOccurred())
+						waitForResourceCondition(ctx, binding, common.ConditionFailed, metav1.ConditionTrue, "", errorMessage)
 					})
 				})
 
@@ -409,7 +379,7 @@ var _ = Describe("ServiceBinding controller", func() {
 					})
 
 					It("should eventually succeed", func() {
-						b, err := createBindingWithoutAssertionsAndWait(ctx, bindingName, bindingTestNamespace, instanceName, "", "binding-external-name", "", true)
+						b, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "binding-external-name", "", true)
 						Expect(err).ToNot(HaveOccurred())
 						Expect(isResourceReady(b)).To(BeTrue())
 					})
@@ -425,7 +395,9 @@ var _ = Describe("ServiceBinding controller", func() {
 					})
 
 					It("should fail", func() {
-						createBindingWithTransitError(ctx, bindingName, bindingTestNamespace, instanceName, "binding-external-name", errorMessage, "")
+						binding, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "binding-external-name", "", false)
+						Expect(err).ToNot(HaveOccurred())
+						waitForResourceCondition(ctx, binding, common.ConditionSucceeded, metav1.ConditionFalse, common.CreateInProgress, errorMessage)
 					})
 				})
 
@@ -436,7 +408,7 @@ var _ = Describe("ServiceBinding controller", func() {
 					})
 
 					It("should detect the error as transient and eventually succeed", func() {
-						createdBinding, _ := createBindingWithoutAssertionsAndWait(ctx,
+						createdBinding, _ := createBindingWithoutAssertions(ctx,
 							bindingName,
 							bindingTestNamespace,
 							instanceName,
@@ -463,7 +435,9 @@ var _ = Describe("ServiceBinding controller", func() {
 					})
 
 					It("should detect the error as non-transient and fail", func() {
-						createBindingWithTransitError(ctx, bindingName, bindingTestNamespace, instanceName, "binding-external-name", errorMessage, "")
+						binding, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "binding-external-name", "", false)
+						Expect(err).ToNot(HaveOccurred())
+						waitForResourceCondition(ctx, binding, common.ConditionSucceeded, metav1.ConditionFalse, common.CreateInProgress, errorMessage)
 					})
 				})
 
@@ -475,7 +449,7 @@ var _ = Describe("ServiceBinding controller", func() {
 				})
 
 				It("creation will fail with appropriate message", func() {
-					createdBinding, _ = createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "", "")
+					createdBinding, _ = createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "", "", false)
 					waitForResourceCondition(ctx, createdBinding, common.ConditionFailed, metav1.ConditionTrue, "CreateFailed", "failed to create secret")
 				})
 			})
@@ -489,7 +463,7 @@ var _ = Describe("ServiceBinding controller", func() {
 			When("bind polling returns success", func() {
 				It("Should create binding and store the binding credentials in a secret", func() {
 					fakeClient.StatusReturns(&smClientTypes.Operation{ResourceID: fakeBindingID, State: smClientTypes.SUCCEEDED}, nil)
-					createdBinding = createBinding(ctx, bindingName, bindingTestNamespace, instanceName, "", "", "")
+					createdBinding = createAndValidateBinding(ctx, bindingName, bindingTestNamespace, instanceName, "", "", "")
 				})
 			})
 
@@ -501,7 +475,10 @@ var _ = Describe("ServiceBinding controller", func() {
 						State:       smClientTypes.FAILED,
 						Description: errorMessage,
 					}, nil)
-					createBindingWithError(ctx, bindingName, bindingTestNamespace, instanceName, "existing-name", errorMessage, "")
+
+					binding, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "existing-name", "", false)
+					Expect(err).ToNot(HaveOccurred())
+					waitForResourceCondition(ctx, binding, common.ConditionFailed, metav1.ConditionTrue, "", errorMessage)
 				})
 			})
 
@@ -512,7 +489,7 @@ var _ = Describe("ServiceBinding controller", func() {
 					fakeClient.GetBindingByIDReturns(&smClientTypes.ServiceBinding{ID: fakeBindingID, LastOperation: &smClientTypes.Operation{State: smClientTypes.SUCCEEDED, Type: smClientTypes.CREATE}}, nil)
 				})
 				It("should eventually succeed", func() {
-					binding, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "", "")
+					binding, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "", "", false)
 					Expect(err).ToNot(HaveOccurred())
 					waitForResourceCondition(ctx, binding, common.ConditionFailed, metav1.ConditionTrue, "", "no polling for you")
 					fakeClient.ListBindingsReturns(&smClientTypes.ServiceBindings{
@@ -540,7 +517,7 @@ var _ = Describe("ServiceBinding controller", func() {
 					common.UseInstanceMetadataNameInSecret: "true",
 				}
 				updateInstance(ctx, createdInstance)
-				createdBinding = createBinding(ctx, bindingName, bindingTestNamespace, instanceName, "", "", "")
+				createdBinding = createAndValidateBinding(ctx, bindingName, bindingTestNamespace, instanceName, "", "", "")
 				bindingSecret := getSecret(ctx, createdBinding.Spec.SecretName, createdBinding.Namespace, true)
 				validateInstanceInfo(bindingSecret, instanceName)
 				validateSecretMetadata(bindingSecret, nil)
@@ -549,7 +526,7 @@ var _ = Describe("ServiceBinding controller", func() {
 
 		When("external name is not provided", func() {
 			It("succeeds and uses the k8s name as external name", func() {
-				createdBinding = createBinding(ctx, bindingName, bindingTestNamespace, instanceName, "", "", "")
+				createdBinding = createAndValidateBinding(ctx, bindingName, bindingTestNamespace, instanceName, "", "", "")
 				Expect(createdBinding.Spec.ExternalName).To(Equal(createdBinding.Name))
 			})
 		})
@@ -563,16 +540,38 @@ var _ = Describe("ServiceBinding controller", func() {
 			})
 		})
 
+		When("referenced service instance is failed", func() {
+			It("should retry and succeed once the instance is ready", func() {
+				utils.SetFailureConditions(smClientTypes.CREATE, "Failed to create instance (test)", createdInstance, false)
+				updateInstanceStatus(ctx, createdInstance)
+
+				binding, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "binding-external-name", "", false)
+				Expect(err).ToNot(HaveOccurred())
+				waitForResourceCondition(ctx, binding, common.ConditionSucceeded, metav1.ConditionFalse, "", "is not usable")
+
+				utils.SetSuccessConditions(smClientTypes.CREATE, createdInstance, false)
+				updateInstanceStatus(ctx, createdInstance)
+				waitForResourceToBeReady(ctx, binding)
+			})
+		})
+
 		When("referenced service instance is not ready", func() {
 			It("should retry and succeed once the instance is ready", func() {
 				createdInstance.Status.Ready = metav1.ConditionFalse
+				fakeClient.StatusReturns(&smClientTypes.Operation{ResourceID: fakeInstanceID, State: smClientTypes.INPROGRESS}, nil)
+				utils.SetInProgressConditions(ctx, smClientTypes.CREATE, "", createdInstance, false)
+				createdInstance.Status.OperationURL = "/1234"
+				createdInstance.Status.OperationType = smClientTypes.CREATE
 				updateInstanceStatus(ctx, createdInstance)
 
-				createdBinding, err := createBindingWithoutAssertionsAndWait(ctx, bindingName, bindingTestNamespace, instanceName, "", "binding-external-name", "", false)
+				createdBinding, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "binding-external-name", "", false)
 				Expect(err).ToNot(HaveOccurred())
 				waitForResourceCondition(ctx, createdBinding, common.ConditionSucceeded, metav1.ConditionFalse, common.Blocked, "")
 
 				createdInstance.Status.Ready = metav1.ConditionTrue
+				utils.SetSuccessConditions(smClientTypes.CREATE, createdInstance, false)
+				createdInstance.Status.OperationType = ""
+				createdInstance.Status.OperationURL = ""
 				updateInstanceStatus(ctx, createdInstance)
 				waitForResourceToBeReady(ctx, createdBinding)
 			})
@@ -606,7 +605,7 @@ stringData:
   newKey: {{ .credentials.secret_key }}
   tags: {{ .instance.tags }}`)
 
-				createdBinding, err := createBindingWithoutAssertionsAndWait(ctx, bindingName, bindingTestNamespace, instanceName, "", "", secretTemplate, true)
+				createdBinding, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "", secretTemplate, true)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(isResourceReady(createdBinding)).To(BeTrue())
 				By("Verify binding secret created")
@@ -628,7 +627,7 @@ stringData:
   newKey: {{ .credentials.secret_key }}
   tags: {{ .instance.tags }}`)
 
-				createdBinding, err := createBindingWithoutAssertionsAndWait(ctx, bindingName, bindingTestNamespace, instanceName, "", "", secretTemplate, true)
+				createdBinding, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "", secretTemplate, true)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(isResourceReady(createdBinding)).To(BeTrue())
 				By("Verify binding secret created")
@@ -645,7 +644,9 @@ stringData:
 				                                       kind: Secret
 				                                       metadata:
 				                                         name: my-secret-name`)
-				createBindingWithError(ctx, bindingName, bindingTestNamespace, instanceName, "", "the Secret template is invalid: Secret's metadata field", secretTemplate)
+				binding, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "", secretTemplate, false)
+				Expect(err).ToNot(HaveOccurred())
+				waitForResourceCondition(ctx, binding, common.ConditionFailed, metav1.ConditionTrue, "", "the Secret template is invalid: Secret's metadata field")
 			})
 			It("should fail to create the secret if wrong template key in the spec.secretTemplate is provided", func() {
 				ctx := context.Background()
@@ -655,7 +656,7 @@ stringData:
 				                                       stringData:
 				                                         foo: {{ .non_existing_key }}`)
 
-				binding, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "", secretTemplate)
+				binding, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "", secretTemplate, false)
 				Expect(err).To(BeNil())
 				bindingLookupKey := getResourceNamespacedName(binding)
 				Eventually(func() bool {
@@ -671,7 +672,9 @@ stringData:
 				secretTemplate := dedent.Dedent(`
 				                                       apiVersion: v1
 				                                       kind: Pod`)
-				createBindingWithError(ctx, bindingName, bindingTestNamespace, instanceName, "", "but needs to be of kind 'Secret'", secretTemplate)
+				binding, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "", secretTemplate, false)
+				Expect(err).ToNot(HaveOccurred())
+				waitForResourceCondition(ctx, binding, common.ConditionFailed, metav1.ConditionTrue, "", "but needs to be of kind 'Secret'")
 			})
 			It("should succeed to create the secret- empty data", func() {
 				ctx := context.Background()
@@ -685,7 +688,7 @@ metadata:
     instance_name: {{ .instance.instance_name }}
 stringData:`)
 
-				createdBinding, err := createBindingWithoutAssertionsAndWait(ctx, bindingName, bindingTestNamespace, instanceName, "", "", secretTemplate, true)
+				createdBinding, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "", secretTemplate, true)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(isResourceReady(createdBinding)).To(BeTrue())
 				By("Verify binding secret created")
@@ -718,7 +721,7 @@ metadata:
   annotations:
     instance_name: {{ .instance.instance_name }}`)
 
-				createdBinding, err := createBindingWithoutAssertionsAndWait(ctx, bindingName, bindingTestNamespace, instanceName, "", "", secretTemplate, true)
+				createdBinding, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "", secretTemplate, true)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(isResourceReady(createdBinding)).To(BeTrue())
 				By("Verify binding secret created")
@@ -757,7 +760,7 @@ stringData:
   newKey: {{ .credentials.auth.basic.password }}
   tags: {{ .instance.tags }}`)
 
-				createdBinding, err := createBindingWithoutAssertionsAndWait(ctx, bindingName, bindingTestNamespace, instanceName, "", "", secretTemplate, true)
+				createdBinding, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "", secretTemplate, true)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(isResourceReady(createdBinding)).To(BeTrue())
 				By("Verify binding secret created")
@@ -782,7 +785,7 @@ metadata:
     instance_name: {{ .instance.instance_name }}
 stringData:
   newKey: {{ .credentials.secret_key }}`)
-			createdBinding = createBinding(ctx, bindingName, bindingTestNamespace, instanceName, "", "binding-external-name", secretTemplate)
+			createdBinding = createAndValidateBinding(ctx, bindingName, bindingTestNamespace, instanceName, "", "binding-external-name", secretTemplate)
 			fakeClient.GetBindingByIDReturns(&smClientTypes.ServiceBinding{ID: fakeBindingID, Credentials: json.RawMessage("{\"secret_key\": \"secret_value\"}")}, nil)
 			Expect(isResourceReady(createdBinding)).To(BeTrue())
 		})
@@ -918,14 +921,9 @@ stringData:
 	})
 
 	Context("Delete", func() {
-		deleteAndValidate := func(binding *v1.ServiceBinding) {
-			deleteAndWait(ctx, getResourceNamespacedName(createdBinding), &v1.ServiceBinding{})
-			err := k8sClient.Get(ctx, types.NamespacedName{Name: binding.Spec.SecretName, Namespace: binding.Namespace}, &corev1.Secret{})
-			Expect(apierrors.IsNotFound(err)).To(BeTrue())
-		}
 
 		BeforeEach(func() {
-			createdBinding = createBinding(ctx, bindingName, bindingTestNamespace, instanceName, "", "binding-external-name", "")
+			createdBinding = createAndValidateBinding(ctx, bindingName, bindingTestNamespace, instanceName, "", "binding-external-name", "")
 			Expect(isResourceReady(createdBinding)).To(BeTrue())
 		})
 
@@ -935,7 +933,7 @@ stringData:
 					fakeClient.UnbindReturns("", nil)
 				})
 				It("should delete the k8s binding and secret", func() {
-					deleteAndValidate(createdBinding)
+					deleteAndWait(ctx, createdBinding)
 				})
 			})
 
@@ -960,7 +958,7 @@ stringData:
 				})
 
 				It("recovers the binding and delete the k8s binding and secret", func() {
-					deleteAndValidate(createdBinding)
+					deleteAndWait(ctx, createdBinding)
 				})
 			})
 
@@ -971,7 +969,7 @@ stringData:
 				})
 				AfterEach(func() {
 					fakeClient.UnbindReturns("", nil)
-					deleteAndValidate(createdBinding)
+					deleteAndWait(ctx, createdBinding)
 				})
 
 				It("should not remove finalizer and keep the secret", func() {
@@ -996,7 +994,7 @@ stringData:
 				})
 
 				It("should eventually succeed", func() {
-					deleteAndValidate(createdBinding)
+					deleteAndWait(ctx, createdBinding)
 				})
 			})
 
@@ -1005,7 +1003,7 @@ stringData:
 					fakeClient.UnbindReturns("", nil)
 				})
 				It("should succeed", func() {
-					createdBinding, err := createBindingWithoutAssertions(ctx, bindingName+"-new", bindingTestNamespace, "non-exist-instance", "", "binding-external-name", "")
+					createdBinding, err := createBindingWithoutAssertions(ctx, bindingName+"-new", bindingTestNamespace, "non-exist-instance", "", "binding-external-name", "", false)
 					Expect(err).ToNot(HaveOccurred())
 					createdBinding.Finalizers = []string{common.FinalizerName}
 					Expect(k8sClient.Update(ctx, createdBinding))
@@ -1017,7 +1015,7 @@ stringData:
 						cond := meta.FindStatusCondition(createdBinding.GetConditions(), common.ConditionSucceeded)
 						return cond != nil && cond.Reason == common.Blocked
 					}, timeout, interval).Should(BeTrue())
-					deleteAndValidate(createdBinding)
+					deleteAndWait(ctx, createdBinding)
 				})
 			})
 		})
@@ -1034,7 +1032,7 @@ stringData:
 
 				It("should delete the k8s binding and secret", func() {
 					Expect(k8sClient.Delete(ctx, createdBinding)).To(Succeed())
-					deleteAndValidate(createdBinding)
+					deleteAndWait(ctx, createdBinding)
 				})
 			})
 
@@ -1059,7 +1057,7 @@ stringData:
 						return failedCond != nil && strings.Contains(failedCond.Message, errorMessage)
 					}, timeout, interval).Should(BeTrue())
 					fakeClient.UnbindReturns("", nil)
-					deleteAndValidate(createdBinding)
+					deleteAndWait(ctx, createdBinding)
 				})
 			})
 
@@ -1081,7 +1079,7 @@ stringData:
 						return cond != nil && strings.Contains(cond.Message, string(smClientTypes.INPROGRESS))
 					}, timeout, interval).Should(BeTrue())
 					fakeClient.UnbindReturns("", nil)
-					deleteAndValidate(createdBinding)
+					deleteAndWait(ctx, createdBinding)
 				})
 			})
 		})
@@ -1124,7 +1122,7 @@ stringData:
 				When(fmt.Sprintf("last operation is %s %s", testCase.lastOpType, testCase.lastOpState), func() {
 					It("should resync status", func() {
 						var err error
-						createdBinding, err = createBindingWithoutAssertionsAndWait(ctx, bindingName, bindingTestNamespace, instanceName, "", "fake-binding-external-name", "", false)
+						createdBinding, err = createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "fake-binding-external-name", "", false)
 						Expect(err).ToNot(HaveOccurred())
 						smCallArgs := fakeClient.ListBindingsArgsForCall(0)
 						Expect(smCallArgs.LabelQuery).To(HaveLen(1))
@@ -1176,7 +1174,7 @@ stringData:
 
 			It("should resync successfully", func() {
 				var err error
-				createdBinding, err = createBindingWithoutAssertionsAndWait(ctx, bindingName, bindingTestNamespace, instanceName, "", "fake-binding-external-name", "", false)
+				createdBinding, err = createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "fake-binding-external-name", "", false)
 				Expect(err).ToNot(HaveOccurred())
 			})
 		})
@@ -1185,7 +1183,7 @@ stringData:
 	Context("Credential Rotation", func() {
 		BeforeEach(func() {
 			fakeClient.RenameBindingReturns(nil, nil)
-			createdBinding = createBinding(ctx, bindingName, bindingTestNamespace, instanceName, "", "binding-external-name", "")
+			createdBinding = createAndValidateBinding(ctx, bindingName, bindingTestNamespace, instanceName, "", "binding-external-name", "")
 			fakeClient.ListBindingsStub = func(params *sm.Parameters) (*smClientTypes.ServiceBindings, error) {
 				if params == nil || params.FieldQuery == nil || len(params.FieldQuery) == 0 {
 					return nil, nil
@@ -1339,19 +1337,13 @@ stringData:
 
 	Context("Cross Namespace", func() {
 		var crossBinding *v1.ServiceBinding
-		var paramsSecret *corev1.Secret
+		var serviceInstanceInAnotherNamespace *v1.ServiceInstance
 		BeforeEach(func() {
-			paramsSecret = &corev1.Secret{}
-			err := k8sClient.Get(ctx, types.NamespacedName{Namespace: testNamespace, Name: "param-secret"}, paramsSecret)
-			if apierrors.IsNotFound(err) {
-				createParamsSecret(testNamespace)
-			} else {
-				Expect(err).ToNot(HaveOccurred())
-			}
+			serviceInstanceInAnotherNamespace = createInstance(ctx, instanceName, testNamespace, instanceExternalName)
 		})
 
 		AfterEach(func() {
-			deleteAndWait(ctx, types.NamespacedName{Namespace: testNamespace, Name: "param-secret"}, &corev1.Secret{})
+			deleteAndWait(ctx, serviceInstanceInAnotherNamespace)
 		})
 
 		When("binding is created in a different namespace than the instance", func() {
@@ -1361,7 +1353,7 @@ stringData:
 				}
 			})
 			It("should succeed", func() {
-				crossBinding = createBinding(ctx, bindingName, testNamespace, instanceName, bindingTestNamespace, "cross-binding-external-name", "")
+				crossBinding = createAndValidateBinding(ctx, bindingName, bindingTestNamespace, instanceName, testNamespace, "cross-binding-external-name", "")
 
 				By("Verify binding secret created")
 				getSecret(ctx, createdBinding.Spec.SecretName, createdBinding.Namespace, true)
@@ -1371,7 +1363,7 @@ stringData:
 		Context("cred rotation", func() {
 			BeforeEach(func() {
 				fakeClient.RenameBindingReturns(nil, nil)
-				crossBinding = createBinding(ctx, bindingName, testNamespace, instanceName, bindingTestNamespace, "cross-binding-external-name", "")
+				crossBinding = createAndValidateBinding(ctx, bindingName, bindingTestNamespace, instanceName, testNamespace, "cross-binding-external-name", "")
 				fakeClient.ListBindingsStub = func(params *sm.Parameters) (*smClientTypes.ServiceBindings, error) {
 					if params == nil || params.FieldQuery == nil || len(params.FieldQuery) == 0 {
 						return nil, nil
@@ -1398,12 +1390,12 @@ stringData:
 			})
 			AfterEach(func() {
 				if crossBinding != nil {
-					Expect(k8sClient.Delete(ctx, crossBinding))
+					deleteAndWait(ctx, crossBinding)
 				}
 			})
 
 			It("should rotate the credentials and create old binding", func() {
-				key := types.NamespacedName{Name: bindingName, Namespace: testNamespace}
+				key := types.NamespacedName{Name: bindingName, Namespace: bindingTestNamespace}
 				Expect(k8sClient.Get(ctx, key, crossBinding)).To(Succeed())
 				crossBinding.Spec.CredRotationPolicy = &v1.CredentialsRotationPolicy{
 					Enabled:           true,
@@ -1413,7 +1405,7 @@ stringData:
 
 				var secret *corev1.Secret
 				Eventually(func() bool {
-					secret = getSecret(ctx, crossBinding.Spec.SecretName, testNamespace, true)
+					secret = getSecret(ctx, crossBinding.Spec.SecretName, bindingTestNamespace, true)
 					secret.Data = map[string][]byte{}
 					return k8sClient.Update(ctx, secret) == nil
 				}, timeout, interval).Should(BeTrue())
@@ -1426,19 +1418,19 @@ stringData:
 					return err == nil && myBinding.Status.LastCredentialsRotationTime != nil && len(myBinding.Status.Conditions) == 2
 				}, timeout, interval).Should(BeTrue())
 
-				secret = getSecret(ctx, myBinding.Spec.SecretName, testNamespace, true)
+				secret = getSecret(ctx, myBinding.Spec.SecretName, bindingTestNamespace, true)
 				val := secret.Data["secret_key"]
 				Expect(string(val)).To(Equal("secret_value"))
 
 				bindingList := &v1.ServiceBindingList{}
 				Eventually(func() bool {
-					Expect(k8sClient.List(ctx, bindingList, client.MatchingLabels{common.StaleBindingIDLabel: myBinding.Status.BindingID}, client.InNamespace(testNamespace))).To(Succeed())
+					Expect(k8sClient.List(ctx, bindingList, client.MatchingLabels{common.StaleBindingIDLabel: myBinding.Status.BindingID}, client.InNamespace(bindingTestNamespace))).To(Succeed())
 					return len(bindingList.Items) > 0
 				}, timeout, interval).Should(BeTrue())
 				oldBinding := bindingList.Items[0]
 				Expect(oldBinding.Spec.CredRotationPolicy.Enabled).To(BeFalse())
 
-				secret = getSecret(ctx, oldBinding.Spec.SecretName, testNamespace, true)
+				secret = getSecret(ctx, oldBinding.Spec.SecretName, bindingTestNamespace, true)
 				val = secret.Data["secret_key2"]
 				Expect(string(val)).To(Equal("secret_value2"))
 			})
@@ -1460,7 +1452,7 @@ func generateBasicBindingTemplate(name, namespace, instanceName, instanceNamespa
 	binding.Spec.ParametersFrom = []v1.ParametersFromSource{
 		{
 			SecretKeyRef: &v1.SecretKeyReference{
-				Name: "param-secret",
+				Name: "binding-params-secret",
 				Key:  "secret-parameter",
 			},
 		},
