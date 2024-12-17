@@ -147,10 +147,10 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			if initCredRotationIfRequired(serviceBinding) {
 				log.Info("cred rotation required, updating status")
 				return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
-			} else {
-				log.Info("Binding in final state, maintaining secret")
-				return r.maintain(ctx, serviceBinding, serviceInstance)
 			}
+
+			log.Info("binding in final state, maintaining secret")
+			return r.maintain(ctx, serviceBinding, serviceInstance)
 		}
 	}
 
@@ -205,29 +205,6 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	log.Error(fmt.Errorf("update binding is not allowed, this line should not be reached"), "")
 	return ctrl.Result{}, nil
-}
-
-func (r *ServiceBindingReconciler) updateSecret(ctx context.Context, serviceBinding *v1.ServiceBinding, serviceInstance *v1.ServiceInstance, log logr.Logger) error {
-	log.Info("Updating secret according to the new template")
-	smClient, err := r.GetSMClient(ctx, serviceInstance)
-	if err != nil {
-		return err
-	}
-	smBinding, err := smClient.GetBindingByID(serviceBinding.Status.BindingID, nil)
-	if err != nil {
-		log.Error(err, "failed to get binding for update secret")
-		return err
-	}
-	if smBinding != nil {
-		if smBinding.Credentials != nil {
-			if err = r.storeBindingSecret(ctx, serviceBinding, smBinding); err != nil {
-				return err
-			}
-			log.Info("Updating binding", "bindingID", smBinding.ID)
-			utils.SetSuccessConditions(smClientTypes.UPDATE, serviceBinding, false)
-		}
-	}
-	return nil
 }
 
 func (r *ServiceBindingReconciler) SetupWithManager(mgr ctrl.Manager) error {
@@ -492,10 +469,10 @@ func (r *ServiceBindingReconciler) maintainSecret(ctx context.Context, serviceBi
 		if _, err := r.getSecret(ctx, serviceBinding.Namespace, serviceBinding.Spec.SecretName); err == nil {
 			log.Info("secret exists, no need to maintain secret")
 			return nil
-		} else {
-			log.Info("binding's secret does not exist")
-			r.Recorder.Event(serviceBinding, corev1.EventTypeWarning, "SecretDeleted", "SecretDeleted")
 		}
+
+		log.Info("binding's secret was not found")
+		r.Recorder.Event(serviceBinding, corev1.EventTypeWarning, "SecretDeleted", "SecretDeleted")
 	}
 
 	log.Info("maintaining binding's secret")
