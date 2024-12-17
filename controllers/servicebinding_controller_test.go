@@ -4,15 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/lithammer/dedent"
-	authv1 "k8s.io/api/authentication/v1"
-	"net/http"
-	"strings"
-
 	"github.com/SAP/sap-btp-service-operator/api/common"
 	"github.com/SAP/sap-btp-service-operator/internal/utils"
+	"github.com/lithammer/dedent"
+	authv1 "k8s.io/api/authentication/v1"
 	"k8s.io/utils/pointer"
+	"net/http"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"strings"
 
 	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
@@ -22,7 +21,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -325,20 +323,17 @@ var _ = Describe("ServiceBinding controller", func() {
 					secretLookupKey := types.NamespacedName{Name: createdBinding.Spec.SecretName, Namespace: createdBinding.Namespace}
 					bindingSecret := getSecret(ctx, secretLookupKey.Name, secretLookupKey.Namespace, true)
 					originalSecretUID := bindingSecret.UID
-					fakeClient.ListBindingsReturns(&smClientTypes.ServiceBindings{
-						ServiceBindings: []smClientTypes.ServiceBinding{
-							{
-								ID:          createdBinding.Status.BindingID,
-								Credentials: json.RawMessage("{\"secret_key\": \"secret_value\"}"),
-								LastOperation: &smClientTypes.Operation{
-									Type:        smClientTypes.CREATE,
-									State:       smClientTypes.SUCCEEDED,
-									Description: "fake-description",
-								},
-							},
+					Expect(k8sClient.Delete(ctx, bindingSecret)).To(Succeed())
+
+					fakeClient.GetBindingByIDReturns(&smClientTypes.ServiceBinding{
+						ID:          createdBinding.Status.BindingID,
+						Credentials: json.RawMessage("{\"secret_key\": \"secret_value\"}"),
+						LastOperation: &smClientTypes.Operation{
+							Type:        smClientTypes.CREATE,
+							State:       smClientTypes.SUCCEEDED,
+							Description: "fake-description",
 						},
 					}, nil)
-					Expect(k8sClient.Delete(ctx, bindingSecret)).To(Succeed())
 
 					//tickle the binding
 					createdBinding.Annotations = map[string]string{"tickle": "true"}
@@ -542,14 +537,14 @@ var _ = Describe("ServiceBinding controller", func() {
 
 		When("referenced service instance is failed", func() {
 			It("should retry and succeed once the instance is ready", func() {
-				utils.SetFailureConditions(smClientTypes.CREATE, "Failed to create instance (test)", createdInstance, false)
+				createdInstance.Status.Ready = metav1.ConditionFalse
 				updateInstanceStatus(ctx, createdInstance)
 
 				binding, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "binding-external-name", "", false)
 				Expect(err).ToNot(HaveOccurred())
 				waitForResourceCondition(ctx, binding, common.ConditionSucceeded, metav1.ConditionFalse, "", "is not usable")
 
-				utils.SetSuccessConditions(smClientTypes.CREATE, createdInstance, false)
+				createdInstance.Status.Ready = metav1.ConditionTrue
 				updateInstanceStatus(ctx, createdInstance)
 				waitForResourceToBeReady(ctx, binding)
 			})
@@ -583,7 +578,7 @@ var _ = Describe("ServiceBinding controller", func() {
 				updateInstance(ctx, createdInstance)
 				Expect(k8sClient.Delete(ctx, createdInstance)).To(Succeed())
 
-				createdBinding, err := createBindingWithoutAssertionsAndWait(ctx, bindingName, bindingTestNamespace, instanceName, "", "binding-external-name", "", false)
+				createdBinding, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "binding-external-name", "", false)
 				Expect(err).ToNot(HaveOccurred())
 				waitForResourceCondition(ctx, createdBinding, common.ConditionSucceeded, metav1.ConditionFalse, common.Blocked, "")
 				Expect(utils.RemoveFinalizer(ctx, k8sClient, createdInstance, "fake/finalizer")).To(Succeed())
@@ -829,7 +824,7 @@ stringData:
 			})
 		})
 
-		When("secretTemplate  is changed", func() {
+		When("secretTemplate is changed", func() {
 			It("should succeed to create the secret", func() {
 				ctx := context.Background()
 				secretTemplate := dedent.Dedent(

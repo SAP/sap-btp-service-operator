@@ -136,12 +136,6 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	readyCond := meta.FindStatusCondition(serviceBinding.Status.Conditions, common.ConditionReady)
-	if serviceBinding.Status.BindingID != "" && readyCond != nil && readyCond.ObservedGeneration != serviceBinding.Generation {
-		// cred rotation or secret template changed
-		log.Info("binding's generation changed, maintaining secret")
-		return r.maintainSecret(ctx, serviceBinding, serviceInstance)
-	}
-
 	isBindingReady := readyCond != nil && readyCond.Status == metav1.ConditionTrue
 	isCredRotationInProgress := meta.IsStatusConditionTrue(serviceBinding.Status.Conditions, common.ConditionCredRotationInProgress)
 	if isBindingReady {
@@ -155,7 +149,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 				return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
 			} else {
 				log.Info("Binding in final state, maintaining secret")
-				return r.maintain(ctx, serviceBinding)
+				return r.maintain(ctx, serviceBinding, serviceInstance)
 			}
 		}
 	}
@@ -480,54 +474,51 @@ func (r *ServiceBindingReconciler) getBindingForRecovery(ctx context.Context, sm
 	return nil, nil
 }
 
-func (r *ServiceBindingReconciler) maintain(ctx context.Context, binding *v1.ServiceBinding) (ctrl.Result, error) {
+func (r *ServiceBindingReconciler) maintain(ctx context.Context, binding *v1.ServiceBinding, instance *v1.ServiceInstance) (ctrl.Result, error) {
 	log := utils.GetLogger(ctx)
-	shouldUpdateStatus := false
-	if !utils.IsFailed(binding) {
-		secret, err := r.getSecret(ctx, binding.Namespace, binding.Spec.SecretName)
-		if err != nil {
-			// secret was deleted
-			if apierrors.IsNotFound(err) && !utils.IsMarkedForDeletion(binding.ObjectMeta) {
-				log.Info(fmt.Sprintf("secret not found recovering binding %s", binding.Name))
-				binding.Status.BindingID = ""
-				binding.Status.Ready = metav1.ConditionFalse
-				utils.SetInProgressConditions(ctx, smClientTypes.CREATE, "recreating deleted secret", binding, false)
-				shouldUpdateStatus = true
-				r.Recorder.Event(binding, corev1.EventTypeWarning, "SecretDeleted", "SecretDeleted")
-			} else {
-				return ctrl.Result{}, err
-			}
-		} else { // secret exists, validate it has the required labels
-			if secret.Labels == nil {
-				secret.Labels = map[string]string{}
-			}
-			if secret.Labels[common.ManagedByBTPOperatorLabel] != "true" {
-				secret.Labels[common.ManagedByBTPOperatorLabel] = "true"
-				if err = r.Client.Update(ctx, secret); err != nil {
-					log.Error(err, "failed to update secret labels")
-					return ctrl.Result{}, err
-				}
-			}
-		}
+	if err := r.maintainSecret(ctx, binding, instance); err != nil {
+		log.Error(err, "failed to maintain secret")
+		return r.handleSecretError(ctx, smClientTypes.UPDATE, err, binding)
 	}
 
-	if shouldUpdateStatus {
-		log.Info(fmt.Sprintf("maintanance required for binding %s", binding.Name))
-		return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, binding)
-	}
-
+	log.Info("maintain finished successfully")
 	return ctrl.Result{}, nil
 }
 
-func (r *ServiceBindingReconciler) maintainSecret(ctx context.Context, serviceBinding *v1.ServiceBinding, serviceInstance *v1.ServiceInstance) (ctrl.Result, error) {
+func (r *ServiceBindingReconciler) maintainSecret(ctx context.Context, serviceBinding *v1.ServiceBinding, serviceInstance *v1.ServiceInstance) error {
 	log := utils.GetLogger(ctx)
-	if err := r.updateSecret(ctx, serviceBinding, serviceInstance, log); err != nil {
-		return r.handleSecretError(ctx, smClientTypes.UPDATE, err, serviceBinding)
+	if common.GetObservedGeneration(serviceBinding) == serviceBinding.Generation {
+		log.Info("observed generation is up to date, checking if secret exists")
+		if _, err := r.getSecret(ctx, serviceBinding.Namespace, serviceBinding.Spec.SecretName); err == nil {
+			log.Info("secret exists, no need to maintain secret")
+			return nil
+		} else {
+			log.Info("binding's secret does not exist")
+			r.Recorder.Event(serviceBinding, corev1.EventTypeWarning, "SecretDeleted", "SecretDeleted")
+		}
 	}
-	if err := utils.UpdateStatus(ctx, r.Client, serviceBinding); err != nil {
-		return r.handleSecretError(ctx, smClientTypes.UPDATE, err, serviceBinding)
+
+	log.Info("maintaining binding's secret")
+	smClient, err := r.GetSMClient(ctx, serviceInstance)
+	if err != nil {
+		return err
 	}
-	return ctrl.Result{}, nil
+	smBinding, err := smClient.GetBindingByID(serviceBinding.Status.BindingID, nil)
+	if err != nil {
+		log.Error(err, "failed to get binding for update secret")
+		return err
+	}
+	if smBinding != nil {
+		if smBinding.Credentials != nil {
+			if err = r.storeBindingSecret(ctx, serviceBinding, smBinding); err != nil {
+				return err
+			}
+			log.Info("Updating binding", "bindingID", smBinding.ID)
+			utils.SetSuccessConditions(smClientTypes.UPDATE, serviceBinding, false)
+		}
+	}
+
+	return utils.UpdateStatus(ctx, r.Client, serviceBinding)
 }
 
 func (r *ServiceBindingReconciler) getServiceInstanceForBinding(ctx context.Context, binding *v1.ServiceBinding) (*v1.ServiceInstance, error) {
