@@ -135,29 +135,27 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 	}
 
+	isCredRotationInProgress := meta.IsStatusConditionTrue(serviceBinding.Status.Conditions, common.ConditionCredRotationInProgress)
+	if isCredRotationInProgress {
+		if err := r.rotateCredentials(ctx, serviceBinding, serviceInstance); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
 	readyCond := meta.FindStatusCondition(serviceBinding.Status.Conditions, common.ConditionReady)
 	isBindingReady := readyCond != nil && readyCond.Status == metav1.ConditionTrue
-	isCredRotationInProgress := meta.IsStatusConditionTrue(serviceBinding.Status.Conditions, common.ConditionCredRotationInProgress)
 	if isBindingReady {
 		if isStaleServiceBinding(serviceBinding) {
 			return r.handleStaleServiceBinding(ctx, serviceBinding)
 		}
 
-		if !isCredRotationInProgress {
-			if initCredRotationIfRequired(serviceBinding) {
-				log.Info("cred rotation required, updating status")
-				return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
-			}
-
-			log.Info("binding in final state, maintaining secret")
-			return r.maintain(ctx, serviceBinding, serviceInstance)
+		if initCredRotationIfRequired(serviceBinding) {
+			log.Info("cred rotation required, updating status")
+			return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
 		}
-	}
 
-	if isCredRotationInProgress {
-		if err := r.rotateCredentials(ctx, serviceBinding, serviceInstance); err != nil {
-			return ctrl.Result{}, err
-		}
+		log.Info("binding in final state, maintaining secret")
+		return r.maintain(ctx, serviceBinding, serviceInstance)
 	}
 
 	if !serviceInstanceUsable(serviceInstance) {
