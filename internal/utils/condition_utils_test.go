@@ -120,7 +120,7 @@ var _ = Describe("Condition Utils", func() {
 		It("should set in-progress conditions", func() {
 			resource = getBinding()
 
-			SetInProgressConditions(ctx, smClientTypes.CREATE, "Pending", resource)
+			SetInProgressConditions(ctx, smClientTypes.CREATE, "Pending", resource, false)
 
 			// Add assertions to check the state of the resource after calling SetInProgressConditions
 			Expect(resource.GetConditions()).ToNot(BeEmpty())
@@ -133,7 +133,7 @@ var _ = Describe("Condition Utils", func() {
 			operationType := smClientTypes.CREATE
 			resource = getBinding()
 
-			SetSuccessConditions(operationType, resource)
+			SetSuccessConditions(operationType, resource, false)
 
 			// Add assertions to check the state of the resource after calling SetSuccessConditions
 			Expect(resource.GetConditions()).ToNot(BeEmpty())
@@ -160,7 +160,7 @@ var _ = Describe("Condition Utils", func() {
 		It("should set failure conditions", func() {
 			operationType := smClientTypes.CREATE
 			errorMessage := "Operation failed"
-			SetFailureConditions(operationType, errorMessage, resource)
+			SetFailureConditions(operationType, errorMessage, resource, false)
 			Expect(resource.GetConditions()).ToNot(BeEmpty())
 			Expect(meta.IsStatusConditionPresentAndEqual(resource.GetConditions(), common.ConditionReady, metav1.ConditionFalse)).To(BeTrue())
 		})
@@ -302,6 +302,34 @@ var _ = Describe("Condition Utils", func() {
 			}
 			result := IsFailed(sb)
 			Expect(result).Should(BeFalse())
+		})
+	})
+
+	Context("getLastObservedGen", func() {
+		It("should return the last observed generation from the conditions", func() {
+			resource := &v1.ServiceBinding{
+				Status: v1.ServiceBindingStatus{
+					Conditions: []metav1.Condition{
+						{
+							Type:               common.ConditionSucceeded,
+							Status:             metav1.ConditionTrue,
+							ObservedGeneration: 5,
+						},
+					},
+				},
+			}
+
+			Expect(getLastObservedGen(resource)).To(Equal(int64(5)))
+		})
+
+		It("should return 0 if the ConditionSucceeded condition is not present", func() {
+			resource := &v1.ServiceBinding{
+				Status: v1.ServiceBindingStatus{
+					Conditions: []metav1.Condition{},
+				},
+			}
+
+			Expect(getLastObservedGen(resource)).To(Equal(int64(0)))
 		})
 	})
 })
