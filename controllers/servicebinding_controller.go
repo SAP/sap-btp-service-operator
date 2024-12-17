@@ -123,11 +123,6 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return r.delete(ctx, serviceBinding, serviceInstance)
 	}
 
-	if len(serviceBinding.Status.OperationURL) > 0 {
-		// ongoing operation - poll status from SM
-		return r.poll(ctx, serviceBinding, serviceInstance)
-	}
-
 	if controllerutil.AddFinalizer(serviceBinding, common.FinalizerName) {
 		log.Info(fmt.Sprintf("added finalizer '%s' to service binding", common.FinalizerName))
 		if err := r.Client.Update(ctx, serviceBinding); err != nil {
@@ -135,8 +130,13 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 	}
 
-	isCredRotationInProgress := meta.IsStatusConditionTrue(serviceBinding.Status.Conditions, common.ConditionCredRotationInProgress)
-	if isCredRotationInProgress {
+	if len(serviceBinding.Status.OperationURL) > 0 {
+		// ongoing operation - poll status from SM
+		return r.poll(ctx, serviceBinding, serviceInstance)
+	}
+
+	if meta.IsStatusConditionTrue(serviceBinding.Status.Conditions, common.ConditionCredRotationInProgress) {
+		log.Info("rotating credentials")
 		if err := r.rotateCredentials(ctx, serviceBinding, serviceInstance); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -146,6 +146,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	isBindingReady := readyCond != nil && readyCond.Status == metav1.ConditionTrue
 	if isBindingReady {
 		if isStaleServiceBinding(serviceBinding) {
+			log.Info("binding is stale, handling")
 			return r.handleStaleServiceBinding(ctx, serviceBinding)
 		}
 
@@ -180,6 +181,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	if serviceBinding.Status.BindingID == "" {
 		if err := r.validateSecretNameIsAvailable(ctx, serviceBinding); err != nil {
+			log.Error(err, "secret validation failed")
 			utils.SetBlockedCondition(ctx, err.Error(), serviceBinding)
 			return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
 		}
