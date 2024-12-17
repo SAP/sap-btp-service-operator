@@ -17,11 +17,16 @@ limitations under the License.
 package v1
 
 import (
+	"crypto/md5"
+	"encoding/hex"
+	"encoding/json"
+
 	"github.com/SAP/sap-btp-service-operator/api/common"
 	"github.com/SAP/sap-btp-service-operator/client/sm/types"
 	v1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -107,9 +112,6 @@ type ServiceInstanceStatus struct {
 	// Service instance conditions
 	Conditions []metav1.Condition `json:"conditions"`
 
-	// Last generation that was acted on
-	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
-
 	// Indicates whether instance is ready for usage
 	Ready metav1.ConditionStatus `json:"ready,omitempty"`
 
@@ -165,14 +167,6 @@ func (si *ServiceInstance) SetStatus(status interface{}) {
 	si.Status = status.(ServiceInstanceStatus)
 }
 
-func (si *ServiceInstance) GetObservedGeneration() int64 {
-	return si.Status.ObservedGeneration
-}
-
-func (si *ServiceInstance) SetObservedGeneration(newObserved int64) {
-	si.Status.ObservedGeneration = newObserved
-}
-
 func (si *ServiceInstance) DeepClone() common.SAPBTPResource {
 	return si.DeepCopy()
 }
@@ -207,6 +201,15 @@ func init() {
 
 func (si *ServiceInstance) Hub() {}
 
-func (si *ServiceInstance) ShouldBeShared() bool {
+func (si *ServiceInstance) GetShared() bool {
 	return si.Spec.Shared != nil && *si.Spec.Shared
+}
+
+func (si *ServiceInstance) GetSpecHash() string {
+	spec := si.Spec
+	spec.Shared = ptr.To(false)
+	specBytes, _ := json.Marshal(spec)
+	s := string(specBytes)
+	hash := md5.Sum([]byte(s))
+	return hex.EncodeToString(hash[:])
 }

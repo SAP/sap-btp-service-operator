@@ -66,18 +66,6 @@ var _ = Describe("Service Binding Type Test", func() {
 		Expect(binding.GetControllerName()).To(Equal(common.ServiceBindingController))
 	})
 
-	It("should update observed generation", func() {
-		Expect(binding.Status.ObservedGeneration).To(Equal(int64(0)))
-		binding.SetObservedGeneration(2)
-		Expect(binding.GetObservedGeneration()).To(Equal(int64(2)))
-	})
-
-	It("should update observed generation", func() {
-		Expect(binding.Status.ObservedGeneration).To(Equal(int64(0)))
-		binding.SetObservedGeneration(2)
-		Expect(binding.Status.ObservedGeneration).To(Equal(int64(2)))
-	})
-
 	It("should update ready", func() {
 		Expect(binding.Status.Ready).To(Equal(metav1.ConditionStatus("")))
 		binding.SetReady(metav1.ConditionTrue)
