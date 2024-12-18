@@ -261,7 +261,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, serviceI
 		if serviceInstance.Labels != nil {
 			for key, secretName := range serviceInstance.Labels {
 				if strings.HasPrefix(key, common.InstanceSecretRefLabel) {
-					if err := utils.RemoveWatchForSecret(ctx, r.Client, types.NamespacedName{Name: secretName, Namespace: serviceInstance.Namespace}, string(serviceInstance.UID)); err != nil {
+					if err := utils.RemoveWatchForSecret(ctx, r.Client, types.NamespacedName{Name: secretName, Namespace: serviceInstance.Namespace}, string(serviceInstance.UID), key); err != nil {
 						log.Error(err, fmt.Sprintf("failed to unwatch secret %s", secretName))
 					}
 				}
@@ -569,7 +569,7 @@ func (r *ServiceInstanceReconciler) buildSMRequestParameters(ctx context.Context
 		if strings.HasPrefix(key, common.InstanceSecretRefLabel) {
 			if _, ok := instanceLabels[key]; !ok {
 				instanceLabelsChanged = true
-				if err := utils.RemoveWatchForSecret(ctx, r.Client, types.NamespacedName{Name: value, Namespace: serviceInstance.Namespace}, string(serviceInstance.UID)); err != nil {
+				if err := utils.RemoveWatchForSecret(ctx, r.Client, types.NamespacedName{Name: value, Namespace: serviceInstance.Namespace}, string(serviceInstance.UID), key); err != nil {
 					log.Error(err, fmt.Sprintf("failed to unwatch secret %s", value))
 					return nil, err
 				}

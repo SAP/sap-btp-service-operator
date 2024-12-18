@@ -1470,6 +1470,11 @@ var _ = Describe("ServiceInstance controller", func() {
 
 				deleteAndWait(ctx, paramsSecret)
 				waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.UpdateInProgress, "secrets \"instance-params-secret\" not found")
+
+				paramsSecret = createParamsSecret(ctx, "instance-params-secret", testNamespace)
+				waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionTrue, common.Updated, "")
+				checkSecretAnnotationsAndLabels(ctx, k8sClient, paramsSecret, []*v1.ServiceInstance{serviceInstance})
+
 			})
 		})
 		When("secret updated and instance don't watch secret", func() {

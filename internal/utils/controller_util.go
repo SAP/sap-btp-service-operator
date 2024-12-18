@@ -257,17 +257,19 @@ func AddWatchForSecret(ctx context.Context, k8sClient client.Client, secret *cor
 	return k8sClient.Update(ctx, secret)
 }
 
-func RemoveWatchForSecret(ctx context.Context, k8sClient client.Client, secretKey apimachinerytypes.NamespacedName, instanceUID string) error {
+func RemoveWatchForSecret(ctx context.Context, k8sClient client.Client, secretKey apimachinerytypes.NamespacedName, instanceUID string, key string) error {
 	secret := &corev1.Secret{}
 	if err := k8sClient.Get(ctx, secretKey, secret); err != nil {
 		return client.IgnoreNotFound(err)
 	}
-	delete(secret.Annotations, common.WatchSecretAnnotation+instanceUID)
-	if !IsSecretWatched(secret.Annotations) {
-		controllerutil.RemoveFinalizer(secret, common.FinalizerName)
+	if key == common.WatchSecretAnnotation+instanceUID {
+		delete(secret.Annotations, common.WatchSecretAnnotation+instanceUID)
+		if !IsSecretWatched(secret.Annotations) {
+			controllerutil.RemoveFinalizer(secret, common.FinalizerName)
+		}
+		return k8sClient.Update(ctx, secret)
 	}
-
-	return k8sClient.Update(ctx, secret)
+	return nil
 }
 
 func IsSecretWatched(secretAnnotations map[string]string) bool {
