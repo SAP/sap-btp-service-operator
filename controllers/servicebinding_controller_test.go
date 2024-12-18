@@ -4,11 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"net/http"
-	"strings"
-
 	"github.com/lithammer/dedent"
 	authv1 "k8s.io/api/authentication/v1"
+	"net/http"
+	"strings"
 
 	"github.com/SAP/sap-btp-service-operator/api/common"
 	"github.com/SAP/sap-btp-service-operator/internal/utils"
@@ -159,6 +158,7 @@ var _ = Describe("ServiceBinding controller", func() {
 			fakeClient.UnbindReturns("", nil)
 			deleteAndWait(ctx, createdBinding)
 		}
+
 		if createdInstance != nil {
 			fakeClient.DeprovisionReturns("", nil)
 			deleteAndWait(ctx, createdInstance)
@@ -1325,9 +1325,11 @@ stringData:
 		BeforeEach(func() {
 			serviceInstanceInAnotherNamespace = createInstance(ctx, instanceName, testNamespace, instanceExternalName)
 		})
+
 		AfterEach(func() {
 			deleteAndWait(ctx, serviceInstanceInAnotherNamespace)
 		})
+
 		When("binding is created in a different namespace than the instance", func() {
 			AfterEach(func() {
 				if crossBinding != nil {
