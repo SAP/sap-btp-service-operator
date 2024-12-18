@@ -567,10 +567,10 @@ func (r *ServiceInstanceReconciler) buildSMRequestParameters(ctx context.Context
 	//sync instance labels
 	for key, value := range serviceInstance.Labels {
 		if strings.HasPrefix(key, common.InstanceSecretRefLabel) {
-			if secretName, ok := instanceLabels[key]; !ok {
+			if _, ok := instanceLabels[key]; !ok {
 				instanceLabelsChanged = true
-				if err := utils.RemoveWatchForSecret(ctx, r.Client, types.NamespacedName{Name: secretName, Namespace: serviceInstance.Namespace}, string(serviceInstance.UID)); err != nil {
-					log.Error(err, fmt.Sprintf("failed to unwatch secret %s", secretName))
+				if err := utils.RemoveWatchForSecret(ctx, r.Client, types.NamespacedName{Name: value, Namespace: serviceInstance.Namespace}, string(serviceInstance.UID)); err != nil {
+					log.Error(err, fmt.Sprintf("failed to unwatch secret %s", value))
 					return nil, err
 				}
 			}
