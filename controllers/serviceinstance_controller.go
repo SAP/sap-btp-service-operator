@@ -565,7 +565,7 @@ func (r *ServiceInstanceReconciler) buildSMRequestParameters(ctx context.Context
 	}
 
 	//sync instance labels
-	for key := range serviceInstance.Labels {
+	for key, value := range serviceInstance.Labels {
 		if strings.HasPrefix(key, common.InstanceSecretRefLabel) {
 			if secretName, ok := instanceLabels[key]; !ok {
 				instanceLabelsChanged = true
@@ -576,7 +576,7 @@ func (r *ServiceInstanceReconciler) buildSMRequestParameters(ctx context.Context
 			}
 		} else {
 			// this label not related to secrets, add it
-			instanceLabels[key] = serviceInstance.Labels[key]
+			instanceLabels[key] = value
 		}
 	}
 	if instanceLabelsChanged {
