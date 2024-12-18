@@ -262,7 +262,7 @@ func RemoveWatchForSecret(ctx context.Context, k8sClient client.Client, secretKe
 	if err := k8sClient.Get(ctx, secretKey, secret); err != nil {
 		return client.IgnoreNotFound(err)
 	}
-	if key == common.WatchSecretAnnotation+instanceUID {
+	if key == common.InstanceSecretRefLabel+string(secret.UID) {
 		delete(secret.Annotations, common.WatchSecretAnnotation+instanceUID)
 		if !IsSecretWatched(secret.Annotations) {
 			controllerutil.RemoveFinalizer(secret, common.FinalizerName)
