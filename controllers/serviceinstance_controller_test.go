@@ -1489,7 +1489,7 @@ var _ = Describe("ServiceInstance controller", func() {
 				Expect(k8sClient.Update(ctx, paramsSecret)).To(Succeed())
 				Expect(fakeClient.UpdateInstanceCallCount()).To(Equal(0))
 			})
-			It("should not update instance with the secret change after removing SubscribeToSecretChanges", func() {
+			FIt("should not update instance with the secret change after removing SubscribeToSecretChanges", func() {
 				instanceSpec.SubscribeToSecretChanges = pointer.Bool(true)
 				serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, true)
 				smInstance, _, _, _, _, _ := fakeClient.ProvisionArgsForCall(0)

@@ -258,6 +258,15 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, serviceI
 
 	log.Info("deleting instance")
 	if controllerutil.ContainsFinalizer(serviceInstance, common.FinalizerName) {
+		if serviceInstance.Labels != nil {
+			for key, secretName := range serviceInstance.Labels {
+				if strings.HasPrefix(key, common.InstanceSecretRefLabel) {
+					if err := utils.RemoveWatchForSecret(ctx, r.Client, types.NamespacedName{Name: secretName, Namespace: serviceInstance.Namespace}, string(serviceInstance.UID)); err != nil {
+						log.Error(err, fmt.Sprintf("failed to unwatch secret %s", secretName))
+					}
+				}
+			}
+		}
 		smClient, err := r.GetSMClient(ctx, serviceInstance)
 		if err != nil {
 			log.Error(err, "failed to get sm client")
@@ -295,17 +304,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, serviceI
 			log.Info("Deleting instance async")
 			return r.handleAsyncDelete(ctx, serviceInstance, operationURL)
 		}
-		if serviceInstance.Labels != nil {
-			for key := range serviceInstance.Labels {
-				if strings.HasPrefix(key, common.InstanceSecretRefLabel) {
-					if secretName, ok := serviceInstance.Labels[key]; !ok {
-						if err := utils.RemoveWatchForSecret(ctx, r.Client, types.NamespacedName{Name: secretName, Namespace: serviceInstance.Namespace}, string(serviceInstance.UID)); err != nil {
-							log.Error(err, fmt.Sprintf("failed to unwatch secret %s", secretName))
-						}
-					}
-				}
-			}
-		}
+
 		log.Info("Instance was deleted successfully, removing finalizer")
 		// remove our finalizer from the list and update it.
 		return ctrl.Result{}, utils.RemoveFinalizer(ctx, r.Client, serviceInstance, common.FinalizerName, serviceInstance.GetControllerName())
@@ -591,7 +590,6 @@ func (r *ServiceInstanceReconciler) buildSMRequestParameters(ctx context.Context
 
 func isFinalState(ctx context.Context, serviceInstance *v1.ServiceInstance) bool {
 	log := utils.GetLogger(ctx)
-
 
 	if serviceInstance.Status.ForceReconcile {
 		log.Info("instance is not in final state, ForceReconcile is true")
