@@ -131,7 +131,7 @@ var _ = Describe("Service Instance Type Test", func() {
 
 	It("should update SubscribeToSecretChanges", func() {
 		instance.Spec.SubscribeToSecretChanges = &[]bool{true}[0]
-		Expect(instance.IsSubscribedToSecretChange()).To(BeTrue())
+		Expect(instance.IsSubscribedToParamSecretsChanges()).To(BeTrue())
 	})
 
 	It("should return correct spec hash", func() {

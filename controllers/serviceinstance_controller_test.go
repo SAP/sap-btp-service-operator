@@ -1337,7 +1337,7 @@ var _ = Describe("ServiceInstance controller", func() {
 				Expect(paramsSecret.Labels["label"]).To(Equal("value"))
 
 			})
-			It("create instance before secret", func() {
+			It("create instance before secret should succeed eventually", func() {
 				newInstanceSpec := v1.ServiceInstanceSpec{
 					ExternalName:        fakeInstanceExternalName,
 					ServicePlanName:     fakePlanName,
@@ -1379,7 +1379,7 @@ var _ = Describe("ServiceInstance controller", func() {
 				deleteAndWait(ctx, serviceInstance)
 				checkSecretAnnotationsAndLabels(ctx, k8sClient, anotherSecret, []*v1.ServiceInstance{})
 			})
-			It("update instance parameterFrom", func() {
+			It("update instance parameterFrom should watch new secrets", func() {
 				credentialsMap := make(map[string][]byte)
 				credentialsMap["secret-parameter2"] = []byte("{\"secret-key2\":\"secret-value2\"}")
 				anotherSecret = createSecret(ctx, "instance-params-secret-new", testNamespace, credentialsMap)
@@ -1423,18 +1423,16 @@ var _ = Describe("ServiceInstance controller", func() {
 				serviceInstance = updateInstance(ctx, serviceInstance)
 				Eventually(func() bool {
 					return fakeClient.UpdateInstanceCallCount() > 1
-				}, timeout, interval).Should(BeTrue(),
-					"dkd",
-				)
+				}, timeout, interval).Should(BeTrue())
 				_, smInstance, _, _, _, _, _ = fakeClient.UpdateInstanceArgsForCall(1)
 				checkParams(string(smInstance.Parameters), []string{"\"key\":\"value\"", "\"secret-key\":\"secret-value\""})
 				checkSecretAnnotationsAndLabels(ctx, k8sClient, anotherSecret, []*v1.ServiceInstance{})
 				checkSecretAnnotationsAndLabels(ctx, k8sClient, paramsSecret, []*v1.ServiceInstance{serviceInstance})
 
-				Expect(serviceInstance.Labels[common.InstanceSecretRefLabel+string(anotherSecret.GetUID())]).To(BeEmpty())
+				Expect(serviceInstance.Labels[utils.GetLabelKeyForInstanceSecret(anotherSecret.Name)]).To(BeEmpty())
 
 			})
-			It("should update two instances with the secret change", func() {
+			It("when watched secret changed, referencing instances should be updated", func() {
 				serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, true)
 				smInstance, _, _, _, _, _ := fakeClient.ProvisionArgsForCall(0)
 				checkParams(string(smInstance.Parameters), []string{"\"key\":\"value\"", "\"secret-key\":\"secret-value\""})
@@ -1463,7 +1461,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 				checkSecretAnnotationsAndLabels(ctx, k8sClient, paramsSecret, []*v1.ServiceInstance{serviceInstance})
 			})
-			It("delete of secret when secret is watched", func() {
+			It("instance should fail when watched secret is deleted", func() {
 				serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, true)
 				Expect(k8sClient.Get(ctx, getResourceNamespacedName(paramsSecret), paramsSecret)).To(Succeed())
 				checkSecretAnnotationsAndLabels(ctx, k8sClient, paramsSecret, []*v1.ServiceInstance{serviceInstance})
@@ -1587,7 +1585,7 @@ func checkSecretAnnotationsAndLabels(ctx context.Context, k8sClient client.Clien
 		Expect(k8sClient.Get(ctx, getResourceNamespacedName(paramsSecret), paramsSecret)).To(Succeed())
 		for _, instance := range instances {
 			Expect(k8sClient.Get(ctx, getResourceNamespacedName(instance), instance)).To(Succeed())
-			Expect(instance.Labels[common.InstanceSecretRefLabel+string(paramsSecret.GetUID())]).To(Equal(paramsSecret.Name))
+			Expect(instance.Labels[utils.GetLabelKeyForInstanceSecret(paramsSecret.Name)]).To(Equal(paramsSecret.Name))
 			Expect(paramsSecret.Annotations[common.WatchSecretAnnotation+string(instance.GetUID())]).To(Equal("true"))
 		}
 		Expect(paramsSecret.Finalizers[0]).To(Equal(common.FinalizerName))

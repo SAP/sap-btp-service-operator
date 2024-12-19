@@ -212,7 +212,7 @@ func (si *ServiceInstance) GetShared() bool {
 	return si.Spec.Shared != nil && *si.Spec.Shared
 }
 
-func (si *ServiceInstance) IsSubscribedToSecretChange() bool {
+func (si *ServiceInstance) IsSubscribedToParamSecretsChanges() bool {
 	return si.Spec.SubscribeToSecretChanges != nil && *si.Spec.SubscribeToSecretChanges
 }
 

@@ -247,29 +247,32 @@ func serialize(value interface{}) ([]byte, format, error) {
 	return data, JSON, nil
 }
 
-func AddWatchForSecret(ctx context.Context, k8sClient client.Client, secret *corev1.Secret, instanceUID string) error {
+func AddWatchForSecretIfNeeded(ctx context.Context, k8sClient client.Client, secret *corev1.Secret, instanceUID string) error {
+	log := GetLogger(ctx)
 	if secret.Annotations == nil {
 		secret.Annotations = make(map[string]string)
 	}
-	secret.Annotations[common.WatchSecretAnnotation+instanceUID] = "true"
-	controllerutil.AddFinalizer(secret, common.FinalizerName)
+	if len(secret.Annotations[common.WatchSecretAnnotation+string(instanceUID)]) == 0 {
+		log.Info(fmt.Sprintf("adding secret watch for secret %s", secret.Name))
+		secret.Annotations[common.WatchSecretAnnotation+instanceUID] = "true"
+		controllerutil.AddFinalizer(secret, common.FinalizerName)
+		return k8sClient.Update(ctx, secret)
+	}
 
-	return k8sClient.Update(ctx, secret)
+	return nil
 }
 
-func RemoveWatchForSecret(ctx context.Context, k8sClient client.Client, secretKey apimachinerytypes.NamespacedName, instanceUID string, key string) error {
+func RemoveWatchForSecret(ctx context.Context, k8sClient client.Client, secretKey apimachinerytypes.NamespacedName, instanceUID string) error {
 	secret := &corev1.Secret{}
 	if err := k8sClient.Get(ctx, secretKey, secret); err != nil {
 		return client.IgnoreNotFound(err)
 	}
-	if key == common.InstanceSecretRefLabel+string(secret.UID) {
-		delete(secret.Annotations, common.WatchSecretAnnotation+instanceUID)
-		if !IsSecretWatched(secret.Annotations) {
-			controllerutil.RemoveFinalizer(secret, common.FinalizerName)
-		}
-		return k8sClient.Update(ctx, secret)
+
+	delete(secret.Annotations, common.WatchSecretAnnotation+instanceUID)
+	if !IsSecretWatched(secret.Annotations) {
+		controllerutil.RemoveFinalizer(secret, common.FinalizerName)
 	}
-	return nil
+	return k8sClient.Update(ctx, secret)
 }
 
 func IsSecretWatched(secretAnnotations map[string]string) bool {
@@ -279,4 +282,8 @@ func IsSecretWatched(secretAnnotations map[string]string) bool {
 		}
 	}
 	return false
+}
+
+func GetLabelKeyForInstanceSecret(secretName string) string {
+	return common.InstanceSecretRefLabel + secretName
 }

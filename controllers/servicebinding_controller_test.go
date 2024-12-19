@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/lithammer/dedent"
-	authv1 "k8s.io/api/authentication/v1"
 	"net/http"
 	"strings"
+
+	"github.com/lithammer/dedent"
+	authv1 "k8s.io/api/authentication/v1"
 
 	"github.com/SAP/sap-btp-service-operator/api/common"
 	"github.com/SAP/sap-btp-service-operator/internal/utils"

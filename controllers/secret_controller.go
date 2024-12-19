@@ -50,9 +50,9 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	var instances v1.ServiceInstanceList
-	labelSelector := client.MatchingLabels{common.InstanceSecretRefLabel + string(secret.GetUID()): secret.Name}
-	if err := r.Client.List(ctx, &instances, labelSelector); err != nil {
+	instances := &v1.ServiceInstanceList{}
+	labelSelector := client.MatchingLabels{utils.GetLabelKeyForInstanceSecret(secret.Name): secret.Name}
+	if err := r.Client.List(ctx, instances, client.InNamespace(secret.Namespace), labelSelector); err != nil {
 		log.Error(err, "failed to list service instances")
 		return ctrl.Result{}, err
 	}
