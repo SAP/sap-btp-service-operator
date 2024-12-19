@@ -44,9 +44,12 @@ func (s *ServiceInstanceDefaulter) Handle(_ context.Context, req admission.Reque
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
 
-		if !reflect.DeepEqual(instance.Spec.UserInfo, oldInstance.Spec.UserInfo) {
+		if instance.Spec.UserInfo == nil {
+			instance.Spec.UserInfo = oldInstance.Spec.UserInfo
+		} else if !reflect.DeepEqual(instance.Spec.UserInfo, oldInstance.Spec.UserInfo) {
 			return admission.Errored(http.StatusBadRequest, fmt.Errorf("modifying spec.userInfo is not allowed"))
-		} else if !reflect.DeepEqual(oldInstance.Spec, instance.Spec) { //UserInfo is updated only when spec is changed
+		}
+		if !reflect.DeepEqual(oldInstance.Spec, instance.Spec) { //UserInfo is updated only when spec is changed
 			instance.Spec.UserInfo = &v1.UserInfo{
 				Username: req.UserInfo.Username,
 				UID:      req.UserInfo.UID,
