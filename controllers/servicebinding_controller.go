@@ -135,6 +135,16 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return r.poll(ctx, serviceBinding, serviceInstance)
 	}
 
+	if !serviceInstanceUsable(serviceInstance) {
+		instanceErr := fmt.Errorf("service instance '%s' is not usable", serviceBinding.Spec.ServiceInstanceName)
+		utils.SetBlockedCondition(ctx, instanceErr.Error(), serviceBinding)
+		if err := utils.UpdateStatus(ctx, r.Client, serviceBinding); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, instanceErr
+	}
+
+	// should rotate creds
 	if meta.IsStatusConditionTrue(serviceBinding.Status.Conditions, common.ConditionCredRotationInProgress) {
 		log.Info("rotating credentials")
 		if err := r.rotateCredentials(ctx, serviceBinding, serviceInstance); err != nil {
@@ -142,9 +152,8 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 	}
 
-	readyCond := meta.FindStatusCondition(serviceBinding.Status.Conditions, common.ConditionReady)
-	isBindingReady := readyCond != nil && readyCond.Status == metav1.ConditionTrue
-	if isBindingReady {
+	// is binding ready
+	if meta.IsStatusConditionTrue(serviceBinding.Status.Conditions, common.ConditionReady) {
 		if isStaleServiceBinding(serviceBinding) {
 			log.Info("binding is stale, handling")
 			return r.handleStaleServiceBinding(ctx, serviceBinding)
@@ -157,15 +166,6 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 		log.Info("binding in final state, maintaining secret")
 		return r.maintain(ctx, serviceBinding, serviceInstance)
-	}
-
-	if !serviceInstanceUsable(serviceInstance) {
-		instanceErr := fmt.Errorf("service instance '%s' is not usable", serviceBinding.Spec.ServiceInstanceName)
-		utils.SetBlockedCondition(ctx, instanceErr.Error(), serviceBinding)
-		if err := utils.UpdateStatus(ctx, r.Client, serviceBinding); err != nil {
-			return ctrl.Result{}, err
-		}
-		return ctrl.Result{}, instanceErr
 	}
 
 	//set owner instance only for original bindings (not rotated)
@@ -885,7 +885,6 @@ func (r *ServiceBindingReconciler) addInstanceInfo(ctx context.Context, binding 
 }
 
 func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, binding *v1.ServiceBinding, serviceInstance *v1.ServiceInstance) error {
-	suffix := "-" + utils.RandStringRunes(6)
 	log := utils.GetLogger(ctx)
 	if binding.Annotations != nil {
 		if _, ok := binding.Annotations[common.ForceRotateAnnotation]; ok {
@@ -931,6 +930,7 @@ func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, bindin
 		}
 
 		// rename current binding
+		suffix := "-" + utils.RandStringRunes(6)
 		log.Info("Credentials rotation - renaming binding to old in SM", "current", binding.Spec.ExternalName)
 		if _, errRenaming := smClient.RenameBinding(binding.Status.BindingID, binding.Spec.ExternalName+suffix, binding.Name+suffix); errRenaming != nil {
 			log.Error(errRenaming, "Credentials rotation - failed renaming binding to old in SM", "binding", binding.Spec.ExternalName)
