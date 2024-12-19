@@ -890,15 +890,9 @@ func (r *ServiceBindingReconciler) addInstanceInfo(ctx context.Context, binding 
 
 func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, binding *v1.ServiceBinding, serviceInstance *v1.ServiceInstance) error {
 	log := utils.GetLogger(ctx)
-	if binding.Annotations != nil {
-		if _, ok := binding.Annotations[common.ForceRotateAnnotation]; ok {
-			log.Info("Credentials rotation - deleting force rotate annotation")
-			delete(binding.Annotations, common.ForceRotateAnnotation)
-			if err := r.Client.Update(ctx, binding); err != nil {
-				log.Info("Credentials rotation - failed to delete force rotate annotation")
-				return err
-			}
-		}
+	if err := r.removeForceRotateAnnotationIfNeeded(ctx, binding, log); err != nil {
+		log.Info("Credentials rotation - failed to delete force rotate annotation")
+		return err
 	}
 
 	credInProgressCondition := meta.FindStatusCondition(binding.GetConditions(), common.ConditionCredRotationInProgress)
@@ -928,6 +922,7 @@ func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, bindin
 	}
 
 	if len(bindings.Items) == 0 {
+		// create the backup binding
 		smClient, err := r.GetSMClient(ctx, serviceInstance)
 		if err != nil {
 			return err
@@ -962,6 +957,17 @@ func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, bindin
 	utils.SetInProgressConditions(ctx, smClientTypes.CREATE, "rotating binding credentials", binding, false)
 	utils.SetCredRotationInProgressConditions(common.CredRotating, "", binding)
 	return utils.UpdateStatus(ctx, r.Client, binding)
+}
+
+func (r *ServiceBindingReconciler) removeForceRotateAnnotationIfNeeded(ctx context.Context, binding *v1.ServiceBinding, log logr.Logger) error {
+	if binding.Annotations != nil {
+		if _, ok := binding.Annotations[common.ForceRotateAnnotation]; ok {
+			log.Info("Credentials rotation - deleting force rotate annotation")
+			delete(binding.Annotations, common.ForceRotateAnnotation)
+			return r.Client.Update(ctx, binding)
+		}
+	}
+	return nil
 }
 
 func (r *ServiceBindingReconciler) stopRotation(ctx context.Context, binding *v1.ServiceBinding) error {
