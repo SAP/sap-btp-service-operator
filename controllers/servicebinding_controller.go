@@ -135,13 +135,16 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return r.poll(ctx, serviceBinding, serviceInstance)
 	}
 
-	if !serviceInstanceUsable(serviceInstance) {
-		instanceErr := fmt.Errorf("service instance '%s' is not usable", serviceBinding.Spec.ServiceInstanceName)
-		utils.SetBlockedCondition(ctx, instanceErr.Error(), serviceBinding)
-		if err := utils.UpdateStatus(ctx, r.Client, serviceBinding); err != nil {
-			return ctrl.Result{}, err
-		}
-		return ctrl.Result{}, instanceErr
+	if utils.IsMarkedForDeletion(serviceInstance.ObjectMeta) {
+		log.Info(fmt.Sprintf("service instance name: %s namespace: %s is marked for deletion, unable to create binding", serviceInstance.Name, serviceInstance.Namespace))
+		utils.SetBlockedCondition(ctx, "instance is in deletion process", serviceBinding)
+		return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
+	}
+
+	if !serviceInstanceReady(serviceInstance) {
+		log.Info(fmt.Sprintf("service instance name: %s namespace: %s is not ready, unable to create binding", serviceInstance.Name, serviceInstance.Namespace))
+		utils.SetBlockedCondition(ctx, "service instance is not ready", serviceBinding)
+		return ctrl.Result{Requeue: true}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
 	}
 
 	// should rotate creds
@@ -418,6 +421,7 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, serviceBinding *v1.
 		}
 	}
 
+	log.Info(fmt.Sprintf("finished polling operation %s '%s'", serviceBinding.Status.OperationType, serviceBinding.Status.OperationURL))
 	serviceBinding.Status.OperationURL = ""
 	serviceBinding.Status.OperationType = ""
 
@@ -1122,10 +1126,7 @@ func bindingAlreadyOwnedByInstance(instance *v1.ServiceInstance, binding *v1.Ser
 	return false
 }
 
-func serviceInstanceUsable(instance *v1.ServiceInstance) bool {
-	if utils.IsMarkedForDeletion(instance.ObjectMeta) {
-		return false
-	}
+func serviceInstanceReady(instance *v1.ServiceInstance) bool {
 	return instance.Status.Ready == metav1.ConditionTrue
 }
 
