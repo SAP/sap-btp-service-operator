@@ -258,7 +258,7 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 	log := utils.GetLogger(ctx)
 	log.Info("Creating smBinding in SM")
 	serviceBinding.Status.InstanceID = serviceInstance.Status.InstanceID
-	_, bindingParameters, err := utils.BuildSMRequestParameters(serviceBinding.Namespace, serviceBinding.Spec.ParametersFrom, serviceBinding.Spec.Parameters)
+	bindingParameters, _, err := utils.BuildSMRequestParameters(serviceBinding.Namespace, serviceBinding.Spec.Parameters, serviceBinding.Spec.ParametersFrom)
 	if err != nil {
 		log.Error(err, "failed to parse smBinding parameters")
 		return utils.MarkAsNonTransientError(ctx, r.Client, smClientTypes.CREATE, err, serviceBinding)
@@ -345,7 +345,7 @@ func (r *ServiceBindingReconciler) delete(ctx context.Context, serviceBinding *v
 			}
 
 			log.Info("Binding does not exists in SM, removing finalizer")
-			if err := utils.RemoveFinalizer(ctx, r.Client, serviceBinding, common.FinalizerName); err != nil {
+			if err := utils.RemoveFinalizer(ctx, r.Client, serviceBinding, common.FinalizerName, serviceBinding.GetControllerName()); err != nil {
 				return ctrl.Result{}, err
 			}
 			return ctrl.Result{}, nil
@@ -807,7 +807,7 @@ func (r *ServiceBindingReconciler) deleteSecretAndRemoveFinalizer(ctx context.Co
 		return ctrl.Result{}, err
 	}
 
-	return ctrl.Result{}, utils.RemoveFinalizer(ctx, r.Client, serviceBinding, common.FinalizerName)
+	return ctrl.Result{}, utils.RemoveFinalizer(ctx, r.Client, serviceBinding, common.FinalizerName, serviceBinding.GetControllerName())
 }
 
 func (r *ServiceBindingReconciler) getSecret(ctx context.Context, namespace string, name string) (*corev1.Secret, error) {

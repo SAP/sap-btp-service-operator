@@ -15,6 +15,7 @@ type ControllerName string
 const (
 	ServiceInstanceController       ControllerName = "ServiceInstance"
 	ServiceBindingController        ControllerName = "ServiceBinding"
+	SecretController                ControllerName = "Secret"
 	FinalizerName                   string         = "services.cloud.sap.com/sap-btp-finalizer"
 	StaleBindingIDLabel             string         = "services.cloud.sap.com/stale"
 	StaleBindingRotationOfLabel     string         = "services.cloud.sap.com/rotationOf"
