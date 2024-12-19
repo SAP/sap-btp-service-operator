@@ -543,7 +543,7 @@ var _ = Describe("ServiceBinding controller", func() {
 
 				binding, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "binding-external-name", "", false)
 				Expect(err).ToNot(HaveOccurred())
-				waitForResourceCondition(ctx, binding, common.ConditionSucceeded, metav1.ConditionFalse, "", "is not usable")
+				waitForResourceCondition(ctx, binding, common.ConditionSucceeded, metav1.ConditionFalse, "", "service instance is not ready")
 
 				createdInstance.Status.Ready = metav1.ConditionTrue
 				updateInstanceStatus(ctx, createdInstance)
