@@ -104,8 +104,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return r.poll(ctx, serviceInstance)
 	}
 
-	if !controllerutil.ContainsFinalizer(serviceInstance, common.FinalizerName) {
-		controllerutil.AddFinalizer(serviceInstance, common.FinalizerName)
+	if controllerutil.AddFinalizer(serviceInstance, common.FinalizerName) {
 		log.Info(fmt.Sprintf("added finalizer '%s' to service instance", common.FinalizerName))
 		if err := r.Client.Update(ctx, serviceInstance); err != nil {
 			return ctrl.Result{}, err
