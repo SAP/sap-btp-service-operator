@@ -583,7 +583,10 @@ var _ = Describe("ServiceBinding controller", func() {
 				createdBinding, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "binding-external-name", "", false)
 				Expect(err).ToNot(HaveOccurred())
 				waitForResourceCondition(ctx, createdBinding, common.ConditionSucceeded, metav1.ConditionFalse, common.Blocked, "")
-				Expect(utils.RemoveFinalizer(ctx, k8sClient, createdInstance, "fake/finalizer")).To(Succeed())
+				Eventually(func() bool {
+					err := k8sClient.Get(ctx, getResourceNamespacedName(createdInstance), createdInstance)
+					return err == nil && utils.RemoveFinalizer(ctx, k8sClient, createdInstance, "fake/finalizer") == nil
+				}, timeout, interval).Should(BeTrue())
 			})
 		})
 
