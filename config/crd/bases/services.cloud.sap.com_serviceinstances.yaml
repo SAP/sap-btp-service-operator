@@ -255,10 +255,6 @@ spec:
                 description: The generated ID of the instance, will be automatically
                   filled once the instance is created
                 type: string
-              observedGeneration:
-                description: Last generation that was acted on
-                format: int64
-                type: integer
               operationType:
                 description: The operation type (CREATE/UPDATE/DELETE) for ongoing
                   operation
