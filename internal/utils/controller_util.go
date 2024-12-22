@@ -44,22 +44,11 @@ type format string
 type LogKey struct {
 }
 
-func RemoveFinalizer(ctx context.Context, k8sClient client.Client, object common.SAPBTPResource, finalizerName string) error {
+func RemoveFinalizer(ctx context.Context, k8sClient client.Client, object client.Object, finalizerName string) error {
 	log := GetLogger(ctx)
-	if controllerutil.ContainsFinalizer(object, finalizerName) {
-		log.Info(fmt.Sprintf("removing finalizer %s", finalizerName))
-		controllerutil.RemoveFinalizer(object, finalizerName)
-		if err := k8sClient.Update(ctx, object); err != nil {
-			if err := k8sClient.Get(ctx, apimachinerytypes.NamespacedName{Name: object.GetName(), Namespace: object.GetNamespace()}, object); err != nil {
-				return client.IgnoreNotFound(err)
-			}
-			controllerutil.RemoveFinalizer(object, finalizerName)
-			if err := k8sClient.Update(ctx, object); err != nil {
-				return fmt.Errorf("failed to remove the finalizer '%s'. Error: %v", finalizerName, err)
-			}
-		}
-		log.Info(fmt.Sprintf("removed finalizer %s from %s", finalizerName, object.GetControllerName()))
-		return nil
+	if controllerutil.RemoveFinalizer(object, finalizerName) {
+		log.Info(fmt.Sprintf("removing finalizer %s from resource %s named '%s' in namespace '%s'", finalizerName, object.GetObjectKind(), object.GetName(), object.GetNamespace()))
+		return k8sClient.Update(ctx, object)
 	}
 	return nil
 }

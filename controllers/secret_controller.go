@@ -68,8 +68,7 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 
 	if utils.IsMarkedForDeletion(secret.ObjectMeta) {
 		log.Info("secret is marked for deletion, removing finalizer")
-		controllerutil.RemoveFinalizer(secret, common.FinalizerName)
-		return ctrl.Result{}, r.Update(ctx, secret)
+		return ctrl.Result{}, utils.RemoveFinalizer(ctx, r.Client, secret, common.FinalizerName)
 	}
 
 	log.Info("finished reconciling params secret")
