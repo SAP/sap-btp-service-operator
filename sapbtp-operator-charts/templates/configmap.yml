@@ -5,7 +5,7 @@ metadata:
   namespace: {{.Release.Namespace}}
   labels:
     "services.cloud.sap.com/managed-by-sap-btp-operator": "true"
-  { { - with .Values.configmap_annotations } }
+  { { - with .Values.operator_configmap_annotations } }
   annotations:
     { { - toYaml . | nindent 4 } }
   { { - end } }
