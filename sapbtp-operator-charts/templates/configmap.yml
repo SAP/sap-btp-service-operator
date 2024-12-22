@@ -5,6 +5,10 @@ metadata:
   namespace: {{.Release.Namespace}}
   labels:
     "services.cloud.sap.com/managed-by-sap-btp-operator": "true"
+  { { - with .Values.configmap_annotations } }
+  annotations:
+    { { - toYaml . | nindent 4 } }
+  { { - end } }
 data:
   {{- if .Values.cluster.id }}
   CLUSTER_ID: {{ .Values.cluster.id }}

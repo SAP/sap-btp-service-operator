@@ -87,6 +87,10 @@ manager:
     enabled: false
   kubernetesMatchLabels:
     enabled: false
+  # Option for adding annotations to secret
+  # secret_annotations: {}
+  # Option for adding annotations to configmap
+  # configmap_annotations: {}
 cluster:
   id:
 externalImages:
