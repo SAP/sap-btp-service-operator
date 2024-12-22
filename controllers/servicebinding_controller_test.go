@@ -12,8 +12,6 @@ import (
 
 	"github.com/SAP/sap-btp-service-operator/api/common"
 	"github.com/SAP/sap-btp-service-operator/internal/utils"
-	"github.com/lithammer/dedent"
-	authv1 "k8s.io/api/authentication/v1"
 	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 

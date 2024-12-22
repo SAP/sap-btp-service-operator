@@ -44,7 +44,7 @@ type format string
 type LogKey struct {
 }
 
-func RemoveFinalizer(ctx context.Context, k8sClient client.Client, object client.Object, finalizerName string, controllerName common.ControllerName) error {
+func RemoveFinalizer(ctx context.Context, k8sClient client.Client, object common.SAPBTPResource, finalizerName string) error {
 	log := GetLogger(ctx)
 	if controllerutil.ContainsFinalizer(object, finalizerName) {
 		log.Info(fmt.Sprintf("removing finalizer %s", finalizerName))
@@ -58,7 +58,7 @@ func RemoveFinalizer(ctx context.Context, k8sClient client.Client, object client
 				return fmt.Errorf("failed to remove the finalizer '%s'. Error: %v", finalizerName, err)
 			}
 		}
-		log.Info(fmt.Sprintf("removed finalizer %s from %s", finalizerName, controllerName))
+		log.Info(fmt.Sprintf("removed finalizer %s from %s", finalizerName, object.GetControllerName()))
 		return nil
 	}
 	return nil

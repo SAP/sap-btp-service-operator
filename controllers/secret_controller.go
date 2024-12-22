@@ -37,7 +37,7 @@ type SecretReconciler struct {
 func (r *SecretReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := r.Log.WithValues("secret", req.NamespacedName).WithValues("correlation_id", uuid.New().String())
 	ctx = context.WithValue(ctx, utils.LogKey{}, log)
-	log.Info(fmt.Sprintf("reconciling secret %s", req.NamespacedName))
+	log.Info(fmt.Sprintf("reconciling params secret %s", req.NamespacedName))
 	// Fetch the Secret
 	secret := &corev1.Secret{}
 	if err := r.Get(ctx, req.NamespacedName, secret); err != nil {
@@ -58,7 +58,7 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 	}
 
 	for _, instance := range instances.Items {
-		log.Info(fmt.Sprintf("waking up instance %s", instance.Name))
+		log.Info(fmt.Sprintf("waking up referencing instance %s", instance.Name))
 		instance.Status.ForceReconcile = true
 		err := utils.UpdateStatus(ctx, r.Client, &instance)
 		if err != nil {
@@ -67,9 +67,12 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 	}
 
 	if utils.IsMarkedForDeletion(secret.ObjectMeta) {
-		return ctrl.Result{}, utils.RemoveFinalizer(ctx, r.Client, secret, common.FinalizerName, common.SecretController)
+		log.Info("secret is marked for deletion, removing finalizer")
+		controllerutil.RemoveFinalizer(secret, common.FinalizerName)
+		return ctrl.Result{}, r.Update(ctx, secret)
 	}
 
+	log.Info("finished reconciling params secret")
 	return reconcile.Result{}, nil
 }
 

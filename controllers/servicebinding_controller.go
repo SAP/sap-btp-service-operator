@@ -308,7 +308,7 @@ func (r *ServiceBindingReconciler) delete(ctx context.Context, serviceBinding *v
 			}
 
 			log.Info("Binding does not exists in SM, removing finalizer")
-			if err := utils.RemoveFinalizer(ctx, r.Client, serviceBinding, common.FinalizerName, serviceBinding.GetControllerName()); err != nil {
+			if err := utils.RemoveFinalizer(ctx, r.Client, serviceBinding, common.FinalizerName); err != nil {
 				return ctrl.Result{}, err
 			}
 			return ctrl.Result{}, nil
@@ -779,7 +779,7 @@ func (r *ServiceBindingReconciler) deleteSecretAndRemoveFinalizer(ctx context.Co
 		return ctrl.Result{}, err
 	}
 
-	return ctrl.Result{}, utils.RemoveFinalizer(ctx, r.Client, serviceBinding, common.FinalizerName, serviceBinding.GetControllerName())
+	return ctrl.Result{}, utils.RemoveFinalizer(ctx, r.Client, serviceBinding, common.FinalizerName)
 }
 
 func (r *ServiceBindingReconciler) getSecret(ctx context.Context, namespace string, name string) (*corev1.Secret, error) {
