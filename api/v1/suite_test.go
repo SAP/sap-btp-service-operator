@@ -77,7 +77,7 @@ func getInstance() *ServiceInstance {
 					},
 				},
 			},
-			WatchParameterFromChanges: &[]bool{true}[0],
+			WatchParametersFromChanges: &[]bool{true}[0],
 			UserInfo: &v1.UserInfo{
 				Username: "test-user",
 				Groups:   []string{"test-group"},

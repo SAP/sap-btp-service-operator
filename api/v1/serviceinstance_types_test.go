@@ -129,8 +129,8 @@ var _ = Describe("Service Instance Type Test", func() {
 		Expect(instance.GetAnnotations()).To(Equal(annotation))
 	})
 
-	It("should update WatchParameterFromChanges", func() {
-		instance.Spec.WatchParameterFromChanges = &[]bool{true}[0]
+	It("should update WatchParametersFromChanges", func() {
+		instance.Spec.WatchParametersFromChanges = &[]bool{true}[0]
 		Expect(instance.IsSubscribedToParamSecretsChanges()).To(BeTrue())
 	})
 
