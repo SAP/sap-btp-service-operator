@@ -77,6 +77,10 @@ type ServiceInstanceSpec struct {
 	// +optional
 	ParametersFrom []ParametersFromSource `json:"parametersFrom,omitempty"`
 
+	// indicate instance will update on secrets from parametersFrom change
+	// +optional
+	WatchParametersFromChanges *bool `json:"watchParametersFromChanges,omitempty"`
+
 	// List of custom tags describing the ServiceInstance, will be copied to `ServiceBinding` secret in the key called `tags`.
 	// +optional
 	CustomTags []string `json:"customTags,omitempty"`
@@ -120,6 +124,9 @@ type ServiceInstanceStatus struct {
 
 	// The subaccount id of the service instance
 	SubaccountID string `json:"subaccountID,omitempty"`
+
+	// if true need to update instance
+	ForceReconcile bool `json:"forceReconcile,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -203,6 +210,10 @@ func (si *ServiceInstance) Hub() {}
 
 func (si *ServiceInstance) GetShared() bool {
 	return si.Spec.Shared != nil && *si.Spec.Shared
+}
+
+func (si *ServiceInstance) IsSubscribedToParamSecretsChanges() bool {
+	return si.Spec.WatchParametersFromChanges != nil && *si.Spec.WatchParametersFromChanges
 }
 
 func (si *ServiceInstance) GetSpecHash() string {

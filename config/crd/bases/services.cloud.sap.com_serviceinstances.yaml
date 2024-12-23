@@ -140,6 +140,10 @@ spec:
               shared:
                 description: Indicates the desired shared state
                 type: boolean
+              watchParametersFromChanges:
+                description: indicate instance will update on secrets from parametersFrom
+                  change
+                type: boolean
               userInfo:
                 description: |-
                   UserInfo contains information about the user that last modified this
@@ -248,6 +252,9 @@ spec:
                   - type
                   type: object
                 type: array
+              forceReconcile:
+                description: if true need to update instance
+                type: boolean
               hashedSpec:
                 description: HashedSpec is the hashed spec without the shared property
                 type: string

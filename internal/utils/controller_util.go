@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
+
 	"github.com/SAP/sap-btp-service-operator/api/common"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
 	smClientTypes "github.com/SAP/sap-btp-service-operator/client/sm/types"
@@ -42,22 +44,11 @@ type format string
 type LogKey struct {
 }
 
-func RemoveFinalizer(ctx context.Context, k8sClient client.Client, object common.SAPBTPResource, finalizerName string) error {
+func RemoveFinalizer(ctx context.Context, k8sClient client.Client, object client.Object, finalizerName string) error {
 	log := GetLogger(ctx)
-	if controllerutil.ContainsFinalizer(object, finalizerName) {
-		log.Info(fmt.Sprintf("removing finalizer %s", finalizerName))
-		controllerutil.RemoveFinalizer(object, finalizerName)
-		if err := k8sClient.Update(ctx, object); err != nil {
-			if err := k8sClient.Get(ctx, apimachinerytypes.NamespacedName{Name: object.GetName(), Namespace: object.GetNamespace()}, object); err != nil {
-				return client.IgnoreNotFound(err)
-			}
-			controllerutil.RemoveFinalizer(object, finalizerName)
-			if err := k8sClient.Update(ctx, object); err != nil {
-				return fmt.Errorf("failed to remove the finalizer '%s'. Error: %v", finalizerName, err)
-			}
-		}
-		log.Info(fmt.Sprintf("removed finalizer %s from %s", finalizerName, object.GetControllerName()))
-		return nil
+	if controllerutil.RemoveFinalizer(object, finalizerName) {
+		log.Info(fmt.Sprintf("removing finalizer %s from resource %s named '%s' in namespace '%s'", finalizerName, object.GetObjectKind(), object.GetName(), object.GetNamespace()))
+		return k8sClient.Update(ctx, object)
 	}
 	return nil
 }
@@ -144,6 +135,15 @@ func HandleError(ctx context.Context, k8sClient client.Client, operationType smC
 
 	log.Info(fmt.Sprintf("unable to cast error to SM error, will be treated as non transient. (error: %v)", err))
 	return MarkAsNonTransientError(ctx, k8sClient, operationType, err, resource)
+}
+
+// ParseNamespacedName converts a "namespace/name" string to a types.NamespacedName object.
+func ParseNamespacedName(input string) (apimachinerytypes.NamespacedName, error) {
+	parts := strings.SplitN(input, "/", 2)
+	if len(parts) != 2 {
+		return apimachinerytypes.NamespacedName{}, fmt.Errorf("invalid format: expected 'namespace/name', got '%s'", input)
+	}
+	return apimachinerytypes.NamespacedName{Namespace: parts[0], Name: parts[1]}, nil
 }
 
 func handleRateLimitError(smError *sm.ServiceManagerError, log logr.Logger) (ctrl.Result, error) {
@@ -234,4 +234,45 @@ func serialize(value interface{}) ([]byte, format, error) {
 		return nil, UNKNOWN, err
 	}
 	return data, JSON, nil
+}
+
+func AddWatchForSecretIfNeeded(ctx context.Context, k8sClient client.Client, secret *corev1.Secret, instanceUID string) error {
+	log := GetLogger(ctx)
+	if secret.Annotations == nil {
+		secret.Annotations = make(map[string]string)
+	}
+	if len(secret.Annotations[common.WatchSecretAnnotation+string(instanceUID)]) == 0 {
+		log.Info(fmt.Sprintf("adding secret watch for secret %s", secret.Name))
+		secret.Annotations[common.WatchSecretAnnotation+instanceUID] = "true"
+		controllerutil.AddFinalizer(secret, common.FinalizerName)
+		return k8sClient.Update(ctx, secret)
+	}
+
+	return nil
+}
+
+func RemoveWatchForSecret(ctx context.Context, k8sClient client.Client, secretKey apimachinerytypes.NamespacedName, instanceUID string) error {
+	secret := &corev1.Secret{}
+	if err := k8sClient.Get(ctx, secretKey, secret); err != nil {
+		return client.IgnoreNotFound(err)
+	}
+
+	delete(secret.Annotations, common.WatchSecretAnnotation+instanceUID)
+	if !IsSecretWatched(secret.Annotations) {
+		controllerutil.RemoveFinalizer(secret, common.FinalizerName)
+	}
+	return k8sClient.Update(ctx, secret)
+}
+
+func IsSecretWatched(secretAnnotations map[string]string) bool {
+	for key := range secretAnnotations {
+		if strings.HasPrefix(key, common.WatchSecretAnnotation) {
+			return true
+		}
+	}
+	return false
+}
+
+func GetLabelKeyForInstanceSecret(secretName string) string {
+	return common.InstanceSecretRefLabel + secretName
 }

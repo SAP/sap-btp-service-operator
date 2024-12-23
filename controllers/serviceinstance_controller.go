@@ -21,6 +21,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
+
+	"k8s.io/apimachinery/pkg/types"
+
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/SAP/sap-btp-service-operator/api/common"
 	"github.com/SAP/sap-btp-service-operator/internal/config"
@@ -157,7 +162,7 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	log := utils.GetLogger(ctx)
 	log.Info("Creating instance in SM")
 	updateHashedSpecValue(serviceInstance)
-	_, instanceParameters, err := utils.BuildSMRequestParameters(serviceInstance.Namespace, serviceInstance.Spec.ParametersFrom, serviceInstance.Spec.Parameters)
+	instanceParameters, err := r.buildSMRequestParameters(ctx, serviceInstance)
 	if err != nil {
 		// if parameters are invalid there is nothing we can do, the user should fix it according to the error message in the condition
 		log.Error(err, "failed to parse instance parameters")
@@ -211,7 +216,7 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 	log := utils.GetLogger(ctx)
 	log.Info(fmt.Sprintf("updating instance %s in SM", serviceInstance.Status.InstanceID))
 
-	_, instanceParameters, err := utils.BuildSMRequestParameters(serviceInstance.Namespace, serviceInstance.Spec.ParametersFrom, serviceInstance.Spec.Parameters)
+	instanceParameters, err := r.buildSMRequestParameters(ctx, serviceInstance)
 	if err != nil {
 		log.Error(err, "failed to parse instance parameters")
 		return utils.MarkAsTransientError(ctx, r.Client, smClientTypes.UPDATE, err, serviceInstance)
@@ -234,6 +239,7 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 		serviceInstance.Status.OperationURL = operationURL
 		serviceInstance.Status.OperationType = smClientTypes.UPDATE
 		utils.SetInProgressConditions(ctx, smClientTypes.UPDATE, "", serviceInstance, false)
+		serviceInstance.Status.ForceReconcile = false
 		if err := utils.UpdateStatus(ctx, r.Client, serviceInstance); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -242,6 +248,7 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 	}
 	log.Info("Instance updated successfully")
 	utils.SetSuccessConditions(smClientTypes.UPDATE, serviceInstance, false)
+	serviceInstance.Status.ForceReconcile = false
 	return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceInstance)
 }
 
@@ -250,6 +257,15 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, serviceI
 
 	log.Info("deleting instance")
 	if controllerutil.ContainsFinalizer(serviceInstance, common.FinalizerName) {
+		for key, secretName := range serviceInstance.Labels {
+			if strings.HasPrefix(key, common.InstanceSecretRefLabel) {
+				if err := utils.RemoveWatchForSecret(ctx, r.Client, types.NamespacedName{Name: secretName, Namespace: serviceInstance.Namespace}, string(serviceInstance.UID)); err != nil {
+					log.Error(err, fmt.Sprintf("failed to unwatch secret %s", secretName))
+					return ctrl.Result{}, err
+				}
+			}
+		}
+
 		smClient, err := r.GetSMClient(ctx, serviceInstance)
 		if err != nil {
 			log.Error(err, "failed to get sm client")
@@ -522,8 +538,64 @@ func (r *ServiceInstanceReconciler) handleInstanceSharingError(ctx context.Conte
 	return ctrl.Result{Requeue: isTransient}, utils.UpdateStatus(ctx, r.Client, object)
 }
 
+func (r *ServiceInstanceReconciler) buildSMRequestParameters(ctx context.Context, serviceInstance *v1.ServiceInstance) ([]byte, error) {
+	log := utils.GetLogger(ctx)
+	instanceParameters, paramSecrets, err := utils.BuildSMRequestParameters(serviceInstance.Namespace, serviceInstance.Spec.Parameters, serviceInstance.Spec.ParametersFrom)
+	if err != nil {
+		log.Error(err, "failed to build instance parameters")
+		return nil, err
+	}
+	instanceLabelsChanged := false
+	newInstanceLabels := make(map[string]string)
+	if serviceInstance.IsSubscribedToParamSecretsChanges() {
+		// find all new secrets on the instance
+		for _, secret := range paramSecrets {
+			labelKey := utils.GetLabelKeyForInstanceSecret(secret.Name)
+			newInstanceLabels[labelKey] = secret.Name
+			if _, ok := serviceInstance.Labels[labelKey]; !ok {
+				instanceLabelsChanged = true
+			}
+
+			if err := utils.AddWatchForSecretIfNeeded(ctx, r.Client, secret, string(serviceInstance.UID)); err != nil {
+				log.Error(err, fmt.Sprintf("failed to mark secret for watch %s", secret.Name))
+				return nil, err
+			}
+
+		}
+	}
+
+	//sync instance labels
+	for labelKey, labelValue := range serviceInstance.Labels {
+		if strings.HasPrefix(labelKey, common.InstanceSecretRefLabel) {
+			if _, ok := newInstanceLabels[labelKey]; !ok {
+				log.Info(fmt.Sprintf("params secret named %s was removed, unwatching it", labelValue))
+				instanceLabelsChanged = true
+				if err := utils.RemoveWatchForSecret(ctx, r.Client, types.NamespacedName{Name: labelValue, Namespace: serviceInstance.Namespace}, string(serviceInstance.UID)); err != nil {
+					log.Error(err, fmt.Sprintf("failed to unwatch secret %s", labelValue))
+					return nil, err
+				}
+			}
+		} else {
+			// this label not related to secrets, add it
+			newInstanceLabels[labelKey] = labelValue
+		}
+	}
+	if instanceLabelsChanged {
+		serviceInstance.Labels = newInstanceLabels
+		log.Info("updating instance with secret labels")
+		return instanceParameters, r.Client.Update(ctx, serviceInstance)
+	}
+
+	return instanceParameters, nil
+}
+
 func isFinalState(ctx context.Context, serviceInstance *v1.ServiceInstance) bool {
 	log := utils.GetLogger(ctx)
+
+	if serviceInstance.Status.ForceReconcile {
+		log.Info("instance is not in final state, ForceReconcile is true")
+		return false
+	}
 
 	if len(serviceInstance.Status.OperationURL) > 0 {
 		log.Info(fmt.Sprintf("instance is not in final state, async operation is in progress (%s)", serviceInstance.Status.OperationURL))
@@ -558,6 +630,10 @@ func updateRequired(serviceInstance *v1.ServiceInstance) bool {
 	//update is not supported for failed instances (this can occur when instance creation was asynchronously)
 	if serviceInstance.Status.Ready != metav1.ConditionTrue {
 		return false
+	}
+
+	if serviceInstance.Status.ForceReconcile {
+		return true
 	}
 
 	cond := meta.FindStatusCondition(serviceInstance.Status.Conditions, common.ConditionSucceeded)
@@ -678,4 +754,8 @@ func getErrorMsgFromLastOperation(status *smClientTypes.Operation) string {
 		}
 	}
 	return errMsg
+}
+
+type SecretPredicate struct {
+	predicate.Funcs
 }

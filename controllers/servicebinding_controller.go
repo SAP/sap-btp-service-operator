@@ -221,7 +221,7 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 	log := utils.GetLogger(ctx)
 	log.Info("Creating smBinding in SM")
 	serviceBinding.Status.InstanceID = serviceInstance.Status.InstanceID
-	_, bindingParameters, err := utils.BuildSMRequestParameters(serviceBinding.Namespace, serviceBinding.Spec.ParametersFrom, serviceBinding.Spec.Parameters)
+	bindingParameters, _, err := utils.BuildSMRequestParameters(serviceBinding.Namespace, serviceBinding.Spec.Parameters, serviceBinding.Spec.ParametersFrom)
 	if err != nil {
 		log.Error(err, "failed to parse smBinding parameters")
 		return utils.MarkAsNonTransientError(ctx, r.Client, smClientTypes.CREATE, err, serviceBinding)

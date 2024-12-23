@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strings"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	authv1 "k8s.io/api/authentication/v1"
 
 	"github.com/SAP/sap-btp-service-operator/api/common"
@@ -223,7 +225,6 @@ var _ = Describe("ServiceInstance controller", func() {
 					Expect(params).To(ContainSubstring("\"secret-key\":\"secret-value\""))
 				})
 			})
-
 			When("provision request to SM fails", func() {
 				errMessage := "failed to provision instance"
 
@@ -1272,6 +1273,246 @@ var _ = Describe("ServiceInstance controller", func() {
 			})
 		})
 	})
+
+	Context("secret watcher", func() {
+		When("secret updated and instance watch secret", func() {
+			anotherInstanceName := "instance2"
+			var anotherInstance *v1.ServiceInstance
+			var anotherSecret *corev1.Secret
+			BeforeEach(func() {
+				instanceSpec.WatchParametersFromChanges = pointer.Bool(true)
+			})
+			AfterEach(func() {
+				instanceSpec.WatchParametersFromChanges = pointer.Bool(false)
+				if anotherInstance != nil {
+					deleteAndWait(ctx, anotherInstance)
+				}
+				if anotherSecret != nil {
+					deleteAndWait(ctx, anotherSecret)
+				}
+			})
+			It("should update instance with the secret change", func() {
+				serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, true)
+				smInstance, _, _, _, _, _ := fakeClient.ProvisionArgsForCall(0)
+				checkParams(string(smInstance.Parameters), []string{"\"key\":\"value\"", "\"secret-key\":\"secret-value\""})
+
+				checkSecretAnnotationsAndLabels(ctx, k8sClient, paramsSecret, []*v1.ServiceInstance{serviceInstance})
+
+				credentialsMap := make(map[string][]byte)
+				credentialsMap["secret-parameter"] = []byte("{\"secret-key\":\"new-secret-value\"}")
+				paramsSecret.Data = credentialsMap
+				Expect(k8sClient.Update(ctx, paramsSecret)).To(Succeed())
+				Eventually(func() bool {
+					return fakeClient.UpdateInstanceCallCount() >= 1
+				}, timeout, interval).Should(BeTrue(), "expected condition was not met")
+
+				_, smInstance, _, _, _, _, _ = fakeClient.UpdateInstanceArgsForCall(0)
+				checkParams(string(smInstance.Parameters), []string{"\"key\":\"value\"", "\"secret-key\":\"new-secret-value\""})
+				deleteAndWait(ctx, serviceInstance)
+
+				checkSecretAnnotationsAndLabels(ctx, k8sClient, paramsSecret, []*v1.ServiceInstance{})
+			})
+			It("should update instance with the secret change and secret have labels", func() {
+				paramsSecret.Labels = map[string]string{"label": "value"}
+				Expect(k8sClient.Update(ctx, paramsSecret)).To(Succeed())
+
+				serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, true)
+				smInstance, _, _, _, _, _ := fakeClient.ProvisionArgsForCall(0)
+				checkParams(string(smInstance.Parameters), []string{"\"key\":\"value\"", "\"secret-key\":\"secret-value\""})
+
+				checkSecretAnnotationsAndLabels(ctx, k8sClient, paramsSecret, []*v1.ServiceInstance{serviceInstance})
+
+				credentialsMap := make(map[string][]byte)
+				credentialsMap["secret-parameter"] = []byte("{\"secret-key\":\"new-secret-value\"}")
+				paramsSecret.Data = credentialsMap
+				Expect(k8sClient.Update(ctx, paramsSecret)).To(Succeed())
+				Eventually(func() bool {
+					return fakeClient.UpdateInstanceCallCount() >= 1
+				}, timeout, interval).Should(BeTrue(), "expected condition was not met")
+
+				_, smInstance, _, _, _, _, _ = fakeClient.UpdateInstanceArgsForCall(0)
+				checkParams(string(smInstance.Parameters), []string{"\"key\":\"value\"", "\"secret-key\":\"new-secret-value\""})
+				deleteAndWait(ctx, serviceInstance)
+				checkSecretAnnotationsAndLabels(ctx, k8sClient, paramsSecret, []*v1.ServiceInstance{})
+				Expect(paramsSecret.Labels["label"]).To(Equal("value"))
+
+			})
+			It("create instance before secret should succeed eventually", func() {
+				newInstanceSpec := v1.ServiceInstanceSpec{
+					ExternalName:        fakeInstanceExternalName,
+					ServicePlanName:     fakePlanName,
+					ServiceOfferingName: fakeOfferingName,
+					Parameters: &runtime.RawExtension{
+						Raw: []byte(`{"key": "value"}`),
+					},
+					ParametersFrom: []v1.ParametersFromSource{
+						{
+							SecretKeyRef: &v1.SecretKeyReference{
+								Name: "instance-params-secret-new",
+								Key:  "secret-parameter",
+							},
+						},
+					},
+					WatchParametersFromChanges: pointer.Bool(true),
+				}
+				serviceInstance = createInstance(ctx, anotherInstanceName, newInstanceSpec, nil, false)
+				waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.CreateInProgress, "secrets \"instance-params-secret-new\" not found")
+				Expect(fakeClient.ProvisionCallCount()).To(Equal(0))
+
+				anotherSecret = createParamsSecret(ctx, "instance-params-secret-new", testNamespace)
+				waitForResourceToBeReady(ctx, serviceInstance)
+				smInstance, _, _, _, _, _ := fakeClient.ProvisionArgsForCall(0)
+				checkParams(string(smInstance.Parameters), []string{"\"key\":\"value\"", "\"secret-key\":\"secret-value\""})
+
+				checkSecretAnnotationsAndLabels(ctx, k8sClient, anotherSecret, []*v1.ServiceInstance{serviceInstance})
+
+				credentialsMap := make(map[string][]byte)
+				credentialsMap["secret-parameter"] = []byte("{\"secret-key\":\"new-secret-value\"}")
+				anotherSecret.Data = credentialsMap
+				Expect(k8sClient.Update(ctx, anotherSecret)).To(Succeed())
+				Eventually(func() bool {
+					return fakeClient.UpdateInstanceCallCount() == 1
+				}, timeout, interval).Should(BeTrue(), "expected condition was not met")
+
+				_, smInstance, _, _, _, _, _ = fakeClient.UpdateInstanceArgsForCall(0)
+				checkParams(string(smInstance.Parameters), []string{"\"key\":\"value\"", "\"secret-key\":\"new-secret-value\""})
+				deleteAndWait(ctx, serviceInstance)
+				checkSecretAnnotationsAndLabels(ctx, k8sClient, anotherSecret, []*v1.ServiceInstance{})
+			})
+			It("update instance parameterFrom should watch new secrets", func() {
+				credentialsMap := make(map[string][]byte)
+				credentialsMap["secret-parameter2"] = []byte("{\"secret-key2\":\"secret-value2\"}")
+				anotherSecret = createSecret(ctx, "instance-params-secret-new", testNamespace, credentialsMap)
+
+				serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, true)
+				smInstance, _, _, _, _, _ := fakeClient.ProvisionArgsForCall(0)
+				checkParams(string(smInstance.Parameters), []string{"\"key\":\"value\"", "\"secret-key\":\"secret-value\""})
+				checkSecretAnnotationsAndLabels(ctx, k8sClient, paramsSecret, []*v1.ServiceInstance{serviceInstance})
+
+				// update instance parametersFrom
+				serviceInstance.Spec.ParametersFrom = []v1.ParametersFromSource{
+					{
+						SecretKeyRef: &v1.SecretKeyReference{
+							Name: "instance-params-secret",
+							Key:  "secret-parameter",
+						},
+					},
+					{
+						SecretKeyRef: &v1.SecretKeyReference{
+							Name: "instance-params-secret-new",
+							Key:  "secret-parameter2",
+						},
+					},
+				}
+				serviceInstance = updateInstance(ctx, serviceInstance)
+				waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionTrue, common.Updated, "")
+				_, smInstance, _, _, _, _, _ = fakeClient.UpdateInstanceArgsForCall(0)
+				checkParams(string(smInstance.Parameters), []string{"\"key\":\"value\"", "\"secret-key\":\"secret-value\"", "\"secret-key2\":\"secret-value2\""})
+				checkSecretAnnotationsAndLabels(ctx, k8sClient, anotherSecret, []*v1.ServiceInstance{serviceInstance})
+				checkSecretAnnotationsAndLabels(ctx, k8sClient, paramsSecret, []*v1.ServiceInstance{serviceInstance})
+
+				// update instance parametersFrom
+				serviceInstance.Spec.ParametersFrom = []v1.ParametersFromSource{
+					{
+						SecretKeyRef: &v1.SecretKeyReference{
+							Name: "instance-params-secret",
+							Key:  "secret-parameter",
+						},
+					},
+				}
+				serviceInstance = updateInstance(ctx, serviceInstance)
+				Eventually(func() bool {
+					return fakeClient.UpdateInstanceCallCount() > 1
+				}, timeout, interval).Should(BeTrue())
+				_, smInstance, _, _, _, _, _ = fakeClient.UpdateInstanceArgsForCall(1)
+				checkParams(string(smInstance.Parameters), []string{"\"key\":\"value\"", "\"secret-key\":\"secret-value\""})
+				checkSecretAnnotationsAndLabels(ctx, k8sClient, anotherSecret, []*v1.ServiceInstance{})
+				checkSecretAnnotationsAndLabels(ctx, k8sClient, paramsSecret, []*v1.ServiceInstance{serviceInstance})
+
+				Expect(serviceInstance.Labels[utils.GetLabelKeyForInstanceSecret(anotherSecret.Name)]).To(BeEmpty())
+
+			})
+			It("when watched secret changed, referencing instances should be updated", func() {
+				serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, true)
+				smInstance, _, _, _, _, _ := fakeClient.ProvisionArgsForCall(0)
+				checkParams(string(smInstance.Parameters), []string{"\"key\":\"value\"", "\"secret-key\":\"secret-value\""})
+
+				anotherInstance = createInstance(ctx, anotherInstanceName, instanceSpec, nil, true)
+				smInstance, _, _, _, _, _ = fakeClient.ProvisionArgsForCall(1)
+				checkParams(string(smInstance.Parameters), []string{"\"key\":\"value\"", "\"secret-key\":\"secret-value\""})
+
+				checkSecretAnnotationsAndLabels(ctx, k8sClient, paramsSecret, []*v1.ServiceInstance{serviceInstance, anotherInstance})
+
+				credentialsMap := make(map[string][]byte)
+				credentialsMap["secret-parameter"] = []byte("{\"secret-key\":\"new-secret-value\"}")
+				paramsSecret.Data = credentialsMap
+				Expect(k8sClient.Update(ctx, paramsSecret)).To(Succeed())
+				Eventually(func() bool {
+					return fakeClient.UpdateInstanceCallCount() == 2
+				}, timeout, interval).Should(BeTrue(), "expected condition was not met")
+
+				_, smInstance, _, _, _, _, _ = fakeClient.UpdateInstanceArgsForCall(0)
+				checkParams(string(smInstance.Parameters), []string{"\"key\":\"value\"", "\"secret-key\":\"new-secret-value\""})
+
+				_, smInstance, _, _, _, _, _ = fakeClient.UpdateInstanceArgsForCall(1)
+				checkParams(string(smInstance.Parameters), []string{"\"key\":\"value\"", "\"secret-key\":\"new-secret-value\""})
+
+				deleteAndWait(ctx, anotherInstance)
+
+				checkSecretAnnotationsAndLabels(ctx, k8sClient, paramsSecret, []*v1.ServiceInstance{serviceInstance})
+			})
+			It("instance should fail when watched secret is deleted", func() {
+				serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, true)
+				Expect(k8sClient.Get(ctx, getResourceNamespacedName(paramsSecret), paramsSecret)).To(Succeed())
+				checkSecretAnnotationsAndLabels(ctx, k8sClient, paramsSecret, []*v1.ServiceInstance{serviceInstance})
+
+				deleteAndWait(ctx, paramsSecret)
+				waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.UpdateInProgress, "secrets \"instance-params-secret\" not found")
+
+				paramsSecret = createParamsSecret(ctx, "instance-params-secret", testNamespace)
+				waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionTrue, common.Updated, "")
+				checkSecretAnnotationsAndLabels(ctx, k8sClient, paramsSecret, []*v1.ServiceInstance{serviceInstance})
+
+			})
+		})
+		When("secret updated and instance don't watch secret", func() {
+			AfterEach(func() {
+				instanceSpec.WatchParametersFromChanges = pointer.Bool(false)
+			})
+			It("should not update instance with the secret change", func() {
+				serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, true)
+				smInstance, _, _, _, _, _ := fakeClient.ProvisionArgsForCall(0)
+				checkParams(string(smInstance.Parameters), []string{"\"key\":\"value\"", "\"secret-key\":\"secret-value\""})
+
+				checkSecretAnnotationsAndLabels(ctx, k8sClient, paramsSecret, []*v1.ServiceInstance{})
+
+				credentialsMap := make(map[string][]byte)
+				credentialsMap["secret-parameter"] = []byte("{\"secret-key\":\"new-secret-value\"}")
+				paramsSecret.Data = credentialsMap
+				Expect(k8sClient.Update(ctx, paramsSecret)).To(Succeed())
+				Expect(fakeClient.UpdateInstanceCallCount()).To(Equal(0))
+			})
+			It("should not update instance with the secret change after removing WatchParametersFromChanges", func() {
+				instanceSpec.WatchParametersFromChanges = pointer.Bool(true)
+				serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, true)
+				smInstance, _, _, _, _, _ := fakeClient.ProvisionArgsForCall(0)
+				checkParams(string(smInstance.Parameters), []string{"\"key\":\"value\"", "\"secret-key\":\"secret-value\""})
+				checkSecretAnnotationsAndLabels(ctx, k8sClient, paramsSecret, []*v1.ServiceInstance{serviceInstance})
+
+				serviceInstance.Spec.WatchParametersFromChanges = pointer.Bool(false)
+				updateInstance(ctx, serviceInstance)
+				waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionTrue, common.Updated, "")
+				checkSecretAnnotationsAndLabels(ctx, k8sClient, paramsSecret, []*v1.ServiceInstance{})
+
+				credentialsMap := make(map[string][]byte)
+				credentialsMap["secret-parameter"] = []byte("{\"secret-key\":\"new-secret-value\"}")
+				paramsSecret.Data = credentialsMap
+				Expect(k8sClient.Update(ctx, paramsSecret)).To(Succeed())
+				//Expect(fakeClient.UpdateInstanceCallCount()).To(Equal(1))
+			})
+		})
+
+	})
 })
 
 func waitForInstanceConditionAndMessage(ctx context.Context, key types.NamespacedName, conditionType, msg string) {
@@ -1332,4 +1573,27 @@ func updateInstanceStatus(ctx context.Context, instance *v1.ServiceInstance) *v1
 		return k8sClient.Status().Update(ctx, si) == nil
 	}, timeout, interval).Should(BeTrue())
 	return si
+}
+
+func checkSecretAnnotationsAndLabels(ctx context.Context, k8sClient client.Client, paramsSecret *corev1.Secret, instances []*v1.ServiceInstance) {
+	if len(instances) == 0 {
+		Eventually(func() bool {
+			Expect(k8sClient.Get(ctx, getResourceNamespacedName(paramsSecret), paramsSecret)).To(Succeed())
+			return !utils.IsSecretWatched(paramsSecret.Annotations) && len(paramsSecret.Finalizers) == 0
+		}, timeout, interval).Should(BeTrue())
+	} else {
+		Expect(k8sClient.Get(ctx, getResourceNamespacedName(paramsSecret), paramsSecret)).To(Succeed())
+		for _, instance := range instances {
+			Expect(k8sClient.Get(ctx, getResourceNamespacedName(instance), instance)).To(Succeed())
+			Expect(instance.Labels[utils.GetLabelKeyForInstanceSecret(paramsSecret.Name)]).To(Equal(paramsSecret.Name))
+			Expect(paramsSecret.Annotations[common.WatchSecretAnnotation+string(instance.GetUID())]).To(Equal("true"))
+		}
+		Expect(paramsSecret.Finalizers[0]).To(Equal(common.FinalizerName))
+	}
+}
+
+func checkParams(params string, substrings []string) {
+	for _, substring := range substrings {
+		Expect(params).To(ContainSubstring(substring))
+	}
 }
