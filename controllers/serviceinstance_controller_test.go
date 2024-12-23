@@ -1280,10 +1280,10 @@ var _ = Describe("ServiceInstance controller", func() {
 			var anotherInstance *v1.ServiceInstance
 			var anotherSecret *corev1.Secret
 			BeforeEach(func() {
-				instanceSpec.SubscribeToSecretChanges = pointer.Bool(true)
+				instanceSpec.WatchParameterFromChanges = pointer.Bool(true)
 			})
 			AfterEach(func() {
-				instanceSpec.SubscribeToSecretChanges = pointer.Bool(false)
+				instanceSpec.WatchParameterFromChanges = pointer.Bool(false)
 				if anotherInstance != nil {
 					deleteAndWait(ctx, anotherInstance)
 				}
@@ -1353,7 +1353,7 @@ var _ = Describe("ServiceInstance controller", func() {
 							},
 						},
 					},
-					SubscribeToSecretChanges: pointer.Bool(true),
+					WatchParameterFromChanges: pointer.Bool(true),
 				}
 				serviceInstance = createInstance(ctx, anotherInstanceName, newInstanceSpec, nil, false)
 				waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.CreateInProgress, "secrets \"instance-params-secret-new\" not found")
@@ -1477,7 +1477,7 @@ var _ = Describe("ServiceInstance controller", func() {
 		})
 		When("secret updated and instance don't watch secret", func() {
 			AfterEach(func() {
-				instanceSpec.SubscribeToSecretChanges = pointer.Bool(false)
+				instanceSpec.WatchParameterFromChanges = pointer.Bool(false)
 			})
 			It("should not update instance with the secret change", func() {
 				serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, true)
@@ -1492,14 +1492,14 @@ var _ = Describe("ServiceInstance controller", func() {
 				Expect(k8sClient.Update(ctx, paramsSecret)).To(Succeed())
 				Expect(fakeClient.UpdateInstanceCallCount()).To(Equal(0))
 			})
-			It("should not update instance with the secret change after removing SubscribeToSecretChanges", func() {
-				instanceSpec.SubscribeToSecretChanges = pointer.Bool(true)
+			It("should not update instance with the secret change after removing WatchParameterFromChanges", func() {
+				instanceSpec.WatchParameterFromChanges = pointer.Bool(true)
 				serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, true)
 				smInstance, _, _, _, _, _ := fakeClient.ProvisionArgsForCall(0)
 				checkParams(string(smInstance.Parameters), []string{"\"key\":\"value\"", "\"secret-key\":\"secret-value\""})
 				checkSecretAnnotationsAndLabels(ctx, k8sClient, paramsSecret, []*v1.ServiceInstance{serviceInstance})
 
-				serviceInstance.Spec.SubscribeToSecretChanges = pointer.Bool(false)
+				serviceInstance.Spec.WatchParameterFromChanges = pointer.Bool(false)
 				updateInstance(ctx, serviceInstance)
 				waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionTrue, common.Updated, "")
 				checkSecretAnnotationsAndLabels(ctx, k8sClient, paramsSecret, []*v1.ServiceInstance{})

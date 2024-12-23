@@ -140,7 +140,7 @@ spec:
               shared:
                 description: Indicates the desired shared state
                 type: boolean
-              subscribeToSecretChanges:
+              watchParameterFromChanges:
                 description: indicate instance will update on secrets from parametersFrom
                   change
                 type: boolean

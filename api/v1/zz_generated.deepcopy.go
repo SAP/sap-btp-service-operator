@@ -287,8 +287,8 @@ func (in *ServiceInstanceSpec) DeepCopyInto(out *ServiceInstanceSpec) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	if in.SubscribeToSecretChanges != nil {
-		in, out := &in.SubscribeToSecretChanges, &out.SubscribeToSecretChanges
+	if in.WatchParameterFromChanges != nil {
+		in, out := &in.WatchParameterFromChanges, &out.WatchParameterFromChanges
 		*out = new(bool)
 		**out = **in
 	}

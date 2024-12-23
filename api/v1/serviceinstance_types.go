@@ -79,7 +79,7 @@ type ServiceInstanceSpec struct {
 
 	// indicate instance will update on secrets from parametersFrom change
 	// +optional
-	SubscribeToSecretChanges *bool `json:"subscribeToSecretChanges,omitempty"`
+	WatchParameterFromChanges *bool `json:"watchParameterFromChanges,omitempty"`
 
 	// List of custom tags describing the ServiceInstance, will be copied to `ServiceBinding` secret in the key called `tags`.
 	// +optional
@@ -213,7 +213,7 @@ func (si *ServiceInstance) GetShared() bool {
 }
 
 func (si *ServiceInstance) IsSubscribedToParamSecretsChanges() bool {
-	return si.Spec.SubscribeToSecretChanges != nil && *si.Spec.SubscribeToSecretChanges
+	return si.Spec.WatchParameterFromChanges != nil && *si.Spec.WatchParameterFromChanges
 }
 
 func (si *ServiceInstance) GetSpecHash() string {
