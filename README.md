@@ -685,21 +685,21 @@ fields in the `spec` field of the `ServiceInstance` or `ServiceBinding` resource
 - `parameters`: can be used to specify a set of properties to be sent to the
   broker. The data specified will be passed "as-is" to the broker without any
   modifications - aside from converting it to JSON for transmission to the broker
-  in the case of the `spec` field being specified as `YAML`. Any valid `YAML` or
+  if the `spec` field is specified as `YAML`. Any valid `YAML` or
   `JSON` constructs are supported. Only one parameter field may be specified per
   `spec`.
 - `parametersFrom`: enables you to specify one or more secrets, and the corresponding keys within those secrets, holding JSON-formatted parameters to be sent to the 
    broker. The `parametersFrom` field is a list that
-   supports multiple sources referenced per `spec`, defining an asymmmetric relationship where the `ServiceInstance` resource can define a number of related secrets.
+   supports multiple sources referenced per `spec`, defining an asymmetric relationship where the `ServiceInstance` resource can define several related secrets.
 - `watchParametersFromChanges`: (boolean) This field determines whether changes to the secret values referenced in `parametersFrom` should trigger an automatic update of the service instance. This enables the service instance to reconcile and react to changes in its referenced secrets. When set to true, any change to the referenced secret values will cause the service instance to be updated. Defaults to `false`.
  
 
-**Note**: When `watchParametersFromChanges` is set to true, only Secret updates with value changes are tracked. Secret creations or updates without value changes won't cause the service instance to get notified.
+**Note**: When `watchParametersFromChanges` is true, Secret updates are tracked.
 
 While you may use either or both of `parameters` and `parametersFrom` fields, `watchParametersFromChanges` if selected, must be used with `parametersFrom`.
 
 If multiple sources in the `parameters` and `parametersFrom` blocks are specified,
-the final payload is a result of merging all of them at the top level.
+the final payload merges all of them at the top level.
 If there are any duplicate properties defined at the top level, the specification
 is considered to be invalid, the further processing of the `ServiceInstance`/`ServiceBinding`
 resource stops and its `status` is marked with an error condition.
