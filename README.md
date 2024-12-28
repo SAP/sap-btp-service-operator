@@ -691,12 +691,9 @@ fields in the `spec` field of the `ServiceInstance` or `ServiceBinding` resource
 - `parametersFrom`: enables you to specify one or more secrets, and the corresponding keys within those secrets, holding JSON-formatted parameters to be sent to the 
    broker. The `parametersFrom` field is a list that
    supports multiple sources referenced per `spec`, defining an asymmetric relationship where the `ServiceInstance` resource can define several related secrets.
-- `watchParametersFromChanges`: (boolean) This field determines whether changes to the secret values referenced in `parametersFrom` should trigger an automatic update of the service instance. This enables the service instance to reconcile and react to changes in its referenced secrets. When set to true, any change to the referenced secret values will cause the service instance to be updated. Defaults to `false`.
+- `watchParametersFromChanges`: (boolean) This field determines whether changes to the secret values referenced in `parametersFrom` should trigger an automatic update of the service instance. This enables the service instance to reconcile and react to changes in its referenced secrets. If `true`, any change to the referenced secret values will cause the service instance to update. Defaults to `false`.
  
-
-**Note**: When `watchParametersFromChanges` is true, Secret updates are tracked.
-
-While you may use either or both of `parameters` and `parametersFrom` fields, `watchParametersFromChanges` if selected, must be used with `parametersFrom`.
+While you may use either or both of `parameters` and `parametersFrom` fields, selected `watchParametersFromChanges` must be used with `parametersFrom`.
 
 If multiple sources in the `parameters` and `parametersFrom` blocks are specified,
 the final payload merges all of them at the top level.
