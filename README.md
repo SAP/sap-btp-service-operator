@@ -689,11 +689,11 @@ fields in the `spec` field of the `ServiceInstance` or `ServiceBinding` resource
   `JSON` constructs are supported. Only one parameter field may be specified per
   `spec`.
 - `parametersFrom`: enables you to specify one or more secrets, and the corresponding keys within those secrets, holding JSON-formatted parameters to be sent to the 
-   broker. The `parametersFrom` field is a list that
-   supports multiple sources referenced per `spec`, defining an asymmetric relationship where the `ServiceInstance` resource can define several related secrets.
-- `watchParametersFromChanges`: (boolean) This field determines whether changes to the secret values referenced in `parametersFrom` should trigger an automatic update of the service instance. This enables the service instance to reconcile and react to changes in its referenced secrets. If `true`, any change to the referenced secret values will cause the service instance to update. Defaults to `false`.
+   broker.
+  The `parametersFrom` field is a list that supports multiple sources referenced per `spec`, defining an asymmetric relationship where the `ServiceInstance` resource can define several related secrets.
+- `watchParametersFromChanges`: (boolean) This field determines whether changes to the secret values referenced in `parametersFrom` should trigger an automatic update of the service instance. If `true`, any change to the referenced secret values will trigger the update of the service instance. Defaults to `false`.
  
-While you may use either or both of `parameters` and `parametersFrom` fields, selected `watchParametersFromChanges` must be used with `parametersFrom`.
+While you may use either or both of `parameters` and `parametersFrom` fields, `watchParametersFromChanges` is only relevant when used alongside `parametersFrom`.
 
 If multiple sources in the `parameters` and `parametersFrom` blocks are specified,
 the final payload merges all of them at the top level.
@@ -773,7 +773,7 @@ secret-parameter:
 | externalName       | `string` | The name for the service instance in SAP BTP, defaults to the instance `metadata.name` if not specified.                                                                                                          |
 | parameters       | `[]object` | Some services support the provisioning of additional configuration parameters during the instance creation.<br/>For the list of supported parameters, check the documentation of the particular service offering. |
 | parametersFrom | `[]object` | List of sources to populate parameters.                                                                                                                                                                           |
-| watchParametersFromChanges | `bool` | This field determines whether changes to the secret values referenced in `parametersFrom` should trigger an automatic update of the service instance. This enables the service instance to reconcile and react to changes in its referenced secrets. When set to true, any change to the referenced secret values will cause the service instance to be updated. Defaults to `false`. It must be used in conjuction with the `parametersFrom` field. |
+| watchParametersFromChanges | `bool` | This field determines whether changes to the secret values referenced in `parametersFrom` should trigger an automatic update of the service instance. When set to true, any change to the referenced secret values will trigger the update of the service instance. Defaults to `false`. It is only relevant when used in conjuction with the `parametersFrom` field. |
 | customTags | `[]string` | A List of custom tags describing the ServiceInstance, will be copied to `ServiceBinding` secret in the key called `tags`.                                                                                           |
 | userInfo | `object` | Contains information about the user that last modified this service instance.                                                                                                                                     |
 | shared |  `*bool`   | The shared state. Possible values: true, false, or nil (value was not specified, counts as "false").                                                                                                              |
