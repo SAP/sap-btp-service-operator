@@ -679,23 +679,24 @@ For more details about `ServiceBinding`, refer to the dedicated [Service Binding
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
 ### Passing Parameters
+
 To set input parameters, you may use the `parameters` and `parametersFrom`
 fields in the `spec` field of the `ServiceInstance` or `ServiceBinding` resource:
 - `parameters`: can be used to specify a set of properties to be sent to the
   broker. The data specified will be passed "as-is" to the broker without any
   modifications - aside from converting it to JSON for transmission to the broker
-  in the case of the `spec` field being specified as `YAML`. Any valid `YAML` or
+  if the `spec` field is specified as `YAML`. Any valid `YAML` or
   `JSON` constructs are supported. Only one parameter field may be specified per
   `spec`.
-- `parametersFrom`: can be used to specify which secret, and key in that secret,
-  which contains a `string` that represents the JSON to include in the set of
-  parameters to be sent to the broker. The `parametersFrom` field is a list that
-  supports multiple sources referenced per `spec`.
-
-You may use either, or both, of these fields as needed.
+- `parametersFrom`: enables you to specify one or more secrets, and the corresponding keys within those secrets, holding JSON-formatted parameters to be sent to the 
+   broker.
+  The `parametersFrom` field is a list that supports multiple sources referenced per `spec`, defining an asymmetric relationship where the `ServiceInstance` resource can define several related secrets.
+- `watchParametersFromChanges`: (boolean) This field determines whether changes to the secret values referenced in `parametersFrom` should trigger an automatic update of the service instance. If `true`, any change to the referenced secret values will trigger the update of the service instance. Defaults to `false`.
+ 
+While you may use either or both of `parameters` and `parametersFrom` fields, `watchParametersFromChanges` is only relevant when used alongside `parametersFrom`.
 
 If multiple sources in the `parameters` and `parametersFrom` blocks are specified,
-the final payload is a result of merging all of them at the top level.
+the final payload merges all of them at the top level.
 If there are any duplicate properties defined at the top level, the specification
 is considered to be invalid, the further processing of the `ServiceInstance`/`ServiceBinding`
 resource stops and its `status` is marked with an error condition.
@@ -772,6 +773,7 @@ secret-parameter:
 | externalName       | `string` | The name for the service instance in SAP BTP, defaults to the instance `metadata.name` if not specified.                                                                                                          |
 | parameters       | `[]object` | Some services support the provisioning of additional configuration parameters during the instance creation.<br/>For the list of supported parameters, check the documentation of the particular service offering. |
 | parametersFrom | `[]object` | List of sources to populate parameters.                                                                                                                                                                           |
+| watchParametersFromChanges | `bool` | This field determines whether changes to the secret values referenced in `parametersFrom` should trigger an automatic update of the service instance. When set to true, any change to the referenced secret values will trigger the update of the service instance. Defaults to `false`. It is only relevant when used in conjuction with the `parametersFrom` field. |
 | customTags | `[]string` | A List of custom tags describing the ServiceInstance, will be copied to `ServiceBinding` secret in the key called `tags`.                                                                                           |
 | userInfo | `object` | Contains information about the user that last modified this service instance.                                                                                                                                     |
 | shared |  `*bool`   | The shared state. Possible values: true, false, or nil (value was not specified, counts as "false").                                                                                                              |
@@ -952,14 +954,10 @@ Do not call this API with the service-operator-access plan credentials.
 <b>Attention: **Use this option only for cleanup purposes for a cluster that's no longer available.** Applying it to an active and available cluster may result in unintended resource leftovers in your cluster.</b>
 
 
-
-
 You're welcome to raise issues related to feature requests, or bugs, or give us general feedback on this project's GitHub Issues page.
 The SAP BTP service operator project maintainers will respond to the best of their abilities.
 
-#-CR doesnt exist, ("instance" in Kuberbernetes) but it does exist on BTP. Once we create CR, it connects to the existing instance.*
-#- *same name, namespace, Instance exists in BTP, not in Kubernetes cluster. How can we recover it?*
-#- Create CR with the same name, namespace, and cluster ID (GET instance details, context in the response)* - separate PR 
+ 
 
 [Back to top](#sap-business-technology-platform-sap-btp-service-operator-for-kubernetes)
 
