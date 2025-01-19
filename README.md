@@ -695,6 +695,10 @@ fields in the `spec` field of the `ServiceInstance` or `ServiceBinding` resource
  
 While you may use either or both of `parameters` and `parametersFrom` fields, `watchParametersFromChanges` is only relevant when used alongside `parametersFrom`.
 
+**Note** 
+The `watchParametersFromChanges` field is only relevant for `ServiceInstance` resourcces because `ServiceBinding` resourcse can't be updated.
+
+
 If multiple sources in the `parameters` and `parametersFrom` blocks are specified,
 the final payload merges all of them at the top level.
 If there are any duplicate properties defined at the top level, the specification
