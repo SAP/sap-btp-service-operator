@@ -47,7 +47,7 @@ func (si *ServiceInstance) ValidateCreate() (warnings admission.Warnings, err er
 }
 
 func (si *ServiceInstance) ValidateUpdate(old runtime.Object) (warnings admission.Warnings, err error) {
-	serviceinstancelog.Info("validate update", "name", si.Name)
+	serviceinstancelog.Info("validate update", "name", si.ObjectMeta.Name)
 
 	oldInstance := old.(*ServiceInstance)
 	if oldInstance.Spec.BTPAccessCredentialsSecret != si.Spec.BTPAccessCredentialsSecret {
@@ -57,11 +57,11 @@ func (si *ServiceInstance) ValidateUpdate(old runtime.Object) (warnings admissio
 }
 
 func (si *ServiceInstance) ValidateDelete() (warnings admission.Warnings, err error) {
-	serviceinstancelog.Info("validate delete", "name", si.Name)
-	if si.Annotations != nil {
-		preventDeletion, ok := si.Annotations[common.PreventDeletion]
+	serviceinstancelog.Info("validate delete", "name", si.ObjectMeta.Name)
+	if si.ObjectMeta.Annotations != nil {
+		preventDeletion, ok := si.ObjectMeta.Annotations[common.PreventDeletion]
 		if ok && strings.ToLower(preventDeletion) == "true" {
-			return nil, fmt.Errorf("service instance '%s' is marked with \"prevent deletion\"", si.Name)
+			return nil, fmt.Errorf("service instance '%s' is marked with \"prevent deletion\"", si.ObjectMeta.Name)
 		}
 	}
 	return nil, nil

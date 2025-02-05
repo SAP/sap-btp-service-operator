@@ -47,7 +47,7 @@ var _ webhook.Validator = &ServiceBinding{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (sb *ServiceBinding) ValidateCreate() (admission.Warnings, error) {
-	servicebindinglog.Info("validate create", "name", sb.Name)
+	servicebindinglog.Info("validate create", "name", sb.ObjectMeta.Name)
 	if sb.Spec.CredRotationPolicy != nil {
 		if err := sb.validateCredRotatingConfig(); err != nil {
 			return nil, err
@@ -58,7 +58,7 @@ func (sb *ServiceBinding) ValidateCreate() (admission.Warnings, error) {
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (sb *ServiceBinding) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
-	servicebindinglog.Info("validate update", "name", sb.Name)
+	servicebindinglog.Info("validate update", "name", sb.ObjectMeta.Name)
 	if sb.Spec.CredRotationPolicy != nil {
 		if err := sb.validateCredRotatingConfig(); err != nil {
 			return nil, err
@@ -87,10 +87,10 @@ func (sb *ServiceBinding) ValidateUpdate(old runtime.Object) (admission.Warnings
 }
 
 func (sb *ServiceBinding) validateRotationLabels(old *ServiceBinding) bool {
-	if sb.Labels[common.StaleBindingIDLabel] != old.Labels[common.StaleBindingIDLabel] {
+	if sb.ObjectMeta.Labels[common.StaleBindingIDLabel] != old.ObjectMeta.Labels[common.StaleBindingIDLabel] {
 		return false
 	}
-	return sb.Labels[common.StaleBindingRotationOfLabel] == old.Labels[common.StaleBindingRotationOfLabel]
+	return sb.ObjectMeta.Labels[common.StaleBindingRotationOfLabel] == old.ObjectMeta.Labels[common.StaleBindingRotationOfLabel]
 }
 
 func (sb *ServiceBinding) specChanged(oldBinding *ServiceBinding) bool {
@@ -110,7 +110,7 @@ func (sb *ServiceBinding) specChanged(oldBinding *ServiceBinding) bool {
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (sb *ServiceBinding) ValidateDelete() (admission.Warnings, error) {
-	servicebindinglog.Info("validate delete", "name", sb.Name)
+	servicebindinglog.Info("validate delete", "name", sb.ObjectMeta.Name)
 
 	// TODO(user): fill in your validation logic upon object deletion.
 	return nil, nil

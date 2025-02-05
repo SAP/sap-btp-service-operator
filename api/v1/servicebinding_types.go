@@ -189,11 +189,11 @@ func (sb *ServiceBinding) SetReady(ready metav1.ConditionStatus) {
 }
 
 func (sb *ServiceBinding) GetAnnotations() map[string]string {
-	return sb.Annotations
+	return sb.ObjectMeta.Annotations
 }
 
 func (sb *ServiceBinding) SetAnnotations(annotations map[string]string) {
-	sb.Annotations = annotations
+	sb.ObjectMeta.Annotations = annotations
 }
 
 // +kubebuilder:object:root=true
