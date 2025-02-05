@@ -100,7 +100,7 @@ envtest:
 
 
 lint: lint-deps
-	golangci-lint run --skip-dirs "pkg/mod/golang.org/toolchain"
+	golangci-lint run --skip-dirs "pkg/mod/golang.org/toolchain" --config ".golangci.yml"
 
 lint-deps:
 	@if ! which golangci-lint >/dev/null || [[ "$$(golangci-lint --version)" != *${LINT_VERSION}* ]]; then \
