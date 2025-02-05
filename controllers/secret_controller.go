@@ -40,7 +40,7 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 	log.Info(fmt.Sprintf("reconciling params secret %s", req.NamespacedName))
 	// Fetch the Secret
 	secret := &corev1.Secret{}
-	if err := r.Get(ctx, req.NamespacedName, secret); err != nil {
+	if err := r.Client.Get(ctx, req.NamespacedName, secret); err != nil {
 		if !apierrors.IsNotFound(err) {
 			log.Error(err, "unable to fetch Secret")
 		}

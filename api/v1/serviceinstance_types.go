@@ -186,11 +186,11 @@ func (si *ServiceInstance) SetReady(ready metav1.ConditionStatus) {
 	si.Status.Ready = ready
 }
 func (si *ServiceInstance) GetAnnotations() map[string]string {
-	return si.Annotations
+	return si.ObjectMeta.Annotations
 }
 
 func (si *ServiceInstance) SetAnnotations(annotations map[string]string) {
-	si.Annotations = annotations
+	si.ObjectMeta.Annotations = annotations
 }
 
 // +kubebuilder:object:root=true
