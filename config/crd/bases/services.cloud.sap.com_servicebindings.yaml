@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.16.1
+    controller-gen.kubebuilder.io/version: v0.15.0
   name: servicebindings.services.cloud.sap.com
 spec:
   group: services.cloud.sap.com
@@ -14,521 +14,549 @@ spec:
     singular: servicebinding
   scope: Namespaced
   versions:
-  - additionalPrinterColumns:
-    - jsonPath: .spec.serviceInstanceName
-      name: Instance
-      type: string
-    - jsonPath: .status.conditions[0].reason
-      name: Status
-      type: string
-    - jsonPath: .status.ready
-      name: Ready
-      type: string
-    - jsonPath: .metadata.creationTimestamp
-      name: Age
-      type: date
-    - jsonPath: .status.bindingID
-      name: ID
-      priority: 1
-      type: string
-    - jsonPath: .status.conditions[0].message
-      name: Message
-      priority: 1
-      type: string
-    name: v1
-    schema:
-      openAPIV3Schema:
-        description: ServiceBinding is the Schema for the servicebindings API
-        properties:
-          apiVersion:
-            description: |-
-              APIVersion defines the versioned schema of this representation of an object.
-              Servers should convert recognized schemas to the latest internal value, and
-              may reject unrecognized values.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
-            type: string
-          kind:
-            description: |-
-              Kind is a string value representing the REST resource this object represents.
-              Servers may infer this from the endpoint the client submits requests to.
-              Cannot be updated.
-              In CamelCase.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
-            type: string
-          metadata:
-            type: object
-          spec:
-            description: ServiceBindingSpec defines the desired state of ServiceBinding
-            properties:
-              credentialsRotationPolicy:
-                description: CredentialsRotationPolicy holds automatic credentials
-                  rotation configuration.
-                properties:
-                  enabled:
-                    type: boolean
-                  rotatedBindingTTL:
-                    description: For how long to keep the rotated binding.
-                    type: string
-                  rotationFrequency:
-                    description: What frequency to perform binding rotation.
-                    type: string
-                required:
-                - enabled
-                type: object
-              externalName:
-                description: The name of the binding in Service Manager
-                type: string
-              parameters:
-                description: |-
-                  Parameters for the binding.
-
-                  The Parameters field is NOT secret or secured in any way and should
-                  NEVER be used to hold sensitive information. To set parameters that
-                  contain secret information, you should ALWAYS store that information
-                  in a Secret and use the ParametersFrom field.
-                type: object
-                x-kubernetes-preserve-unknown-fields: true
-              parametersFrom:
-                description: |-
-                  List of sources to populate parameters.
-                  If a top-level parameter name exists in multiples sources among
-                  `Parameters` and `ParametersFrom` fields, it is
-                  considered to be a user error in the specification
-                items:
-                  description: ParametersFromSource represents the source of a set
-                    of Parameters
+    - additionalPrinterColumns:
+        - jsonPath: .spec.serviceInstanceName
+          name: Instance
+          type: string
+        - jsonPath: .status.conditions[0].reason
+          name: Status
+          type: string
+        - jsonPath: .status.ready
+          name: Ready
+          type: string
+        - jsonPath: .metadata.creationTimestamp
+          name: Age
+          type: date
+        - jsonPath: .status.bindingID
+          name: ID
+          priority: 1
+          type: string
+        - jsonPath: .status.conditions[0].message
+          name: Message
+          priority: 1
+          type: string
+      name: v1
+      schema:
+        openAPIV3Schema:
+          description: ServiceBinding is the Schema for the servicebindings API
+          properties:
+            apiVersion:
+              description: |-
+                APIVersion defines the versioned schema of this representation of an object.
+                Servers should convert recognized schemas to the latest internal value, and
+                may reject unrecognized values.
+                More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+              type: string
+            kind:
+              description: |-
+                Kind is a string value representing the REST resource this object represents.
+                Servers may infer this from the endpoint the client submits requests to.
+                Cannot be updated.
+                In CamelCase.
+                More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: ServiceBindingSpec defines the desired state of ServiceBinding
+              properties:
+                credentialsRotationPolicy:
+                  description: CredentialsRotationPolicy holds automatic credentials
+                    rotation configuration.
                   properties:
-                    secretKeyRef:
-                      description: |-
-                        The Secret key to select from.
-                        The value must be a JSON object.
-                      properties:
-                        key:
-                          description: The key of the secret to select from.  Must
-                            be a valid secret key.
-                          type: string
-                        name:
-                          description: The name of the secret in the pod's namespace
-                            to select from.
-                          type: string
-                      required:
-                      - key
-                      - name
-                      type: object
+                    enabled:
+                      type: boolean
+                    rotatedBindingTTL:
+                      description: For how long to keep the rotated binding.
+                      type: string
+                    rotationFrequency:
+                      description: What frequency to perform binding rotation.
+                      type: string
+                  required:
+                    - enabled
                   type: object
-                type: array
-              secretKey:
-                description: |-
-                  SecretKey is used as the key inside the secret to store the credentials
-                  returned by the broker encoded as json to support complex data structures.
-                  If not specified, the credentials returned by the broker will be used
-                  directly as the secrets data.
-                type: string
-              secretName:
-                description: SecretName is the name of the secret where credentials
-                  will be stored
-                type: string
-              secretRootKey:
-                description: |-
-                  SecretRootKey is used as the key inside the secret to store all binding
-                  data including credentials returned by the broker and additional info under single key.
-                  Convenient way to store whole binding data in single file when using `volumeMounts`.
-                type: string
-              secretTemplate:
-                description: |-
-                  SecretTemplate is a Go template that generates a custom Kubernetes
-                  v1/Secret based on data from the service binding returned by Service Manager and the instance information.
-                  The generated secret is used instead of the default secret.
-                  This is useful if the consumer of service binding data expects them in
-                  a specific format.
-                  For Go templates see https://pkg.go.dev/text/template.
-                  For supported funcs see: https://pkg.go.dev/text/template#hdr-Functions, https://masterminds.github.io/sprig/
-                type: string
-                x-kubernetes-preserve-unknown-fields: true
-              serviceInstanceName:
-                description: The k8s name of the service instance to bind, should
-                  be in the namespace of the binding
-                minLength: 1
-                type: string
-              serviceInstanceNamespace:
-                description: The namespace of the referenced instance, if empty Binding's
-                  namespace will be used
-                type: string
-              userInfo:
-                description: |-
-                  UserInfo contains information about the user that last modified this
-                  instance. This field is set by the API server and not settable by the
-                  end-user. User-provided values for this field are not saved.
-                properties:
-                  extra:
-                    additionalProperties:
-                      description: ExtraValue masks the value so protobuf can generate
+                externalName:
+                  description: The name of the binding in Service Manager
+                  type: string
+                parameters:
+                  description: |-
+                    Parameters for the binding.
+                    
+                    
+                    The Parameters field is NOT secret or secured in any way and should
+                    NEVER be used to hold sensitive information. To set parameters that
+                    contain secret information, you should ALWAYS store that information
+                    in a Secret and use the ParametersFrom field.
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+                parametersFrom:
+                  description: |-
+                    List of sources to populate parameters.
+                    If a top-level parameter name exists in multiples sources among
+                    `Parameters` and `ParametersFrom` fields, it is
+                    considered to be a user error in the specification
+                  items:
+                    description: ParametersFromSource represents the source of a set
+                      of Parameters
+                    properties:
+                      secretKeyRef:
+                        description: |-
+                          The Secret key to select from.
+                          The value must be a JSON object.
+                        properties:
+                          key:
+                            description: The key of the secret to select from.  Must
+                              be a valid secret key.
+                            type: string
+                          name:
+                            description: The name of the secret in the pod's namespace
+                              to select from.
+                            type: string
+                        required:
+                          - key
+                          - name
+                        type: object
+                    type: object
+                  type: array
+                secretKey:
+                  description: |-
+                    SecretKey is used as the key inside the secret to store the credentials
+                    returned by the broker encoded as json to support complex data structures.
+                    If not specified, the credentials returned by the broker will be used
+                    directly as the secrets data.
+                  type: string
+                secretName:
+                  description: SecretName is the name of the secret where credentials
+                    will be stored
+                  type: string
+                secretRootKey:
+                  description: |-
+                    SecretRootKey is used as the key inside the secret to store all binding
+                    data including credentials returned by the broker and additional info under single key.
+                    Convenient way to store whole binding data in single file when using `volumeMounts`.
+                  type: string
+                secretTemplate:
+                  description: |-
+                    SecretTemplate is a Go template that generates a custom Kubernetes
+                    v1/Secret based on data from the service binding returned by Service Manager and the instance information.
+                    The generated secret is used instead of the default secret.
+                    This is useful if the consumer of service binding data expects them in
+                    a specific format.
+                    For Go templates see https://pkg.go.dev/text/template.
+                    For supported funcs see: https://pkg.go.dev/text/template#hdr-Functions, https://masterminds.github.io/sprig/
+                  type: string
+                  x-kubernetes-preserve-unknown-fields: true
+                serviceInstanceName:
+                  description: The k8s name of the service instance to bind, should
+                    be in the namespace of the binding
+                  minLength: 1
+                  type: string
+                serviceInstanceNamespace:
+                  description: The namespace of the referenced instance, if empty Binding's
+                    namespace will be used
+                  type: string
+                userInfo:
+                  description: |-
+                    UserInfo contains information about the user that last modified this
+                    instance. This field is set by the API server and not settable by the
+                    end-user. User-provided values for this field are not saved.
+                  properties:
+                    extra:
+                      additionalProperties:
+                        description: ExtraValue masks the value so protobuf can generate
+                        items:
+                          type: string
+                        type: array
+                      description: Any additional information provided by the authenticator.
+                      type: object
+                    groups:
+                      description: The names of groups this user is a part of.
                       items:
                         type: string
                       type: array
-                    description: Any additional information provided by the authenticator.
+                      x-kubernetes-list-type: atomic
+                    uid:
+                      description: |-
+                        A unique value that identifies this user across time. If this user is
+                        deleted and another user by the same name is added, they will have
+                        different UIDs.
+                      type: string
+                    username:
+                      description: The name that uniquely identifies this user among
+                        all active users.
+                      type: string
+                  type: object
+              required:
+                - serviceInstanceName
+              type: object
+            status:
+              description: ServiceBindingStatus defines the observed state of ServiceBinding
+              properties:
+                bindingID:
+                  description: The generated ID of the binding, will be automatically
+                    filled once the binding is created
+                  type: string
+                conditions:
+                  description: Service binding conditions
+                  items:
+                    description: "Condition contains details for one aspect of the current
+                    state of this API Resource.\n---\nThis struct is intended for
+                    direct use as an array at the field path .status.conditions.  For
+                    example,\n\n\n\ttype FooStatus struct{\n\t    // Represents the
+                    observations of a foo's current state.\n\t    // Known .status.conditions.type
+                    are: \"Available\", \"Progressing\", and \"Degraded\"\n\t    //
+                    +patchMergeKey=type\n\t    // +patchStrategy=merge\n\t    // +listType=map\n\t
+                    \   // +listMapKey=type\n\t    Conditions []metav1.Condition `json:\"conditions,omitempty\"
+                    patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"`\n\n\n\t
+                    \   // other fields\n\t}"
+                    properties:
+                      lastTransitionTime:
+                        description: |-
+                          lastTransitionTime is the last time the condition transitioned from one status to another.
+                          This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                        format: date-time
+                        type: string
+                      message:
+                        description: |-
+                          message is a human readable message indicating details about the transition.
+                          This may be an empty string.
+                        maxLength: 32768
+                        type: string
+                      observedGeneration:
+                        description: |-
+                          observedGeneration represents the .metadata.generation that the condition was set based upon.
+                          For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                          with respect to the current state of the instance.
+                        format: int64
+                        minimum: 0
+                        type: integer
+                      reason:
+                        description: |-
+                          reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                          Producers of specific condition types may define expected values and meanings for this field,
+                          and whether the values are considered a guaranteed API.
+                          The value should be a CamelCase string.
+                          This field may not be empty.
+                        maxLength: 1024
+                        minLength: 1
+                        pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                        type: string
+                      status:
+                        description: status of the condition, one of True, False, Unknown.
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                        type: string
+                      type:
+                        description: |-
+                          type of condition in CamelCase or in foo.example.com/CamelCase.
+                          ---
+                          Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be
+                          useful (see .node.status.conditions), the ability to deconflict is important.
+                          The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                        maxLength: 316
+                        pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                        type: string
+                    required:
+                      - lastTransitionTime
+                      - message
+                      - reason
+                      - status
+                      - type
                     type: object
-                  groups:
-                    description: The names of groups this user is a part of.
-                    items:
-                      type: string
-                    type: array
-                    x-kubernetes-list-type: atomic
-                  uid:
-                    description: |-
-                      A unique value that identifies this user across time. If this user is
-                      deleted and another user by the same name is added, they will have
-                      different UIDs.
-                    type: string
-                  username:
-                    description: The name that uniquely identifies this user among
-                      all active users.
-                    type: string
-                type: object
-            required:
-            - serviceInstanceName
-            type: object
-          status:
-            description: ServiceBindingStatus defines the observed state of ServiceBinding
-            properties:
-              bindingID:
-                description: The generated ID of the binding, will be automatically
-                  filled once the binding is created
-                type: string
-              conditions:
-                description: Service binding conditions
-                items:
-                  description: Condition contains details for one aspect of the current
-                    state of this API Resource.
+                  type: array
+                instanceID:
+                  description: The ID of the instance in SM associated with binding
+                  type: string
+                lastCredentialsRotationTime:
+                  description: Indicates when binding secret was rotated
+                  format: date-time
+                  type: string
+                operationType:
+                  description: The operation type (CREATE/UPDATE/DELETE) for ongoing
+                    operation
+                  type: string
+                operationURL:
+                  description: URL of ongoing operation for the service binding
+                  type: string
+                ready:
+                  description: Indicates whether binding is ready for usage
+                  type: string
+                subaccountID:
+                  description: The subaccount id of the service binding
+                  type: string
+              required:
+                - conditions
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}
+    - additionalPrinterColumns:
+        - jsonPath: .spec.serviceInstanceName
+          name: Instance
+          type: string
+        - jsonPath: .status.conditions[0].reason
+          name: Status
+          type: string
+        - jsonPath: .status.ready
+          name: Ready
+          type: string
+        - jsonPath: .metadata.creationTimestamp
+          name: Age
+          type: date
+        - jsonPath: .status.bindingID
+          name: ID
+          priority: 1
+          type: string
+        - jsonPath: .status.conditions[0].message
+          name: Message
+          priority: 1
+          type: string
+      name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: ServiceBinding is the Schema for the servicebindings API
+          properties:
+            apiVersion:
+              description: |-
+                APIVersion defines the versioned schema of this representation of an object.
+                Servers should convert recognized schemas to the latest internal value, and
+                may reject unrecognized values.
+                More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+              type: string
+            kind:
+              description: |-
+                Kind is a string value representing the REST resource this object represents.
+                Servers may infer this from the endpoint the client submits requests to.
+                Cannot be updated.
+                In CamelCase.
+                More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: ServiceBindingSpec defines the desired state of ServiceBinding
+              properties:
+                credentialsRotationPolicy:
+                  description: CredentialsRotationPolicy holds automatic credentials
+                    rotation configuration.
                   properties:
-                    lastTransitionTime:
-                      description: |-
-                        lastTransitionTime is the last time the condition transitioned from one status to another.
-                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
-                      format: date-time
+                    enabled:
+                      type: boolean
+                    rotatedBindingTTL:
+                      description: For how long to keep the rotated binding.
                       type: string
-                    message:
-                      description: |-
-                        message is a human readable message indicating details about the transition.
-                        This may be an empty string.
-                      maxLength: 32768
-                      type: string
-                    observedGeneration:
-                      description: |-
-                        observedGeneration represents the .metadata.generation that the condition was set based upon.
-                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
-                        with respect to the current state of the instance.
-                      format: int64
-                      minimum: 0
-                      type: integer
-                    reason:
-                      description: |-
-                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
-                        Producers of specific condition types may define expected values and meanings for this field,
-                        and whether the values are considered a guaranteed API.
-                        The value should be a CamelCase string.
-                        This field may not be empty.
-                      maxLength: 1024
-                      minLength: 1
-                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
-                      type: string
-                    status:
-                      description: status of the condition, one of True, False, Unknown.
-                      enum:
-                      - "True"
-                      - "False"
-                      - Unknown
-                      type: string
-                    type:
-                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
-                      maxLength: 316
-                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                    rotationFrequency:
+                      description: What frequency to perform binding rotation.
                       type: string
                   required:
-                  - lastTransitionTime
-                  - message
-                  - reason
-                  - status
-                  - type
+                    - enabled
                   type: object
-                type: array
-              instanceID:
-                description: The ID of the instance in SM associated with binding
-                type: string
-              lastCredentialsRotationTime:
-                description: Indicates when binding secret was rotated
-                format: date-time
-                type: string
-              operationType:
-                description: The operation type (CREATE/UPDATE/DELETE) for ongoing
-                  operation
-                type: string
-              operationURL:
-                description: URL of ongoing operation for the service binding
-                type: string
-              ready:
-                description: Indicates whether binding is ready for usage
-                type: string
-              subaccountID:
-                description: The subaccount id of the service binding
-                type: string
-            required:
-            - conditions
-            type: object
-        type: object
-    served: true
-    storage: true
-    subresources:
-      status: {}
-  - additionalPrinterColumns:
-    - jsonPath: .spec.serviceInstanceName
-      name: Instance
-      type: string
-    - jsonPath: .status.conditions[0].reason
-      name: Status
-      type: string
-    - jsonPath: .status.ready
-      name: Ready
-      type: string
-    - jsonPath: .metadata.creationTimestamp
-      name: Age
-      type: date
-    - jsonPath: .status.bindingID
-      name: ID
-      priority: 1
-      type: string
-    - jsonPath: .status.conditions[0].message
-      name: Message
-      priority: 1
-      type: string
-    name: v1alpha1
-    schema:
-      openAPIV3Schema:
-        description: ServiceBinding is the Schema for the servicebindings API
-        properties:
-          apiVersion:
-            description: |-
-              APIVersion defines the versioned schema of this representation of an object.
-              Servers should convert recognized schemas to the latest internal value, and
-              may reject unrecognized values.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
-            type: string
-          kind:
-            description: |-
-              Kind is a string value representing the REST resource this object represents.
-              Servers may infer this from the endpoint the client submits requests to.
-              Cannot be updated.
-              In CamelCase.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
-            type: string
-          metadata:
-            type: object
-          spec:
-            description: ServiceBindingSpec defines the desired state of ServiceBinding
-            properties:
-              credentialsRotationPolicy:
-                description: CredentialsRotationPolicy holds automatic credentials
-                  rotation configuration.
-                properties:
-                  enabled:
-                    type: boolean
-                  rotatedBindingTTL:
-                    description: For how long to keep the rotated binding.
-                    type: string
-                  rotationFrequency:
-                    description: What frequency to perform binding rotation.
-                    type: string
-                required:
-                - enabled
-                type: object
-              externalName:
-                description: The name of the binding in Service Manager
-                type: string
-              parameters:
-                description: |-
-                  Parameters for the binding.
-
-                  The Parameters field is NOT secret or secured in any way and should
-                  NEVER be used to hold sensitive information. To set parameters that
-                  contain secret information, you should ALWAYS store that information
-                  in a Secret and use the ParametersFrom field.
-                type: object
-                x-kubernetes-preserve-unknown-fields: true
-              parametersFrom:
-                description: |-
-                  List of sources to populate parameters.
-                  If a top-level parameter name exists in multiples sources among
-                  `Parameters` and `ParametersFrom` fields, it is
-                  considered to be a user error in the specification
-                items:
-                  description: ParametersFromSource represents the source of a set
-                    of Parameters
+                externalName:
+                  description: The name of the binding in Service Manager
+                  type: string
+                parameters:
+                  description: |-
+                    Parameters for the binding.
+                    
+                    
+                    The Parameters field is NOT secret or secured in any way and should
+                    NEVER be used to hold sensitive information. To set parameters that
+                    contain secret information, you should ALWAYS store that information
+                    in a Secret and use the ParametersFrom field.
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+                parametersFrom:
+                  description: |-
+                    List of sources to populate parameters.
+                    If a top-level parameter name exists in multiples sources among
+                    `Parameters` and `ParametersFrom` fields, it is
+                    considered to be a user error in the specification
+                  items:
+                    description: ParametersFromSource represents the source of a set
+                      of Parameters
+                    properties:
+                      secretKeyRef:
+                        description: |-
+                          The Secret key to select from.
+                          The value must be a JSON object.
+                        properties:
+                          key:
+                            description: The key of the secret to select from.  Must
+                              be a valid secret key.
+                            type: string
+                          name:
+                            description: The name of the secret in the pod's namespace
+                              to select from.
+                            type: string
+                        required:
+                          - key
+                          - name
+                        type: object
+                    type: object
+                  type: array
+                secretKey:
+                  description: |-
+                    SecretKey is used as the key inside the secret to store the credentials
+                    returned by the broker encoded as json to support complex data structures.
+                    If not specified, the credentials returned by the broker will be used
+                    directly as the secrets data.
+                  type: string
+                secretName:
+                  description: SecretName is the name of the secret where credentials
+                    will be stored
+                  type: string
+                secretRootKey:
+                  description: |-
+                    SecretRootKey is used as the key inside the secret to store all binding
+                    data including credentials returned by the broker and additional info under single key.
+                    Convenient way to store whole binding data in single file when using `volumeMounts`.
+                  type: string
+                serviceInstanceName:
+                  description: The k8s name of the service instance to bind, should
+                    be in the namespace of the binding
+                  minLength: 1
+                  type: string
+                userInfo:
+                  description: |-
+                    UserInfo contains information about the user that last modified this
+                    instance. This field is set by the API server and not settable by the
+                    end-user. User-provided values for this field are not saved.
                   properties:
-                    secretKeyRef:
-                      description: |-
-                        The Secret key to select from.
-                        The value must be a JSON object.
-                      properties:
-                        key:
-                          description: The key of the secret to select from.  Must
-                            be a valid secret key.
+                    extra:
+                      additionalProperties:
+                        description: ExtraValue masks the value so protobuf can generate
+                        items:
                           type: string
-                        name:
-                          description: The name of the secret in the pod's namespace
-                            to select from.
-                          type: string
-                      required:
-                      - key
-                      - name
+                        type: array
+                      description: Any additional information provided by the authenticator.
                       type: object
-                  type: object
-                type: array
-              secretKey:
-                description: |-
-                  SecretKey is used as the key inside the secret to store the credentials
-                  returned by the broker encoded as json to support complex data structures.
-                  If not specified, the credentials returned by the broker will be used
-                  directly as the secrets data.
-                type: string
-              secretName:
-                description: SecretName is the name of the secret where credentials
-                  will be stored
-                type: string
-              secretRootKey:
-                description: |-
-                  SecretRootKey is used as the key inside the secret to store all binding
-                  data including credentials returned by the broker and additional info under single key.
-                  Convenient way to store whole binding data in single file when using `volumeMounts`.
-                type: string
-              serviceInstanceName:
-                description: The k8s name of the service instance to bind, should
-                  be in the namespace of the binding
-                minLength: 1
-                type: string
-              userInfo:
-                description: |-
-                  UserInfo contains information about the user that last modified this
-                  instance. This field is set by the API server and not settable by the
-                  end-user. User-provided values for this field are not saved.
-                properties:
-                  extra:
-                    additionalProperties:
-                      description: ExtraValue masks the value so protobuf can generate
+                    groups:
+                      description: The names of groups this user is a part of.
                       items:
                         type: string
                       type: array
-                    description: Any additional information provided by the authenticator.
-                    type: object
-                  groups:
-                    description: The names of groups this user is a part of.
-                    items:
-                      type: string
-                    type: array
-                    x-kubernetes-list-type: atomic
-                  uid:
-                    description: |-
-                      A unique value that identifies this user across time. If this user is
-                      deleted and another user by the same name is added, they will have
-                      different UIDs.
-                    type: string
-                  username:
-                    description: The name that uniquely identifies this user among
-                      all active users.
-                    type: string
-                type: object
-            required:
-            - serviceInstanceName
-            type: object
-          status:
-            description: ServiceBindingStatus defines the observed state of ServiceBinding
-            properties:
-              bindingID:
-                description: The generated ID of the binding, will be automatically
-                  filled once the binding is created
-                type: string
-              conditions:
-                description: Service binding conditions
-                items:
-                  description: Condition contains details for one aspect of the current
-                    state of this API Resource.
-                  properties:
-                    lastTransitionTime:
+                      x-kubernetes-list-type: atomic
+                    uid:
                       description: |-
-                        lastTransitionTime is the last time the condition transitioned from one status to another.
-                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
-                      format: date-time
+                        A unique value that identifies this user across time. If this user is
+                        deleted and another user by the same name is added, they will have
+                        different UIDs.
                       type: string
-                    message:
-                      description: |-
-                        message is a human readable message indicating details about the transition.
-                        This may be an empty string.
-                      maxLength: 32768
+                    username:
+                      description: The name that uniquely identifies this user among
+                        all active users.
                       type: string
-                    observedGeneration:
-                      description: |-
-                        observedGeneration represents the .metadata.generation that the condition was set based upon.
-                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
-                        with respect to the current state of the instance.
-                      format: int64
-                      minimum: 0
-                      type: integer
-                    reason:
-                      description: |-
-                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
-                        Producers of specific condition types may define expected values and meanings for this field,
-                        and whether the values are considered a guaranteed API.
-                        The value should be a CamelCase string.
-                        This field may not be empty.
-                      maxLength: 1024
-                      minLength: 1
-                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
-                      type: string
-                    status:
-                      description: status of the condition, one of True, False, Unknown.
-                      enum:
-                      - "True"
-                      - "False"
-                      - Unknown
-                      type: string
-                    type:
-                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
-                      maxLength: 316
-                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
-                      type: string
-                  required:
-                  - lastTransitionTime
-                  - message
-                  - reason
-                  - status
-                  - type
                   type: object
-                type: array
-              instanceID:
-                description: The ID of the instance in SM associated with binding
-                type: string
-              lastCredentialsRotationTime:
-                description: Indicates when binding secret was rotated
-                format: date-time
-                type: string
-              observedGeneration:
-                description: Last generation that was acted on
-                format: int64
-                type: integer
-              operationType:
-                description: The operation type (CREATE/UPDATE/DELETE) for ongoing
-                  operation
-                type: string
-              operationURL:
-                description: URL of ongoing operation for the service binding
-                type: string
-              ready:
-                description: Indicates whether binding is ready for usage
-                type: string
-            required:
-            - conditions
-            type: object
-        type: object
-    served: true
-    storage: false
-    subresources:
-      status: {}
+              required:
+                - serviceInstanceName
+              type: object
+            status:
+              description: ServiceBindingStatus defines the observed state of ServiceBinding
+              properties:
+                bindingID:
+                  description: The generated ID of the binding, will be automatically
+                    filled once the binding is created
+                  type: string
+                conditions:
+                  description: Service binding conditions
+                  items:
+                    description: "Condition contains details for one aspect of the current
+                    state of this API Resource.\n---\nThis struct is intended for
+                    direct use as an array at the field path .status.conditions.  For
+                    example,\n\n\n\ttype FooStatus struct{\n\t    // Represents the
+                    observations of a foo's current state.\n\t    // Known .status.conditions.type
+                    are: \"Available\", \"Progressing\", and \"Degraded\"\n\t    //
+                    +patchMergeKey=type\n\t    // +patchStrategy=merge\n\t    // +listType=map\n\t
+                    \   // +listMapKey=type\n\t    Conditions []metav1.Condition `json:\"conditions,omitempty\"
+                    patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"`\n\n\n\t
+                    \   // other fields\n\t}"
+                    properties:
+                      lastTransitionTime:
+                        description: |-
+                          lastTransitionTime is the last time the condition transitioned from one status to another.
+                          This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                        format: date-time
+                        type: string
+                      message:
+                        description: |-
+                          message is a human readable message indicating details about the transition.
+                          This may be an empty string.
+                        maxLength: 32768
+                        type: string
+                      observedGeneration:
+                        description: |-
+                          observedGeneration represents the .metadata.generation that the condition was set based upon.
+                          For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                          with respect to the current state of the instance.
+                        format: int64
+                        minimum: 0
+                        type: integer
+                      reason:
+                        description: |-
+                          reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                          Producers of specific condition types may define expected values and meanings for this field,
+                          and whether the values are considered a guaranteed API.
+                          The value should be a CamelCase string.
+                          This field may not be empty.
+                        maxLength: 1024
+                        minLength: 1
+                        pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                        type: string
+                      status:
+                        description: status of the condition, one of True, False, Unknown.
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                        type: string
+                      type:
+                        description: |-
+                          type of condition in CamelCase or in foo.example.com/CamelCase.
+                          ---
+                          Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be
+                          useful (see .node.status.conditions), the ability to deconflict is important.
+                          The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                        maxLength: 316
+                        pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                        type: string
+                    required:
+                      - lastTransitionTime
+                      - message
+                      - reason
+                      - status
+                      - type
+                    type: object
+                  type: array
+                instanceID:
+                  description: The ID of the instance in SM associated with binding
+                  type: string
+                lastCredentialsRotationTime:
+                  description: Indicates when binding secret was rotated
+                  format: date-time
+                  type: string
+                observedGeneration:
+                  description: Last generation that was acted on
+                  format: int64
+                  type: integer
+                operationType:
+                  description: The operation type (CREATE/UPDATE/DELETE) for ongoing
+                    operation
+                  type: string
+                operationURL:
+                  description: URL of ongoing operation for the service binding
+                  type: string
+                ready:
+                  description: Indicates whether binding is ready for usage
+                  type: string
+              required:
+                - conditions
+              type: object
+          type: object
+      served: true
+      storage: false
+      subresources:
+        status: {}
