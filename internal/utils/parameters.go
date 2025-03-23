@@ -28,17 +28,19 @@ func BuildSMRequestParameters(namespace string, parameters *runtime.RawExtension
 			if err != nil {
 				return nil, nil, err
 			}
-			secretsSet[string(secret.UID)] = secret
-			for k, v := range fps {
-				// we don't want to add shared param because sm api does not support updating
-				// shared param with other params, for sharing we have different function.
-				if k == "shared" {
-					continue
+			if secret != nil {
+				secretsSet[string(secret.UID)] = secret
+				for k, v := range fps {
+					// we don't want to add shared param because sm api does not support updating
+					// shared param with other params, for sharing we have different function.
+					if k == "shared" {
+						continue
+					}
+					if _, ok := params[k]; ok {
+						return nil, nil, fmt.Errorf("conflict: duplicate entry for parameter %q", k)
+					}
+					params[k] = v
 				}
-				if _, ok := params[k]; ok {
-					return nil, nil, fmt.Errorf("conflict: duplicate entry for parameter %q", k)
-				}
-				params[k] = v
 			}
 		}
 	}
