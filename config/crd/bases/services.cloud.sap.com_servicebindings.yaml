@@ -94,6 +94,7 @@ spec:
                   If a top-level parameter name exists in multiples sources among
                   `Parameters` and `ParametersFrom` fields, it is
                   considered to be a user error in the specification
+                minItems: 1
                 items:
                   description: ParametersFromSource represents the source of a set
                     of Parameters
@@ -115,6 +116,8 @@ spec:
                       - key
                       - name
                       type: object
+                  required:
+                    - secretKeyRef
                   type: object
                 type: array
               secretKey:
