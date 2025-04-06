@@ -61,10 +61,8 @@ func GetSecretForResource(ctx context.Context, namespace, name string) (*v1.Secr
 func (sr *secretClient) getSecretFromManagementNamespace(ctx context.Context, name string) (*v1.Secret, error) {
 	secretForResource := &v1.Secret{}
 
-	sr.Log.Info(fmt.Sprintf("Searching for secret %s in management namespace %s", name, sr.ManagementNamespace))
 	err := sr.getWithClientFallback(ctx, types.NamespacedName{Name: name, Namespace: sr.ManagementNamespace}, secretForResource)
 	if err != nil {
-		sr.Log.Error(err, fmt.Sprintf("Could not fetch secret %s from management namespace %s", name, sr.ManagementNamespace))
 		return nil, err
 	}
 	return secretForResource, nil
@@ -75,14 +73,12 @@ func (sr *secretClient) getSecretForResource(ctx context.Context, namespace, nam
 
 	// search namespace secret
 	if sr.EnableNamespaceSecrets {
-		sr.Log.Info(fmt.Sprintf("Searching for secret %s in namespace %s", name, namespace))
 		err := sr.getWithClientFallback(ctx, types.NamespacedName{Name: name, Namespace: namespace}, secretForResource)
 		if err == nil {
 			return secretForResource, nil
 		}
 
 		if client.IgnoreNotFound(err) != nil {
-			sr.Log.Error(err, fmt.Sprintf("Could not fetch secret %s from namespace %s", name, namespace))
 			return nil, err
 		}
 	}
@@ -95,17 +91,15 @@ func (sr *secretClient) getSecretForResource(ctx context.Context, namespace, nam
 	}
 
 	if client.IgnoreNotFound(err) != nil {
-		sr.Log.Error(err, fmt.Sprintf("Could not fetch secret %s-%s in the management namespace %s", namespace, name, sr.ManagementNamespace))
 		return nil, err
 	}
-
 	// namespace-specific secret not found in management namespace, fallback to central cluster secret
 	return sr.getClusterDefaultSecret(ctx, name)
 }
 
 func (sr *secretClient) getClusterDefaultSecret(ctx context.Context, name string) (*v1.Secret, error) {
 	secretForResource := &v1.Secret{}
-	sr.Log.Info(fmt.Sprintf("Searching for cluster secret %s in releaseNamespace %s", name, sr.ReleaseNamespace))
+	//	sr.Log.Info(fmt.Sprintf("Searching for cluster secret %s in releaseNamespace %s", name, sr.ReleaseNamespace))
 	err := sr.getWithClientFallback(ctx, types.NamespacedName{Namespace: sr.ReleaseNamespace, Name: name}, secretForResource)
 	if err != nil {
 		sr.Log.Error(err, fmt.Sprintf("Could not fetch cluster secret %s from releaseNamespace %s", name, sr.ReleaseNamespace))
@@ -118,12 +112,10 @@ func (sr *secretClient) getWithClientFallback(ctx context.Context, key types.Nam
 	err := sr.Client.Get(ctx, key, secretForResource)
 	if err != nil {
 		if errors.IsNotFound(err) && sr.LimitedCacheEnabled {
-			sr.Log.Info(fmt.Sprintf("secret %s not found in cache, falling back to non-cached client", key.String()))
 			err = sr.NonCachedClient.Get(ctx, key, secretForResource)
 			if err != nil {
 				return err
 			}
-			sr.Log.Info(fmt.Sprintf("secret %s found using non-cached client", key.String()))
 			return nil
 		}
 		return err

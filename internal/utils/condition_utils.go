@@ -3,10 +3,8 @@ package utils
 import (
 	"context"
 	"fmt"
-	"net/http"
 
 	"github.com/SAP/sap-btp-service-operator/api/common"
-	"github.com/SAP/sap-btp-service-operator/client/sm"
 	smClientTypes "github.com/SAP/sap-btp-service-operator/client/sm/types"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,7 +14,7 @@ import (
 
 func InitConditions(ctx context.Context, k8sClient client.Client, obj common.SAPBTPResource) error {
 	obj.SetReady(metav1.ConditionFalse)
-	SetInProgressConditions(ctx, smClientTypes.CREATE, "Pending", obj)
+	SetInProgressConditions(ctx, smClientTypes.CREATE, "Pending", obj, false)
 	return UpdateStatus(ctx, k8sClient, obj)
 }
 
@@ -57,7 +55,7 @@ func GetConditionReason(opType smClientTypes.OperationCategory, state smClientTy
 	return common.Unknown
 }
 
-func SetInProgressConditions(ctx context.Context, operationType smClientTypes.OperationCategory, message string, object common.SAPBTPResource) {
+func SetInProgressConditions(ctx context.Context, operationType smClientTypes.OperationCategory, message string, object common.SAPBTPResource, isAsyncOperation bool) {
 	log := GetLogger(ctx)
 	if len(message) == 0 {
 		if operationType == smClientTypes.CREATE {
@@ -73,12 +71,16 @@ func SetInProgressConditions(ctx context.Context, operationType smClientTypes.Op
 	if len(conditions) > 0 {
 		meta.RemoveStatusCondition(&conditions, common.ConditionFailed)
 	}
+	observedGen := object.GetGeneration()
+	if isAsyncOperation {
+		observedGen = getLastObservedGen(object)
+	}
 	lastOpCondition := metav1.Condition{
 		Type:               common.ConditionSucceeded,
 		Status:             metav1.ConditionFalse,
 		Reason:             GetConditionReason(operationType, smClientTypes.INPROGRESS),
 		Message:            message,
-		ObservedGeneration: object.GetObservedGeneration(),
+		ObservedGeneration: observedGen,
 	}
 	meta.SetStatusCondition(&conditions, lastOpCondition)
 	meta.SetStatusCondition(&conditions, getReadyCondition(object))
@@ -87,7 +89,7 @@ func SetInProgressConditions(ctx context.Context, operationType smClientTypes.Op
 	log.Info(fmt.Sprintf("setting inProgress conditions: reason: %s, message:%s, generation: %d", lastOpCondition.Reason, message, object.GetGeneration()))
 }
 
-func SetSuccessConditions(operationType smClientTypes.OperationCategory, object common.SAPBTPResource) {
+func SetSuccessConditions(operationType smClientTypes.OperationCategory, object common.SAPBTPResource, isAsyncOperation bool) {
 	var message string
 	if operationType == smClientTypes.CREATE {
 		message = fmt.Sprintf("%s provisioned successfully", object.GetControllerName())
@@ -101,19 +103,23 @@ func SetSuccessConditions(operationType smClientTypes.OperationCategory, object 
 	if len(conditions) > 0 {
 		meta.RemoveStatusCondition(&conditions, common.ConditionFailed)
 	}
+	observedGen := object.GetGeneration()
+	if isAsyncOperation {
+		observedGen = getLastObservedGen(object)
+	}
 	lastOpCondition := metav1.Condition{
 		Type:               common.ConditionSucceeded,
 		Status:             metav1.ConditionTrue,
 		Reason:             GetConditionReason(operationType, smClientTypes.SUCCEEDED),
 		Message:            message,
-		ObservedGeneration: object.GetObservedGeneration(),
+		ObservedGeneration: observedGen,
 	}
 	readyCondition := metav1.Condition{
 		Type:               common.ConditionReady,
 		Status:             metav1.ConditionTrue,
 		Reason:             common.Provisioned,
 		Message:            message,
-		ObservedGeneration: object.GetObservedGeneration(),
+		ObservedGeneration: observedGen,
 	}
 	meta.SetStatusCondition(&conditions, lastOpCondition)
 	meta.SetStatusCondition(&conditions, readyCondition)
@@ -132,13 +138,13 @@ func SetCredRotationInProgressConditions(reason, message string, object common.S
 		Status:             metav1.ConditionTrue,
 		Reason:             reason,
 		Message:            message,
-		ObservedGeneration: object.GetObservedGeneration(),
+		ObservedGeneration: object.GetGeneration(),
 	}
 	meta.SetStatusCondition(&conditions, credRotCondition)
 	object.SetConditions(conditions)
 }
 
-func SetFailureConditions(operationType smClientTypes.OperationCategory, errorMessage string, object common.SAPBTPResource) {
+func SetFailureConditions(operationType smClientTypes.OperationCategory, errorMessage string, object common.SAPBTPResource, isAsyncOperation bool) {
 	var message string
 	if operationType == smClientTypes.CREATE {
 		message = fmt.Sprintf("%s create failed: %s", object.GetControllerName(), errorMessage)
@@ -155,55 +161,47 @@ func SetFailureConditions(operationType smClientTypes.OperationCategory, errorMe
 		reason = object.GetConditions()[0].Reason
 	}
 
+	observedGen := object.GetGeneration()
+	if isAsyncOperation {
+		observedGen = getLastObservedGen(object)
+	}
 	conditions := object.GetConditions()
 	lastOpCondition := metav1.Condition{
 		Type:               common.ConditionSucceeded,
 		Status:             metav1.ConditionFalse,
 		Reason:             reason,
 		Message:            message,
-		ObservedGeneration: object.GetObservedGeneration(),
+		ObservedGeneration: observedGen,
 	}
-	meta.SetStatusCondition(&conditions, lastOpCondition)
-
 	failedCondition := metav1.Condition{
 		Type:               common.ConditionFailed,
 		Status:             metav1.ConditionTrue,
 		Reason:             reason,
 		Message:            message,
-		ObservedGeneration: object.GetObservedGeneration(),
+		ObservedGeneration: observedGen,
 	}
+
+	meta.SetStatusCondition(&conditions, lastOpCondition)
 	meta.SetStatusCondition(&conditions, failedCondition)
 	meta.SetStatusCondition(&conditions, getReadyCondition(object))
 
 	object.SetConditions(conditions)
 }
 
-func MarkAsNonTransientError(ctx context.Context, k8sClient client.Client, operationType smClientTypes.OperationCategory, errMsg string, object common.SAPBTPResource) (ctrl.Result, error) {
+func MarkAsNonTransientError(ctx context.Context, k8sClient client.Client, operationType smClientTypes.OperationCategory, err error, object common.SAPBTPResource) (ctrl.Result, error) {
 	log := GetLogger(ctx)
-	SetFailureConditions(operationType, errMsg, object)
-	if operationType != smClientTypes.DELETE {
-		log.Info(fmt.Sprintf("operation %s of %s encountered a non transient error %s, giving up operation :(", operationType, object.GetControllerName(), errMsg))
-	}
-	object.SetObservedGeneration(object.GetGeneration())
-	err := UpdateStatus(ctx, k8sClient, object)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	if operationType == smClientTypes.DELETE {
-		return ctrl.Result{}, fmt.Errorf(errMsg)
-	}
-	return ctrl.Result{}, nil
+	errMsg := err.Error()
+	log.Info(fmt.Sprintf("operation %s of %s encountered a non transient error %s, setting failure conditions", operationType, object.GetControllerName(), errMsg))
+	SetFailureConditions(operationType, errMsg, object, false)
+	return ctrl.Result{}, UpdateStatus(ctx, k8sClient, object)
 }
 
 func MarkAsTransientError(ctx context.Context, k8sClient client.Client, operationType smClientTypes.OperationCategory, err error, object common.SAPBTPResource) (ctrl.Result, error) {
 	log := GetLogger(ctx)
-	//DO NOT REMOVE - 429 error is not reflected to the status
-	if smError, ok := err.(*sm.ServiceManagerError); !ok || smError.StatusCode != http.StatusTooManyRequests {
-		SetInProgressConditions(ctx, operationType, err.Error(), object)
-		log.Info(fmt.Sprintf("operation %s of %s encountered a transient error %s, retrying operation :)", operationType, object.GetControllerName(), err.Error()))
-		if updateErr := UpdateStatus(ctx, k8sClient, object); updateErr != nil {
-			return ctrl.Result{}, updateErr
-		}
+	log.Info(fmt.Sprintf("operation %s of %s encountered a transient error %s, retrying operation :)", operationType, object.GetControllerName(), err.Error()))
+	SetInProgressConditions(ctx, operationType, err.Error(), object, false)
+	if updateErr := UpdateStatus(ctx, k8sClient, object); updateErr != nil {
+		return ctrl.Result{}, updateErr
 	}
 
 	return ctrl.Result{}, err
@@ -211,7 +209,7 @@ func MarkAsTransientError(ctx context.Context, k8sClient client.Client, operatio
 
 // blocked condition marks to the user that action from his side is required, this is considered as in progress operation
 func SetBlockedCondition(ctx context.Context, message string, object common.SAPBTPResource) {
-	SetInProgressConditions(ctx, common.Unknown, message, object)
+	SetInProgressConditions(ctx, common.Unknown, message, object, false)
 	lastOpCondition := meta.FindStatusCondition(object.GetConditions(), common.ConditionSucceeded)
 	lastOpCondition.Reason = common.Blocked
 }
@@ -241,4 +239,13 @@ func getReadyCondition(object common.SAPBTPResource) metav1.Condition {
 	}
 
 	return metav1.Condition{Type: common.ConditionReady, Status: status, Reason: reason}
+}
+
+func getLastObservedGen(object common.SAPBTPResource) int64 {
+	conditions := object.GetConditions()
+	cond := meta.FindStatusCondition(conditions, common.ConditionSucceeded)
+	if cond != nil {
+		return cond.ObservedGeneration
+	}
+	return 0
 }

@@ -18,13 +18,14 @@ package controllers
 
 import (
 	"context"
-	"crypto/md5"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
-	"k8s.io/utils/ptr"
+	"k8s.io/apimachinery/pkg/types"
+
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/SAP/sap-btp-service-operator/api/common"
 	"github.com/SAP/sap-btp-service-operator/internal/config"
@@ -81,6 +82,9 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 	serviceInstance = serviceInstance.DeepCopy()
 
+	if utils.IsMarkedForDeletion(serviceInstance.ObjectMeta) {
+		return r.deleteInstance(ctx, serviceInstance)
+	}
 	if len(serviceInstance.GetConditions()) == 0 {
 		err := utils.InitConditions(ctx, r.Client, serviceInstance)
 		if err != nil {
@@ -100,27 +104,17 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, nil
 	}
 
-	if utils.IsMarkedForDeletion(serviceInstance.ObjectMeta) {
-		// delete updates the generation
-		serviceInstance.SetObservedGeneration(serviceInstance.Generation)
-		return r.deleteInstance(ctx, serviceInstance)
-	}
-
 	if len(serviceInstance.Status.OperationURL) > 0 {
 		// ongoing operation - poll status from SM
 		return r.poll(ctx, serviceInstance)
 	}
 
-	if !controllerutil.ContainsFinalizer(serviceInstance, common.FinalizerName) {
-		controllerutil.AddFinalizer(serviceInstance, common.FinalizerName)
+	if controllerutil.AddFinalizer(serviceInstance, common.FinalizerName) {
 		log.Info(fmt.Sprintf("added finalizer '%s' to service instance", common.FinalizerName))
 		if err := r.Client.Update(ctx, serviceInstance); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
-
-	log.Info(fmt.Sprintf("instance is not in final state, handling... (generation: %d, observedGen: %d", serviceInstance.Generation, serviceInstance.Status.ObservedGeneration))
-	serviceInstance.SetObservedGeneration(serviceInstance.Generation)
 
 	smClient, err := r.GetSMClient(ctx, serviceInstance)
 	if err != nil {
@@ -145,19 +139,15 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	// Update
 	if updateRequired(serviceInstance) {
-		if res, err := r.updateInstance(ctx, smClient, serviceInstance); err != nil {
-			log.Info("got error while trying to update instance")
-			return ctrl.Result{}, err
-		} else if res.Requeue {
-			return res, nil
-		}
+		return r.updateInstance(ctx, smClient, serviceInstance)
 	}
 
-	// Handle instance share if needed
-	if sharingUpdateRequired(serviceInstance) {
+	// share/unshare
+	if shareOrUnshareRequired(serviceInstance) {
 		return r.handleInstanceSharing(ctx, serviceInstance, smClient)
 	}
 
+	log.Info("No action required")
 	return ctrl.Result{}, nil
 }
 
@@ -172,11 +162,11 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	log := utils.GetLogger(ctx)
 	log.Info("Creating instance in SM")
 	updateHashedSpecValue(serviceInstance)
-	_, instanceParameters, err := utils.BuildSMRequestParameters(serviceInstance.Namespace, serviceInstance.Spec.ParametersFrom, serviceInstance.Spec.Parameters)
+	instanceParameters, err := r.buildSMRequestParameters(ctx, serviceInstance)
 	if err != nil {
 		// if parameters are invalid there is nothing we can do, the user should fix it according to the error message in the condition
 		log.Error(err, "failed to parse instance parameters")
-		return utils.MarkAsNonTransientError(ctx, r.Client, smClientTypes.CREATE, err.Error(), serviceInstance)
+		return utils.MarkAsTransientError(ctx, r.Client, smClientTypes.CREATE, err, serviceInstance)
 	}
 
 	provision, provisionErr := smClient.Provision(&smClientTypes.ServiceInstance{
@@ -193,7 +183,7 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	if provisionErr != nil {
 		log.Error(provisionErr, "failed to create service instance", "serviceOfferingName", serviceInstance.Spec.ServiceOfferingName,
 			"servicePlanName", serviceInstance.Spec.ServicePlanName)
-		return utils.HandleError(ctx, r.Client, smClientTypes.CREATE, provisionErr, serviceInstance, true)
+		return utils.HandleError(ctx, r.Client, smClientTypes.CREATE, provisionErr, serviceInstance)
 	}
 
 	serviceInstance.Status.InstanceID = provision.InstanceID
@@ -211,14 +201,14 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 		log.Info("Provision request is in progress (async)")
 		serviceInstance.Status.OperationURL = provision.Location
 		serviceInstance.Status.OperationType = smClientTypes.CREATE
-		utils.SetInProgressConditions(ctx, smClientTypes.CREATE, "", serviceInstance)
+		utils.SetInProgressConditions(ctx, smClientTypes.CREATE, "", serviceInstance, false)
 
 		return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, utils.UpdateStatus(ctx, r.Client, serviceInstance)
 	}
 
 	log.Info(fmt.Sprintf("Instance provisioned successfully, instanceID: %s, subaccountID: %s", serviceInstance.Status.InstanceID,
 		serviceInstance.Status.SubaccountID))
-	utils.SetSuccessConditions(smClientTypes.CREATE, serviceInstance)
+	utils.SetSuccessConditions(smClientTypes.CREATE, serviceInstance, false)
 	return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceInstance)
 }
 
@@ -226,14 +216,13 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 	log := utils.GetLogger(ctx)
 	log.Info(fmt.Sprintf("updating instance %s in SM", serviceInstance.Status.InstanceID))
 
-	updateHashedSpecValue(serviceInstance)
-
-	_, instanceParameters, err := utils.BuildSMRequestParameters(serviceInstance.Namespace, serviceInstance.Spec.ParametersFrom, serviceInstance.Spec.Parameters)
+	instanceParameters, err := r.buildSMRequestParameters(ctx, serviceInstance)
 	if err != nil {
 		log.Error(err, "failed to parse instance parameters")
-		return utils.MarkAsNonTransientError(ctx, r.Client, smClientTypes.UPDATE, fmt.Sprintf("failed to parse parameters: %v", err.Error()), serviceInstance)
+		return utils.MarkAsTransientError(ctx, r.Client, smClientTypes.UPDATE, err, serviceInstance)
 	}
 
+	updateHashedSpecValue(serviceInstance)
 	_, operationURL, err := smClient.UpdateInstance(serviceInstance.Status.InstanceID, &smClientTypes.ServiceInstance{
 		Name:          serviceInstance.Spec.ExternalName,
 		ServicePlanID: serviceInstance.Spec.ServicePlanID,
@@ -242,15 +231,15 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 
 	if err != nil {
 		log.Error(err, fmt.Sprintf("failed to update service instance with ID %s", serviceInstance.Status.InstanceID))
-		return utils.HandleError(ctx, r.Client, smClientTypes.UPDATE, err, serviceInstance, true)
+		return utils.HandleError(ctx, r.Client, smClientTypes.UPDATE, err, serviceInstance)
 	}
 
 	if operationURL != "" {
 		log.Info(fmt.Sprintf("Update request accepted, operation URL: %s", operationURL))
 		serviceInstance.Status.OperationURL = operationURL
 		serviceInstance.Status.OperationType = smClientTypes.UPDATE
-		utils.SetInProgressConditions(ctx, smClientTypes.UPDATE, "", serviceInstance)
-
+		utils.SetInProgressConditions(ctx, smClientTypes.UPDATE, "", serviceInstance, false)
+		serviceInstance.Status.ForceReconcile = false
 		if err := utils.UpdateStatus(ctx, r.Client, serviceInstance); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -258,14 +247,25 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 		return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, nil
 	}
 	log.Info("Instance updated successfully")
-	utils.SetSuccessConditions(smClientTypes.UPDATE, serviceInstance)
+	utils.SetSuccessConditions(smClientTypes.UPDATE, serviceInstance, false)
+	serviceInstance.Status.ForceReconcile = false
 	return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceInstance)
 }
 
 func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, serviceInstance *v1.ServiceInstance) (ctrl.Result, error) {
 	log := utils.GetLogger(ctx)
 
+	log.Info("deleting instance")
 	if controllerutil.ContainsFinalizer(serviceInstance, common.FinalizerName) {
+		for key, secretName := range serviceInstance.Labels {
+			if strings.HasPrefix(key, common.InstanceSecretRefLabel) {
+				if err := utils.RemoveWatchForSecret(ctx, r.Client, types.NamespacedName{Name: secretName, Namespace: serviceInstance.Namespace}, string(serviceInstance.UID)); err != nil {
+					log.Error(err, fmt.Sprintf("failed to unwatch secret %s", secretName))
+					return ctrl.Result{}, err
+				}
+			}
+		}
+
 		smClient, err := r.GetSMClient(ctx, serviceInstance)
 		if err != nil {
 			log.Error(err, "failed to get sm client")
@@ -280,7 +280,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, serviceI
 			if smInstance != nil {
 				log.Info("instance exists in SM continue with deletion")
 				serviceInstance.Status.InstanceID = smInstance.ID
-				utils.SetInProgressConditions(ctx, smClientTypes.DELETE, "delete after recovery", serviceInstance)
+				utils.SetInProgressConditions(ctx, smClientTypes.DELETE, "delete after recovery", serviceInstance, false)
 				return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceInstance)
 			}
 			log.Info("instance does not exists in SM, removing finalizer")
@@ -296,7 +296,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, serviceI
 		operationURL, deprovisionErr := smClient.Deprovision(serviceInstance.Status.InstanceID, nil, utils.BuildUserInfo(ctx, serviceInstance.Spec.UserInfo))
 		if deprovisionErr != nil {
 			// delete will proceed anyway
-			return utils.MarkAsNonTransientError(ctx, r.Client, smClientTypes.DELETE, deprovisionErr.Error(), serviceInstance)
+			return utils.HandleDeleteError(ctx, r.Client, deprovisionErr, serviceInstance)
 		}
 
 		if operationURL != "" {
@@ -315,8 +315,8 @@ func (r *ServiceInstanceReconciler) handleInstanceSharing(ctx context.Context, s
 	log := utils.GetLogger(ctx)
 	log.Info("Handling change in instance sharing")
 
-	if serviceInstance.ShouldBeShared() {
-		log.Info("Service instance is shouldBeShared, sharing the instance")
+	if serviceInstance.GetShared() {
+		log.Info("Service instance appears to be unshared, sharing the instance")
 		err := smClient.ShareInstance(serviceInstance.Status.InstanceID, utils.BuildUserInfo(ctx, serviceInstance.Spec.UserInfo))
 		if err != nil {
 			log.Error(err, "failed to share instance")
@@ -325,7 +325,7 @@ func (r *ServiceInstanceReconciler) handleInstanceSharing(ctx context.Context, s
 		log.Info("instance shared successfully")
 		setSharedCondition(serviceInstance, metav1.ConditionTrue, common.ShareSucceeded, "instance shared successfully")
 	} else { //un-share
-		log.Info("Service instance is un-shouldBeShared, un-sharing the instance")
+		log.Info("Service instance appears to be shared, un-sharing the instance")
 		err := smClient.UnShareInstance(serviceInstance.Status.InstanceID, utils.BuildUserInfo(ctx, serviceInstance.Spec.UserInfo))
 		if err != nil {
 			log.Error(err, "failed to un-share instance")
@@ -357,9 +357,9 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, serviceInstance *v
 	status, statusErr := smClient.Status(serviceInstance.Status.OperationURL, nil)
 	if statusErr != nil {
 		log.Info(fmt.Sprintf("failed to fetch operation, got error from SM: %s", statusErr.Error()), "operationURL", serviceInstance.Status.OperationURL)
-		utils.SetInProgressConditions(ctx, serviceInstance.Status.OperationType, string(smClientTypes.INPROGRESS), serviceInstance)
+		utils.SetInProgressConditions(ctx, serviceInstance.Status.OperationType, string(smClientTypes.INPROGRESS), serviceInstance, false)
 		// if failed to read operation status we cleanup the status to trigger re-sync from SM
-		freshStatus := v1.ServiceInstanceStatus{Conditions: serviceInstance.GetConditions(), ObservedGeneration: serviceInstance.Generation}
+		freshStatus := v1.ServiceInstanceStatus{Conditions: serviceInstance.GetConditions()}
 		if utils.IsMarkedForDeletion(serviceInstance.ObjectMeta) {
 			freshStatus.InstanceID = serviceInstance.Status.InstanceID
 		}
@@ -380,7 +380,7 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, serviceInstance *v
 	case smClientTypes.PENDING:
 		if len(status.Description) > 0 {
 			log.Info(fmt.Sprintf("last operation description is '%s'", status.Description))
-			utils.SetInProgressConditions(ctx, status.Type, status.Description, serviceInstance)
+			utils.SetInProgressConditions(ctx, status.Type, status.Description, serviceInstance, true)
 			if err := utils.UpdateStatus(ctx, r.Client, serviceInstance); err != nil {
 				log.Error(err, "unable to update ServiceInstance polling description")
 				return ctrl.Result{}, err
@@ -389,7 +389,7 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, serviceInstance *v
 		return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, nil
 	case smClientTypes.FAILED:
 		errMsg := getErrorMsgFromLastOperation(status)
-		utils.SetFailureConditions(status.Type, errMsg, serviceInstance)
+		utils.SetFailureConditions(status.Type, errMsg, serviceInstance, true)
 		// in order to delete eventually the object we need return with error
 		if serviceInstance.Status.OperationType == smClientTypes.DELETE {
 			serviceInstance.Status.OperationURL = ""
@@ -416,7 +416,7 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, serviceInstance *v
 				return ctrl.Result{}, err
 			}
 		}
-		utils.SetSuccessConditions(status.Type, serviceInstance)
+		utils.SetSuccessConditions(status.Type, serviceInstance, true)
 	}
 
 	serviceInstance.Status.OperationURL = ""
@@ -428,7 +428,7 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, serviceInstance *v
 func (r *ServiceInstanceReconciler) handleAsyncDelete(ctx context.Context, serviceInstance *v1.ServiceInstance, opURL string) (ctrl.Result, error) {
 	serviceInstance.Status.OperationURL = opURL
 	serviceInstance.Status.OperationType = smClientTypes.DELETE
-	utils.SetInProgressConditions(ctx, smClientTypes.DELETE, "", serviceInstance)
+	utils.SetInProgressConditions(ctx, smClientTypes.DELETE, "", serviceInstance, false)
 
 	if err := utils.UpdateStatus(ctx, r.Client, serviceInstance); err != nil {
 		return ctrl.Result{}, err
@@ -467,14 +467,6 @@ func (r *ServiceInstanceReconciler) recover(ctx context.Context, smClient sm.Cli
 
 	log.Info(fmt.Sprintf("found existing instance in SM with id %s, updating status", smInstance.ID))
 	updateHashedSpecValue(k8sInstance)
-	// set observed generation to 0 because we dont know which generation the current state in SM represents,
-	// unless the generation is 1 and SM is in the same state as operator
-	if k8sInstance.Generation == 1 {
-		k8sInstance.SetObservedGeneration(1)
-	} else {
-		k8sInstance.SetObservedGeneration(0)
-	}
-
 	if smInstance.Ready {
 		k8sInstance.Status.Ready = metav1.ConditionTrue
 	}
@@ -509,11 +501,11 @@ func (r *ServiceInstanceReconciler) recover(ctx context.Context, smClient sm.Cli
 	case smClientTypes.INPROGRESS:
 		k8sInstance.Status.OperationURL = sm.BuildOperationURL(smInstance.LastOperation.ID, smInstance.ID, smClientTypes.ServiceInstancesURL)
 		k8sInstance.Status.OperationType = smInstance.LastOperation.Type
-		utils.SetInProgressConditions(ctx, smInstance.LastOperation.Type, smInstance.LastOperation.Description, k8sInstance)
+		utils.SetInProgressConditions(ctx, smInstance.LastOperation.Type, smInstance.LastOperation.Description, k8sInstance, false)
 	case smClientTypes.SUCCEEDED:
-		utils.SetSuccessConditions(operationType, k8sInstance)
+		utils.SetSuccessConditions(operationType, k8sInstance, false)
 	case smClientTypes.FAILED:
-		utils.SetFailureConditions(operationType, description, k8sInstance)
+		utils.SetFailureConditions(operationType, description, k8sInstance, false)
 	}
 
 	return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, k8sInstance)
@@ -546,18 +538,73 @@ func (r *ServiceInstanceReconciler) handleInstanceSharingError(ctx context.Conte
 	return ctrl.Result{Requeue: isTransient}, utils.UpdateStatus(ctx, r.Client, object)
 }
 
+func (r *ServiceInstanceReconciler) buildSMRequestParameters(ctx context.Context, serviceInstance *v1.ServiceInstance) ([]byte, error) {
+	log := utils.GetLogger(ctx)
+	instanceParameters, paramSecrets, err := utils.BuildSMRequestParameters(serviceInstance.Namespace, serviceInstance.Spec.Parameters, serviceInstance.Spec.ParametersFrom)
+	if err != nil {
+		log.Error(err, "failed to build instance parameters")
+		return nil, err
+	}
+	instanceLabelsChanged := false
+	newInstanceLabels := make(map[string]string)
+	if serviceInstance.IsSubscribedToParamSecretsChanges() {
+		// find all new secrets on the instance
+		for _, secret := range paramSecrets {
+			labelKey := utils.GetLabelKeyForInstanceSecret(secret.Name)
+			newInstanceLabels[labelKey] = secret.Name
+			if _, ok := serviceInstance.Labels[labelKey]; !ok {
+				instanceLabelsChanged = true
+			}
+
+			if err := utils.AddWatchForSecretIfNeeded(ctx, r.Client, secret, string(serviceInstance.UID)); err != nil {
+				log.Error(err, fmt.Sprintf("failed to mark secret for watch %s", secret.Name))
+				return nil, err
+			}
+
+		}
+	}
+
+	//sync instance labels
+	for labelKey, labelValue := range serviceInstance.Labels {
+		if strings.HasPrefix(labelKey, common.InstanceSecretRefLabel) {
+			if _, ok := newInstanceLabels[labelKey]; !ok {
+				log.Info(fmt.Sprintf("params secret named %s was removed, unwatching it", labelValue))
+				instanceLabelsChanged = true
+				if err := utils.RemoveWatchForSecret(ctx, r.Client, types.NamespacedName{Name: labelValue, Namespace: serviceInstance.Namespace}, string(serviceInstance.UID)); err != nil {
+					log.Error(err, fmt.Sprintf("failed to unwatch secret %s", labelValue))
+					return nil, err
+				}
+			}
+		} else {
+			// this label not related to secrets, add it
+			newInstanceLabels[labelKey] = labelValue
+		}
+	}
+	if instanceLabelsChanged {
+		serviceInstance.Labels = newInstanceLabels
+		log.Info("updating instance with secret labels")
+		return instanceParameters, r.Client.Update(ctx, serviceInstance)
+	}
+
+	return instanceParameters, nil
+}
+
 func isFinalState(ctx context.Context, serviceInstance *v1.ServiceInstance) bool {
 	log := utils.GetLogger(ctx)
-	if utils.IsMarkedForDeletion(serviceInstance.ObjectMeta) {
-		log.Info("instance is not in final state, it is marked for deletion")
+
+	if serviceInstance.Status.ForceReconcile {
+		log.Info("instance is not in final state, ForceReconcile is true")
 		return false
 	}
+
 	if len(serviceInstance.Status.OperationURL) > 0 {
 		log.Info(fmt.Sprintf("instance is not in final state, async operation is in progress (%s)", serviceInstance.Status.OperationURL))
 		return false
 	}
-	if serviceInstance.Generation != serviceInstance.GetObservedGeneration() {
-		log.Info(fmt.Sprintf("instance is not in final state, generation: %d, observedGen: %d", serviceInstance.Generation, serviceInstance.GetObservedGeneration()))
+
+	observedGen := common.GetObservedGeneration(serviceInstance)
+	if serviceInstance.Generation != observedGen {
+		log.Info(fmt.Sprintf("instance is not in final state, generation: %d, observedGen: %d", serviceInstance.Generation, observedGen))
 		return false
 	}
 
@@ -567,7 +614,7 @@ func isFinalState(ctx context.Context, serviceInstance *v1.ServiceInstance) bool
 		return false
 	}
 
-	if sharingUpdateRequired(serviceInstance) {
+	if shareOrUnshareRequired(serviceInstance) {
 		log.Info("instance is not in final state, need to sync sharing status")
 		if len(serviceInstance.Status.HashedSpec) == 0 {
 			updateHashedSpecValue(serviceInstance)
@@ -585,40 +632,40 @@ func updateRequired(serviceInstance *v1.ServiceInstance) bool {
 		return false
 	}
 
+	if serviceInstance.Status.ForceReconcile {
+		return true
+	}
+
 	cond := meta.FindStatusCondition(serviceInstance.Status.Conditions, common.ConditionSucceeded)
 	if cond != nil && cond.Reason == common.UpdateInProgress { //in case of transient error occurred
 		return true
 	}
 
-	return getSpecHash(serviceInstance) != serviceInstance.Status.HashedSpec
+	return serviceInstance.GetSpecHash() != serviceInstance.Status.HashedSpec
 }
 
-func sharingUpdateRequired(serviceInstance *v1.ServiceInstance) bool {
+func shareOrUnshareRequired(serviceInstance *v1.ServiceInstance) bool {
 	//relevant only for non-shared instances - sharing instance is possible only for usable instances
 	if serviceInstance.Status.Ready != metav1.ConditionTrue {
 		return false
 	}
 
 	sharedCondition := meta.FindStatusCondition(serviceInstance.GetConditions(), common.ConditionShared)
-	shouldBeShared := serviceInstance.ShouldBeShared()
-
 	if sharedCondition == nil {
-		return shouldBeShared
+		return serviceInstance.GetShared()
 	}
 
 	if sharedCondition.Reason == common.ShareNotSupported {
 		return false
 	}
 
-	if sharedCondition.Reason == common.InProgress || sharedCondition.Reason == common.ShareFailed || sharedCondition.Reason == common.UnShareFailed {
-		return true
+	if sharedCondition.Status == metav1.ConditionFalse {
+		// instance does not appear to be shared, should share it if shared is requested
+		return serviceInstance.GetShared()
 	}
 
-	if shouldBeShared {
-		return sharedCondition.Status == metav1.ConditionFalse
-	}
-
-	return sharedCondition.Status == metav1.ConditionTrue
+	// instance appears to be shared, should unshare it if shared is not requested
+	return !serviceInstance.GetShared()
 }
 
 func getOfferingTags(smClient sm.Client, planID string) ([]string, error) {
@@ -661,19 +708,6 @@ func getTags(tags []byte) ([]string, error) {
 	return tagsArr, nil
 }
 
-func getSpecHash(serviceInstance *v1.ServiceInstance) string {
-	spec := serviceInstance.Spec
-	spec.Shared = ptr.To(false)
-	specBytes, _ := json.Marshal(spec)
-	s := string(specBytes)
-	return generateEncodedMD5Hash(s)
-}
-
-func generateEncodedMD5Hash(str string) string {
-	hash := md5.Sum([]byte(str))
-	return hex.EncodeToString(hash[:])
-}
-
 func setSharedCondition(object common.SAPBTPResource, status metav1.ConditionStatus, reason, msg string) {
 	conditions := object.GetConditions()
 	// align all conditions to latest generation
@@ -700,7 +734,7 @@ func setSharedCondition(object common.SAPBTPResource, status metav1.ConditionSta
 }
 
 func updateHashedSpecValue(serviceInstance *v1.ServiceInstance) {
-	serviceInstance.Status.HashedSpec = getSpecHash(serviceInstance)
+	serviceInstance.Status.HashedSpec = serviceInstance.GetSpecHash()
 }
 
 func getErrorMsgFromLastOperation(status *smClientTypes.Operation) string {
@@ -720,4 +754,8 @@ func getErrorMsgFromLastOperation(status *smClientTypes.Operation) string {
 		}
 	}
 	return errMsg
+}
+
+type SecretPredicate struct {
+	predicate.Funcs
 }

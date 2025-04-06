@@ -4,8 +4,7 @@ package v1
 type ParametersFromSource struct {
 	// The Secret key to select from.
 	// The value must be a JSON object.
-	// +optional
-	SecretKeyRef *SecretKeyReference `json:"secretKeyRef,omitempty"`
+	SecretKeyRef *SecretKeyReference `json:"secretKeyRef,required"`
 }
 
 // SecretKeyReference references a key of a Secret.

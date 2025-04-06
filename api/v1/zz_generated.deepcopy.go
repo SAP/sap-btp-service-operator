@@ -287,6 +287,11 @@ func (in *ServiceInstanceSpec) DeepCopyInto(out *ServiceInstanceSpec) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.WatchParametersFromChanges != nil {
+		in, out := &in.WatchParametersFromChanges, &out.WatchParametersFromChanges
+		*out = new(bool)
+		**out = **in
+	}
 	if in.CustomTags != nil {
 		in, out := &in.CustomTags, &out.CustomTags
 		*out = make([]string, len(*in))

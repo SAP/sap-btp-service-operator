@@ -70,10 +70,11 @@ type Client interface {
 }
 
 type ServiceManagerError struct {
-	ErrorType   string                      `json:"error,omitempty"`
-	Description string                      `json:"description,omitempty"`
-	StatusCode  int                         `json:"-"`
-	BrokerError *common.HTTPStatusCodeError `json:"broker_error,omitempty"`
+	ErrorType       string                      `json:"error,omitempty"`
+	Description     string                      `json:"description,omitempty"`
+	StatusCode      int                         `json:"-"`
+	BrokerError     *common.HTTPStatusCodeError `json:"broker_error,omitempty"`
+	ResponseHeaders http.Header                 `json:"-"`
 }
 
 func (e *ServiceManagerError) Error() string {
@@ -590,7 +591,8 @@ func handleResponseError(response *http.Response) error {
 	}
 
 	smError := &ServiceManagerError{
-		StatusCode: response.StatusCode,
+		StatusCode:      response.StatusCode,
+		ResponseHeaders: response.Header,
 	}
 	_ = json.Unmarshal(body, &smError)
 

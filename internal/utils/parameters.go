@@ -3,7 +3,6 @@ package utils
 import (
 	"context"
 	"encoding/json"
-
 	"fmt"
 
 	servicesv1 "github.com/SAP/sap-btp-service-operator/api/v1"
@@ -20,24 +19,28 @@ import (
 // secret values.
 // The second return value is parameters marshalled to byt array
 // The third return value is any error that caused the function to fail.
-func BuildSMRequestParameters(namespace string, parametersFrom []servicesv1.ParametersFromSource, parameters *runtime.RawExtension) (map[string]interface{}, []byte, error) {
+func BuildSMRequestParameters(namespace string, parameters *runtime.RawExtension, parametersFrom []servicesv1.ParametersFromSource) ([]byte, map[string]*corev1.Secret, error) {
 	params := make(map[string]interface{})
+	secretsSet := map[string]*corev1.Secret{}
 	if len(parametersFrom) > 0 {
 		for _, p := range parametersFrom {
-			fps, err := fetchParametersFromSource(namespace, &p)
+			fps, secret, err := fetchParametersFromSource(namespace, &p)
 			if err != nil {
 				return nil, nil, err
 			}
-			for k, v := range fps {
-				// we don't want to add shared param because sm api does not support updating
-				// shared param with other params, for sharing we have different function.
-				if k == "shared" {
-					continue
+			if secret != nil {
+				secretsSet[string(secret.UID)] = secret
+				for k, v := range fps {
+					// we don't want to add shared param because sm api does not support updating
+					// shared param with other params, for sharing we have different function.
+					if k == "shared" {
+						continue
+					}
+					if _, ok := params[k]; ok {
+						return nil, nil, fmt.Errorf("conflict: duplicate entry for parameter %q", k)
+					}
+					params[k] = v
 				}
-				if _, ok := params[k]; ok {
-					return nil, nil, fmt.Errorf("conflict: duplicate entry for parameter %q", k)
-				}
-				params[k] = v
 			}
 		}
 	}
@@ -62,7 +65,7 @@ func BuildSMRequestParameters(namespace string, parametersFrom []servicesv1.Para
 	if err != nil {
 		return nil, nil, err
 	}
-	return params, parametersRaw, nil
+	return parametersRaw, secretsSet, nil
 }
 
 // UnmarshalRawParameters produces a map structure from a given raw YAML/JSON input
@@ -94,31 +97,35 @@ func unmarshalJSON(in []byte) (map[string]interface{}, error) {
 }
 
 // fetchSecretKeyValue requests and returns the contents of the given secret key
-func fetchSecretKeyValue(namespace string, secretKeyRef *servicesv1.SecretKeyReference) ([]byte, error) {
+func fetchSecretKeyValue(namespace string, secretKeyRef *servicesv1.SecretKeyReference) ([]byte, *corev1.Secret, error) {
 	secret := &corev1.Secret{}
 	err := GetSecretWithFallback(context.Background(), types.NamespacedName{Namespace: namespace, Name: secretKeyRef.Name}, secret)
 
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return secret.Data[secretKeyRef.Key], nil
+
+	return secret.Data[secretKeyRef.Key], secret, nil
 }
 
 // fetchParametersFromSource fetches data from a specified external source and
 // represents it in the parameters map format
-func fetchParametersFromSource(namespace string, parametersFrom *servicesv1.ParametersFromSource) (map[string]interface{}, error) {
+func fetchParametersFromSource(namespace string, parametersFrom *servicesv1.ParametersFromSource) (map[string]interface{}, *corev1.Secret, error) {
 	var params map[string]interface{}
 	if parametersFrom.SecretKeyRef != nil {
-		data, err := fetchSecretKeyValue(namespace, parametersFrom.SecretKeyRef)
+		data, secret, err := fetchSecretKeyValue(namespace, parametersFrom.SecretKeyRef)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
+		}
+		if secret.DeletionTimestamp != nil {
+			return nil, nil, fmt.Errorf("secret %s is marked for deletion", secret.Name)
 		}
 		p, err := unmarshalJSON(data)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		params = p
-
+		return params, secret, nil
 	}
-	return params, nil
+	return params, nil, nil
 }

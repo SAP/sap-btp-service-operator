@@ -123,9 +123,6 @@ type ServiceBindingStatus struct {
 	// Service binding conditions
 	Conditions []metav1.Condition `json:"conditions"`
 
-	// Last generation that was acted on
-	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
-
 	// Indicates whether binding is ready for usage
 	Ready metav1.ConditionStatus `json:"ready,omitempty"`
 
@@ -179,14 +176,6 @@ func (sb *ServiceBinding) SetStatus(status interface{}) {
 	sb.Status = status.(ServiceBindingStatus)
 }
 
-func (sb *ServiceBinding) GetObservedGeneration() int64 {
-	return sb.Status.ObservedGeneration
-}
-
-func (sb *ServiceBinding) SetObservedGeneration(newObserved int64) {
-	sb.Status.ObservedGeneration = newObserved
-}
-
 func (sb *ServiceBinding) DeepClone() common.SAPBTPResource {
 	return sb.DeepCopy()
 }
@@ -200,11 +189,11 @@ func (sb *ServiceBinding) SetReady(ready metav1.ConditionStatus) {
 }
 
 func (sb *ServiceBinding) GetAnnotations() map[string]string {
-	return sb.Annotations
+	return sb.ObjectMeta.Annotations
 }
 
 func (sb *ServiceBinding) SetAnnotations(annotations map[string]string) {
-	sb.Annotations = annotations
+	sb.ObjectMeta.Annotations = annotations
 }
 
 // +kubebuilder:object:root=true

@@ -33,6 +33,7 @@ func GetSMClient(ctx context.Context, serviceInstance *v1.ServiceInstance) (sm.C
 			log.Error(err, "failed to get secret for instance")
 			return nil, err
 		}
+		log.Info(fmt.Sprintf("using secret %s in namespace %s", secret.Name, secret.Namespace))
 	}
 
 	clientConfig := &sm.ClientConfig{
@@ -62,7 +63,7 @@ func GetSMClient(ctx context.Context, serviceInstance *v1.ServiceInstance) (sm.C
 		if client.IgnoreNotFound(err) != nil {
 			return nil, err
 		}
-
+		log.Info(fmt.Sprintf("using tls secret %s in namespace %s", secret.Name, secret.Namespace))
 		if tlsSecret == nil || len(tlsSecret.Data) == 0 || len(tlsSecret.Data[corev1.TLSCertKey]) == 0 || len(tlsSecret.Data[corev1.TLSPrivateKeyKey]) == 0 {
 			log.Info("clientsecret not found in SM credentials, and tls secret is invalid")
 			return nil, &InvalidCredentialsError{}

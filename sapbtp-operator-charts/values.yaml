@@ -29,6 +29,7 @@ manager:
     sm_url: ""
     tokenurl: ""
     tokenurlsuffix: "/oauth/token"
+#   annotations: {}
   rbacProxy:
     image:
       repository: quay.io/brancz/kube-rbac-proxy
@@ -95,3 +96,5 @@ externalImages:
       repository: bitnami/kubectl
       sha: ""
       tag: latest
+# Option for adding annotations to configmap
+# operator_configmap_annotations: {}
