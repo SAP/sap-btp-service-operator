@@ -922,7 +922,7 @@ smctl Example
 **Note:** `force_k8s_binding` is supported only for the Kubernetes instances that are in the `Delete Failed` state.<br>
 
 
-### Cluster is unavailable and I still have service instances and bindings
+### Cluster is unavailable, and I still have service instances and bindings
 
 I cannot delete service instances and bindings because the cluster in which they were created is no longer available.
 
@@ -945,17 +945,51 @@ Do not call this API with the service-operator-access plan credentials.
 | Parameter                                   | Type       | Description                                                                               |
 |:--------------------------------------------|:-----------|:------------------------------------------------------------------------------------------|
 | platformID                                  | `string`   | The ID of the platform (should be the `service-operator-access` instance ID)             |
-| clusterID                                   | `string`   | The ID of the cluster. You should specify the ID from the step 4 of the [Setup](#setup) section. If you are unable to retrieve it, use the GET serrvice instance or binding API or equivalent btp CLI command and extract it from the response.                 |
+| clusterID                                   | `string`   | The ID of the cluster. You should specify the ID from step 4 of the [Setup](#setup) section. If you are unable to retrieve it, use the GET serrvice instance or binding API or equivalent btp CLI command and extract it from the response.                 |
 
 #### Response
 ##### 
 | Status Code            | Description                                                                                                                                                                                                                                                                                                  |
 |:-----------------------|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| 202 Accepted           | The request has been accepted for processing.  <br>  <br> **Headers:** <br> 'Location'- A path to the operation status, For more information about operations, see:  [Service Manager operation API](https://api.sap.com/api/APIServiceManager/path/getSingleOperation). |
+| 202 Accepted           | The request has been accepted for processing.  <br>  <br> **Headers:** <br> 'Location'- A path to the operation status. For more information about operations, see:  [Service Manager operation API](https://api.sap.com/api/APIServiceManager/path/getSingleOperation). |
 | 404 Resource Not Found | Platform or cluster not found                                                                                                                                                                                                                                                                                |
 | 429 Too Many Requests  | When the rate limit is exceeded, the client receives the HTTP 429 "Too Many Requests" response status code. <br>  <br> **Headers:** <br>  'Retry-After'-  indicates the time in seconds after which the client can retry the request.                                                                        |
                                 
-<b>Attention: **Use this option only for cleanup purposes for a cluster that's no longer available.** Applying it to an active and available cluster may result in unintended resource leftovers in your cluster.</b>
+<b>Attention: **Use this option only for cleanup purposes for a no longer available cluster.** Applying it to an active and available cluster may result in unintended resource leftovers in your cluster.</b>
+
+### I can see my service instance/binding in SAP BTP, but not its corresponding custom resource in my cluster. How can I restore the custom resource?
+
+
+Let's break down how to recover your Kubernetes custom resource that exists in SAP BTP but not in your Kubernetes cluster:
+
+#### Background
+
+If a Kubernetes custom resource (CR) representing an SAP BTP service instance or service binding is lost, you can restore the connection to the existing BTP resource by manually recreating the CR using the information from the BTP side. To successfully re-establish the link, the new CR must have the same name, reside in the same namespace, and be associated with the same cluster ID as the original. The SAP BTP resource itself holds the configuration and remains unchanged, so as long as these identifying attributes match, creating a new CR will not result in provisioning a new BTP resource, but will instead reconnect to the existing one.
+
+#### Steps
+
+1. Retrieve CR Details:
+
+a) Access the service instance or binding representing your CR in SAP BTP.
+
+b) Obtain the following details from the service instance:
+
+- The name of the custom resource.
+- The Kubernetes namespace where the CR should reside.
+  
+2. Recreate the CR:
+
+a) If you have a YAML definition or manifest for your CR, ensure it includes the exact name and namespace you retrieved from the SAP BTP service instance or binding. 
+
+b) Use `kubectl apply -f <your_cr_manifest.yaml>` to create the CR in your Kubernetes cluster.
+
+3. Verify:
+
+a) Use `kubectl get <your_cr_kind> <your_cr_name> -n <your_namespace>` to verify that the CR is successfully created in Kubernetes.
+
+b) Check the service instance or binding in SAP BTP to confirm it now recognizes the re-established connection with the CR in Kubernetes.
+
+c) If the connection is not re-established, verify that the cluster ID in your Kubernetes cluster matches the one associated with the SAP BTP service instance or binding. You can find the cluster ID in the context details visible in the cockpit or BTP CLI. If the IDs don't match, reconfigure your cluster with the correct ID.
 
 
 You're welcome to raise issues related to feature requests, or bugs, or give us general feedback on this project's GitHub Issues page.
