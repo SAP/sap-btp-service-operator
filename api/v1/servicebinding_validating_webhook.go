@@ -79,6 +79,12 @@ func (sb *ServiceBinding) ValidateUpdate(old runtime.Object) (admission.Warnings
 		}
 	}
 
+	if sb.Spec.UserInfo == nil {
+		sb.Spec.UserInfo = oldBinding.Spec.UserInfo
+	} else if !reflect.DeepEqual(sb.Spec.UserInfo, oldBinding.Spec.UserInfo) {
+		return nil, fmt.Errorf("modifying spec.userInfo is not allowed")
+	}
+
 	specChanged := sb.specChanged(oldBinding)
 	if specChanged && (sb.Status.BindingID != "" || isStale) {
 		return nil, fmt.Errorf("updating service bindings is not supported")
