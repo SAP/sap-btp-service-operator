@@ -103,6 +103,7 @@ lint:
 	@echo "Running golangci-lint"
 	@echo "----------------------------------------"
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	golangci-lint version
 	golangci-lint run --skip-dirs "pkg/mod"
 
 lint-deps:
