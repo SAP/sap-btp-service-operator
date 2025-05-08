@@ -45,7 +45,7 @@ func (sb *ServiceBinding) SetupWebhookWithManager(mgr ctrl.Manager) error {
 var _ webhook.CustomValidator = &ServiceBinding{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (sb *ServiceBinding) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+func (sb *ServiceBinding) ValidateCreate(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
 	newBinding := obj.(*ServiceBinding)
 	servicebindinglog.Info("validate create", "name", newBinding.ObjectMeta.Name)
 	if newBinding.Spec.CredRotationPolicy != nil {
@@ -57,7 +57,7 @@ func (sb *ServiceBinding) ValidateCreate(ctx context.Context, obj runtime.Object
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (sb *ServiceBinding) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
+func (sb *ServiceBinding) ValidateUpdate(_ context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
 	oldBinding := oldObj.(*ServiceBinding)
 	newBinding := newObj.(*ServiceBinding)
 	servicebindinglog.Info("validate update", "name", newBinding.ObjectMeta.Name)
@@ -109,7 +109,7 @@ func (sb *ServiceBinding) specChanged(oldBinding *ServiceBinding, newBinding *Se
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (sb *ServiceBinding) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+func (sb *ServiceBinding) ValidateDelete(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
 	servicebindinglog.Info("validate delete", "name", sb.ObjectMeta.Name)
 
 	// TODO(user): fill in your validation logic upon object deletion.

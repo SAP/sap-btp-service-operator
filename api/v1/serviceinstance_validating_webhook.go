@@ -41,11 +41,11 @@ var _ webhook.CustomValidator = &ServiceInstance{}
 // log is for logging in this package.
 var serviceinstancelog = logf.Log.WithName("serviceinstance-resource")
 
-func (si *ServiceInstance) ValidateCreate(ctx context.Context, obj runtime.Object) (warnings admission.Warnings, err error) {
+func (si *ServiceInstance) ValidateCreate(_ context.Context, _ runtime.Object) (warnings admission.Warnings, err error) {
 	return nil, nil
 }
 
-func (si *ServiceInstance) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (warnings admission.Warnings, err error) {
+func (si *ServiceInstance) ValidateUpdate(_ context.Context, oldObj, newObj runtime.Object) (warnings admission.Warnings, err error) {
 	oldInstance := oldObj.(*ServiceInstance)
 	newInstance := newObj.(*ServiceInstance)
 	serviceinstancelog.Info("validate update", "name", newInstance.ObjectMeta.Name)
@@ -56,7 +56,7 @@ func (si *ServiceInstance) ValidateUpdate(ctx context.Context, oldObj, newObj ru
 	return nil, nil
 }
 
-func (si *ServiceInstance) ValidateDelete(ctx context.Context, newObj runtime.Object) (warnings admission.Warnings, err error) {
+func (si *ServiceInstance) ValidateDelete(_ context.Context, newObj runtime.Object) (warnings admission.Warnings, err error) {
 	newInstance := newObj.(*ServiceInstance)
 	serviceinstancelog.Info("validate delete", "name", newInstance.ObjectMeta.Name)
 	if newInstance.ObjectMeta.Annotations != nil {

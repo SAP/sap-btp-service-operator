@@ -99,13 +99,13 @@ envtest:
 	go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 
 
-lint: lint-deps
+lint:
+	@echo "Running golangci-lint"
+	@echo "----------------------------------------"
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 	golangci-lint run --skip-dirs "pkg/mod"
 
 lint-deps:
-	@if ! which golangci-lint >/dev/null || [[ "$$(golangci-lint --version)" != *${LINT_VERSION}* ]]; then \
-		curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(shell go env GOPATH)/bin v${LINT_VERSION}; \
-	fi
 
 helm-charts:
 	kustomize build config/default > ./sapbtp-operator-charts/templates/crd.yml
