@@ -397,7 +397,7 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, serviceBinding *v1.
 			if status.Errors != nil {
 				errMsg = fmt.Sprintf("Async unbind operation failed, errors: %s", string(status.Errors))
 			}
-			return ctrl.Result{}, fmt.Errorf(errMsg)
+			return ctrl.Result{}, errors.New(errMsg)
 		}
 	case smClientTypes.SUCCEEDED:
 		utils.SetSuccessConditions(status.Type, serviceBinding, true)

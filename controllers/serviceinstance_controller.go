@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/pkg/errors"
 	"net/http"
 	"strings"
 
@@ -397,7 +398,7 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, serviceInstance *v
 			if err := utils.UpdateStatus(ctx, r.Client, serviceInstance); err != nil {
 				return ctrl.Result{}, err
 			}
-			return ctrl.Result{}, fmt.Errorf(errMsg)
+			return ctrl.Result{}, errors.New(errMsg)
 		}
 	case smClientTypes.SUCCEEDED:
 		if serviceInstance.Status.OperationType == smClientTypes.CREATE {
