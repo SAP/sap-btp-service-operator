@@ -85,8 +85,8 @@ func (sb *ServiceBinding) ValidateUpdate(_ context.Context, oldObj, newObj runti
 		return nil, fmt.Errorf("modifying spec.userInfo is not allowed")
 	}
 
-	specChanged := newBinding.specChanged(oldBinding)
-	if specChanged && (newBinding.Status.BindingID != "" || isStale) {
+	isSpecChanged := newBinding.specChanged(oldBinding)
+	if isSpecChanged && (newBinding.Status.BindingID != "" || isStale) {
 
 		return nil, fmt.Errorf("updating service bindings is not supported")
 	}
@@ -100,9 +100,9 @@ func (sb *ServiceBinding) validateRotationLabels(old *ServiceBinding) bool {
 	return sb.ObjectMeta.Labels[common.StaleBindingRotationOfLabel] == old.ObjectMeta.Labels[common.StaleBindingRotationOfLabel]
 }
 
-func (sb *ServiceBinding) specChanged(oldBinding *ServiceBinding, newBinding *ServiceBinding) bool {
+func (sb *ServiceBinding) specChanged(oldBinding *ServiceBinding) bool {
 	oldSpec := oldBinding.Spec.DeepCopy()
-	newSpec := newBinding.Spec.DeepCopy()
+	newSpec := sb.Spec.DeepCopy()
 
 	//allow changing cred rotation config
 	oldSpec.CredRotationPolicy = nil
