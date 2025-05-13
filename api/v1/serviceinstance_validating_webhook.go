@@ -17,6 +17,7 @@ limitations under the License.
 package v1
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -30,38 +31,38 @@ import (
 )
 
 func (si *ServiceInstance) SetupWebhookWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(si).
-		Complete()
+	return ctrl.NewWebhookManagedBy(mgr).For(si).WithValidator(si).Complete()
 }
 
 // +kubebuilder:webhook:verbs=delete;update;create,path=/validate-services-cloud-sap-com-v1-serviceinstance,mutating=false,failurePolicy=fail,groups=services.cloud.sap.com,resources=serviceinstances,versions=v1,name=vserviceinstance.kb.io,sideEffects=None,admissionReviewVersions=v1beta1;v1
 
-var _ webhook.Validator = &ServiceInstance{}
+var _ webhook.CustomValidator = &ServiceInstance{}
 
 // log is for logging in this package.
 var serviceinstancelog = logf.Log.WithName("serviceinstance-resource")
 
-func (si *ServiceInstance) ValidateCreate() (warnings admission.Warnings, err error) {
+func (si *ServiceInstance) ValidateCreate(_ context.Context, _ runtime.Object) (warnings admission.Warnings, err error) {
 	return nil, nil
 }
 
-func (si *ServiceInstance) ValidateUpdate(old runtime.Object) (warnings admission.Warnings, err error) {
-	serviceinstancelog.Info("validate update", "name", si.ObjectMeta.Name)
+func (si *ServiceInstance) ValidateUpdate(_ context.Context, oldObj, newObj runtime.Object) (warnings admission.Warnings, err error) {
+	oldInstance := oldObj.(*ServiceInstance)
+	newInstance := newObj.(*ServiceInstance)
+	serviceinstancelog.Info("validate update", "name", newInstance.ObjectMeta.Name)
 
-	oldInstance := old.(*ServiceInstance)
-	if oldInstance.Spec.BTPAccessCredentialsSecret != si.Spec.BTPAccessCredentialsSecret {
+	if oldInstance.Spec.BTPAccessCredentialsSecret != newInstance.Spec.BTPAccessCredentialsSecret {
 		return nil, fmt.Errorf("changing the btpAccessCredentialsSecret for an existing instance is not allowed")
 	}
 	return nil, nil
 }
 
-func (si *ServiceInstance) ValidateDelete() (warnings admission.Warnings, err error) {
-	serviceinstancelog.Info("validate delete", "name", si.ObjectMeta.Name)
-	if si.ObjectMeta.Annotations != nil {
-		preventDeletion, ok := si.ObjectMeta.Annotations[common.PreventDeletion]
+func (si *ServiceInstance) ValidateDelete(_ context.Context, newObj runtime.Object) (warnings admission.Warnings, err error) {
+	newInstance := newObj.(*ServiceInstance)
+	serviceinstancelog.Info("validate delete", "name", newInstance.ObjectMeta.Name)
+	if newInstance.ObjectMeta.Annotations != nil {
+		preventDeletion, ok := newInstance.ObjectMeta.Annotations[common.PreventDeletion]
 		if ok && strings.ToLower(preventDeletion) == "true" {
-			return nil, fmt.Errorf("service instance '%s' is marked with \"prevent deletion\"", si.ObjectMeta.Name)
+			return nil, fmt.Errorf("service instance '%s' is marked with \"prevent deletion\"", newInstance.ObjectMeta.Name)
 		}
 	}
 	return nil, nil

@@ -27,9 +27,8 @@ func GetConditionReason(opType smClientTypes.OperationCategory, state smClientTy
 			return common.Updated
 		} else if opType == smClientTypes.DELETE {
 			return common.Deleted
-		} else {
-			return common.Finished
 		}
+		return common.Finished
 	case smClientTypes.INPROGRESS, smClientTypes.PENDING:
 		if opType == smClientTypes.CREATE {
 			return common.CreateInProgress
@@ -37,9 +36,8 @@ func GetConditionReason(opType smClientTypes.OperationCategory, state smClientTy
 			return common.UpdateInProgress
 		} else if opType == smClientTypes.DELETE {
 			return common.DeleteInProgress
-		} else {
-			return common.InProgress
 		}
+		return common.InProgress
 	case smClientTypes.FAILED:
 		if opType == smClientTypes.CREATE {
 			return common.CreateFailed
@@ -47,9 +45,8 @@ func GetConditionReason(opType smClientTypes.OperationCategory, state smClientTy
 			return common.UpdateFailed
 		} else if opType == smClientTypes.DELETE {
 			return common.DeleteFailed
-		} else {
-			return common.Failed
 		}
+		return common.Failed
 	}
 
 	return common.Unknown

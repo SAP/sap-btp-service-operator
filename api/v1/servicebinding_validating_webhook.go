@@ -17,6 +17,7 @@ limitations under the License.
 package v1
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"time"
@@ -33,9 +34,7 @@ import (
 var servicebindinglog = logf.Log.WithName("servicebinding-resource")
 
 func (sb *ServiceBinding) SetupWebhookWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(sb).
-		Complete()
+	return ctrl.NewWebhookManagedBy(mgr).For(sb).WithValidator(sb).Complete()
 }
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -43,13 +42,14 @@ func (sb *ServiceBinding) SetupWebhookWithManager(mgr ctrl.Manager) error {
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
 // +kubebuilder:webhook:verbs=create;update,path=/validate-services-cloud-sap-com-v1-servicebinding,mutating=false,failurePolicy=fail,groups=services.cloud.sap.com,resources=servicebindings,versions=v1,name=vservicebinding.kb.io,sideEffects=None,admissionReviewVersions=v1beta1;v1
 
-var _ webhook.Validator = &ServiceBinding{}
+var _ webhook.CustomValidator = &ServiceBinding{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (sb *ServiceBinding) ValidateCreate() (admission.Warnings, error) {
-	servicebindinglog.Info("validate create", "name", sb.ObjectMeta.Name)
-	if sb.Spec.CredRotationPolicy != nil {
-		if err := sb.validateCredRotatingConfig(); err != nil {
+func (sb *ServiceBinding) ValidateCreate(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
+	newBinding := obj.(*ServiceBinding)
+	servicebindinglog.Info("validate create", "name", newBinding.ObjectMeta.Name)
+	if newBinding.Spec.CredRotationPolicy != nil {
+		if err := newBinding.validateCredRotatingConfig(); err != nil {
 			return nil, err
 		}
 	}
@@ -57,36 +57,37 @@ func (sb *ServiceBinding) ValidateCreate() (admission.Warnings, error) {
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (sb *ServiceBinding) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
-	servicebindinglog.Info("validate update", "name", sb.ObjectMeta.Name)
-	if sb.Spec.CredRotationPolicy != nil {
-		if err := sb.validateCredRotatingConfig(); err != nil {
+func (sb *ServiceBinding) ValidateUpdate(_ context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
+	oldBinding := oldObj.(*ServiceBinding)
+	newBinding := newObj.(*ServiceBinding)
+	servicebindinglog.Info("validate update", "name", newBinding.ObjectMeta.Name)
+	if newBinding.Spec.CredRotationPolicy != nil {
+		if err := newBinding.validateCredRotatingConfig(); err != nil {
 			return nil, err
 		}
 	}
-
-	oldBinding := old.(*ServiceBinding)
 	isStale := false
 	if oldBinding.Labels != nil {
 		if _, ok := oldBinding.Labels[common.StaleBindingIDLabel]; ok {
-			if sb.Spec.CredRotationPolicy.Enabled {
+			if newBinding.Spec.CredRotationPolicy.Enabled {
 				return nil, fmt.Errorf("enabling cred rotation for rotated binding is not allowed")
 			}
-			if !sb.validateRotationLabels(oldBinding) {
+			if !newBinding.validateRotationLabels(oldBinding) {
 				return nil, fmt.Errorf("modifying rotation labels is not allowed")
 			}
 			isStale = true
 		}
 	}
 
-	if sb.Spec.UserInfo == nil {
-		sb.Spec.UserInfo = oldBinding.Spec.UserInfo
-	} else if !reflect.DeepEqual(sb.Spec.UserInfo, oldBinding.Spec.UserInfo) {
+	if newBinding.Spec.UserInfo == nil {
+		newBinding.Spec.UserInfo = oldBinding.Spec.UserInfo
+	} else if !reflect.DeepEqual(newBinding.Spec.UserInfo, oldBinding.Spec.UserInfo) {
 		return nil, fmt.Errorf("modifying spec.userInfo is not allowed")
 	}
 
-	specChanged := sb.specChanged(oldBinding)
-	if specChanged && (sb.Status.BindingID != "" || isStale) {
+	specChanged := newBinding.specChanged(oldBinding)
+	if specChanged && (newBinding.Status.BindingID != "" || isStale) {
+
 		return nil, fmt.Errorf("updating service bindings is not supported")
 	}
 	return nil, nil
@@ -99,9 +100,9 @@ func (sb *ServiceBinding) validateRotationLabels(old *ServiceBinding) bool {
 	return sb.ObjectMeta.Labels[common.StaleBindingRotationOfLabel] == old.ObjectMeta.Labels[common.StaleBindingRotationOfLabel]
 }
 
-func (sb *ServiceBinding) specChanged(oldBinding *ServiceBinding) bool {
+func (sb *ServiceBinding) specChanged(oldBinding *ServiceBinding, newBinding *ServiceBinding) bool {
 	oldSpec := oldBinding.Spec.DeepCopy()
-	newSpec := sb.Spec.DeepCopy()
+	newSpec := newBinding.Spec.DeepCopy()
 
 	//allow changing cred rotation config
 	oldSpec.CredRotationPolicy = nil
@@ -115,7 +116,7 @@ func (sb *ServiceBinding) specChanged(oldBinding *ServiceBinding) bool {
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (sb *ServiceBinding) ValidateDelete() (admission.Warnings, error) {
+func (sb *ServiceBinding) ValidateDelete(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
 	servicebindinglog.Info("validate delete", "name", sb.ObjectMeta.Name)
 
 	// TODO(user): fill in your validation logic upon object deletion.

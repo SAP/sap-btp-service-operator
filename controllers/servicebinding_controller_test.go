@@ -965,7 +965,7 @@ stringData:
 			When("delete in SM fails with general error", func() {
 				errorMessage := "some-error"
 				BeforeEach(func() {
-					fakeClient.UnbindReturns("", fmt.Errorf(errorMessage))
+					fakeClient.UnbindReturns("", errors.New(errorMessage))
 				})
 				AfterEach(func() {
 					fakeClient.UnbindReturns("", nil)
