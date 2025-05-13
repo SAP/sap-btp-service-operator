@@ -17,17 +17,6 @@ rules:
   - ""
   resources:
   - events
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
   - secrets
   verbs:
   - create
@@ -41,25 +30,6 @@ rules:
   - services.cloud.sap.com
   resources:
   - servicebindings
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - services.cloud.sap.com
-  resources:
-  - servicebindings/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - services.cloud.sap.com
-  resources:
   - serviceinstances
   verbs:
   - create
@@ -72,6 +42,7 @@ rules:
 - apiGroups:
   - services.cloud.sap.com
   resources:
+  - servicebindings/status
   - serviceinstances/status
   verbs:
   - get

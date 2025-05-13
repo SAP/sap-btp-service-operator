@@ -19,7 +19,7 @@ var _ = Describe("Service Instance Webhook Test", func() {
 				instance.Spec.BTPAccessCredentialsSecret = ""
 				newInstance := getInstance()
 				newInstance.Spec.BTPAccessCredentialsSecret = "new-secret"
-				_, err := newInstance.ValidateUpdate(instance)
+				_, err := newInstance.ValidateUpdate(nil, instance, newInstance)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("changing the btpAccessCredentialsSecret for an existing instance is not allowed"))
 			})
@@ -32,14 +32,14 @@ var _ = Describe("Service Instance Webhook Test", func() {
 				instance.Annotations = map[string]string{
 					common.PreventDeletion: "true",
 				}
-				_, err := instance.ValidateDelete()
+				_, err := instance.ValidateDelete(nil, instance)
 				Expect(err).To(HaveOccurred())
 			})
 		})
 
 		When("service instance is not marked as prevent deletion", func() {
 			It("should not return error from webhook", func() {
-				_, err := instance.ValidateDelete()
+				_, err := instance.ValidateDelete(nil, instance)
 				Expect(err).ToNot(HaveOccurred())
 			})
 		})
@@ -49,7 +49,7 @@ var _ = Describe("Service Instance Webhook Test", func() {
 				instance.Annotations = map[string]string{
 					common.PreventDeletion: "not-true",
 				}
-				_, err := instance.ValidateDelete()
+				_, err := instance.ValidateDelete(nil, instance)
 				Expect(err).ToNot(HaveOccurred())
 			})
 		})
