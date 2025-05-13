@@ -5,6 +5,7 @@ import (
 	"github.com/lithammer/dedent"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	v1 "k8s.io/api/authentication/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -82,6 +83,26 @@ var _ = Describe("Service Binding Webhook Test", func() {
 						  key2: "value2"
 					`)
 						newBinding.Spec.SecretTemplate = modifiedSecretTemplate
+						_, err := newBinding.ValidateUpdate(nil, binding, newBinding)
+						Expect(err).ToNot(HaveOccurred())
+					})
+				})
+
+				When("UserInfo changed", func() {
+					It("should fail", func() {
+						newBinding.Spec.UserInfo = &v1.UserInfo{
+							Username: "username",
+						}
+						_, err := newBinding.ValidateUpdate(nil, binding, newBinding)
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(ContainSubstring("modifying spec.userInfo is not allowed"))
+					})
+					It("should succeed if new binding user info is empty", func() {
+						newBinding.Spec.UserInfo = nil
+						_, err := newBinding.ValidateUpdate(nil, binding, newBinding)
+						Expect(err).ToNot(HaveOccurred())
+					})
+					It("should succeed if user info not changed", func() {
 						_, err := newBinding.ValidateUpdate(nil, binding, newBinding)
 						Expect(err).ToNot(HaveOccurred())
 					})
