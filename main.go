@@ -108,7 +108,7 @@ func main() {
 			},
 		}
 	}
-	syncPeriod := 10 * time.Second
+	syncPeriod := 10 * time.Hour
 	mgrOptions.Cache.SyncPeriod = &syncPeriod
 
 	if !config.Get().AllowClusterAccess {
