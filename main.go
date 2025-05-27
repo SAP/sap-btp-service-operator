@@ -20,6 +20,7 @@ import (
 	"context"
 	"flag"
 	"os"
+	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
@@ -96,17 +97,21 @@ func main() {
 		LeaderElectionID:       "aa689ecc.cloud.sap.com",
 	}
 
+	selectors := map[string]string{}
 	if config.Get().EnableLimitedCache {
 		setupLog.Info("limited cache enabled")
-		mgrOptions.Cache = cache.Options{
-			ByObject: map[client.Object]cache.ByObject{
-				&v1.Secret{}:                  {Label: labels.SelectorFromSet(map[string]string{common.ManagedByBTPOperatorLabel: "true"})},
-				&v1.ConfigMap{}:               {Label: labels.SelectorFromSet(map[string]string{common.ManagedByBTPOperatorLabel: "true"})},
-				&servicesv1.ServiceInstance{}: {},
-				&servicesv1.ServiceBinding{}:  {},
-			},
-		}
+		selectors[common.ManagedByBTPOperatorLabel] = "true"
 	}
+	mgrOptions.Cache = cache.Options{
+		ByObject: map[client.Object]cache.ByObject{
+			&v1.Secret{}:                  {Label: labels.SelectorFromSet(selectors)},
+			&v1.ConfigMap{}:               {Label: labels.SelectorFromSet(selectors)},
+			&servicesv1.ServiceInstance{}: {},
+			&servicesv1.ServiceBinding{}:  {},
+		},
+	}
+	syncPeriod := 10 * time.Hour
+	mgrOptions.Cache.SyncPeriod = &syncPeriod
 
 	if !config.Get().AllowClusterAccess {
 		allowedNamespaces := config.Get().AllowedNamespaces
