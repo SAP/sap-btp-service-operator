@@ -20,6 +20,7 @@ import (
 	"context"
 	"flag"
 	"os"
+	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
@@ -107,6 +108,8 @@ func main() {
 			},
 		}
 	}
+	syncPeriod := 10 * time.Hour
+	mgrOptions.Cache.SyncPeriod = &syncPeriod
 
 	if !config.Get().AllowClusterAccess {
 		allowedNamespaces := config.Get().AllowedNamespaces
