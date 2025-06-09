@@ -915,7 +915,7 @@ stringData:
 				}
 				err := k8sClient.Update(ctx, createdBinding)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("updating service bindings is not supported"))
+				Expect(err.Error()).To(ContainSubstring("modifying spec.userInfo is not allowed"))
 			})
 		})
 	})
@@ -965,7 +965,7 @@ stringData:
 			When("delete in SM fails with general error", func() {
 				errorMessage := "some-error"
 				BeforeEach(func() {
-					fakeClient.UnbindReturns("", fmt.Errorf(errorMessage))
+					fakeClient.UnbindReturns("", errors.New(errorMessage))
 				})
 				AfterEach(func() {
 					fakeClient.UnbindReturns("", nil)

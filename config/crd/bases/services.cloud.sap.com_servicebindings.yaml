@@ -115,6 +115,8 @@ spec:
                       - key
                       - name
                       type: object
+                  required:
+                  - secretKeyRef
                   type: object
                 type: array
               secretKey:

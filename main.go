@@ -20,12 +20,12 @@ import (
 	"context"
 	"flag"
 	"os"
+	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"k8s.io/apimachinery/pkg/labels"
 
-	"github.com/SAP/sap-btp-service-operator/api/v1/webhooks"
 	v1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -50,6 +50,7 @@ import (
 
 	"github.com/SAP/sap-btp-service-operator/api/common"
 	servicesv1 "github.com/SAP/sap-btp-service-operator/api/v1"
+	"github.com/SAP/sap-btp-service-operator/api/v1/webhooks"
 	"github.com/SAP/sap-btp-service-operator/controllers"
 	// +kubebuilder:scaffold:imports
 )
@@ -107,6 +108,8 @@ func main() {
 			},
 		}
 	}
+	syncPeriod := 10 * time.Hour
+	mgrOptions.Cache.SyncPeriod = &syncPeriod
 
 	if !config.Get().AllowClusterAccess {
 		allowedNamespaces := config.Get().AllowedNamespaces

@@ -23,6 +23,7 @@ import (
 	"time"
 
 	commonutils "github.com/SAP/sap-btp-service-operator/api/common/utils"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/pkg/errors"
 
@@ -211,9 +212,10 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 }
 
 func (r *ServiceBindingReconciler) SetupWithManager(mgr ctrl.Manager) error {
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1.ServiceBinding{}).
-		WithOptions(controller.Options{RateLimiter: workqueue.NewItemExponentialFailureRateLimiter(r.Config.RetryBaseDelay, r.Config.RetryMaxDelay)}).
+		WithOptions(controller.Options{RateLimiter: workqueue.NewTypedItemExponentialFailureRateLimiter[reconcile.Request](r.Config.RetryBaseDelay, r.Config.RetryMaxDelay)}).
 		Complete(r)
 }
 
@@ -397,7 +399,7 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, serviceBinding *v1.
 			if status.Errors != nil {
 				errMsg = fmt.Sprintf("Async unbind operation failed, errors: %s", string(status.Errors))
 			}
-			return ctrl.Result{}, fmt.Errorf(errMsg)
+			return ctrl.Result{}, errors.New(errMsg)
 		}
 	case smClientTypes.SUCCEEDED:
 		utils.SetSuccessConditions(status.Type, serviceBinding, true)

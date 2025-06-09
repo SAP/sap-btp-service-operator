@@ -23,6 +23,9 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/pkg/errors"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
 	"k8s.io/apimachinery/pkg/types"
 
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -154,7 +157,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 func (r *ServiceInstanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1.ServiceInstance{}).
-		WithOptions(controller.Options{RateLimiter: workqueue.NewItemExponentialFailureRateLimiter(r.Config.RetryBaseDelay, r.Config.RetryMaxDelay)}).
+		WithOptions(controller.Options{RateLimiter: workqueue.NewTypedItemExponentialFailureRateLimiter[reconcile.Request](r.Config.RetryBaseDelay, r.Config.RetryMaxDelay)}).
 		Complete(r)
 }
 
@@ -397,7 +400,7 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, serviceInstance *v
 			if err := utils.UpdateStatus(ctx, r.Client, serviceInstance); err != nil {
 				return ctrl.Result{}, err
 			}
-			return ctrl.Result{}, fmt.Errorf(errMsg)
+			return ctrl.Result{}, errors.New(errMsg)
 		}
 	case smClientTypes.SUCCEEDED:
 		if serviceInstance.Status.OperationType == smClientTypes.CREATE {

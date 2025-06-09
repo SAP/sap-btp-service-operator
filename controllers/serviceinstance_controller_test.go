@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -686,7 +687,7 @@ var _ = Describe("ServiceInstance controller", func() {
 			When("delete in SM fails", func() {
 				It("should not delete the k8s instance and should update the condition", func() {
 					errMsg := "failed to delete instance"
-					fakeClient.DeprovisionReturns("", fmt.Errorf(errMsg))
+					fakeClient.DeprovisionReturns("", errors.New(errMsg))
 					deleteInstance(ctx, serviceInstance, false)
 					waitForResourceCondition(ctx, serviceInstance, common.ConditionFailed, metav1.ConditionTrue, common.DeleteFailed, errMsg)
 				})

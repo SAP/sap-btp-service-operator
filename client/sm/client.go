@@ -466,20 +466,20 @@ func (client *serviceManagerClient) getPlanInfo(planID string, serviceName strin
 		return nil, err
 	}
 
-	var commaSepOfferingIds string
+	var commaSepOfferingIDs string
 	if len(offerings.ServiceOfferings) == 0 {
 		return nil, fmt.Errorf("couldn't find the service offering '%s' on dataCenter '%s'", serviceName, dataCenter)
 	}
 
-	serviceOfferingIds := make([]string, 0, len(offerings.ServiceOfferings))
+	serviceOfferingIDs := make([]string, 0, len(offerings.ServiceOfferings))
 	for _, svc := range offerings.ServiceOfferings {
-		serviceOfferingIds = append(serviceOfferingIds, svc.ID)
+		serviceOfferingIDs = append(serviceOfferingIDs, svc.ID)
 	}
 
-	commaSepOfferingIds = "'" + strings.Join(serviceOfferingIds, "', '") + "'"
+	commaSepOfferingIDs = "'" + strings.Join(serviceOfferingIDs, "', '") + "'"
 
 	query := &Parameters{
-		FieldQuery: []string{fmt.Sprintf("catalog_name eq '%s'", planName), fmt.Sprintf("service_offering_id in (%s)", commaSepOfferingIds)},
+		FieldQuery: []string{fmt.Sprintf("catalog_name eq '%s'", planName), fmt.Sprintf("service_offering_id in (%s)", commaSepOfferingIDs)},
 	}
 
 	plans, err := client.ListPlans(query)
@@ -493,14 +493,13 @@ func (client *serviceManagerClient) getPlanInfo(planID string, serviceName strin
 			planID:          plans.ServicePlans[0].ID,
 			serviceOffering: findOffering(plans.ServicePlans[0].ServiceOfferingID, offerings),
 		}, nil
-	} else {
-		for _, plan := range plans.ServicePlans {
-			if plan.ID == planID {
-				return &planInfo{
-					planID:          plan.ID,
-					serviceOffering: findOffering(plan.ServiceOfferingID, offerings),
-				}, nil
-			}
+	}
+	for _, plan := range plans.ServicePlans {
+		if plan.ID == planID {
+			return &planInfo{
+				planID:          plan.ID,
+				serviceOffering: findOffering(plan.ServiceOfferingID, offerings),
+			}, nil
 		}
 	}
 
