@@ -45,7 +45,7 @@ func BuildHTTPClientTLS(tlsCertKey, tlsPrivateKey string) (*http.Client, error) 
 
 func getClient() *http.Client {
 	client := &http.Client{
-		Timeout: time.Second * 30,
+		Timeout: time.Minute * 2,
 		Transport: &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
 			DialContext: (&net.Dialer{
