@@ -184,9 +184,14 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	}, serviceInstance.Spec.ServiceOfferingName, serviceInstance.Spec.ServicePlanName, nil, utils.BuildUserInfo(ctx, serviceInstance.Spec.UserInfo), serviceInstance.Spec.DataCenter)
 
 	if provisionErr != nil {
-		log.Error(provisionErr, "failed to create service instance", "serviceOfferingName", serviceInstance.Spec.ServiceOfferingName,
-			"servicePlanName", serviceInstance.Spec.ServicePlanName)
-		return utils.HandleError(ctx, r.Client, smClientTypes.CREATE, provisionErr, serviceInstance)
+		var transientErr *sm.TransientError
+		if errors.As(provisionErr, &transientErr) {
+			return utils.MarkAsTransientError(ctx, r.Client, smClientTypes.CREATE, provisionErr, serviceInstance)
+		} else {
+			log.Error(provisionErr, "failed to create service instance", "serviceOfferingName", serviceInstance.Spec.ServiceOfferingName,
+				"servicePlanName", serviceInstance.Spec.ServicePlanName)
+			return utils.HandleError(ctx, r.Client, smClientTypes.CREATE, provisionErr, serviceInstance)
+		}
 	}
 
 	serviceInstance.Status.InstanceID = provision.InstanceID

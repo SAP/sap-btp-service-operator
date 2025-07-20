@@ -85,6 +85,15 @@ func (e *ServiceManagerError) Error() string {
 	return e.Description
 }
 
+// TODO need to place in the right place in the project
+type TransientError struct {
+	Message string
+}
+
+func (e *TransientError) Error() string {
+	return e.Message
+}
+
 func (e *ServiceManagerError) GetStatusCode() int {
 	if e.BrokerError != nil {
 		return e.BrokerError.StatusCode
@@ -463,12 +472,12 @@ func (client *serviceManagerClient) getPlanInfo(planID string, serviceName strin
 
 	offerings, err := client.getServiceOfferingsByNameAndDataCenter(serviceName, dataCenter)
 	if err != nil {
-		return nil, err
+		return nil, &TransientError{Message: err.Error()}
 	}
 
 	var commaSepOfferingIDs string
 	if len(offerings.ServiceOfferings) == 0 {
-		return nil, fmt.Errorf("couldn't find the service offering '%s' on dataCenter '%s'", serviceName, dataCenter)
+		return nil, &TransientError{Message: fmt.Sprintf("couldn't find the service offering '%s' on dataCenter '%s'", serviceName, dataCenter)}
 	}
 
 	serviceOfferingIDs := make([]string, 0, len(offerings.ServiceOfferings))
@@ -487,7 +496,7 @@ func (client *serviceManagerClient) getPlanInfo(planID string, serviceName strin
 		return nil, err
 	}
 	if len(plans.ServicePlans) == 0 {
-		return nil, fmt.Errorf("couldn't find the service plan '%s' for the service offering '%s'", planName, serviceName)
+		return nil, &TransientError{Message: fmt.Sprintf("couldn't find the service plan '%s' for the service offering '%s'", planName, serviceName)}
 	} else if len(plans.ServicePlans) == 1 && len(planID) == 0 {
 		return &planInfo{
 			planID:          plans.ServicePlans[0].ID,
@@ -504,9 +513,9 @@ func (client *serviceManagerClient) getPlanInfo(planID string, serviceName strin
 	}
 
 	if len(planID) > 0 {
-		err = fmt.Errorf("the provided plan ID '%s' doesn't match the provided offering name '%s' and plan name '%s", planID, serviceName, planName)
+		err = &TransientError{Message: fmt.Sprintf("the provided plan ID '%s' doesn't match the provided offering name '%s' and plan name '%s'", planID, serviceName, planName)}
 	} else {
-		err = fmt.Errorf("ambiguity error: found more than one resource that matches the provided offering name '%s' and plan name '%s'. Please provide servicePlanID", serviceName, planName)
+		err = &TransientError{Message: fmt.Sprintf("ambiguity error: found more than one resource that matches the provided offering name '%s' and plan name '%s'. Please provide servicePlanID", serviceName, planName)}
 	}
 	return nil, err
 }
