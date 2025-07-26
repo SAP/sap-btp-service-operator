@@ -714,14 +714,28 @@ release <release-name> uninstalled
 **Issue**: Cannot create a binding due to a service instance in `Delete Failed` state.
 
 **Solution**:
-Use `force_k8s_binding=true` with the Service Manager Control CLI (`smctl`):
+Use `force_k8s_binding=true` with the btp CLI:
 ```bash
-smctl bind INSTANCE_NAME BINDING_NAME --param force_k8s_binding=true
+btp create services/binding
+--subaccount [ID]
+--binding NAME
+[--instance-name NAME]
+[--service-instance ID]
+[--parameters JSON]
+[--labels JSON]
+[--force TRUE ] 
 ```
 
 Delete the binding afterward:
 ```bash
-smctl unbind INSTANCE_NAME BINDING_NAME --param force_k8s_binding=true
+btp create services/binding
+--subaccount [ID]
+--binding NAME
+[--instance-name NAME]
+[--service-instance ID]
+[--parameters JSON]
+[--labels JSON]
+[--force FALSE ] 
 ```
 
 **Note**: Do not use `service-operator-access` plan credentials. This applies only to Kubernetes instances in `Delete Failed` state.
