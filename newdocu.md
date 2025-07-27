@@ -1,5 +1,3 @@
-
-
 # SAP Business Technology Platform (SAP BTP) Service Operator for Kubernetes
 
 ## Table of Contents
