@@ -1,10 +1,12 @@
 apiVersion: services.cloud.sap.com/v1
 kind: ServiceBinding
 metadata:
-  name: sample-binding-rotate
+  name: sample-binding-rotate-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-very-long-name-4
+  labels:
+    "services.cloud.sap.com/forceRotate": "true"
 spec:
   serviceInstanceName: sample-instance-1
   credentialsRotationPolicy:
     enabled: true
-    rotatedBindingTTL: 48h
-    rotationFrequency: 168h
+    rotatedBindingTTL: 30m
+    rotationFrequency: 11s

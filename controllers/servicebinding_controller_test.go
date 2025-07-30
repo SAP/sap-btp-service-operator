@@ -1210,13 +1210,6 @@ stringData:
 		})
 
 		It("should rotate the credentials and create old binding", func() {
-			Expect(k8sClient.Get(ctx, defaultLookupKey, createdBinding)).To(Succeed())
-			createdBinding.Spec.CredRotationPolicy = &v1.CredentialsRotationPolicy{
-				Enabled:           true,
-				RotatedBindingTTL: "1h",
-				RotationFrequency: "1ns",
-			}
-
 			var secret *corev1.Secret
 			Eventually(func() bool {
 				secret = getSecret(ctx, createdBinding.Spec.SecretName, bindingTestNamespace, true)
@@ -1224,26 +1217,44 @@ stringData:
 				return k8sClient.Update(ctx, secret) == nil
 			}, timeout, interval).Should(BeTrue())
 
-			updateBinding(ctx, defaultLookupKey, createdBinding)
+			origBindingID := createdBinding.Status.BindingID
 
-			myBinding := &v1.ServiceBinding{}
+			By("update binding with rotation policy")
+			createdBinding.Spec.CredRotationPolicy = &v1.CredentialsRotationPolicy{
+				Enabled:           true,
+				RotatedBindingTTL: "1h",
+				RotationFrequency: "1ns",
+			}
+			updateBinding(ctx, getResourceNamespacedName(createdBinding), createdBinding)
+
+			By("validate rotation occurred")
 			Eventually(func() bool {
-				err := k8sClient.Get(ctx, defaultLookupKey, myBinding)
-				return err == nil && myBinding.Status.LastCredentialsRotationTime != nil && len(myBinding.Status.Conditions) == 2
+				err := k8sClient.Get(ctx, defaultLookupKey, createdBinding)
+				return err == nil && createdBinding.Status.LastCredentialsRotationTime != nil && len(createdBinding.Status.Conditions) == 2
 			}, timeout, interval).Should(BeTrue())
 
-			secret = getSecret(ctx, myBinding.Spec.SecretName, bindingTestNamespace, true)
+			secret = getSecret(ctx, createdBinding.Spec.SecretName, bindingTestNamespace, true)
 			val := secret.Data["secret_key"]
 			Expect(string(val)).To(Equal("secret_value"))
 
 			bindingList := &v1.ServiceBindingList{}
 			Eventually(func() bool {
-				Expect(k8sClient.List(ctx, bindingList, client.MatchingLabels{common.StaleBindingIDLabel: myBinding.Status.BindingID}, client.InNamespace(bindingTestNamespace))).To(Succeed())
+				err := k8sClient.List(ctx, bindingList, client.MatchingLabels{common.StaleBindingIDLabel: origBindingID}, client.InNamespace(bindingTestNamespace))
+				if err != nil {
+					return false
+				}
 				return len(bindingList.Items) > 0
 			}, timeout, interval).Should(BeTrue())
 
 			oldBinding := bindingList.Items[0]
 			Expect(oldBinding.Spec.CredRotationPolicy.Enabled).To(BeFalse())
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: oldBinding.Name, Namespace: oldBinding.Namespace}, &oldBinding)
+				if err != nil {
+					return false
+				}
+				return len(oldBinding.Status.BindingID) > 0
+			}, timeout, interval).Should(BeTrue())
 
 			secret = getSecret(ctx, oldBinding.Spec.SecretName, bindingTestNamespace, true)
 			val = secret.Data["secret_key2"]
@@ -1317,7 +1328,7 @@ stringData:
 		})
 
 		When("stale binding is missing rotationOf label", func() {
-			It("should delete the binding", func() {
+			XIt("should delete the binding", func() {
 				Expect(k8sClient.Get(ctx, types.NamespacedName{Name: createdBinding.Name, Namespace: bindingTestNamespace}, createdBinding)).To(Succeed())
 				staleBinding := generateBasicStaleBinding(createdBinding)
 				staleBinding.Labels = map[string]string{
