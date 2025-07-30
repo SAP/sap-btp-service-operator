@@ -156,7 +156,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 				log.Error(err, "internal error occurred during cred rotation, requeuing binding")
 				return ctrl.Result{}, err
 			}
-			return utils.HandleCredRotationError(ctx, r.Client, common.CredPreparing, err, serviceBinding)
+			return utils.HandleCredRotationError(ctx, r.Client, serviceBinding, err)
 		}
 	}
 

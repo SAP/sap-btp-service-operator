@@ -137,7 +137,7 @@ func HandleError(ctx context.Context, k8sClient client.Client, operationType smC
 	return MarkAsNonTransientError(ctx, k8sClient, operationType, err, resource)
 }
 
-func HandleCredRotationError(ctx context.Context, k8sClient client.Client, operationType smClientTypes.OperationCategory, err error, binding common.SAPBTPResource) (ctrl.Result, error) {
+func HandleCredRotationError(ctx context.Context, k8sClient client.Client, binding common.SAPBTPResource, err error) (ctrl.Result, error) {
 	log := GetLogger(ctx)
 	var smError *sm.ServiceManagerError
 	if ok := errors.As(err, &smError); ok {
