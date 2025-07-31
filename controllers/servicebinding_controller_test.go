@@ -1255,6 +1255,11 @@ stringData:
 				}
 				return len(oldBinding.Status.BindingID) > 0
 			}, timeout, interval).Should(BeTrue())
+			Expect(len(oldBinding.Annotations)).To(Equal(1))
+			Expect(oldBinding.Annotations[common.StaleBindingOrigBindingNameAnnotation]).To(Equal(createdBinding.Name))
+			Expect(len(oldBinding.Labels)).To(Equal(2))
+			Expect(oldBinding.Labels[common.StaleBindingIDLabel]).To(Equal(origBindingID))
+			Expect(oldBinding.Labels[common.StaleBindingRotationOfLabel]).To(Equal(createdBinding.Name))
 
 			secret = getSecret(ctx, oldBinding.Spec.SecretName, bindingTestNamespace, true)
 			val = secret.Data["secret_key2"]
@@ -1342,6 +1347,90 @@ stringData:
 
 				Expect(k8sClient.Create(ctx, staleBinding)).To(Succeed())
 				waitForResourceToBeDeleted(ctx, getResourceNamespacedName(staleBinding), staleBinding)
+			})
+		})
+
+		When("binding's name is more than 63 characters", func() {
+			var binding *v1.ServiceBinding
+			var longBindingName = "binding-name-that-is-way-too-long-to-be-valid-binding-name-which-should-be-truncated"
+			BeforeEach(func() {
+				fakeClient.RenameBindingReturns(nil, nil)
+				binding = createAndValidateBinding(ctx, longBindingName, bindingTestNamespace, instanceName, "", longBindingName, "")
+				fakeClient.ListBindingsStub = func(params *sm.Parameters) (*smClientTypes.ServiceBindings, error) {
+					if params == nil || params.FieldQuery == nil || len(params.FieldQuery) == 0 {
+						return nil, nil
+					}
+
+					if strings.Contains(params.FieldQuery[0], longBindingName+"-") {
+						return &smClientTypes.ServiceBindings{
+							ServiceBindings: []smClientTypes.ServiceBinding{
+								{
+									ID:          fakeBindingID,
+									Ready:       true,
+									Credentials: json.RawMessage("{\"secret_key2\": \"secret_value2\"}"),
+									LastOperation: &smClientTypes.Operation{
+										Type:        smClientTypes.CREATE,
+										State:       smClientTypes.SUCCEEDED,
+										Description: "fake-description",
+									},
+								},
+							},
+						}, nil
+					}
+					return nil, nil
+				}
+			})
+			It("rotation should succeed", func() {
+				var secret *corev1.Secret
+				origBindingID := binding.Status.BindingID
+
+				bindingNamespacedName := getResourceNamespacedName(binding)
+
+				By("update binding with rotation policy")
+				binding.Spec.CredRotationPolicy = &v1.CredentialsRotationPolicy{
+					Enabled:           true,
+					RotatedBindingTTL: "1h",
+					RotationFrequency: "1ns",
+				}
+				updateBinding(ctx, bindingNamespacedName, binding)
+
+				By("validate rotation occurred")
+				Eventually(func() bool {
+					err := k8sClient.Get(ctx, bindingNamespacedName, binding)
+					return err == nil && binding.Status.LastCredentialsRotationTime != nil && len(binding.Status.Conditions) == 2
+				}, timeout, interval).Should(BeTrue())
+
+				secret = getSecret(ctx, binding.Spec.SecretName, bindingTestNamespace, true)
+				val := secret.Data["secret_key"]
+				Expect(string(val)).To(Equal("secret_value"))
+
+				bindingList := &v1.ServiceBindingList{}
+				Eventually(func() bool {
+					err := k8sClient.List(ctx, bindingList, client.MatchingLabels{common.StaleBindingIDLabel: origBindingID}, client.InNamespace(bindingTestNamespace))
+					if err != nil {
+						return false
+					}
+					return len(bindingList.Items) > 0
+				}, timeout, interval).Should(BeTrue())
+
+				oldBinding := bindingList.Items[0]
+				Expect(oldBinding.Spec.CredRotationPolicy.Enabled).To(BeFalse())
+				Eventually(func() bool {
+					err := k8sClient.Get(ctx, types.NamespacedName{Name: oldBinding.Name, Namespace: oldBinding.Namespace}, &oldBinding)
+					if err != nil {
+						return false
+					}
+					return len(oldBinding.Status.BindingID) > 0
+				}, timeout, interval).Should(BeTrue())
+				Expect(len(oldBinding.Annotations)).To(Equal(1))
+				Expect(oldBinding.Annotations[common.StaleBindingOrigBindingNameAnnotation]).To(Equal(longBindingName))
+				Expect(len(oldBinding.Labels)).To(Equal(2))
+				Expect(oldBinding.Labels[common.StaleBindingIDLabel]).To(Equal(origBindingID))
+				Expect(oldBinding.Labels[common.StaleBindingRotationOfLabel]).To(Equal(truncateString(binding.Name, 63)))
+
+				secret = getSecret(ctx, oldBinding.Spec.SecretName, bindingTestNamespace, true)
+				val = secret.Data["secret_key2"]
+				Expect(string(val)).To(Equal("secret_value2"))
 			})
 		})
 	})
