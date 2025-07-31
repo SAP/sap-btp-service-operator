@@ -48,9 +48,6 @@ var _ webhook.CustomValidator = &ServiceBinding{}
 func (sb *ServiceBinding) ValidateCreate(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
 	newBinding := obj.(*ServiceBinding)
 	servicebindinglog.Info("validate create", "name", newBinding.ObjectMeta.Name)
-	if len(newBinding.Spec.ExternalName) > 100 {
-		return nil, fmt.Errorf("binding's name must be less than 100 characters")
-	}
 	if newBinding.Spec.CredRotationPolicy != nil {
 		if err := newBinding.validateCredRotatingConfig(); err != nil {
 			return nil, err
