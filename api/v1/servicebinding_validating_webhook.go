@@ -101,7 +101,7 @@ func (sb *ServiceBinding) validateRotationFields(old *ServiceBinding) bool {
 	isValid := sb.ObjectMeta.Labels[common.StaleBindingIDLabel] == old.ObjectMeta.Labels[common.StaleBindingIDLabel] &&
 		sb.ObjectMeta.Labels[common.StaleBindingRotationOfLabel] == old.ObjectMeta.Labels[common.StaleBindingRotationOfLabel]
 
-	if len(old.ObjectMeta.Annotations[common.StaleBindingOrigBindingNameAnnotation]) > 0 {
+	if old.ObjectMeta.Annotations != nil && len(old.ObjectMeta.Annotations[common.StaleBindingOrigBindingNameAnnotation]) > 0 {
 		isValid = isValid && sb.ObjectMeta.Annotations[common.StaleBindingOrigBindingNameAnnotation] == old.ObjectMeta.Annotations[common.StaleBindingOrigBindingNameAnnotation]
 	}
 	return isValid
