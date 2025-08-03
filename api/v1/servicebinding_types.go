@@ -43,7 +43,7 @@ type ServiceBindingSpec struct {
 
 	// The name of the binding in Service Manager
 	// +optional
-	ExternalName string `json:"externalName,maxLength=100"`
+	ExternalName string `json:"externalName"`
 
 	// SecretName is the name of the secret where credentials will be stored
 	// +optional
