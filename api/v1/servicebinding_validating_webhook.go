@@ -48,9 +48,6 @@ var _ webhook.CustomValidator = &ServiceBinding{}
 func (sb *ServiceBinding) ValidateCreate(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
 	newBinding := obj.(*ServiceBinding)
 	servicebindinglog.Info("validate create", "name", newBinding.ObjectMeta.Name)
-	if len(newBinding.Spec.ExternalName) > 100 {
-		return nil, fmt.Errorf("binding's name must be less than 100 characters")
-	}
 	if newBinding.Spec.CredRotationPolicy != nil {
 		if err := newBinding.validateCredRotatingConfig(); err != nil {
 			return nil, err
@@ -104,7 +101,7 @@ func (sb *ServiceBinding) validateRotationFields(old *ServiceBinding) bool {
 	isValid := sb.ObjectMeta.Labels[common.StaleBindingIDLabel] == old.ObjectMeta.Labels[common.StaleBindingIDLabel] &&
 		sb.ObjectMeta.Labels[common.StaleBindingRotationOfLabel] == old.ObjectMeta.Labels[common.StaleBindingRotationOfLabel]
 
-	if len(old.ObjectMeta.Annotations[common.StaleBindingOrigBindingNameAnnotation]) > 0 {
+	if old.ObjectMeta.Annotations != nil && len(old.ObjectMeta.Annotations[common.StaleBindingOrigBindingNameAnnotation]) > 0 {
 		isValid = isValid && sb.ObjectMeta.Annotations[common.StaleBindingOrigBindingNameAnnotation] == old.ObjectMeta.Annotations[common.StaleBindingOrigBindingNameAnnotation]
 	}
 	return isValid
