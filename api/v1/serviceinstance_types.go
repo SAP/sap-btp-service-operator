@@ -127,6 +127,9 @@ type ServiceInstanceStatus struct {
 
 	// if true need to update instance
 	ForceReconcile bool `json:"forceReconcile,omitempty"`
+
+	// Last generation that was acted on
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -191,6 +194,10 @@ func (si *ServiceInstance) GetAnnotations() map[string]string {
 
 func (si *ServiceInstance) SetAnnotations(annotations map[string]string) {
 	si.ObjectMeta.Annotations = annotations
+}
+
+func (in *ServiceInstance) SetObservedGeneration(newObserved int64) {
+	in.Status.ObservedGeneration = newObserved
 }
 
 // +kubebuilder:object:root=true
