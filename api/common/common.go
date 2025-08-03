@@ -82,6 +82,7 @@ type SAPBTPResource interface {
 	GetReady() metav1.ConditionStatus
 	GetAnnotations() map[string]string
 	SetAnnotations(map[string]string)
+	SetObservedGeneration(int64)
 }
 
 func GetObservedGeneration(obj SAPBTPResource) int64 {

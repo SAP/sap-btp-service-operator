@@ -98,10 +98,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	if isFinalState(ctx, serviceInstance) {
 		if len(serviceInstance.Status.HashedSpec) == 0 {
 			updateHashedSpecValue(serviceInstance)
-			err := r.Client.Status().Update(ctx, serviceInstance)
-			if err != nil {
-				return ctrl.Result{}, err
-			}
+			return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceInstance)
 		}
 
 		return ctrl.Result{}, nil

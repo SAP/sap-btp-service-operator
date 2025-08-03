@@ -56,6 +56,7 @@ func RemoveFinalizer(ctx context.Context, k8sClient client.Client, object client
 func UpdateStatus(ctx context.Context, k8sClient client.Client, object common.SAPBTPResource) error {
 	log := GetLogger(ctx)
 	log.Info(fmt.Sprintf("updating %s status", object.GetObjectKind().GroupVersionKind().Kind))
+	object.SetObservedGeneration(getLastObservedGen(object))
 	return k8sClient.Status().Update(ctx, object)
 }
 
