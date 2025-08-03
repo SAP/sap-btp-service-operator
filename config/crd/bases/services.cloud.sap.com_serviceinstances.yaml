@@ -85,6 +85,7 @@ spec:
               externalName:
                 description: The name of the instance in Service Manager
                 type: string
+                maxLength: 100
               parameters:
                 description: |-
                   Provisioning parameters for the instance.
@@ -340,6 +341,7 @@ spec:
               externalName:
                 description: The name of the instance in Service Manager
                 type: string
+                maxLength: 100
               parameters:
                 description: |-
                   Provisioning parameters for the instance.

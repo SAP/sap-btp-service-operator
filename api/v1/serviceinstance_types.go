@@ -54,7 +54,7 @@ type ServiceInstanceSpec struct {
 	ServicePlanID string `json:"servicePlanID,omitempty"`
 
 	// The name of the instance in Service Manager
-	ExternalName string `json:"externalName,omitempty"`
+	ExternalName string `json:"externalName,maxLength=100,omitempty"`
 
 	// Indicates the desired shared state
 	// +optional
