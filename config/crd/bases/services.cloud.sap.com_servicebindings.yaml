@@ -78,6 +78,7 @@ spec:
               externalName:
                 description: The name of the binding in Service Manager
                 type: string
+                maxLength: 100
               parameters:
                 description: |-
                   Parameters for the binding.
