@@ -196,8 +196,8 @@ func (si *ServiceInstance) SetAnnotations(annotations map[string]string) {
 	si.ObjectMeta.Annotations = annotations
 }
 
-func (in *ServiceInstance) SetObservedGeneration(newObserved int64) {
-	in.Status.ObservedGeneration = newObserved
+func (si *ServiceInstance) SetObservedGeneration(newObserved int64) {
+	si.Status.ObservedGeneration = newObserved
 }
 
 // +kubebuilder:object:root=true
