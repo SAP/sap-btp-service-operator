@@ -152,11 +152,11 @@ metadata:
   namespace: sap-btp-operator
 type: Opaque
 stringData:
-  clientid: <clientid>
-  tls.crt: <certificate>
-  tls.key: <key>
-  sm_url: <sm_url>
-  tokenurl: <auth_url>
+  clientid: "<clientid>"
+  tls.crt: "<certificate>"
+  tls.key: "<key>"
+  sm_url: "<sm_url>"
+  tokenurl: "<auth_url>"
   tokenurlsuffix: "/oauth/token"
 ```
 
@@ -219,15 +219,15 @@ stringData:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: <namespace-name>-sap-btp-service-operator
-  namespace: <centrally-managed-namespace>
+  name: "<namespace-name>-sap-btp-service-operator"
+  namespace: "<centrally-managed-namespace>"
 type: Opaque
 stringData:
-  clientid: <clientid>
-  tls.crt: <certificate>
-  tls.key: <key>
-  sm_url: <sm_url>
-  tokenurl: <auth_url>
+  clientid: "<clientid>"
+  tls.crt: "<certificate>"
+  tls.key: "<key>"
+  sm_url: "<sm_url>"
+  tokenurl: "<auth_url>"
   tokenurlsuffix: "/oauth/token"
 ```
 
@@ -246,7 +246,7 @@ You can deploy service instances belonging to different subaccounts within the s
 apiVersion: v1
 kind: Secret
 metadata:
-  name: <my-secret>
+  name: "<my-secret>"
   namespace: <centrally-managed-namespace>
 type: Opaque
 stringData:
@@ -263,15 +263,15 @@ stringData:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: <my-secret>
+  name: "<my-secret>"
   namespace: <centrally-managed-namespace>
 type: Opaque
 stringData:
-  clientid: <clientid>
-  tls.crt: <certificate>
-  tls.key: <key>
-  sm_url: <sm_url>
-  tokenurl: <auth_url>
+  clientid: "<clientid>"
+  tls.crt: "<certificate>"
+  tls.key: "<key>"
+  sm_url: "<sm_url>"
+  tokenurl: "<auth_url>"
   tokenurlsuffix: "/oauth/token"
 ```
 
@@ -703,7 +703,7 @@ spec:
     name: value
   parametersFrom:
     - secretKeyRef:
-        name: my-secret
+       name: my-secret,
         key: secret-parameter
 ```
 
