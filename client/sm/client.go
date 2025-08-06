@@ -85,7 +85,6 @@ func (e *ServiceManagerError) Error() string {
 	return e.Description
 }
 
-// TODO need to place in the right place in the project
 type TransientError struct {
 	Message string
 }
