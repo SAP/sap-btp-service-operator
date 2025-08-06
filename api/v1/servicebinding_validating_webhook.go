@@ -72,7 +72,7 @@ func (sb *ServiceBinding) ValidateUpdate(_ context.Context, oldObj, newObj runti
 			if newBinding.Spec.CredRotationPolicy.Enabled {
 				return nil, fmt.Errorf("enabling cred rotation for rotated binding is not allowed")
 			}
-			if !newBinding.validateRotationLabels(oldBinding) {
+			if !newBinding.validateRotationFields(oldBinding) {
 				return nil, fmt.Errorf("modifying rotation labels is not allowed")
 			}
 			isStale = true
@@ -93,11 +93,18 @@ func (sb *ServiceBinding) ValidateUpdate(_ context.Context, oldObj, newObj runti
 	return nil, nil
 }
 
-func (sb *ServiceBinding) validateRotationLabels(old *ServiceBinding) bool {
-	if sb.ObjectMeta.Labels[common.StaleBindingIDLabel] != old.ObjectMeta.Labels[common.StaleBindingIDLabel] {
+func (sb *ServiceBinding) validateRotationFields(old *ServiceBinding) bool {
+	if sb.ObjectMeta.Labels == nil {
 		return false
 	}
-	return sb.ObjectMeta.Labels[common.StaleBindingRotationOfLabel] == old.ObjectMeta.Labels[common.StaleBindingRotationOfLabel]
+
+	isValid := sb.ObjectMeta.Labels[common.StaleBindingIDLabel] == old.ObjectMeta.Labels[common.StaleBindingIDLabel] &&
+		sb.ObjectMeta.Labels[common.StaleBindingRotationOfLabel] == old.ObjectMeta.Labels[common.StaleBindingRotationOfLabel]
+
+	if old.ObjectMeta.Annotations != nil && len(old.ObjectMeta.Annotations[common.StaleBindingOrigBindingNameAnnotation]) > 0 {
+		isValid = isValid && sb.ObjectMeta.Annotations[common.StaleBindingOrigBindingNameAnnotation] == old.ObjectMeta.Annotations[common.StaleBindingOrigBindingNameAnnotation]
+	}
+	return isValid
 }
 
 func (sb *ServiceBinding) specChanged(oldBinding *ServiceBinding) bool {
