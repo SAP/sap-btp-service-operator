@@ -13,14 +13,15 @@ import (
 type ControllerName string
 
 const (
-	ServiceInstanceController       ControllerName = "ServiceInstance"
-	ServiceBindingController        ControllerName = "ServiceBinding"
-	FinalizerName                   string         = "services.cloud.sap.com/sap-btp-finalizer"
-	StaleBindingIDLabel             string         = "services.cloud.sap.com/stale"
-	StaleBindingRotationOfLabel     string         = "services.cloud.sap.com/rotationOf"
-	ForceRotateAnnotation           string         = "services.cloud.sap.com/forceRotate"
-	PreventDeletion                 string         = "services.cloud.sap.com/preventDeletion"
-	UseInstanceMetadataNameInSecret string         = "services.cloud.sap.com/useInstanceMetadataName"
+	ServiceInstanceController             ControllerName = "ServiceInstance"
+	ServiceBindingController              ControllerName = "ServiceBinding"
+	FinalizerName                         string         = "services.cloud.sap.com/sap-btp-finalizer"
+	StaleBindingIDLabel                   string         = "services.cloud.sap.com/stale"
+	StaleBindingRotationOfLabel           string         = "services.cloud.sap.com/rotationOf"
+	StaleBindingOrigBindingNameAnnotation string         = "services.cloud.sap.com/original-binding-name"
+	ForceRotateAnnotation                 string         = "services.cloud.sap.com/forceRotate"
+	PreventDeletion                       string         = "services.cloud.sap.com/preventDeletion"
+	UseInstanceMetadataNameInSecret       string         = "services.cloud.sap.com/useInstanceMetadataName"
 )
 
 type HTTPStatusCodeError struct {
@@ -81,6 +82,7 @@ type SAPBTPResource interface {
 	GetReady() metav1.ConditionStatus
 	GetAnnotations() map[string]string
 	SetAnnotations(map[string]string)
+	SetObservedGeneration(int64)
 }
 
 func GetObservedGeneration(obj SAPBTPResource) int64 {

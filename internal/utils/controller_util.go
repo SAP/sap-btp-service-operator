@@ -56,6 +56,7 @@ func RemoveFinalizer(ctx context.Context, k8sClient client.Client, object client
 func UpdateStatus(ctx context.Context, k8sClient client.Client, object common.SAPBTPResource) error {
 	log := GetLogger(ctx)
 	log.Info(fmt.Sprintf("updating %s status", object.GetObjectKind().GroupVersionKind().Kind))
+	object.SetObservedGeneration(getLastObservedGen(object))
 	return k8sClient.Status().Update(ctx, object)
 }
 
@@ -136,6 +137,22 @@ func HandleError(ctx context.Context, k8sClient client.Client, operationType smC
 	//todo I prefer "Non-SM error occurred - %v, treating as transient
 	log.Info(fmt.Sprintf("unable to cast error to SM error, will be treated as a transient. (error: %v)", err))
 	return MarkAsTransientError(ctx, k8sClient, operationType, err, resource)
+}
+
+func HandleCredRotationError(ctx context.Context, k8sClient client.Client, binding common.SAPBTPResource, err error) (ctrl.Result, error) {
+	log := GetLogger(ctx)
+	var smError *sm.ServiceManagerError
+	if ok := errors.As(err, &smError); ok {
+		if smError.StatusCode == http.StatusTooManyRequests {
+			log.Info(fmt.Sprintf("SM returned 429 (%s), requeueing...", smError.Error()))
+			return handleRateLimitError(smError, log)
+		}
+		log.Info(fmt.Sprintf("SM returned error: %s", smError.Error()))
+	}
+
+	log.Info("updating cred rotation condition with error", err)
+	SetCredRotationInProgressConditions(common.CredPreparing, err.Error(), binding)
+	return ctrl.Result{}, UpdateStatus(ctx, k8sClient, binding)
 }
 
 // ParseNamespacedName converts a "namespace/name" string to a types.NamespacedName object.

@@ -131,6 +131,9 @@ type ServiceBindingStatus struct {
 
 	// The subaccount id of the service binding
 	SubaccountID string `json:"subaccountID,omitempty"`
+
+	// Last generation that was acted on
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -194,6 +197,10 @@ func (sb *ServiceBinding) GetAnnotations() map[string]string {
 
 func (sb *ServiceBinding) SetAnnotations(annotations map[string]string) {
 	sb.ObjectMeta.Annotations = annotations
+}
+
+func (sb *ServiceBinding) SetObservedGeneration(newObserved int64) {
+	sb.Status.ObservedGeneration = newObserved
 }
 
 // +kubebuilder:object:root=true
