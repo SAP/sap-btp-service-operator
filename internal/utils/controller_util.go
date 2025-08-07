@@ -134,8 +134,9 @@ func HandleError(ctx context.Context, k8sClient client.Client, operationType smC
 		return MarkAsTransientError(ctx, k8sClient, operationType, smError, resource)
 	}
 
-	log.Info(fmt.Sprintf("unable to cast error to SM error, will be treated as non transient. (error: %v)", err))
-	return MarkAsNonTransientError(ctx, k8sClient, operationType, err, resource)
+	//todo I prefer "Non-SM error occurred - %v, treating as transient
+	log.Info(fmt.Sprintf("unable to cast error to SM error, will be treated as a transient. (error: %v)", err))
+	return MarkAsTransientError(ctx, k8sClient, operationType, err, resource)
 }
 
 func HandleCredRotationError(ctx context.Context, k8sClient client.Client, binding common.SAPBTPResource, err error) (ctrl.Result, error) {
@@ -188,7 +189,7 @@ func HandleDeleteError(ctx context.Context, k8sClient client.Client, err error, 
 		return handleRateLimitError(smError, log)
 	}
 
-	if _, updateErr := MarkAsNonTransientError(ctx, k8sClient, smClientTypes.DELETE, err, object); updateErr != nil {
+	if _, updateErr := MarkAsNonTransientError(ctx, k8sClient, smClientTypes.DELETE, err, object); updateErr != nil { //todo not sure if transient or not
 		log.Error(updateErr, "failed to update resource status")
 		return ctrl.Result{}, updateErr
 	}
