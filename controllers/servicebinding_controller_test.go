@@ -361,7 +361,7 @@ var _ = Describe("ServiceBinding controller", func() {
 					It("should fail with the error returned from SM", func() {
 						binding, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "binding-external-name", "", false)
 						Expect(err).ToNot(HaveOccurred())
-						waitForResourceCondition(ctx, binding, common.ConditionFailed, metav1.ConditionTrue, "", errorMessage)
+						waitForResourceCondition(ctx, binding, common.ConditionSucceeded, metav1.ConditionFalse, "", errorMessage)
 					})
 				})
 
