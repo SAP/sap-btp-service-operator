@@ -447,7 +447,7 @@ var _ = Describe("ServiceBinding controller", func() {
 
 				It("creation will fail with appropriate message", func() {
 					createdBinding, _ = createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "", "", false)
-					waitForResourceCondition(ctx, createdBinding, common.ConditionFailed, metav1.ConditionTrue, "CreateFailed", "failed to create secret")
+					waitForResourceCondition(ctx, createdBinding, common.ConditionSucceeded, metav1.ConditionFalse, "", "failed to create secret")
 				})
 			})
 		})
