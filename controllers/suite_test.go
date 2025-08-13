@@ -284,8 +284,6 @@ func waitForResourceCondition(ctx context.Context, resource common.SAPBTPResourc
 	)
 }
 
-//todo does this log cause side effects??
-
 func getResourceNamespacedName(resource client.Object) types.NamespacedName {
 	return types.NamespacedName{Namespace: resource.GetNamespace(), Name: resource.GetName()}
 }
