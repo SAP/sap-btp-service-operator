@@ -646,7 +646,7 @@ stringData:
 				                                         name: my-secret-name`)
 				binding, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "", secretTemplate, false)
 				Expect(err).ToNot(HaveOccurred())
-				waitForResourceCondition(ctx, binding, common.ConditionFailed, metav1.ConditionTrue, "", "the Secret template is invalid: Secret's metadata field")
+				waitForResourceCondition(ctx, binding, common.ConditionSucceeded, metav1.ConditionFalse, "", "the Secret template is invalid: Secret's metadata field")
 			})
 			It("should fail to create the secret if wrong template key in the spec.secretTemplate is provided", func() {
 				ctx := context.Background()
