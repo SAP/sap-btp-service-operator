@@ -361,7 +361,7 @@ var _ = Describe("ServiceBinding controller", func() {
 					It("should fail with the error returned from SM", func() {
 						binding, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "binding-external-name", "", false)
 						Expect(err).ToNot(HaveOccurred())
-						waitForResourceCondition(ctx, binding, common.ConditionFailed, metav1.ConditionTrue, "", errorMessage)
+						waitForResourceCondition(ctx, binding, common.ConditionSucceeded, metav1.ConditionFalse, "", errorMessage)
 					})
 				})
 
@@ -447,7 +447,7 @@ var _ = Describe("ServiceBinding controller", func() {
 
 				It("creation will fail with appropriate message", func() {
 					createdBinding, _ = createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "", "", false)
-					waitForResourceCondition(ctx, createdBinding, common.ConditionFailed, metav1.ConditionTrue, "CreateFailed", "failed to create secret")
+					waitForResourceCondition(ctx, createdBinding, common.ConditionSucceeded, metav1.ConditionFalse, "", "failed to create secret")
 				})
 			})
 		})
@@ -646,7 +646,7 @@ stringData:
 				                                         name: my-secret-name`)
 				binding, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "", secretTemplate, false)
 				Expect(err).ToNot(HaveOccurred())
-				waitForResourceCondition(ctx, binding, common.ConditionFailed, metav1.ConditionTrue, "", "the Secret template is invalid: Secret's metadata field")
+				waitForResourceCondition(ctx, binding, common.ConditionSucceeded, metav1.ConditionFalse, "", "the Secret template is invalid: Secret's metadata field")
 			})
 			It("should fail to create the secret if wrong template key in the spec.secretTemplate is provided", func() {
 				ctx := context.Background()
@@ -664,7 +664,7 @@ stringData:
 						return false
 					}
 					cond := meta.FindStatusCondition(binding.GetConditions(), common.ConditionSucceeded)
-					return cond != nil && cond.Reason == "CreateFailed" && strings.Contains(cond.Message, "map has no entry for key \"non_existing_key\"")
+					return cond != nil && cond.Reason == "CreateInProgress" && strings.Contains(cond.Message, "map has no entry for key \"non_existing_key\"")
 				}, timeout*2, interval).Should(BeTrue())
 			})
 			It("should fail to create the secret if secretTemplate is an unexpected type", func() {
@@ -674,7 +674,7 @@ stringData:
 				                                       kind: Pod`)
 				binding, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "", secretTemplate, false)
 				Expect(err).ToNot(HaveOccurred())
-				waitForResourceCondition(ctx, binding, common.ConditionFailed, metav1.ConditionTrue, "", "but needs to be of kind 'Secret'")
+				waitForResourceCondition(ctx, binding, common.ConditionSucceeded, metav1.ConditionFalse, "", "but needs to be of kind 'Secret'")
 			})
 			It("should succeed to create the secret- empty data", func() {
 				ctx := context.Background()
@@ -884,7 +884,7 @@ stringData:
 			err := k8sClient.Update(ctx, createdBinding)
 			Expect(err).ToNot(HaveOccurred())
 			By("Verify binding update failed")
-			waitForResourceCondition(ctx, createdBinding, common.ConditionFailed, metav1.ConditionTrue, "UpdateFailed", "failed to create secret")
+			waitForResourceCondition(ctx, createdBinding, common.ConditionSucceeded, metav1.ConditionFalse, "UpdateInProgress", "failed to create secret")
 
 			secretTemplate = dedent.Dedent(
 				`apiVersion: v1

@@ -230,7 +230,7 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 	bindingParameters, _, err := utils.BuildSMRequestParameters(serviceBinding.Namespace, serviceBinding.Spec.Parameters, serviceBinding.Spec.ParametersFrom)
 	if err != nil {
 		log.Error(err, "failed to parse smBinding parameters")
-		return utils.MarkAsNonTransientError(ctx, r.Client, smClientTypes.CREATE, err, serviceBinding)
+		return utils.MarkAsTransientError(ctx, r.Client, smClientTypes.CREATE, err, serviceBinding)
 	}
 
 	smBinding, operationURL, bindErr := smClient.Bind(&smClientTypes.ServiceBinding{
@@ -252,7 +252,7 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 	if operationURL != "" {
 		var bindingID string
 		if bindingID = sm.ExtractBindingID(operationURL); len(bindingID) == 0 {
-			return utils.MarkAsNonTransientError(ctx, r.Client, smClientTypes.CREATE, fmt.Errorf("failed to extract smBinding ID from operation URL %s", operationURL), serviceBinding)
+			return utils.MarkAsTransientError(ctx, r.Client, smClientTypes.CREATE, fmt.Errorf("failed to extract smBinding ID from operation URL %s", operationURL), serviceBinding)
 		}
 		serviceBinding.Status.BindingID = bindingID
 
@@ -822,9 +822,6 @@ func (r *ServiceBindingReconciler) validateSecretNameIsAvailable(ctx context.Con
 func (r *ServiceBindingReconciler) handleSecretError(ctx context.Context, op smClientTypes.OperationCategory, err error, binding *v1.ServiceBinding) (ctrl.Result, error) {
 	log := utils.GetLogger(ctx)
 	log.Error(err, fmt.Sprintf("failed to store secret %s for binding %s", binding.Spec.SecretName, binding.Name))
-	if apierrors.ReasonForError(err) == metav1.StatusReasonUnknown {
-		return utils.MarkAsNonTransientError(ctx, r.Client, op, err, binding)
-	}
 	return utils.MarkAsTransientError(ctx, r.Client, op, err, binding)
 }
 

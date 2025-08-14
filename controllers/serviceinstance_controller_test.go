@@ -519,7 +519,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						newExternalName := "my-new-external-name" + uuid.New().String()
 						serviceInstance.Spec.ExternalName = newExternalName
 						updateInstance(ctx, serviceInstance)
-						waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.UpdateFailed, "")
+						waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.UpdateInProgress, "")
 					})
 				})
 			})
