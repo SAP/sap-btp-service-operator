@@ -20,7 +20,7 @@ ARG TARGETOS TARGETARCH
 # Build
 RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH GO111MODULE=on go build -a -o manager main.go
 
-FROM alpine:3.20.0
+FROM alpine:3.22.1
 WORKDIR /
 COPY --from=builder /workspace/manager .
 USER 65534:65534
