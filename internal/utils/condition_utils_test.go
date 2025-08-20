@@ -166,7 +166,7 @@ var _ = Describe("Condition Utils", func() {
 		})
 	})
 
-	Context("MarkAsNonTransientError", func() {
+	Context("MarkAsNonTransientError", func() { //todo remove if MarkAsNonTransientFunction proves to be unnecessary
 		It("should mark as non-transient error and update status", func() {
 			operationType := smClientTypes.CREATE
 
