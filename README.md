@@ -888,7 +888,7 @@ We currently do not accept community contributions.
 
 ### License
 
-This project is licensed under Apache 2.0 unless noted otherwise in the [license](./LICENSE) file.
+Copyright 2024 SAP SE and sap-btp-service-operator contributors. Please see our LICENSE for copyright and license information. Detailed information including third-party components and their licensing/copyright information is available via the REUSE tool.
 
 [Back to top](#table-of-contents)
 
