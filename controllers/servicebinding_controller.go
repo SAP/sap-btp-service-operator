@@ -151,8 +151,12 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	// should rotate creds
 	if meta.IsStatusConditionTrue(serviceBinding.Status.Conditions, common.ConditionCredRotationInProgress) {
 		log.Info("rotating credentials")
-		if err := r.rotateCredentials(ctx, serviceBinding, serviceInstance); err != nil {
-			return ctrl.Result{}, err
+		if shouldUpdateStatus, err := r.rotateCredentials(ctx, serviceBinding, serviceInstance); err != nil {
+			if !shouldUpdateStatus {
+				log.Error(err, "internal error occurred during cred rotation, requeuing binding")
+				return ctrl.Result{}, err
+			}
+			return utils.HandleCredRotationError(ctx, r.Client, serviceBinding, err)
 		}
 	}
 
@@ -890,11 +894,11 @@ func (r *ServiceBindingReconciler) addInstanceInfo(ctx context.Context, binding 
 	return metadata, nil
 }
 
-func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, binding *v1.ServiceBinding, serviceInstance *v1.ServiceInstance) error {
+func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, binding *v1.ServiceBinding, serviceInstance *v1.ServiceInstance) (bool, error) {
 	log := utils.GetLogger(ctx)
 	if err := r.removeForceRotateAnnotationIfNeeded(ctx, binding, log); err != nil {
 		log.Info("Credentials rotation - failed to delete force rotate annotation")
-		return err
+		return false, err
 	}
 
 	credInProgressCondition := meta.FindStatusCondition(binding.GetConditions(), common.ConditionCredRotationInProgress)
@@ -903,31 +907,31 @@ func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, bindin
 			log.Info("Credentials rotation - finished successfully")
 			now := metav1.NewTime(time.Now())
 			binding.Status.LastCredentialsRotationTime = &now
-			return r.stopRotation(ctx, binding)
+			return false, r.stopRotation(ctx, binding)
 		} else if utils.IsFailed(binding) {
 			log.Info("Credentials rotation - binding failed stopping rotation")
-			return r.stopRotation(ctx, binding)
+			return false, r.stopRotation(ctx, binding)
 		}
 		log.Info("Credentials rotation - waiting to finish")
-		return nil
+		return false, nil
 	}
 
 	if len(binding.Status.BindingID) == 0 {
 		log.Info("Credentials rotation - no binding id found nothing to do")
-		return r.stopRotation(ctx, binding)
+		return false, r.stopRotation(ctx, binding)
 	}
 
 	bindings := &v1.ServiceBindingList{}
 	err := r.Client.List(ctx, bindings, client.MatchingLabels{common.StaleBindingIDLabel: binding.Status.BindingID}, client.InNamespace(binding.Namespace))
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	if len(bindings.Items) == 0 {
 		// create the backup binding
 		smClient, err := r.GetSMClient(ctx, serviceInstance)
 		if err != nil {
-			return err
+			return false, err
 		}
 
 		// rename current binding
@@ -935,22 +939,13 @@ func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, bindin
 		log.Info("Credentials rotation - renaming binding to old in SM", "current", binding.Spec.ExternalName)
 		if _, errRenaming := smClient.RenameBinding(binding.Status.BindingID, binding.Spec.ExternalName+suffix, binding.Name+suffix); errRenaming != nil {
 			log.Error(errRenaming, "Credentials rotation - failed renaming binding to old in SM", "binding", binding.Spec.ExternalName)
-			utils.SetCredRotationInProgressConditions(common.CredPreparing, errRenaming.Error(), binding)
-			if errStatus := utils.UpdateStatus(ctx, r.Client, binding); errStatus != nil {
-				return errStatus
-			}
-			return errRenaming
+			return true, errRenaming
 		}
 
 		log.Info("Credentials rotation - backing up old binding in K8S", "name", binding.Name+suffix)
 		if err := r.createOldBinding(ctx, suffix, binding); err != nil {
 			log.Error(err, "Credentials rotation - failed to back up old binding in K8S")
-
-			utils.SetCredRotationInProgressConditions(common.CredPreparing, err.Error(), binding)
-			if errStatus := utils.UpdateStatus(ctx, r.Client, binding); errStatus != nil {
-				return errStatus
-			}
-			return err
+			return true, err
 		}
 	}
 
@@ -958,7 +953,7 @@ func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, bindin
 	binding.Status.Ready = metav1.ConditionFalse
 	utils.SetInProgressConditions(ctx, smClientTypes.CREATE, "rotating binding credentials", binding, false)
 	utils.SetCredRotationInProgressConditions(common.CredRotating, "", binding)
-	return utils.UpdateStatus(ctx, r.Client, binding)
+	return false, utils.UpdateStatus(ctx, r.Client, binding)
 }
 
 func (r *ServiceBindingReconciler) removeForceRotateAnnotationIfNeeded(ctx context.Context, binding *v1.ServiceBinding, log logr.Logger) error {
@@ -987,7 +982,10 @@ func (r *ServiceBindingReconciler) createOldBinding(ctx context.Context, suffix 
 	}
 	oldBinding.Labels = map[string]string{
 		common.StaleBindingIDLabel:         binding.Status.BindingID,
-		common.StaleBindingRotationOfLabel: binding.Name,
+		common.StaleBindingRotationOfLabel: truncateString(binding.Name, 63),
+	}
+	oldBinding.Annotations = map[string]string{
+		common.StaleBindingOrigBindingNameAnnotation: binding.Name,
 	}
 	spec := binding.Spec.DeepCopy()
 	spec.CredRotationPolicy.Enabled = false
@@ -999,11 +997,14 @@ func (r *ServiceBindingReconciler) createOldBinding(ctx context.Context, suffix 
 
 func (r *ServiceBindingReconciler) handleStaleServiceBinding(ctx context.Context, serviceBinding *v1.ServiceBinding) (ctrl.Result, error) {
 	log := utils.GetLogger(ctx)
-	originalBindingName, ok := serviceBinding.Labels[common.StaleBindingRotationOfLabel]
+	originalBindingName, ok := serviceBinding.Annotations[common.StaleBindingOrigBindingNameAnnotation]
 	if !ok {
-		//if the user removed the "rotationOf" label the stale binding should be deleted otherwise it will remain forever
-		log.Info("missing rotationOf label, unable to fetch original binding, deleting stale")
-		return ctrl.Result{}, r.Client.Delete(ctx, serviceBinding)
+		//if the user removed the "OrigBindingName" annotation and rotationOf label not exist as well
+		//the stale binding should be deleted otherwise it will remain forever
+		if originalBindingName, ok = serviceBinding.Labels[common.StaleBindingRotationOfLabel]; !ok {
+			log.Info("missing rotationOf label/annotation, unable to fetch original binding, deleting stale")
+			return ctrl.Result{}, r.Client.Delete(ctx, serviceBinding)
+		}
 	}
 	origBinding := &v1.ServiceBinding{}
 	if err := r.Client.Get(ctx, types.NamespacedName{Namespace: serviceBinding.Namespace, Name: originalBindingName}, origBinding); err != nil {
@@ -1159,4 +1160,11 @@ func singleKeyMap(credentialsMap map[string][]byte, key string) (map[string][]by
 	return map[string][]byte{
 		key: credBytes,
 	}, nil
+}
+
+func truncateString(str string, length int) string {
+	if len(str) > length {
+		return str[:length]
+	}
+	return str
 }
