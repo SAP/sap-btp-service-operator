@@ -1,6 +1,6 @@
 version = 1
 SPDX-PackageName = "SAP BTP Service Operator"
-SPDX-PackageSupplier = "Pavel Maliy <pavel.maliy@sap.com>"
+SPDX-PackageSupplier = ""
 SPDX-PackageDownloadLocation = "https://github.com/SAP/sap-btp-service-operator"
 
 [[annotations]]
