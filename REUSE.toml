@@ -1,0 +1,10 @@
+version = 1
+SPDX-PackageName = "SAP BTP Service Operator"
+SPDX-PackageSupplier = ""
+SPDX-PackageDownloadLocation = "https://github.com/SAP/sap-btp-service-operator"
+
+[[annotations]]
+path = "**"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2021 SAP SE or an SAP affiliate company and OwnID contributors"
+SPDX-License-Identifier = "Apache-2.0"
