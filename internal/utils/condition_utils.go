@@ -185,18 +185,20 @@ func SetFailureConditions(operationType smClientTypes.OperationCategory, errorMe
 	object.SetConditions(conditions)
 }
 
-func MarkAsNonTransientError(ctx context.Context, k8sClient client.Client, operationType smClientTypes.OperationCategory, err error, object common.SAPBTPResource) (ctrl.Result, error) {
-	log := GetLogger(ctx)
-	errMsg := err.Error()
-	log.Info(fmt.Sprintf("operation %s of %s encountered a non transient error %s, setting failure conditions", operationType, object.GetControllerName(), errMsg))
-	SetFailureConditions(operationType, errMsg, object, false)
-	return ctrl.Result{}, UpdateStatus(ctx, k8sClient, object)
-}
-
-func MarkAsTransientError(ctx context.Context, k8sClient client.Client, operationType smClientTypes.OperationCategory, err error, object common.SAPBTPResource) (ctrl.Result, error) {
+func UpdateFailedStatus(ctx context.Context, k8sClient client.Client, operationType smClientTypes.OperationCategory, err error, object common.SAPBTPResource) (ctrl.Result, error) {
 	log := GetLogger(ctx)
 	log.Info(fmt.Sprintf("operation %s of %s encountered a transient error %s, retrying operation :)", operationType, object.GetControllerName(), err.Error()))
-	SetInProgressConditions(ctx, operationType, err.Error(), object, false)
+
+	conditions := object.GetConditions()
+	meta.RemoveStatusCondition(&conditions, common.ConditionFailed)
+	lastOpCondition := metav1.Condition{
+		Type:               common.ConditionSucceeded,
+		Status:             metav1.ConditionFalse,
+		Reason:             GetConditionReason(operationType, smClientTypes.FAILED),
+		Message:            err.Error(),
+		ObservedGeneration: object.GetGeneration(),
+	}
+	meta.SetStatusCondition(&conditions, lastOpCondition)
 	if updateErr := UpdateStatus(ctx, k8sClient, object); updateErr != nil {
 		return ctrl.Result{}, updateErr
 	}
@@ -215,6 +217,11 @@ func IsInProgress(object common.SAPBTPResource) bool {
 	conditions := object.GetConditions()
 	return meta.IsStatusConditionPresentAndEqual(conditions, common.ConditionSucceeded, metav1.ConditionFalse) &&
 		!meta.IsStatusConditionPresentAndEqual(conditions, common.ConditionFailed, metav1.ConditionTrue)
+}
+
+func IsLastOperationFailed(object common.SAPBTPResource) bool {
+	conditions := object.GetConditions()
+	return meta.IsStatusConditionPresentAndEqual(conditions, common.ConditionSucceeded, metav1.ConditionFalse)
 }
 
 func IsFailed(resource common.SAPBTPResource) bool {

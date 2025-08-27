@@ -196,13 +196,13 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 		smClient, err := r.GetSMClient(ctx, serviceInstance)
 		if err != nil {
-			return utils.MarkAsTransientError(ctx, r.Client, common.Unknown, err, serviceBinding)
+			return utils.UpdateFailedStatus(ctx, r.Client, common.Unknown, err, serviceBinding)
 		}
 
 		smBinding, err := r.getBindingForRecovery(ctx, smClient, serviceBinding)
 		if err != nil {
 			log.Error(err, "failed to check binding recovery")
-			return utils.MarkAsTransientError(ctx, r.Client, smClientTypes.CREATE, err, serviceBinding)
+			return utils.UpdateFailedStatus(ctx, r.Client, smClientTypes.CREATE, err, serviceBinding)
 		}
 		if smBinding != nil {
 			return r.recover(ctx, serviceBinding, smBinding)
@@ -230,7 +230,7 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 	bindingParameters, _, err := utils.BuildSMRequestParameters(serviceBinding.Namespace, serviceBinding.Spec.Parameters, serviceBinding.Spec.ParametersFrom)
 	if err != nil {
 		log.Error(err, "failed to parse smBinding parameters")
-		return utils.MarkAsTransientError(ctx, r.Client, smClientTypes.CREATE, err, serviceBinding)
+		return utils.UpdateFailedStatus(ctx, r.Client, smClientTypes.CREATE, err, serviceBinding)
 	}
 
 	smBinding, operationURL, bindErr := smClient.Bind(&smClientTypes.ServiceBinding{
@@ -246,13 +246,13 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 
 	if bindErr != nil {
 		log.Error(err, "failed to create service binding", "serviceInstanceID", serviceInstance.Status.InstanceID)
-		return utils.HandleError(ctx, r.Client, smClientTypes.CREATE, bindErr, serviceBinding)
+		return utils.HandleServiceManagerError(ctx, r.Client, smClientTypes.CREATE, bindErr, serviceBinding)
 	}
 
 	if operationURL != "" {
 		var bindingID string
 		if bindingID = sm.ExtractBindingID(operationURL); len(bindingID) == 0 {
-			return utils.MarkAsTransientError(ctx, r.Client, smClientTypes.CREATE, fmt.Errorf("failed to extract smBinding ID from operation URL %s", operationURL), serviceBinding)
+			return utils.UpdateFailedStatus(ctx, r.Client, smClientTypes.CREATE, fmt.Errorf("failed to extract smBinding ID from operation URL %s", operationURL), serviceBinding)
 		}
 		serviceBinding.Status.BindingID = bindingID
 
@@ -264,7 +264,7 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 			log.Error(err, "unable to update ServiceBinding status")
 			return ctrl.Result{}, err
 		}
-		return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, nil
+		return ctrl.Result{RequeueAfter: r.Config.PollInterval}, nil
 	}
 
 	log.Info("Binding created successfully")
@@ -292,7 +292,7 @@ func (r *ServiceBindingReconciler) delete(ctx context.Context, serviceBinding *v
 	if controllerutil.ContainsFinalizer(serviceBinding, common.FinalizerName) {
 		smClient, err := r.GetSMClient(ctx, serviceInstance)
 		if err != nil {
-			return utils.MarkAsTransientError(ctx, r.Client, common.Unknown, err, serviceBinding)
+			return utils.UpdateFailedStatus(ctx, r.Client, common.Unknown, err, serviceBinding)
 		}
 
 		if len(serviceBinding.Status.BindingID) == 0 {
@@ -339,7 +339,7 @@ func (r *ServiceBindingReconciler) delete(ctx context.Context, serviceBinding *v
 			if err := utils.UpdateStatus(ctx, r.Client, serviceBinding); err != nil {
 				return ctrl.Result{}, err
 			}
-			return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, nil
+			return ctrl.Result{RequeueAfter: r.Config.PollInterval}, nil
 		}
 
 		log.Info("Binding was deleted successfully")
@@ -354,7 +354,7 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, serviceBinding *v1.
 
 	smClient, err := r.GetSMClient(ctx, serviceInstance)
 	if err != nil {
-		return utils.MarkAsTransientError(ctx, r.Client, common.Unknown, err, serviceBinding)
+		return utils.UpdateFailedStatus(ctx, r.Client, common.Unknown, err, serviceBinding)
 	}
 
 	status, statusErr := smClient.Status(serviceBinding.Status.OperationURL, nil)
@@ -375,7 +375,7 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, serviceBinding *v1.
 	}
 
 	if status == nil {
-		return utils.MarkAsTransientError(ctx, r.Client, serviceBinding.Status.OperationType, fmt.Errorf("failed to get last operation status of %s", serviceBinding.Name), serviceBinding)
+		return utils.UpdateFailedStatus(ctx, r.Client, serviceBinding.Status.OperationType, fmt.Errorf("failed to get last operation status of %s", serviceBinding.Name), serviceBinding)
 	}
 	switch status.State {
 	case smClientTypes.INPROGRESS:
@@ -388,7 +388,7 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, serviceBinding *v1.
 				return ctrl.Result{}, err
 			}
 		}
-		return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, nil
+		return ctrl.Result{RequeueAfter: r.Config.PollInterval}, nil
 	case smClientTypes.FAILED:
 		// non transient error - should not retry
 		utils.SetFailureConditions(status.Type, status.Description, serviceBinding, true)
@@ -822,7 +822,7 @@ func (r *ServiceBindingReconciler) validateSecretNameIsAvailable(ctx context.Con
 func (r *ServiceBindingReconciler) handleSecretError(ctx context.Context, op smClientTypes.OperationCategory, err error, binding *v1.ServiceBinding) (ctrl.Result, error) {
 	log := utils.GetLogger(ctx)
 	log.Error(err, fmt.Sprintf("failed to store secret %s for binding %s", binding.Spec.SecretName, binding.Name))
-	return utils.MarkAsTransientError(ctx, r.Client, op, err, binding)
+	return utils.UpdateFailedStatus(ctx, r.Client, op, err, binding)
 }
 
 func (r *ServiceBindingReconciler) getInstanceInfo(ctx context.Context, binding *v1.ServiceBinding) (map[string]string, error) {

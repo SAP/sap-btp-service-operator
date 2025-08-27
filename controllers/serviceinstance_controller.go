@@ -119,7 +119,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	smClient, err := r.GetSMClient(ctx, serviceInstance)
 	if err != nil {
 		log.Error(err, "failed to get sm client")
-		return utils.MarkAsTransientError(ctx, r.Client, common.Unknown, err, serviceInstance)
+		return utils.UpdateFailedStatus(ctx, r.Client, common.Unknown, err, serviceInstance)
 	}
 
 	if serviceInstance.Status.InstanceID == "" {
@@ -127,7 +127,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		smInstance, err := r.getInstanceForRecovery(ctx, smClient, serviceInstance)
 		if err != nil {
 			log.Error(err, "failed to check instance recovery")
-			return utils.MarkAsTransientError(ctx, r.Client, common.Unknown, err, serviceInstance)
+			return utils.UpdateFailedStatus(ctx, r.Client, common.Unknown, err, serviceInstance)
 		}
 		if smInstance != nil {
 			return r.recover(ctx, smClient, serviceInstance, smInstance)
@@ -166,7 +166,7 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	if err != nil {
 		// if parameters are invalid there is nothing we can do, the user should fix it according to the error message in the condition
 		log.Error(err, "failed to parse instance parameters")
-		return utils.MarkAsTransientError(ctx, r.Client, smClientTypes.CREATE, err, serviceInstance)
+		return utils.UpdateFailedStatus(ctx, r.Client, smClientTypes.CREATE, err, serviceInstance)
 	}
 
 	provision, provisionErr := smClient.Provision(&smClientTypes.ServiceInstance{
@@ -181,13 +181,9 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	}, serviceInstance.Spec.ServiceOfferingName, serviceInstance.Spec.ServicePlanName, nil, utils.BuildUserInfo(ctx, serviceInstance.Spec.UserInfo), serviceInstance.Spec.DataCenter)
 
 	if provisionErr != nil {
-		var transientErr *sm.TransientError
-		if errors.As(provisionErr, &transientErr) {
-			return utils.MarkAsTransientError(ctx, r.Client, smClientTypes.CREATE, provisionErr, serviceInstance)
-		}
 		log.Error(provisionErr, "failed to create service instance", "serviceOfferingName", serviceInstance.Spec.ServiceOfferingName,
 			"servicePlanName", serviceInstance.Spec.ServicePlanName)
-		return utils.HandleError(ctx, r.Client, smClientTypes.CREATE, provisionErr, serviceInstance)
+		return utils.HandleServiceManagerError(ctx, r.Client, smClientTypes.CREATE, provisionErr, serviceInstance)
 	}
 
 	serviceInstance.Status.InstanceID = provision.InstanceID
@@ -207,7 +203,7 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 		serviceInstance.Status.OperationType = smClientTypes.CREATE
 		utils.SetInProgressConditions(ctx, smClientTypes.CREATE, "", serviceInstance, false)
 
-		return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, utils.UpdateStatus(ctx, r.Client, serviceInstance)
+		return ctrl.Result{RequeueAfter: r.Config.PollInterval}, utils.UpdateStatus(ctx, r.Client, serviceInstance)
 	}
 
 	log.Info(fmt.Sprintf("Instance provisioned successfully, instanceID: %s, subaccountID: %s", serviceInstance.Status.InstanceID,
@@ -223,7 +219,7 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 	instanceParameters, err := r.buildSMRequestParameters(ctx, serviceInstance)
 	if err != nil {
 		log.Error(err, "failed to parse instance parameters")
-		return utils.MarkAsTransientError(ctx, r.Client, smClientTypes.UPDATE, err, serviceInstance)
+		return utils.UpdateFailedStatus(ctx, r.Client, smClientTypes.UPDATE, err, serviceInstance)
 	}
 
 	updateHashedSpecValue(serviceInstance)
@@ -235,7 +231,7 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 
 	if err != nil {
 		log.Error(err, fmt.Sprintf("failed to update service instance with ID %s", serviceInstance.Status.InstanceID))
-		return utils.HandleError(ctx, r.Client, smClientTypes.UPDATE, err, serviceInstance)
+		return utils.HandleServiceManagerError(ctx, r.Client, smClientTypes.UPDATE, err, serviceInstance)
 	}
 
 	if operationURL != "" {
@@ -248,7 +244,7 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 			return ctrl.Result{}, err
 		}
 
-		return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, nil
+		return ctrl.Result{RequeueAfter: r.Config.PollInterval}, nil
 	}
 	log.Info("Instance updated successfully")
 	utils.SetSuccessConditions(smClientTypes.UPDATE, serviceInstance, false)
@@ -273,7 +269,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, serviceI
 		smClient, err := r.GetSMClient(ctx, serviceInstance)
 		if err != nil {
 			log.Error(err, "failed to get sm client")
-			return utils.MarkAsTransientError(ctx, r.Client, common.Unknown, err, serviceInstance)
+			return utils.UpdateFailedStatus(ctx, r.Client, common.Unknown, err, serviceInstance)
 		}
 		if len(serviceInstance.Status.InstanceID) == 0 {
 			log.Info("No instance id found validating instance does not exists in SM before removing finalizer")
@@ -355,7 +351,7 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, serviceInstance *v
 	smClient, err := r.GetSMClient(ctx, serviceInstance)
 	if err != nil {
 		log.Error(err, "failed to get sm client")
-		return utils.MarkAsTransientError(ctx, r.Client, common.Unknown, err, serviceInstance)
+		return utils.UpdateFailedStatus(ctx, r.Client, common.Unknown, err, serviceInstance)
 	}
 
 	status, statusErr := smClient.Status(serviceInstance.Status.OperationURL, nil)
@@ -390,7 +386,7 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, serviceInstance *v
 				return ctrl.Result{}, err
 			}
 		}
-		return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, nil
+		return ctrl.Result{RequeueAfter: r.Config.PollInterval}, nil
 	case smClientTypes.FAILED:
 		errMsg := getErrorMsgFromLastOperation(status)
 		utils.SetFailureConditions(status.Type, errMsg, serviceInstance, true)
@@ -438,7 +434,7 @@ func (r *ServiceInstanceReconciler) handleAsyncDelete(ctx context.Context, servi
 		return ctrl.Result{}, err
 	}
 
-	return ctrl.Result{Requeue: true, RequeueAfter: r.Config.PollInterval}, nil
+	return ctrl.Result{RequeueAfter: r.Config.PollInterval}, nil
 }
 
 func (r *ServiceInstanceReconciler) getInstanceForRecovery(ctx context.Context, smClient sm.Client, serviceInstance *v1.ServiceInstance) (*smClientTypes.ServiceInstance, error) {
@@ -612,9 +608,9 @@ func isFinalState(ctx context.Context, serviceInstance *v1.ServiceInstance) bool
 		return false
 	}
 
-	// succeeded=false for current generation, and without failed=true --> transient error retry
-	if utils.IsInProgress(serviceInstance) {
-		log.Info("instance is not in final state, sync operation is in progress")
+	// no more non transient errors - if last operation failed then instance is not in final state
+	if utils.IsLastOperationFailed(serviceInstance) {
+		log.Info("instance is not in final state, last operation failed, retrying")
 		return false
 	}
 

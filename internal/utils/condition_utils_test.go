@@ -1,19 +1,14 @@
 package utils
 
 import (
-	"fmt"
-	"net/http"
-
 	"github.com/SAP/sap-btp-service-operator/api/common"
 	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
-	"github.com/SAP/sap-btp-service-operator/client/sm"
 	smClientTypes "github.com/SAP/sap-btp-service-operator/client/sm/types"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -163,27 +158,6 @@ var _ = Describe("Condition Utils", func() {
 			SetFailureConditions(operationType, errorMessage, resource, false)
 			Expect(resource.GetConditions()).ToNot(BeEmpty())
 			Expect(meta.IsStatusConditionPresentAndEqual(resource.GetConditions(), common.ConditionReady, metav1.ConditionFalse)).To(BeTrue())
-		})
-	})
-
-	Context("MarkAsNonTransientError", func() { //todo remove if MarkAsNonTransientFunction proves to be unnecessary
-		It("should mark as non-transient error and update status", func() {
-			operationType := smClientTypes.CREATE
-
-			result, err := MarkAsNonTransientError(ctx, k8sClient, operationType, fmt.Errorf("Non-transient error"), resource)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(result).To(Equal(ctrl.Result{}))
-		})
-	})
-
-	Context("MarkAsTransientError", func() {
-		It("should handle TooManyRequests error correctly", func() {
-			resource.SetConditions([]metav1.Condition{{Message: "not TooManyRequests"}})
-			serviceManagerError := &sm.ServiceManagerError{StatusCode: http.StatusTooManyRequests}
-			result, err := MarkAsTransientError(ctx, k8sClient, smClientTypes.UPDATE, serviceManagerError, resource)
-			Expect(err).ToNot(BeNil())
-			Expect(resource.GetConditions()[0].Message).To(ContainSubstring("not TooManyRequests")) //TooManyRequests is not reflected to status
-			Expect(result).To(BeEquivalentTo(ctrl.Result{}))
 		})
 	})
 
