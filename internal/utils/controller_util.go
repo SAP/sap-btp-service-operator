@@ -131,11 +131,11 @@ func HandleServiceManagerError(ctx context.Context, k8sClient client.Client, ope
 		}
 
 		log.Info(fmt.Sprintf("SM returned error: %s", smError.Error()))
-		return UpdateFailedStatus(ctx, k8sClient, operationType, smError, resource)
+		return SetLastOperationConditionAsFailed(ctx, k8sClient, operationType, smError, resource)
 	}
 
 	log.Info(fmt.Sprintf("unable to cast error to SM error (error: %v)", err))
-	return UpdateFailedStatus(ctx, k8sClient, operationType, err, resource)
+	return SetLastOperationConditionAsFailed(ctx, k8sClient, operationType, err, resource)
 }
 
 func HandleCredRotationError(ctx context.Context, k8sClient client.Client, binding common.SAPBTPResource, err error) (ctrl.Result, error) {
@@ -188,7 +188,7 @@ func HandleDeleteError(ctx context.Context, k8sClient client.Client, err error, 
 		return handleRateLimitError(smError, log)
 	}
 
-	if _, updateErr := UpdateFailedStatus(ctx, k8sClient, smClientTypes.DELETE, err, object); updateErr != nil {
+	if _, updateErr := SetLastOperationConditionAsFailed(ctx, k8sClient, smClientTypes.DELETE, err, object); updateErr != nil {
 		log.Error(updateErr, "failed to update resource status")
 		return ctrl.Result{}, updateErr
 	}

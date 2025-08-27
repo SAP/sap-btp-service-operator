@@ -119,7 +119,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	smClient, err := r.GetSMClient(ctx, serviceInstance)
 	if err != nil {
 		log.Error(err, "failed to get sm client")
-		return utils.UpdateFailedStatus(ctx, r.Client, common.Unknown, err, serviceInstance)
+		return utils.SetLastOperationConditionAsFailed(ctx, r.Client, common.Unknown, err, serviceInstance)
 	}
 
 	if serviceInstance.Status.InstanceID == "" {
@@ -127,7 +127,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		smInstance, err := r.getInstanceForRecovery(ctx, smClient, serviceInstance)
 		if err != nil {
 			log.Error(err, "failed to check instance recovery")
-			return utils.UpdateFailedStatus(ctx, r.Client, common.Unknown, err, serviceInstance)
+			return utils.SetLastOperationConditionAsFailed(ctx, r.Client, common.Unknown, err, serviceInstance)
 		}
 		if smInstance != nil {
 			return r.recover(ctx, smClient, serviceInstance, smInstance)
@@ -166,7 +166,7 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	if err != nil {
 		// if parameters are invalid there is nothing we can do, the user should fix it according to the error message in the condition
 		log.Error(err, "failed to parse instance parameters")
-		return utils.UpdateFailedStatus(ctx, r.Client, smClientTypes.CREATE, err, serviceInstance)
+		return utils.SetLastOperationConditionAsFailed(ctx, r.Client, smClientTypes.CREATE, err, serviceInstance)
 	}
 
 	provision, provisionErr := smClient.Provision(&smClientTypes.ServiceInstance{
@@ -219,7 +219,7 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 	instanceParameters, err := r.buildSMRequestParameters(ctx, serviceInstance)
 	if err != nil {
 		log.Error(err, "failed to parse instance parameters")
-		return utils.UpdateFailedStatus(ctx, r.Client, smClientTypes.UPDATE, err, serviceInstance)
+		return utils.SetLastOperationConditionAsFailed(ctx, r.Client, smClientTypes.UPDATE, err, serviceInstance)
 	}
 
 	updateHashedSpecValue(serviceInstance)
@@ -269,7 +269,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, serviceI
 		smClient, err := r.GetSMClient(ctx, serviceInstance)
 		if err != nil {
 			log.Error(err, "failed to get sm client")
-			return utils.UpdateFailedStatus(ctx, r.Client, common.Unknown, err, serviceInstance)
+			return utils.SetLastOperationConditionAsFailed(ctx, r.Client, common.Unknown, err, serviceInstance)
 		}
 		if len(serviceInstance.Status.InstanceID) == 0 {
 			log.Info("No instance id found validating instance does not exists in SM before removing finalizer")
@@ -351,7 +351,7 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, serviceInstance *v
 	smClient, err := r.GetSMClient(ctx, serviceInstance)
 	if err != nil {
 		log.Error(err, "failed to get sm client")
-		return utils.UpdateFailedStatus(ctx, r.Client, common.Unknown, err, serviceInstance)
+		return utils.SetLastOperationConditionAsFailed(ctx, r.Client, common.Unknown, err, serviceInstance)
 	}
 
 	status, statusErr := smClient.Status(serviceInstance.Status.OperationURL, nil)

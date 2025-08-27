@@ -185,7 +185,7 @@ func SetFailureConditions(operationType smClientTypes.OperationCategory, errorMe
 	object.SetConditions(conditions)
 }
 
-func UpdateFailedStatus(ctx context.Context, k8sClient client.Client, operationType smClientTypes.OperationCategory, err error, object common.SAPBTPResource) (ctrl.Result, error) {
+func SetLastOperationConditionAsFailed(ctx context.Context, k8sClient client.Client, operationType smClientTypes.OperationCategory, err error, object common.SAPBTPResource) (ctrl.Result, error) {
 	log := GetLogger(ctx)
 	log.Info(fmt.Sprintf("operation %s of %s encountered a transient error %s, retrying operation :)", operationType, object.GetControllerName(), err.Error()))
 
@@ -199,6 +199,8 @@ func UpdateFailedStatus(ctx context.Context, k8sClient client.Client, operationT
 		ObservedGeneration: object.GetGeneration(),
 	}
 	meta.SetStatusCondition(&conditions, lastOpCondition)
+	meta.SetStatusCondition(&conditions, getReadyCondition(object))
+
 	if updateErr := UpdateStatus(ctx, k8sClient, object); updateErr != nil {
 		return ctrl.Result{}, updateErr
 	}
@@ -206,6 +208,7 @@ func UpdateFailedStatus(ctx context.Context, k8sClient client.Client, operationT
 	return ctrl.Result{}, err
 }
 
+// TODO check if needed
 // blocked condition marks to the user that action from his side is required, this is considered as in progress operation
 func SetBlockedCondition(ctx context.Context, message string, object common.SAPBTPResource) {
 	SetInProgressConditions(ctx, common.Unknown, message, object, false)
