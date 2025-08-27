@@ -1,9 +1,7 @@
 apiVersion: services.cloud.sap.com/v1
 kind: ServiceInstance
 metadata:
-  name: ttttt
+  name: sample-instance-1
 spec:
-  serviceOfferingName: xsuaa
-  servicePlanName: reference-instance
-  parameters:
-    referenced_instance_id: de25dad9-c251-41b8-ae0a-602cb91eabc5
+  serviceOfferingName: service-manager
+  servicePlanName: subaccount-audit
