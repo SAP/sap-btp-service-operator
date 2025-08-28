@@ -689,7 +689,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					errMsg := "failed to delete instance"
 					fakeClient.DeprovisionReturns("", errors.New(errMsg))
 					deleteInstance(ctx, serviceInstance, false)
-					waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionTrue, common.DeleteFailed, errMsg)
+					waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.DeleteFailed, errMsg)
 				})
 			})
 		})

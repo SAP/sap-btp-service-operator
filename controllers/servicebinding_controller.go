@@ -196,13 +196,13 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 		smClient, err := r.GetSMClient(ctx, serviceInstance)
 		if err != nil {
-			return utils.SetLastOperationConditionAsFailed(ctx, r.Client, serviceBinding, common.Unknown, err)
+			return utils.HandleOperationFailure(ctx, r.Client, serviceBinding, common.Unknown, err)
 		}
 
 		smBinding, err := r.getBindingForRecovery(ctx, smClient, serviceBinding)
 		if err != nil {
 			log.Error(err, "failed to check binding recovery")
-			return utils.SetLastOperationConditionAsFailed(ctx, r.Client, serviceBinding, smClientTypes.CREATE, err)
+			return utils.HandleOperationFailure(ctx, r.Client, serviceBinding, smClientTypes.CREATE, err)
 		}
 		if smBinding != nil {
 			return r.recover(ctx, serviceBinding, smBinding)
@@ -230,7 +230,7 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 	bindingParameters, _, err := utils.BuildSMRequestParameters(serviceBinding.Namespace, serviceBinding.Spec.Parameters, serviceBinding.Spec.ParametersFrom)
 	if err != nil {
 		log.Error(err, "failed to parse smBinding parameters")
-		return utils.SetLastOperationConditionAsFailed(ctx, r.Client, serviceBinding, smClientTypes.CREATE, err)
+		return utils.HandleOperationFailure(ctx, r.Client, serviceBinding, smClientTypes.CREATE, err)
 	}
 
 	smBinding, operationURL, bindErr := smClient.Bind(&smClientTypes.ServiceBinding{
@@ -246,13 +246,13 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 
 	if bindErr != nil {
 		log.Error(err, "failed to create service binding", "serviceInstanceID", serviceInstance.Status.InstanceID)
-		return utils.HandleServiceManagerError(ctx, r.Client, smClientTypes.CREATE, bindErr, serviceBinding)
+		return utils.HandleServiceManagerError(ctx, r.Client, serviceBinding, smClientTypes.CREATE, bindErr)
 	}
 
 	if operationURL != "" {
 		var bindingID string
 		if bindingID = sm.ExtractBindingID(operationURL); len(bindingID) == 0 {
-			return utils.SetLastOperationConditionAsFailed(ctx, r.Client, serviceBinding, smClientTypes.CREATE, fmt.Errorf("failed to extract smBinding ID from operation URL %s", operationURL))
+			return utils.HandleOperationFailure(ctx, r.Client, serviceBinding, smClientTypes.CREATE, fmt.Errorf("failed to extract smBinding ID from operation URL %s", operationURL))
 		}
 		serviceBinding.Status.BindingID = bindingID
 
@@ -292,7 +292,7 @@ func (r *ServiceBindingReconciler) delete(ctx context.Context, serviceBinding *v
 	if controllerutil.ContainsFinalizer(serviceBinding, common.FinalizerName) {
 		smClient, err := r.GetSMClient(ctx, serviceInstance)
 		if err != nil {
-			return utils.SetLastOperationConditionAsFailed(ctx, r.Client, serviceBinding, common.Unknown, err)
+			return utils.HandleOperationFailure(ctx, r.Client, serviceBinding, common.Unknown, err)
 		}
 
 		if len(serviceBinding.Status.BindingID) == 0 {
@@ -354,7 +354,7 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, serviceBinding *v1.
 
 	smClient, err := r.GetSMClient(ctx, serviceInstance)
 	if err != nil {
-		return utils.SetLastOperationConditionAsFailed(ctx, r.Client, serviceBinding, common.Unknown, err)
+		return utils.HandleOperationFailure(ctx, r.Client, serviceBinding, common.Unknown, err)
 	}
 
 	status, statusErr := smClient.Status(serviceBinding.Status.OperationURL, nil)
@@ -375,7 +375,7 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, serviceBinding *v1.
 	}
 
 	if status == nil {
-		return utils.SetLastOperationConditionAsFailed(ctx, r.Client, serviceBinding, serviceBinding.Status.OperationType, fmt.Errorf("failed to get last operation status of %s", serviceBinding.Name))
+		return utils.HandleOperationFailure(ctx, r.Client, serviceBinding, serviceBinding.Status.OperationType, fmt.Errorf("failed to get last operation status of %s", serviceBinding.Name))
 	}
 	switch status.State {
 	case smClientTypes.INPROGRESS:
@@ -822,7 +822,7 @@ func (r *ServiceBindingReconciler) validateSecretNameIsAvailable(ctx context.Con
 func (r *ServiceBindingReconciler) handleSecretError(ctx context.Context, op smClientTypes.OperationCategory, err error, binding *v1.ServiceBinding) (ctrl.Result, error) {
 	log := utils.GetLogger(ctx)
 	log.Error(err, fmt.Sprintf("failed to store secret %s for binding %s", binding.Spec.SecretName, binding.Name))
-	return utils.SetLastOperationConditionAsFailed(ctx, r.Client, binding, op, err)
+	return utils.HandleOperationFailure(ctx, r.Client, binding, op, err)
 }
 
 func (r *ServiceBindingReconciler) getInstanceInfo(ctx context.Context, binding *v1.ServiceBinding) (map[string]string, error) {

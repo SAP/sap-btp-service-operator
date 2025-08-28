@@ -121,17 +121,17 @@ func GetLogger(ctx context.Context) logr.Logger {
 	return ctx.Value(LogKey{}).(logr.Logger)
 }
 
-func HandleServiceManagerError(ctx context.Context, k8sClient client.Client, operationType smClientTypes.OperationCategory, err error, resource common.SAPBTPResource) (ctrl.Result, error) {
+func HandleServiceManagerError(ctx context.Context, k8sClient client.Client, resource common.SAPBTPResource, operationType smClientTypes.OperationCategory, err error) (ctrl.Result, error) {
 	log := GetLogger(ctx)
 	var smError *sm.ServiceManagerError
 	if ok := errors.As(err, &smError); ok {
 		if smError.StatusCode == http.StatusTooManyRequests {
 			log.Info(fmt.Sprintf("SM returned 429 (%s), requeueing...", smError.Error()))
-			return handleRateLimitError(smError, log)
+			return handleRateLimitError(ctx, k8sClient, resource, operationType, smError)
 		}
 	}
 
-	return SetLastOperationConditionAsFailed(ctx, k8sClient, resource, operationType, err)
+	return HandleOperationFailure(ctx, k8sClient, resource, operationType, err)
 }
 
 func HandleCredRotationError(ctx context.Context, k8sClient client.Client, binding common.SAPBTPResource, err error) (ctrl.Result, error) {
@@ -140,7 +140,7 @@ func HandleCredRotationError(ctx context.Context, k8sClient client.Client, bindi
 	if ok := errors.As(err, &smError); ok {
 		if smError.StatusCode == http.StatusTooManyRequests {
 			log.Info(fmt.Sprintf("SM returned 429 (%s), requeueing...", smError.Error()))
-			return handleRateLimitError(smError, log)
+			return handleRateLimitError(ctx, k8sClient, binding, smClientTypes.CRED_ROTATION, smError)
 		}
 		log.Info(fmt.Sprintf("SM returned error: %s", smError.Error()))
 	}
@@ -159,36 +159,15 @@ func ParseNamespacedName(input string) (apimachinerytypes.NamespacedName, error)
 	return apimachinerytypes.NamespacedName{Namespace: parts[0], Name: parts[1]}, nil
 }
 
-func handleRateLimitError(smError *sm.ServiceManagerError, log logr.Logger) (ctrl.Result, error) {
-	retryAfterStr := smError.ResponseHeaders.Get("Retry-After")
-	if len(retryAfterStr) > 0 {
-		log.Info(fmt.Sprintf("SM returned 429 with Retry-After: %s, requeueing after it...", retryAfterStr))
-		retryAfter, err := time.Parse(time.DateTime, retryAfterStr[:len(time.DateTime)]) // format 2024-11-11 14:59:33 +0000 UTC
-		if err != nil {
-			log.Error(err, "failed to parse Retry-After header, using default requeue time")
-		} else {
-			timeToRequeue := time.Until(retryAfter)
-			log.Info(fmt.Sprintf("requeueing after %d minutes, %d seconds", int(timeToRequeue.Minutes()), int(timeToRequeue.Seconds())%60))
-			return ctrl.Result{RequeueAfter: timeToRequeue}, nil
-		}
-	}
-
-	return ctrl.Result{Requeue: true}, nil
-}
-
 func HandleDeleteError(ctx context.Context, k8sClient client.Client, err error, object common.SAPBTPResource) (ctrl.Result, error) {
 	log := GetLogger(ctx)
 	log.Info(fmt.Sprintf("handling delete error: %v", err))
 	var smError *sm.ServiceManagerError
 	if errors.As(err, &smError) && smError.StatusCode == http.StatusTooManyRequests {
-		return handleRateLimitError(smError, log)
+		return handleRateLimitError(ctx, k8sClient, object, smClientTypes.DELETE, smError)
 	}
 
-	if _, updateErr := SetLastOperationConditionAsFailed(ctx, k8sClient, object, smClientTypes.DELETE, err); updateErr != nil {
-		log.Error(updateErr, "failed to update resource status")
-		return ctrl.Result{}, updateErr
-	}
-	return ctrl.Result{}, err
+	return HandleOperationFailure(ctx, k8sClient, object, smClientTypes.DELETE, err)
 }
 
 func IsTransientError(smError *sm.ServiceManagerError, log logr.Logger) bool {
@@ -219,34 +198,6 @@ func RemoveAnnotations(ctx context.Context, k8sClient client.Client, object comm
 		}
 	}
 	return nil
-}
-
-func isConcurrentOperationError(smError *sm.ServiceManagerError) bool {
-	// service manager returns 422 for resources that have another operation in progress
-	// in this case 422 status code is transient
-	return smError.StatusCode == http.StatusUnprocessableEntity && smError.ErrorType == "ConcurrentOperationInProgress"
-}
-
-func isTransientStatusCode(StatusCode int) bool {
-	return StatusCode == http.StatusTooManyRequests ||
-		StatusCode == http.StatusServiceUnavailable ||
-		StatusCode == http.StatusGatewayTimeout ||
-		StatusCode == http.StatusBadGateway ||
-		StatusCode == http.StatusNotFound
-}
-
-func serialize(value interface{}) ([]byte, format, error) {
-	if byteArrayVal, ok := value.([]byte); ok {
-		return byteArrayVal, JSON, nil
-	}
-	if strVal, ok := value.(string); ok {
-		return []byte(strVal), TEXT, nil
-	}
-	data, err := json.Marshal(value)
-	if err != nil {
-		return nil, UNKNOWN, err
-	}
-	return data, JSON, nil
 }
 
 func AddWatchForSecretIfNeeded(ctx context.Context, k8sClient client.Client, secret *corev1.Secret, instanceUID string) error {
@@ -288,4 +239,84 @@ func IsSecretWatched(secretAnnotations map[string]string) bool {
 
 func GetLabelKeyForInstanceSecret(secretName string) string {
 	return common.InstanceSecretRefLabel + secretName
+}
+
+func HandleInstanceSharingError(ctx context.Context, k8sClient client.Client, object common.SAPBTPResource, status metav1.ConditionStatus, reason string, err error) (ctrl.Result, error) {
+	log := GetLogger(ctx)
+
+	errMsg := err.Error()
+	if smError, ok := err.(*sm.ServiceManagerError); ok {
+		log.Info(fmt.Sprintf("SM returned error with status code %d", smError.StatusCode))
+		errMsg = smError.Error()
+
+		if smError.StatusCode == http.StatusTooManyRequests {
+			return handleRateLimitError(ctx, k8sClient, object, smClientTypes.INSTANCE_SHARING, smError)
+		} else if reason == common.ShareFailed &&
+			(smError.StatusCode == http.StatusBadRequest || smError.StatusCode == http.StatusInternalServerError) {
+			/* non-transient error may occur only when sharing
+			   SM return 400 when plan is not sharable
+			   SM returns 500 when TOGGLES_ENABLE_INSTANCE_SHARE_FROM_OPERATOR feature toggle is off */
+			reason = common.ShareNotSupported
+		}
+	}
+
+	SetSharedCondition(object, status, reason, errMsg)
+	if updateErr := UpdateStatus(ctx, k8sClient, object); updateErr != nil {
+		log.Error(updateErr, "failed to update instance status")
+		return ctrl.Result{}, updateErr
+	}
+
+	return ctrl.Result{}, err
+}
+
+func handleRateLimitError(ctx context.Context, sClient client.Client, resource common.SAPBTPResource, operationType smClientTypes.OperationCategory, smError *sm.ServiceManagerError) (ctrl.Result, error) {
+	log := GetLogger(ctx)
+	SetInProgressConditions(ctx, operationType, "", resource, false)
+	if updateErr := UpdateStatus(ctx, sClient, resource); updateErr != nil {
+		log.Info("failed to update status after rate limit error")
+		return ctrl.Result{}, updateErr
+	}
+
+	retryAfterStr := smError.ResponseHeaders.Get("Retry-After")
+	if len(retryAfterStr) > 0 {
+		log.Info(fmt.Sprintf("SM returned 429 with Retry-After: %s, requeueing after it...", retryAfterStr))
+		retryAfter, err := time.Parse(time.DateTime, retryAfterStr[:len(time.DateTime)]) // format 2024-11-11 14:59:33 +0000 UTC
+		if err != nil {
+			log.Error(err, "failed to parse Retry-After header, using default requeue time")
+		} else {
+			timeToRequeue := time.Until(retryAfter)
+			log.Info(fmt.Sprintf("requeueing after %d minutes, %d seconds", int(timeToRequeue.Minutes()), int(timeToRequeue.Seconds())%60))
+			return ctrl.Result{RequeueAfter: timeToRequeue}, nil
+		}
+	}
+
+	return ctrl.Result{Requeue: true}, nil
+}
+
+func isConcurrentOperationError(smError *sm.ServiceManagerError) bool {
+	// service manager returns 422 for resources that have another operation in progress
+	// in this case 422 status code is transient
+	return smError.StatusCode == http.StatusUnprocessableEntity && smError.ErrorType == "ConcurrentOperationInProgress"
+}
+
+func isTransientStatusCode(StatusCode int) bool {
+	return StatusCode == http.StatusTooManyRequests ||
+		StatusCode == http.StatusServiceUnavailable ||
+		StatusCode == http.StatusGatewayTimeout ||
+		StatusCode == http.StatusBadGateway ||
+		StatusCode == http.StatusNotFound
+}
+
+func serialize(value interface{}) ([]byte, format, error) {
+	if byteArrayVal, ok := value.([]byte); ok {
+		return byteArrayVal, JSON, nil
+	}
+	if strVal, ok := value.(string); ok {
+		return []byte(strVal), TEXT, nil
+	}
+	data, err := json.Marshal(value)
+	if err != nil {
+		return nil, UNKNOWN, err
+	}
+	return data, JSON, nil
 }

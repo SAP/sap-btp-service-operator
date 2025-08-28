@@ -61,6 +61,8 @@ func SetInProgressConditions(ctx context.Context, operationType smClientTypes.Op
 			message = fmt.Sprintf("%s is being updated", object.GetControllerName())
 		} else if operationType == smClientTypes.DELETE {
 			message = fmt.Sprintf("%s is being deleted", object.GetControllerName())
+		} else {
+			message = "Operation in progress"
 		}
 	}
 
@@ -185,7 +187,7 @@ func SetFailureConditions(operationType smClientTypes.OperationCategory, errorMe
 	object.SetConditions(conditions)
 }
 
-func SetLastOperationConditionAsFailed(ctx context.Context, k8sClient client.Client, object common.SAPBTPResource, operationType smClientTypes.OperationCategory, err error) (ctrl.Result, error) {
+func HandleOperationFailure(ctx context.Context, k8sClient client.Client, object common.SAPBTPResource, operationType smClientTypes.OperationCategory, err error) (ctrl.Result, error) {
 	log := GetLogger(ctx)
 	log.Info(fmt.Sprintf("operation %s of %s encountered a transient error %s, retrying operation :)", operationType, object.GetControllerName(), err.Error()))
 
@@ -222,6 +224,31 @@ func ShouldRetryOperation(object common.SAPBTPResource) bool {
 	conditions := object.GetConditions()
 	return meta.IsStatusConditionPresentAndEqual(conditions, common.ConditionSucceeded, metav1.ConditionFalse) &&
 		!meta.IsStatusConditionPresentAndEqual(conditions, common.ConditionFailed, metav1.ConditionTrue) //failed condition is used in async operations - we don't want to retry async operations
+}
+
+func SetSharedCondition(object common.SAPBTPResource, status metav1.ConditionStatus, reason, msg string) {
+	conditions := object.GetConditions()
+	// align all conditions to latest generation
+	for _, cond := range object.GetConditions() {
+		if cond.Type != common.ConditionShared {
+			cond.ObservedGeneration = object.GetGeneration()
+			meta.SetStatusCondition(&conditions, cond)
+		}
+	}
+
+	shareCondition := metav1.Condition{
+		Type:    common.ConditionShared,
+		Status:  status,
+		Reason:  reason,
+		Message: msg,
+		// shared condition does not contain observed generation
+	}
+
+	// remove shared condition and add it as new (in case it has observed generation)
+	meta.RemoveStatusCondition(&conditions, common.ConditionShared)
+	meta.SetStatusCondition(&conditions, shareCondition)
+
+	object.SetConditions(conditions)
 }
 
 func IsFailed(resource common.SAPBTPResource) bool {

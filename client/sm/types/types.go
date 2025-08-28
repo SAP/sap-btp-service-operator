@@ -14,9 +14,11 @@ type LabelChange struct {
 type OperationCategory string
 
 const (
-	CREATE OperationCategory = "create"
-	UPDATE OperationCategory = "update"
-	DELETE OperationCategory = "delete"
+	CREATE           OperationCategory = "create"
+	UPDATE           OperationCategory = "update"
+	DELETE           OperationCategory = "delete"
+	INSTANCE_SHARING OperationCategory = "instance sharing"
+	CRED_ROTATION    OperationCategory = "credentials rotation"
 )
 
 type OperationState string
