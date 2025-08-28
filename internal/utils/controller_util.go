@@ -140,7 +140,7 @@ func HandleCredRotationError(ctx context.Context, k8sClient client.Client, bindi
 	if ok := errors.As(err, &smError); ok {
 		if smError.StatusCode == http.StatusTooManyRequests {
 			log.Info(fmt.Sprintf("SM returned 429 (%s), requeueing...", smError.Error()))
-			return handleRateLimitError(ctx, k8sClient, binding, smClientTypes.CRED_ROTATION, smError)
+			return handleRateLimitError(ctx, k8sClient, binding, common.Unknown, smError)
 		}
 		log.Info(fmt.Sprintf("SM returned error: %s", smError.Error()))
 	}
@@ -250,7 +250,7 @@ func HandleInstanceSharingError(ctx context.Context, k8sClient client.Client, ob
 		errMsg = smError.Error()
 
 		if smError.StatusCode == http.StatusTooManyRequests {
-			return handleRateLimitError(ctx, k8sClient, object, smClientTypes.INSTANCE_SHARING, smError)
+			return handleRateLimitError(ctx, k8sClient, object, common.Unknown, smError)
 		} else if reason == common.ShareFailed &&
 			(smError.StatusCode == http.StatusBadRequest || smError.StatusCode == http.StatusInternalServerError) {
 			/* non-transient error may occur only when sharing
