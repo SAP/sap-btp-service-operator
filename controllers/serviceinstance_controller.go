@@ -95,6 +95,11 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 	}
 
+	if len(serviceInstance.Status.OperationURL) > 0 {
+		// ongoing operation - poll status from SM
+		return r.poll(ctx, serviceInstance)
+	}
+
 	if isFinalState(ctx, serviceInstance) {
 		if len(serviceInstance.Status.HashedSpec) == 0 {
 			updateHashedSpecValue(serviceInstance)
@@ -102,11 +107,6 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 
 		return ctrl.Result{}, nil
-	}
-
-	if len(serviceInstance.Status.OperationURL) > 0 {
-		// ongoing operation - poll status from SM
-		return r.poll(ctx, serviceInstance)
 	}
 
 	if controllerutil.AddFinalizer(serviceInstance, common.FinalizerName) {
@@ -119,7 +119,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	smClient, err := r.GetSMClient(ctx, serviceInstance)
 	if err != nil {
 		log.Error(err, "failed to get sm client")
-		return utils.SetLastOperationConditionAsFailed(ctx, r.Client, common.Unknown, err, serviceInstance)
+		return utils.SetLastOperationConditionAsFailed(ctx, r.Client, serviceInstance, common.Unknown, err)
 	}
 
 	if serviceInstance.Status.InstanceID == "" {
@@ -127,7 +127,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		smInstance, err := r.getInstanceForRecovery(ctx, smClient, serviceInstance)
 		if err != nil {
 			log.Error(err, "failed to check instance recovery")
-			return utils.SetLastOperationConditionAsFailed(ctx, r.Client, common.Unknown, err, serviceInstance)
+			return utils.SetLastOperationConditionAsFailed(ctx, r.Client, serviceInstance, common.Unknown, err)
 		}
 		if smInstance != nil {
 			return r.recover(ctx, smClient, serviceInstance, smInstance)
@@ -166,7 +166,7 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	if err != nil {
 		// if parameters are invalid there is nothing we can do, the user should fix it according to the error message in the condition
 		log.Error(err, "failed to parse instance parameters")
-		return utils.SetLastOperationConditionAsFailed(ctx, r.Client, smClientTypes.CREATE, err, serviceInstance)
+		return utils.SetLastOperationConditionAsFailed(ctx, r.Client, serviceInstance, smClientTypes.CREATE, err)
 	}
 
 	provision, provisionErr := smClient.Provision(&smClientTypes.ServiceInstance{
@@ -219,7 +219,7 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 	instanceParameters, err := r.buildSMRequestParameters(ctx, serviceInstance)
 	if err != nil {
 		log.Error(err, "failed to parse instance parameters")
-		return utils.SetLastOperationConditionAsFailed(ctx, r.Client, smClientTypes.UPDATE, err, serviceInstance)
+		return utils.SetLastOperationConditionAsFailed(ctx, r.Client, serviceInstance, smClientTypes.UPDATE, err)
 	}
 
 	updateHashedSpecValue(serviceInstance)
@@ -269,7 +269,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, serviceI
 		smClient, err := r.GetSMClient(ctx, serviceInstance)
 		if err != nil {
 			log.Error(err, "failed to get sm client")
-			return utils.SetLastOperationConditionAsFailed(ctx, r.Client, common.Unknown, err, serviceInstance)
+			return utils.SetLastOperationConditionAsFailed(ctx, r.Client, serviceInstance, common.Unknown, err)
 		}
 		if len(serviceInstance.Status.InstanceID) == 0 {
 			log.Info("No instance id found validating instance does not exists in SM before removing finalizer")
@@ -351,7 +351,7 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, serviceInstance *v
 	smClient, err := r.GetSMClient(ctx, serviceInstance)
 	if err != nil {
 		log.Error(err, "failed to get sm client")
-		return utils.SetLastOperationConditionAsFailed(ctx, r.Client, common.Unknown, err, serviceInstance)
+		return utils.SetLastOperationConditionAsFailed(ctx, r.Client, serviceInstance, common.Unknown, err)
 	}
 
 	status, statusErr := smClient.Status(serviceInstance.Status.OperationURL, nil)
@@ -597,19 +597,13 @@ func isFinalState(ctx context.Context, serviceInstance *v1.ServiceInstance) bool
 		return false
 	}
 
-	if len(serviceInstance.Status.OperationURL) > 0 {
-		log.Info(fmt.Sprintf("instance is not in final state, async operation is in progress (%s)", serviceInstance.Status.OperationURL))
-		return false
-	}
-
 	observedGen := common.GetObservedGeneration(serviceInstance)
 	if serviceInstance.Generation != observedGen {
 		log.Info(fmt.Sprintf("instance is not in final state, generation: %d, observedGen: %d", serviceInstance.Generation, observedGen))
 		return false
 	}
 
-	// no more non transient errors - if last operation failed then instance is not in final state
-	if utils.IsLastOperationFailed(serviceInstance) {
+	if utils.ShouldRetryOperation(serviceInstance) {
 		log.Info("instance is not in final state, last operation failed, retrying")
 		return false
 	}

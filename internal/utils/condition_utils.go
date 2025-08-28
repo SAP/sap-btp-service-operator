@@ -185,7 +185,7 @@ func SetFailureConditions(operationType smClientTypes.OperationCategory, errorMe
 	object.SetConditions(conditions)
 }
 
-func SetLastOperationConditionAsFailed(ctx context.Context, k8sClient client.Client, operationType smClientTypes.OperationCategory, err error, object common.SAPBTPResource) (ctrl.Result, error) {
+func SetLastOperationConditionAsFailed(ctx context.Context, k8sClient client.Client, object common.SAPBTPResource, operationType smClientTypes.OperationCategory, err error) (ctrl.Result, error) {
 	log := GetLogger(ctx)
 	log.Info(fmt.Sprintf("operation %s of %s encountered a transient error %s, retrying operation :)", operationType, object.GetControllerName(), err.Error()))
 
@@ -218,15 +218,10 @@ func SetBlockedCondition(ctx context.Context, message string, object common.SAPB
 	lastOpCondition.Reason = common.Blocked
 }
 
-func IsInProgress(object common.SAPBTPResource) bool {
+func ShouldRetryOperation(object common.SAPBTPResource) bool {
 	conditions := object.GetConditions()
 	return meta.IsStatusConditionPresentAndEqual(conditions, common.ConditionSucceeded, metav1.ConditionFalse) &&
-		!meta.IsStatusConditionPresentAndEqual(conditions, common.ConditionFailed, metav1.ConditionTrue)
-}
-
-func IsLastOperationFailed(object common.SAPBTPResource) bool {
-	conditions := object.GetConditions()
-	return meta.IsStatusConditionPresentAndEqual(conditions, common.ConditionSucceeded, metav1.ConditionFalse)
+		!meta.IsStatusConditionPresentAndEqual(conditions, common.ConditionFailed, metav1.ConditionTrue) //failed condition is used in async operations - we don't want to retry async operations
 }
 
 func IsFailed(resource common.SAPBTPResource) bool {

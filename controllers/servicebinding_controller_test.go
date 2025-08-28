@@ -1139,7 +1139,7 @@ stringData:
 						case smClientTypes.FAILED:
 							Expect(utils.IsFailed(createdBinding))
 						case smClientTypes.INPROGRESS:
-							Expect(utils.IsInProgress(createdBinding))
+							Expect(utils.ShouldRetryOperation(createdBinding))
 						case smClientTypes.SUCCEEDED:
 							Expect(isResourceReady(createdBinding))
 						}

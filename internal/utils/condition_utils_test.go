@@ -174,7 +174,7 @@ var _ = Describe("Condition Utils", func() {
 		})
 	})
 
-	Context("IsInProgress", func() {
+	Context("ShouldRetryOperation", func() {
 		It("should return true for in progress condition", func() {
 			resource := &v1.ServiceBinding{
 				Status: v1.ServiceBindingStatus{
@@ -191,7 +191,7 @@ var _ = Describe("Condition Utils", func() {
 				},
 			}
 
-			Expect(IsInProgress(resource)).To(BeTrue())
+			Expect(ShouldRetryOperation(resource)).To(BeTrue())
 		})
 
 		It("should return false for failed condition", func() {
@@ -210,7 +210,7 @@ var _ = Describe("Condition Utils", func() {
 				},
 			}
 
-			Expect(IsInProgress(resource)).To(BeFalse())
+			Expect(ShouldRetryOperation(resource)).To(BeFalse())
 		})
 
 		It("should return false for succeeded condition", func() {
@@ -229,7 +229,7 @@ var _ = Describe("Condition Utils", func() {
 				},
 			}
 
-			Expect(IsInProgress(resource)).To(BeFalse())
+			Expect(ShouldRetryOperation(resource)).To(BeFalse())
 		})
 
 		It("should return false for empty conditions", func() {
@@ -239,7 +239,7 @@ var _ = Describe("Condition Utils", func() {
 				},
 			}
 
-			Expect(IsInProgress(resource)).To(BeFalse())
+			Expect(ShouldRetryOperation(resource)).To(BeFalse())
 		})
 	})
 
