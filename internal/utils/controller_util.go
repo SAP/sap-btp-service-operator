@@ -170,12 +170,6 @@ func HandleDeleteError(ctx context.Context, k8sClient client.Client, err error, 
 	return HandleOperationFailure(ctx, k8sClient, object, smClientTypes.DELETE, err)
 }
 
-func IsTransientError(smError *sm.ServiceManagerError, log logr.Logger) bool {
-	statusCode := smError.GetStatusCode()
-	log.Info(fmt.Sprintf("SM returned error with status code %d", statusCode))
-	return isTransientStatusCode(statusCode) || isConcurrentOperationError(smError)
-}
-
 func IsMarkedForDeletion(object metav1.ObjectMeta) bool {
 	return !object.DeletionTimestamp.IsZero()
 }
@@ -291,20 +285,6 @@ func handleRateLimitError(ctx context.Context, sClient client.Client, resource c
 	}
 
 	return ctrl.Result{Requeue: true}, nil
-}
-
-func isConcurrentOperationError(smError *sm.ServiceManagerError) bool {
-	// service manager returns 422 for resources that have another operation in progress
-	// in this case 422 status code is transient
-	return smError.StatusCode == http.StatusUnprocessableEntity && smError.ErrorType == "ConcurrentOperationInProgress"
-}
-
-func isTransientStatusCode(StatusCode int) bool {
-	return StatusCode == http.StatusTooManyRequests ||
-		StatusCode == http.StatusServiceUnavailable ||
-		StatusCode == http.StatusGatewayTimeout ||
-		StatusCode == http.StatusBadGateway ||
-		StatusCode == http.StatusNotFound
 }
 
 func serialize(value interface{}) ([]byte, format, error) {

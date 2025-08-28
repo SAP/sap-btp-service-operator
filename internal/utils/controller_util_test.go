@@ -2,13 +2,10 @@ package utils
 
 import (
 	"encoding/json"
-	"net/http"
 
 	"github.com/SAP/sap-btp-service-operator/api/common"
 
 	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
-	"github.com/SAP/sap-btp-service-operator/client/sm"
-	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	authv1 "k8s.io/api/authentication/v1"
@@ -66,50 +63,6 @@ var _ = Describe("Controller Util", func() {
 		It("empty slice", func() {
 			slice := []string{}
 			Expect(SliceContains(slice, "element1")).To(BeFalse())
-		})
-	})
-
-	Context("IsTransientError", func() {
-		var instance *sm.ServiceManagerError
-		var log logr.Logger
-		BeforeEach(func() {
-			log = GetLogger(ctx)
-		})
-		When("400 status code", func() {
-			BeforeEach(func() {
-				instance = &sm.ServiceManagerError{
-					StatusCode: 400,
-				}
-			})
-
-			It("should not be transient error", func() {
-				Expect(IsTransientError(instance, log)).To(BeFalse())
-			})
-		})
-
-		When("internal server error status code", func() {
-			BeforeEach(func() {
-				instance = &sm.ServiceManagerError{
-					StatusCode: 500,
-				}
-			})
-
-			It("should be non transient error", func() {
-				Expect(IsTransientError(instance, log)).To(BeFalse())
-			})
-		})
-
-		When("concurrent operation error", func() {
-			BeforeEach(func() {
-				instance = &sm.ServiceManagerError{
-					StatusCode: http.StatusUnprocessableEntity,
-					ErrorType:  "ConcurrentOperationInProgress",
-				}
-			})
-
-			It("should be transient error", func() {
-				Expect(IsTransientError(instance, log)).To(BeTrue())
-			})
 		})
 	})
 
