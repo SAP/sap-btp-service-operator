@@ -200,15 +200,17 @@ func SetLastOperationConditionAsFailed(ctx context.Context, k8sClient client.Cli
 	}
 	meta.SetStatusCondition(&conditions, lastOpCondition)
 	meta.SetStatusCondition(&conditions, getReadyCondition(object))
+	object.SetConditions(conditions)
 
 	if updateErr := UpdateStatus(ctx, k8sClient, object); updateErr != nil {
 		return ctrl.Result{}, updateErr
 	}
 
+	log.Info(fmt.Sprintf("Successfully updated last operation condition as failed with message {%s}, requeuing", lastOpCondition.Message))
+
 	return ctrl.Result{}, err
 }
 
-// TODO check if needed
 // blocked condition marks to the user that action from his side is required, this is considered as in progress operation
 func SetBlockedCondition(ctx context.Context, message string, object common.SAPBTPResource) {
 	SetInProgressConditions(ctx, common.Unknown, message, object, false)

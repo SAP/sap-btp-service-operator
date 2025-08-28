@@ -884,7 +884,7 @@ stringData:
 			err := k8sClient.Update(ctx, createdBinding)
 			Expect(err).ToNot(HaveOccurred())
 			By("Verify binding update failed")
-			waitForResourceCondition(ctx, createdBinding, common.ConditionSucceeded, metav1.ConditionFalse, "UpdateInProgress", "failed to create secret")
+			waitForResourceCondition(ctx, createdBinding, common.ConditionSucceeded, metav1.ConditionFalse, "UpdateFailed", "failed to create secret from template")
 
 			secretTemplate = dedent.Dedent(
 				`apiVersion: v1
