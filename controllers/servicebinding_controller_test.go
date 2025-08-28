@@ -394,7 +394,7 @@ var _ = Describe("ServiceBinding controller", func() {
 					It("should fail", func() {
 						binding, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "binding-external-name", "", false)
 						Expect(err).ToNot(HaveOccurred())
-						waitForResourceCondition(ctx, binding, common.ConditionSucceeded, metav1.ConditionFalse, common.CreateInProgress, errorMessage)
+						waitForResourceCondition(ctx, binding, common.ConditionSucceeded, metav1.ConditionFalse, common.CreateFailed, errorMessage)
 					})
 				})
 
@@ -434,7 +434,7 @@ var _ = Describe("ServiceBinding controller", func() {
 					It("should detect the error as non-transient and fail", func() {
 						binding, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "binding-external-name", "", false)
 						Expect(err).ToNot(HaveOccurred())
-						waitForResourceCondition(ctx, binding, common.ConditionSucceeded, metav1.ConditionFalse, common.CreateInProgress, errorMessage)
+						waitForResourceCondition(ctx, binding, common.ConditionSucceeded, metav1.ConditionFalse, common.CreateFailed, errorMessage)
 					})
 				})
 
@@ -664,7 +664,7 @@ stringData:
 						return false
 					}
 					cond := meta.FindStatusCondition(binding.GetConditions(), common.ConditionSucceeded)
-					return cond != nil && cond.Reason == "CreateInProgress" && strings.Contains(cond.Message, "map has no entry for key \"non_existing_key\"")
+					return cond != nil && cond.Reason == common.CreateFailed && strings.Contains(cond.Message, "map has no entry for key \"non_existing_key\"")
 				}, timeout*2, interval).Should(BeTrue())
 			})
 			It("should fail to create the secret if secretTemplate is an unexpected type", func() {
@@ -979,8 +979,8 @@ stringData:
 						if err != nil {
 							return false
 						}
-						failedCond := meta.FindStatusCondition(createdBinding.GetConditions(), common.ConditionFailed)
-						return failedCond != nil && strings.Contains(failedCond.Message, errorMessage)
+						cond := meta.FindStatusCondition(createdBinding.GetConditions(), common.ConditionSucceeded)
+						return cond != nil && strings.Contains(cond.Message, errorMessage)
 					}, timeout, interval).Should(BeTrue())
 					Expect(len(createdBinding.Finalizers)).To(Equal(1))
 					getSecret(ctx, createdBinding.Spec.SecretName, createdBinding.Namespace, true)
