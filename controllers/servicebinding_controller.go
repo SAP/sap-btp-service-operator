@@ -328,7 +328,7 @@ func (r *ServiceBindingReconciler) delete(ctx context.Context, serviceBinding *v
 		log.Info(fmt.Sprintf("Deleting binding with id %v from SM", serviceBinding.Status.BindingID))
 		operationURL, unbindErr := smClient.Unbind(serviceBinding.Status.BindingID, nil, utils.BuildUserInfo(ctx, serviceBinding.Spec.UserInfo))
 		if unbindErr != nil {
-			return utils.HandleDeleteError(ctx, r.Client, unbindErr, serviceBinding)
+			return utils.HandleServiceManagerError(ctx, r.Client, serviceBinding, smClientTypes.DELETE, unbindErr)
 		}
 
 		if operationURL != "" {

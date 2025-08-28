@@ -159,17 +159,6 @@ func ParseNamespacedName(input string) (apimachinerytypes.NamespacedName, error)
 	return apimachinerytypes.NamespacedName{Namespace: parts[0], Name: parts[1]}, nil
 }
 
-func HandleDeleteError(ctx context.Context, k8sClient client.Client, err error, object common.SAPBTPResource) (ctrl.Result, error) {
-	log := GetLogger(ctx)
-	log.Info(fmt.Sprintf("handling delete error: %v", err))
-	var smError *sm.ServiceManagerError
-	if errors.As(err, &smError) && smError.StatusCode == http.StatusTooManyRequests {
-		return handleRateLimitError(ctx, k8sClient, object, smClientTypes.DELETE, smError)
-	}
-
-	return HandleOperationFailure(ctx, k8sClient, object, smClientTypes.DELETE, err)
-}
-
 func IsMarkedForDeletion(object metav1.ObjectMeta) bool {
 	return !object.DeletionTimestamp.IsZero()
 }
