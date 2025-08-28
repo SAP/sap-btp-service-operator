@@ -126,7 +126,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		smInstance, err := r.getInstanceForRecovery(ctx, smClient, serviceInstance)
 		if err != nil {
 			log.Error(err, "failed to check instance recovery")
-			return utils.HandleOperationFailure(ctx, r.Client, serviceInstance, common.Unknown, err)
+			return utils.HandleServiceManagerError(ctx, r.Client, serviceInstance, smClientTypes.CREATE, err)
 		}
 		if smInstance != nil {
 			return r.recover(ctx, smClient, serviceInstance, smInstance)
@@ -274,7 +274,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, serviceI
 			log.Info("No instance id found validating instance does not exists in SM before removing finalizer")
 			smInstance, err := r.getInstanceForRecovery(ctx, smClient, serviceInstance)
 			if err != nil {
-				return ctrl.Result{}, err
+				return utils.HandleServiceManagerError(ctx, r.Client, serviceInstance, smClientTypes.DELETE, err)
 			}
 			if smInstance != nil {
 				log.Info("instance exists in SM continue with deletion")

@@ -202,7 +202,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		smBinding, err := r.getBindingForRecovery(ctx, smClient, serviceBinding)
 		if err != nil {
 			log.Error(err, "failed to check binding recovery")
-			return utils.HandleOperationFailure(ctx, r.Client, serviceBinding, smClientTypes.CREATE, err)
+			return utils.HandleServiceManagerError(ctx, r.Client, serviceBinding, smClientTypes.CREATE, err)
 		}
 		if smBinding != nil {
 			return r.recover(ctx, serviceBinding, smBinding)
@@ -299,7 +299,7 @@ func (r *ServiceBindingReconciler) delete(ctx context.Context, serviceBinding *v
 			log.Info("No binding id found validating binding does not exists in SM before removing finalizer")
 			smBinding, err := r.getBindingForRecovery(ctx, smClient, serviceBinding)
 			if err != nil {
-				return ctrl.Result{}, err
+				return utils.HandleServiceManagerError(ctx, r.Client, serviceBinding, smClientTypes.DELETE, err)
 			}
 			if smBinding != nil {
 				log.Info("binding exists in SM continue with deletion")
