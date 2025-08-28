@@ -968,7 +968,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						})
 						serviceInstance.Spec.Shared = pointer.Bool(true)
 						updateInstance(ctx, serviceInstance)
-						waitForResourceCondition(ctx, serviceInstance, common.ConditionShared, metav1.ConditionFalse, common.InProgress, "")
+						waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.InProgress, "Operation in progress")
 						fakeClient.ShareInstanceReturns(nil)
 						waitForInstanceToBeShared(ctx, serviceInstance)
 					})
