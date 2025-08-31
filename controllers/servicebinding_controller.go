@@ -905,7 +905,7 @@ func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, bindin
 			now := metav1.NewTime(time.Now())
 			binding.Status.LastCredentialsRotationTime = &now
 			return false, r.stopRotation(ctx, binding)
-		} else if utils.IsFailed(binding) { //TODO what should happen? no more non transient
+		} else if utils.IsFailed(binding) {
 			log.Info("Credentials rotation - binding failed stopping rotation")
 			return false, r.stopRotation(ctx, binding)
 		}
