@@ -292,7 +292,7 @@ func (r *ServiceBindingReconciler) delete(ctx context.Context, serviceBinding *v
 	if controllerutil.ContainsFinalizer(serviceBinding, common.FinalizerName) {
 		smClient, err := r.GetSMClient(ctx, serviceInstance)
 		if err != nil {
-			return utils.HandleOperationFailure(ctx, r.Client, serviceBinding, common.Unknown, err)
+			return utils.HandleOperationFailure(ctx, r.Client, serviceBinding, smClientTypes.DELETE, err)
 		}
 
 		if len(serviceBinding.Status.BindingID) == 0 {

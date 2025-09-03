@@ -268,7 +268,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, serviceI
 		smClient, err := r.GetSMClient(ctx, serviceInstance)
 		if err != nil {
 			log.Error(err, "failed to get sm client")
-			return utils.HandleOperationFailure(ctx, r.Client, serviceInstance, common.Unknown, err)
+			return utils.HandleOperationFailure(ctx, r.Client, serviceInstance, smClientTypes.DELETE, err)
 		}
 		if len(serviceInstance.Status.InstanceID) == 0 {
 			log.Info("No instance id found validating instance does not exists in SM before removing finalizer")

@@ -2,7 +2,7 @@ apiVersion: services.cloud.sap.com/v1
 kind: ServiceBinding
 metadata:
   name: sample-binding-rotate
-  labels:
+  annotations:
     "services.cloud.sap.com/forceRotate": "true"
 spec:
   serviceInstanceName: sample-instance-1
