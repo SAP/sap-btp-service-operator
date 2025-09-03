@@ -61,6 +61,8 @@ func SetInProgressConditions(ctx context.Context, operationType smClientTypes.Op
 			message = fmt.Sprintf("%s is being updated", object.GetControllerName())
 		} else if operationType == smClientTypes.DELETE {
 			message = fmt.Sprintf("%s is being deleted", object.GetControllerName())
+		} else {
+			message = "Operation in progress"
 		}
 	}
 
@@ -185,21 +187,28 @@ func SetFailureConditions(operationType smClientTypes.OperationCategory, errorMe
 	object.SetConditions(conditions)
 }
 
-func MarkAsNonTransientError(ctx context.Context, k8sClient client.Client, operationType smClientTypes.OperationCategory, err error, object common.SAPBTPResource) (ctrl.Result, error) {
-	log := GetLogger(ctx)
-	errMsg := err.Error()
-	log.Info(fmt.Sprintf("operation %s of %s encountered a non transient error %s, setting failure conditions", operationType, object.GetControllerName(), errMsg))
-	SetFailureConditions(operationType, errMsg, object, false)
-	return ctrl.Result{}, UpdateStatus(ctx, k8sClient, object)
-}
-
-func MarkAsTransientError(ctx context.Context, k8sClient client.Client, operationType smClientTypes.OperationCategory, err error, object common.SAPBTPResource) (ctrl.Result, error) {
+func HandleOperationFailure(ctx context.Context, k8sClient client.Client, object common.SAPBTPResource, operationType smClientTypes.OperationCategory, err error) (ctrl.Result, error) {
 	log := GetLogger(ctx)
 	log.Info(fmt.Sprintf("operation %s of %s encountered a transient error %s, retrying operation :)", operationType, object.GetControllerName(), err.Error()))
-	SetInProgressConditions(ctx, operationType, err.Error(), object, false)
+
+	conditions := object.GetConditions()
+	meta.RemoveStatusCondition(&conditions, common.ConditionFailed)
+	lastOpCondition := metav1.Condition{
+		Type:               common.ConditionSucceeded,
+		Status:             metav1.ConditionFalse,
+		Reason:             GetConditionReason(operationType, smClientTypes.FAILED),
+		Message:            err.Error(),
+		ObservedGeneration: object.GetGeneration(),
+	}
+	meta.SetStatusCondition(&conditions, lastOpCondition)
+	meta.SetStatusCondition(&conditions, getReadyCondition(object))
+	object.SetConditions(conditions)
+
 	if updateErr := UpdateStatus(ctx, k8sClient, object); updateErr != nil {
 		return ctrl.Result{}, updateErr
 	}
+
+	log.Info(fmt.Sprintf("Successfully updated last operation condition as failed with message {%s}, requeuing", lastOpCondition.Message))
 
 	return ctrl.Result{}, err
 }
@@ -211,10 +220,35 @@ func SetBlockedCondition(ctx context.Context, message string, object common.SAPB
 	lastOpCondition.Reason = common.Blocked
 }
 
-func IsInProgress(object common.SAPBTPResource) bool {
+func ShouldRetryOperation(object common.SAPBTPResource) bool {
 	conditions := object.GetConditions()
 	return meta.IsStatusConditionPresentAndEqual(conditions, common.ConditionSucceeded, metav1.ConditionFalse) &&
-		!meta.IsStatusConditionPresentAndEqual(conditions, common.ConditionFailed, metav1.ConditionTrue)
+		!meta.IsStatusConditionPresentAndEqual(conditions, common.ConditionFailed, metav1.ConditionTrue) //failed condition is used in async operations - we don't want to retry async operations
+}
+
+func SetSharedCondition(object common.SAPBTPResource, status metav1.ConditionStatus, reason, msg string) {
+	conditions := object.GetConditions()
+	// align all conditions to latest generation
+	for _, cond := range object.GetConditions() {
+		if cond.Type != common.ConditionShared {
+			cond.ObservedGeneration = object.GetGeneration()
+			meta.SetStatusCondition(&conditions, cond)
+		}
+	}
+
+	shareCondition := metav1.Condition{
+		Type:    common.ConditionShared,
+		Status:  status,
+		Reason:  reason,
+		Message: msg,
+		// shared condition does not contain observed generation
+	}
+
+	// remove shared condition and add it as new (in case it has observed generation)
+	meta.RemoveStatusCondition(&conditions, common.ConditionShared)
+	meta.SetStatusCondition(&conditions, shareCondition)
+
+	object.SetConditions(conditions)
 }
 
 func IsFailed(resource common.SAPBTPResource) bool {
