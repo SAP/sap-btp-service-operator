@@ -261,7 +261,7 @@ var _ = Describe("ServiceInstance controller", func() {
 							Description: errMessage,
 						})
 						serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, false)
-						waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.CreateInProgress, errMessage)
+						waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.CreateFailed, errMessage)
 					})
 				})
 
@@ -288,7 +288,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 					It("should be transient error and eventually succeed", func() {
 						serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, false)
-						waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.CreateInProgress, tooManyRequestsError)
+						waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.CreateFailed, tooManyRequestsError)
 						fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: fakeInstanceID}, nil)
 						waitForResourceToBeReady(ctx, serviceInstance)
 					})
@@ -535,7 +535,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						newExternalName := "my-new-external-name" + uuid.New().String()
 						serviceInstance.Spec.ExternalName = newExternalName
 						updateInstance(ctx, serviceInstance)
-						waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.UpdateInProgress, "")
+						waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.UpdateFailed, "")
 						fakeClient.UpdateInstanceReturns(nil, "", nil)
 						updateInstance(ctx, serviceInstance)
 						waitForResourceToBeReady(ctx, serviceInstance)
@@ -551,7 +551,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						newExternalName := "my-new-external-name" + uuid.New().String()
 						serviceInstance.Spec.ExternalName = newExternalName
 						updateInstance(ctx, serviceInstance)
-						waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.UpdateInProgress, "")
+						waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.UpdateFailed, "")
 						fakeClient.UpdateInstanceReturns(nil, "", nil)
 						waitForResourceToBeReady(ctx, serviceInstance)
 					})
@@ -689,7 +689,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					errMsg := "failed to delete instance"
 					fakeClient.DeprovisionReturns("", errors.New(errMsg))
 					deleteInstance(ctx, serviceInstance, false)
-					waitForResourceCondition(ctx, serviceInstance, common.ConditionFailed, metav1.ConditionTrue, common.DeleteFailed, errMsg)
+					waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.DeleteFailed, errMsg)
 				})
 			})
 		})
@@ -950,7 +950,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						Description: "errMessage",
 					})
 					serviceInstance = createInstance(ctx, fakeInstanceName, sharedInstanceSpec, nil, false)
-					waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.CreateInProgress, "")
+					waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.CreateFailed, "")
 					Expect(fakeClient.ShareInstanceCallCount()).To(BeZero())
 				})
 			})
@@ -968,7 +968,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						})
 						serviceInstance.Spec.Shared = pointer.Bool(true)
 						updateInstance(ctx, serviceInstance)
-						waitForResourceCondition(ctx, serviceInstance, common.ConditionShared, metav1.ConditionFalse, common.InProgress, "")
+						waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.InProgress, "Operation in progress")
 						fakeClient.ShareInstanceReturns(nil)
 						waitForInstanceToBeShared(ctx, serviceInstance)
 					})
@@ -1357,7 +1357,7 @@ var _ = Describe("ServiceInstance controller", func() {
 					WatchParametersFromChanges: pointer.Bool(true),
 				}
 				serviceInstance = createInstance(ctx, anotherInstanceName, newInstanceSpec, nil, false)
-				waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.CreateInProgress, "secrets \"instance-params-secret-new\" not found")
+				waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.CreateFailed, "secrets \"instance-params-secret-new\" not found")
 				Expect(fakeClient.ProvisionCallCount()).To(Equal(0))
 
 				anotherSecret = createParamsSecret(ctx, "instance-params-secret-new", testNamespace)
@@ -1468,7 +1468,7 @@ var _ = Describe("ServiceInstance controller", func() {
 				checkSecretAnnotationsAndLabels(ctx, k8sClient, paramsSecret, []*v1.ServiceInstance{serviceInstance})
 
 				deleteAndWait(ctx, paramsSecret)
-				waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.UpdateInProgress, "secrets \"instance-params-secret\" not found")
+				waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.UpdateFailed, "secrets \"instance-params-secret\" not found")
 
 				paramsSecret = createParamsSecret(ctx, "instance-params-secret", testNamespace)
 				waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionTrue, common.Updated, "")

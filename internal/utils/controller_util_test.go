@@ -2,13 +2,13 @@ package utils
 
 import (
 	"encoding/json"
-	"net/http"
 
 	"github.com/SAP/sap-btp-service-operator/api/common"
+	"github.com/SAP/sap-btp-service-operator/client/sm"
+	smclientTypes "github.com/SAP/sap-btp-service-operator/client/sm/types"
+	"k8s.io/apimachinery/pkg/api/meta"
 
 	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
-	"github.com/SAP/sap-btp-service-operator/client/sm"
-	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	authv1 "k8s.io/api/authentication/v1"
@@ -66,50 +66,6 @@ var _ = Describe("Controller Util", func() {
 		It("empty slice", func() {
 			slice := []string{}
 			Expect(SliceContains(slice, "element1")).To(BeFalse())
-		})
-	})
-
-	Context("IsTransientError", func() {
-		var instance *sm.ServiceManagerError
-		var log logr.Logger
-		BeforeEach(func() {
-			log = GetLogger(ctx)
-		})
-		When("400 status code", func() {
-			BeforeEach(func() {
-				instance = &sm.ServiceManagerError{
-					StatusCode: 400,
-				}
-			})
-
-			It("should not be transient error", func() {
-				Expect(IsTransientError(instance, log)).To(BeFalse())
-			})
-		})
-
-		When("internal server error status code", func() {
-			BeforeEach(func() {
-				instance = &sm.ServiceManagerError{
-					StatusCode: 500,
-				}
-			})
-
-			It("should be non transient error", func() {
-				Expect(IsTransientError(instance, log)).To(BeFalse())
-			})
-		})
-
-		When("concurrent operation error", func() {
-			BeforeEach(func() {
-				instance = &sm.ServiceManagerError{
-					StatusCode: http.StatusUnprocessableEntity,
-					ErrorType:  "ConcurrentOperationInProgress",
-				}
-			})
-
-			It("should be transient error", func() {
-				Expect(IsTransientError(instance, log)).To(BeTrue())
-			})
 		})
 	})
 
@@ -230,6 +186,28 @@ var _ = Describe("Controller Util", func() {
 			Expect(updatedSecret.Finalizers[0]).To(Equal(common.FinalizerName))
 			Expect(updatedSecret.Annotations[common.WatchSecretAnnotation+"123"]).To(Equal("true"))
 
+		})
+	})
+
+	Context("handleRateLimitError", func() {
+		var resource common.SAPBTPResource
+		BeforeEach(func() {
+			resource = getBinding()
+			Expect(k8sClient.Create(ctx, resource)).To(Succeed())
+		})
+		AfterEach(func() {
+			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
+		})
+		It("should update the condition to in progress", func() {
+			headers := map[string][]string{"Retry-After": {"2024-11-11 14:59:33 +0000 UTC"}}
+			_, err := handleRateLimitError(ctx, k8sClient, resource, smclientTypes.CREATE, &sm.ServiceManagerError{ResponseHeaders: headers})
+			Expect(err).ToNot(HaveOccurred())
+			conds := resource.GetConditions()
+			Expect(len(conds)).To(Equal(2))
+			succeededCond := meta.FindStatusCondition(conds, common.ConditionSucceeded)
+			Expect(succeededCond).NotTo(BeNil())
+			Expect(succeededCond.Status).To(Equal(metav1.ConditionFalse))
+			Expect(succeededCond.Reason).To(Equal(common.CreateInProgress))
 		})
 	})
 })
