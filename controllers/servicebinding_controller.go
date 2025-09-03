@@ -176,17 +176,6 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return r.maintain(ctx, serviceBinding, serviceInstance)
 	}
 
-	//set owner instance only for original bindings (not rotated)
-	if serviceBinding.Labels == nil || len(serviceBinding.Labels[common.StaleBindingIDLabel]) == 0 {
-		if !bindingAlreadyOwnedByInstance(serviceInstance, serviceBinding) &&
-			serviceInstance.Namespace == serviceBinding.Namespace { //cross namespace reference not allowed
-			if err := r.setOwner(ctx, serviceInstance, serviceBinding); err != nil {
-				log.Error(err, "failed to set owner reference for binding")
-				return ctrl.Result{}, err
-			}
-		}
-	}
-
 	if serviceBinding.Status.BindingID == "" {
 		if err := r.validateSecretNameIsAvailable(ctx, serviceBinding); err != nil {
 			log.Error(err, "secret validation failed")
@@ -521,20 +510,6 @@ func (r *ServiceBindingReconciler) getServiceInstanceForBinding(ctx context.Cont
 	}
 
 	return serviceInstance.DeepCopy(), nil
-}
-
-func (r *ServiceBindingReconciler) setOwner(ctx context.Context, serviceInstance *v1.ServiceInstance, serviceBinding *v1.ServiceBinding) error {
-	log := utils.GetLogger(ctx)
-	log.Info("Binding instance as owner of binding", "bindingName", serviceBinding.Name, "instanceName", serviceInstance.Name)
-	if err := controllerutil.SetControllerReference(serviceInstance, serviceBinding, r.Scheme); err != nil {
-		log.Error(err, fmt.Sprintf("Could not update the smBinding %s owner instance reference", serviceBinding.Name))
-		return err
-	}
-	if err := r.Client.Update(ctx, serviceBinding); err != nil {
-		log.Error(err, "Failed to set controller reference", "bindingName", serviceBinding.Name)
-		return err
-	}
-	return nil
 }
 
 func (r *ServiceBindingReconciler) resyncBindingStatus(ctx context.Context, k8sBinding *v1.ServiceBinding, smBinding *smClientTypes.ServiceBinding) {
