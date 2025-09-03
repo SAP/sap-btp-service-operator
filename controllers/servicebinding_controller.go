@@ -1093,23 +1093,6 @@ func newBindingObject(name, namespace string) *v1.ServiceBinding {
 	}
 }
 
-func bindingAlreadyOwnedByInstance(instance *v1.ServiceInstance, binding *v1.ServiceBinding) bool {
-	if existing := metav1.GetControllerOf(binding); existing != nil {
-		aGV, err := schema.ParseGroupVersion(existing.APIVersion)
-		if err != nil {
-			return false
-		}
-
-		bGV, err := schema.ParseGroupVersion(instance.APIVersion)
-		if err != nil {
-			return false
-		}
-
-		return aGV.Group == bGV.Group && existing.Kind == instance.Kind && existing.Name == instance.Name
-	}
-	return false
-}
-
 func serviceInstanceReady(instance *v1.ServiceInstance) bool {
 	return instance.Status.Ready == metav1.ConditionTrue
 }
