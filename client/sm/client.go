@@ -504,7 +504,7 @@ func (client *serviceManagerClient) getPlanInfo(planID string, serviceName strin
 	}
 
 	if len(planID) > 0 {
-		err = fmt.Errorf("the provided plan ID '%s' doesn't match the provided offering name '%s' and plan name '%s", planID, serviceName, planName)
+		err = fmt.Errorf("the provided plan ID '%s' doesn't match the provided offering name '%s' and plan name '%s'", planID, serviceName, planName)
 	} else {
 		err = fmt.Errorf("ambiguity error: found more than one resource that matches the provided offering name '%s' and plan name '%s'. Please provide servicePlanID", serviceName, planName)
 	}

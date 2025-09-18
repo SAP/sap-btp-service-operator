@@ -1,19 +1,14 @@
 package utils
 
 import (
-	"fmt"
-	"net/http"
-
 	"github.com/SAP/sap-btp-service-operator/api/common"
 	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
-	"github.com/SAP/sap-btp-service-operator/client/sm"
 	smClientTypes "github.com/SAP/sap-btp-service-operator/client/sm/types"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -166,27 +161,6 @@ var _ = Describe("Condition Utils", func() {
 		})
 	})
 
-	Context("MarkAsNonTransientError", func() {
-		It("should mark as non-transient error and update status", func() {
-			operationType := smClientTypes.CREATE
-
-			result, err := MarkAsNonTransientError(ctx, k8sClient, operationType, fmt.Errorf("Non-transient error"), resource)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(result).To(Equal(ctrl.Result{}))
-		})
-	})
-
-	Context("MarkAsTransientError", func() {
-		It("should handle TooManyRequests error correctly", func() {
-			resource.SetConditions([]metav1.Condition{{Message: "not TooManyRequests"}})
-			serviceManagerError := &sm.ServiceManagerError{StatusCode: http.StatusTooManyRequests}
-			result, err := MarkAsTransientError(ctx, k8sClient, smClientTypes.UPDATE, serviceManagerError, resource)
-			Expect(err).ToNot(BeNil())
-			Expect(resource.GetConditions()[0].Message).To(ContainSubstring("not TooManyRequests")) //TooManyRequests is not reflected to status
-			Expect(result).To(BeEquivalentTo(ctrl.Result{}))
-		})
-	})
-
 	Context("SetBlockedCondition", func() {
 		It("Blocked Condition Set on ServiceBinding", func() {
 			sb := &v1.ServiceBinding{
@@ -200,7 +174,7 @@ var _ = Describe("Condition Utils", func() {
 		})
 	})
 
-	Context("IsInProgress", func() {
+	Context("ShouldRetryOperation", func() {
 		It("should return true for in progress condition", func() {
 			resource := &v1.ServiceBinding{
 				Status: v1.ServiceBindingStatus{
@@ -217,7 +191,7 @@ var _ = Describe("Condition Utils", func() {
 				},
 			}
 
-			Expect(IsInProgress(resource)).To(BeTrue())
+			Expect(ShouldRetryOperation(resource)).To(BeTrue())
 		})
 
 		It("should return false for failed condition", func() {
@@ -236,7 +210,7 @@ var _ = Describe("Condition Utils", func() {
 				},
 			}
 
-			Expect(IsInProgress(resource)).To(BeFalse())
+			Expect(ShouldRetryOperation(resource)).To(BeFalse())
 		})
 
 		It("should return false for succeeded condition", func() {
@@ -255,7 +229,7 @@ var _ = Describe("Condition Utils", func() {
 				},
 			}
 
-			Expect(IsInProgress(resource)).To(BeFalse())
+			Expect(ShouldRetryOperation(resource)).To(BeFalse())
 		})
 
 		It("should return false for empty conditions", func() {
@@ -265,7 +239,7 @@ var _ = Describe("Condition Utils", func() {
 				},
 			}
 
-			Expect(IsInProgress(resource)).To(BeFalse())
+			Expect(ShouldRetryOperation(resource)).To(BeFalse())
 		})
 	})
 
