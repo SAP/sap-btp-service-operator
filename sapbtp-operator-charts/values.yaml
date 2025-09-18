@@ -40,6 +40,7 @@ manager:
     req_memory_limit: ""
     req_cpu_limit: ""
   imagePullSecrets: []
+  skipPreDeleteJob: false
   #   - name: registrySecretName
   pullSecretTemplate:
   # creates a secret to be used in imagePullSecrets from a template
@@ -93,8 +94,9 @@ cluster:
 externalImages:
   kubectl:
     image:
-      repository: bitnami/kubectl
+      repository: bitnamisecure/kubectl
       sha: ""
       tag: latest
 # Option for adding annotations to configmap
 # operator_configmap_annotations: {}
+
