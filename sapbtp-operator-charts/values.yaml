@@ -94,7 +94,7 @@ cluster:
 externalImages:
   kubectl:
     image:
-      repository: bitnamisecure/kubectl
+      repository: bitnami/kubectl
       sha: ""
       tag: latest
 # Option for adding annotations to configmap
