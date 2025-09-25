@@ -41,6 +41,7 @@ manager:
     req_cpu_limit: ""
   imagePullSecrets: []
   #   - name: registrySecretName
+  disablePreDeleteJob: false
   pullSecretTemplate:
   # creates a secret to be used in imagePullSecrets from a template
   # output of data will be in form {"auths":{"myhost":{"auth":<encoded username:password>},"myhost1":{"auth":<encoded username:password>}}}
@@ -98,3 +99,4 @@ externalImages:
       tag: latest
 # Option for adding annotations to configmap
 # operator_configmap_annotations: {}
+
