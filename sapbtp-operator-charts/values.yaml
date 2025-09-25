@@ -40,8 +40,8 @@ manager:
     req_memory_limit: ""
     req_cpu_limit: ""
   imagePullSecrets: []
-  disablePreDeleteJob: false
   #   - name: registrySecretName
+  disablePreDeleteJob: false
   pullSecretTemplate:
   # creates a secret to be used in imagePullSecrets from a template
   # output of data will be in form {"auths":{"myhost":{"auth":<encoded username:password>},"myhost1":{"auth":<encoded username:password>}}}
