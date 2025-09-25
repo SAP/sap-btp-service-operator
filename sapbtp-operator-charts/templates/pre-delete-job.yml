@@ -1,4 +1,4 @@
-{{ if .Values.manager.skipPreDeleteJob }}
+{{ if .Values.manager.disablePreDeleteJob }}
 apiVersion: batch/v1
 kind: Job
 metadata:

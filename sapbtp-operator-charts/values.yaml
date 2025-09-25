@@ -40,7 +40,7 @@ manager:
     req_memory_limit: ""
     req_cpu_limit: ""
   imagePullSecrets: []
-  skipPreDeleteJob: false
+  disablePreDeleteJob: false
   #   - name: registrySecretName
   pullSecretTemplate:
   # creates a secret to be used in imagePullSecrets from a template
