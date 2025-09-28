@@ -567,6 +567,9 @@ func (r *ServiceBindingReconciler) storeBindingSecret(ctx context.Context, k8sBi
 		secret.Labels = map[string]string{}
 	}
 	secret.Labels[common.ManagedByBTPOperatorLabel] = "true"
+	if len(k8sBinding.Labels) > 0 && len(k8sBinding.Labels[common.StaleBindingIDLabel]) > 0 {
+		secret.Labels[common.StaleBindingIDLabel] = k8sBinding.Labels[common.StaleBindingIDLabel]
+	}
 
 	if secret.Annotations == nil {
 		secret.Annotations = map[string]string{}
