@@ -1269,7 +1269,7 @@ stringData:
 			val = secret.Data["secret_key2"]
 			Expect(string(val)).To(Equal("secret_value2"))
 			Expect(len(secret.Labels) > 0).To(BeTrue())
-			Expect(secret.Labels[common.StaleBindingIDLabel]).To(Equal("true"))
+			Expect(secret.Labels[common.StaleBindingIDLabel]).To(Equal(oldBinding.Status.BindingID))
 		})
 
 		It("should rotate the credentials with force rotate annotation", func() {
