@@ -257,6 +257,7 @@ var _ = Describe("ServiceBinding controller", func() {
 
 				By("Verify binding secret created")
 				bindingSecret := getSecret(ctx, createdBinding.Spec.SecretName, createdBinding.Namespace, true)
+				Expect(bindingSecret.Labels[common.StaleBindingIDLabel]).To(BeEmpty())
 				validateSecretData(bindingSecret, "secret_key", "secret_value")
 				validateSecretData(bindingSecret, "escaped", `{"escaped_key":"escaped_val"}`)
 				validateInstanceInfo(bindingSecret, instanceExternalName)
@@ -1267,6 +1268,8 @@ stringData:
 			secret = getSecret(ctx, oldBinding.Spec.SecretName, bindingTestNamespace, true)
 			val = secret.Data["secret_key2"]
 			Expect(string(val)).To(Equal("secret_value2"))
+			Expect(len(secret.Labels) > 0).To(BeTrue())
+			Expect(secret.Labels[common.StaleBindingIDLabel]).To(Equal("true"))
 		})
 
 		It("should rotate the credentials with force rotate annotation", func() {
