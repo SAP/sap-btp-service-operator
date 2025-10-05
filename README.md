@@ -666,7 +666,7 @@ spec:
 Once the `ServiceBinding` is rotated:
 
 - The `Secret` is updated with the latest credentials.
-- The old credentials are kept in a newly-created secret named original-secret-name-<guid>.
+- The old credentials are kept in a newly-created secret named `original-secret-name-<guid>`.
   This temporary secret is marked with the `services.cloud.sap.com/stale` label and is kept until the configured deletion time (TTL) expires.
 
 ### Checking Last Rotation
