@@ -34,7 +34,7 @@ manager:
     image:
       repository: quay.io/brancz/kube-rbac-proxy
       sha: ""
-      tag: v0.19.1
+      tag: v0.20.0
     memory_limit: ""
     cpu_limit: ""
     req_memory_limit: ""
