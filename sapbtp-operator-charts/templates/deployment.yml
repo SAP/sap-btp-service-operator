@@ -30,6 +30,9 @@ spec:
         control-plane: controller-manager
         app.kubernetes.io/instance: sap-btp-operator
         app.kubernetes.io/name: sap-btp-operator
+        {{- if .Values.manager.labels }}
+        {{- toYaml .Values.manager.labels | nindent 8 }}
+        {{- end }}
     spec:
       serviceAccountName: sap-btp-operator
       containers:
