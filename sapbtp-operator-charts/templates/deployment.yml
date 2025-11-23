@@ -126,6 +126,11 @@ spec:
             - mountPath: /tmp/k8s-webhook-server/serving-certs
               name: cert
               readOnly: true
+            {{- if .Values.manager.customCA.enabled }}
+            - mountPath: /etc/ssl/certs/custom_ca
+              name: custom-ca-volume
+              readOnly: true
+            {{- end }}
     {{- if .Values.manager.imagePullSecrets }}
       imagePullSecrets: {{ toYaml .Values.manager.imagePullSecrets | nindent 8 }}
     {{- end }}
@@ -138,6 +143,11 @@ spec:
           secret:
             defaultMode: 420
             secretName: webhook-server-cert
+        {{- if .Values.manager.customCA.enabled }}
+        - name: custom-ca-volume
+          secret:
+            secretName: sap-btp-operator-custom-ca
+        {{- end }}
       {{- if .Values.manager.nodeSelector }}
       nodeSelector: {{ toYaml .Values.manager.nodeSelector | nindent 8 }}
       {{- end }}

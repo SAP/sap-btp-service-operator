@@ -33,3 +33,6 @@ data:
   ALLOWED_NAMESPACES: {{ join "," .Values.manager.allowed_namespaces }}
   {{- end }}
   {{- end }}
+  {{- if .Values.manager.customCA.enabled }}
+  SSL_CERT_FILE: /etc/ssl/certs/custom_ca/ca.crt
+  {{- end }}
