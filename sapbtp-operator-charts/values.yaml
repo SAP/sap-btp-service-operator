@@ -85,6 +85,12 @@ manager:
   #securityContext:
   #   runAsNonRoot: true
   securityContext: {}
+  # Example of adding security context for the pod
+  #podSecurityContext:
+  #   runAsUser: 1000
+  #   runAsNonRoot: true
+  #   fsGroup: 1000
+  podSecurityContext: {}
   health_service:
     enabled: false
   kubernetesMatchLabels:
@@ -99,4 +105,3 @@ externalImages:
       tag: latest
 # Option for adding annotations to configmap
 # operator_configmap_annotations: {}
-
