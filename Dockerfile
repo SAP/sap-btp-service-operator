@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM --platform=$BUILDPLATFORM golang:1.25.1-alpine3.22 as builder
+FROM --platform=$BUILDPLATFORM golang:1.25.3-alpine3.22 as builder
 
 WORKDIR /workspace
 # Copy the Go Modules manifests
@@ -21,7 +21,7 @@ ARG TARGETOS TARGETARCH
 RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH GO111MODULE=on go build -a -o manager main.go
 
 
-FROM alpine:3.22.1
+FROM alpine:3.22.2
 
 WORKDIR /
 COPY --from=builder /workspace/manager .
