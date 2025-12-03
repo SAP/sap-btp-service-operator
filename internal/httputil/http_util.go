@@ -2,9 +2,11 @@ package httputil
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"net"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 )
@@ -22,6 +24,11 @@ func BuildHTTPClient(sslDisabled bool) *http.Client {
 	client := getClient()
 	if sslDisabled {
 		client.Transport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	} else {
+		// Load custom CA certificates if present
+		if tlsConfig := loadCustomCACerts(); tlsConfig != nil {
+			client.Transport.(*http.Transport).TLSClientConfig = tlsConfig
+		}
 	}
 
 	return client
@@ -36,9 +43,16 @@ func BuildHTTPClientTLS(tlsCertKey, tlsPrivateKey string) (*http.Client, error) 
 		return nil, err
 	}
 
-	client.Transport.(*http.Transport).TLSClientConfig = &tls.Config{
+	tlsConfig := &tls.Config{
 		Certificates: []tls.Certificate{cert},
 	}
+
+	// Load custom CA certificates if present
+	if customConfig := loadCustomCACerts(); customConfig != nil {
+		tlsConfig.RootCAs = customConfig.RootCAs
+	}
+
+	client.Transport.(*http.Transport).TLSClientConfig = tlsConfig
 
 	return client, nil
 }
@@ -72,4 +86,38 @@ func UnmarshalResponse(response *http.Response, jsonResult interface{}) error {
 	}()
 
 	return json.NewDecoder(response.Body).Decode(&jsonResult)
+}
+
+// loadCustomCACerts loads custom CA certificates from the mounted path
+// Returns nil if no custom certificates are configured
+func loadCustomCACerts() *tls.Config {
+	customCAPath := "/etc/ssl/certs/custom-ca-certificates.crt"
+
+	// Check if custom CA certificate file exists
+	if _, err := os.Stat(customCAPath); os.IsNotExist(err) {
+		return nil
+	}
+
+	// Read the custom CA certificate file
+	caCert, err := os.ReadFile(customCAPath)
+	if err != nil {
+		return nil
+	}
+
+	// Get system cert pool and append custom certs
+	rootCAs, err := x509.SystemCertPool()
+	if err != nil {
+		// If system pool is unavailable, create a new pool
+		rootCAs = x509.NewCertPool()
+	}
+
+	// Append custom CA certificates to the pool
+	if ok := rootCAs.AppendCertsFromPEM(caCert); !ok {
+		// Failed to parse certificates
+		return nil
+	}
+
+	return &tls.Config{
+		RootCAs: rootCAs,
+	}
 }
