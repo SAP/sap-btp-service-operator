@@ -132,7 +132,7 @@ var _ = Describe("ServiceInstance controller", func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 		log := ctrl.Log.WithName("instanceTest")
-		ctx = context.WithValue(ctx, log_utils.LogKey{}, log)
+		ctx = context.WithValue(ctx, log_utils.LogKey, log)
 		fakeInstanceName = "ic-test-" + uuid.New().String()
 		defaultLookupKey = types.NamespacedName{Name: fakeInstanceName, Namespace: testNamespace}
 

@@ -37,7 +37,7 @@ type SecretReconciler struct {
 
 func (r *SecretReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := r.Log.WithValues("secret", req.NamespacedName).WithValues("correlation_id", uuid.New().String())
-	ctx = context.WithValue(ctx, log_utils.LogKey{}, log)
+	ctx = context.WithValue(ctx, log_utils.LogKey, log)
 	log.Info(fmt.Sprintf("reconciling params secret %s", req.NamespacedName))
 	// Fetch the Secret
 	secret := &corev1.Secret{}

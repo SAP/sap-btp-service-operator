@@ -71,7 +71,7 @@ type ServiceInstanceReconciler struct {
 
 func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("serviceinstance", req.NamespacedName).WithValues("correlation_id", uuid.New().String())
-	ctx = context.WithValue(ctx, log_utils.LogKey{}, log)
+	ctx = context.WithValue(ctx, log_utils.LogKey, log)
 
 	serviceInstance := &v1.ServiceInstance{}
 	if err := r.Client.Get(ctx, req.NamespacedName, serviceInstance); err != nil {

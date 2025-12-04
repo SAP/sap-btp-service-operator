@@ -71,7 +71,7 @@ var _ = BeforeSuite(func(done Done) {
 
 	ctx = context.Background()
 	log := ctrl.Log.WithName("utils_tests")
-	ctx = context.WithValue(ctx, log_utils.LogKey{}, log)
+	ctx = context.WithValue(ctx, log_utils.LogKey, log)
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 
 	By("bootstrapping test environment")

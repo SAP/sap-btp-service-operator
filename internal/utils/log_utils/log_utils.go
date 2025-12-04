@@ -6,8 +6,14 @@ import (
 	"github.com/go-logr/logr"
 )
 
-type LogKey struct{}
+type logKey struct{}
+
+var LogKey = logKey{}
 
 func GetLogger(ctx context.Context) logr.Logger {
-	return ctx.Value(LogKey{}).(logr.Logger)
+	v := ctx.Value(LogKey)
+	if v == nil {
+		return logr.Discard()
+	}
+	return v.(logr.Logger)
 }

@@ -136,7 +136,7 @@ var _ = Describe("ServiceBinding controller", func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 		log := ctrl.Log.WithName("bindingTest")
-		ctx = context.WithValue(ctx, log_utils.LogKey{}, log)
+		ctx = context.WithValue(ctx, log_utils.LogKey, log)
 		testUUID = uuid.New().String()
 		instanceName = "test-instance-" + testUUID
 		bindingName = "test-binding-" + testUUID
