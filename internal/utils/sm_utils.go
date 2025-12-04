@@ -6,6 +6,7 @@ import (
 
 	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
+	"github.com/SAP/sap-btp-service-operator/internal/utils/log_utils"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -17,7 +18,7 @@ func (ic *InvalidCredentialsError) Error() string {
 }
 
 func GetSMClient(ctx context.Context, serviceInstance *v1.ServiceInstance) (sm.Client, error) {
-	log := GetLogger(ctx)
+	log := log_utils.GetLogger(ctx)
 	var err error
 
 	var secret *corev1.Secret

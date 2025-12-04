@@ -6,6 +6,7 @@ import (
 
 	"github.com/SAP/sap-btp-service-operator/api/common"
 	smClientTypes "github.com/SAP/sap-btp-service-operator/client/sm/types"
+	"github.com/SAP/sap-btp-service-operator/internal/utils/log_utils"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -53,7 +54,7 @@ func GetConditionReason(opType smClientTypes.OperationCategory, state smClientTy
 }
 
 func SetInProgressConditions(ctx context.Context, operationType smClientTypes.OperationCategory, message string, object common.SAPBTPResource, isAsyncOperation bool) {
-	log := GetLogger(ctx)
+	log := log_utils.GetLogger(ctx)
 	if len(message) == 0 {
 		if operationType == smClientTypes.CREATE {
 			message = fmt.Sprintf("%s is being created", object.GetControllerName())
@@ -188,7 +189,7 @@ func SetFailureConditions(operationType smClientTypes.OperationCategory, errorMe
 }
 
 func HandleOperationFailure(ctx context.Context, k8sClient client.Client, object common.SAPBTPResource, operationType smClientTypes.OperationCategory, err error) (ctrl.Result, error) {
-	log := GetLogger(ctx)
+	log := log_utils.GetLogger(ctx)
 	log.Info(fmt.Sprintf("operation %s of %s encountered a transient error %s, retrying operation :)", operationType, object.GetControllerName(), err.Error()))
 
 	conditions := object.GetConditions()

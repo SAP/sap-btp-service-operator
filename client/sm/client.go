@@ -29,7 +29,6 @@ import (
 	"strings"
 
 	"github.com/SAP/sap-btp-service-operator/api/common"
-
 	"github.com/SAP/sap-btp-service-operator/client/sm/types"
 	"github.com/SAP/sap-btp-service-operator/internal/auth"
 	"github.com/SAP/sap-btp-service-operator/internal/httputil"
