@@ -83,7 +83,7 @@ type ServiceBindingReconciler struct {
 
 func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("servicebinding", req.NamespacedName).WithValues("correlation_id", uuid.New().String(), req.Name, req.Namespace)
-	ctx = context.WithValue(ctx, utils.LogKey{}, log)
+	ctx = context.WithValue(ctx, log_utils.LogKey{}, log)
 
 	serviceBinding := &v1.ServiceBinding{}
 	if err := r.Client.Get(ctx, req.NamespacedName, serviceBinding); err != nil {

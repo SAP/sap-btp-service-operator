@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/SAP/sap-btp-service-operator/internal/utils/log_utils"
 	"github.com/lithammer/dedent"
 	authv1 "k8s.io/api/authentication/v1"
 
@@ -135,7 +136,7 @@ var _ = Describe("ServiceBinding controller", func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 		log := ctrl.Log.WithName("bindingTest")
-		ctx = context.WithValue(ctx, utils.LogKey{}, log)
+		ctx = context.WithValue(ctx, log_utils.LogKey{}, log)
 		testUUID = uuid.New().String()
 		instanceName = "test-instance-" + testUUID
 		bindingName = "test-binding-" + testUUID
