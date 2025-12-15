@@ -1,4 +1,4 @@
-package log_utils //nolint:stylecheck
+package logutils
 
 import (
 	"context"

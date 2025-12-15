@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"github.com/SAP/sap-btp-service-operator/internal/httputil"
-	"github.com/SAP/sap-btp-service-operator/internal/utils/log_utils"
+	"github.com/SAP/sap-btp-service-operator/internal/utils/logutils"
 	"github.com/pkg/errors"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
@@ -39,7 +39,7 @@ func NewAuthClientWithTLS(ccConfig *clientcredentials.Config, tlsCertKey, tlsPri
 }
 
 func newHTTPClient(ctx context.Context, ccConfig *clientcredentials.Config) (HTTPClient, error) {
-	log := log_utils.GetLogger(ctx)
+	log := logutils.GetLogger(ctx)
 	client := oauth2.NewClient(ctx, ccConfig.TokenSource(ctx))
 	if caPEM, err := os.ReadFile(CustomCAPath); err == nil {
 		log.Info("found custom CA, loading it..")

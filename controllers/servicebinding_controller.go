@@ -23,7 +23,7 @@ import (
 	"time"
 
 	commonutils "github.com/SAP/sap-btp-service-operator/api/common/utils"
-	"github.com/SAP/sap-btp-service-operator/internal/utils/log_utils"
+	"github.com/SAP/sap-btp-service-operator/internal/utils/logutils"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/pkg/errors"
@@ -83,7 +83,7 @@ type ServiceBindingReconciler struct {
 
 func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("servicebinding", req.NamespacedName).WithValues("correlation_id", uuid.New().String(), req.Name, req.Namespace)
-	ctx = context.WithValue(ctx, log_utils.LogKey, log)
+	ctx = context.WithValue(ctx, logutils.LogKey, log)
 
 	serviceBinding := &v1.ServiceBinding{}
 	if err := r.Client.Get(ctx, req.NamespacedName, serviceBinding); err != nil {
@@ -214,7 +214,7 @@ func (r *ServiceBindingReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient sm.Client, serviceInstance *v1.ServiceInstance, serviceBinding *v1.ServiceBinding) (ctrl.Result, error) {
-	log := log_utils.GetLogger(ctx)
+	log := logutils.GetLogger(ctx)
 	log.Info("Creating smBinding in SM")
 	serviceBinding.Status.InstanceID = serviceInstance.Status.InstanceID
 	bindingParameters, _, err := utils.BuildSMRequestParameters(serviceBinding.Namespace, serviceBinding.Spec.Parameters, serviceBinding.Spec.ParametersFrom)
@@ -278,7 +278,7 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 }
 
 func (r *ServiceBindingReconciler) delete(ctx context.Context, serviceBinding *v1.ServiceBinding, serviceInstance *v1.ServiceInstance) (ctrl.Result, error) {
-	log := log_utils.GetLogger(ctx)
+	log := logutils.GetLogger(ctx)
 	if controllerutil.ContainsFinalizer(serviceBinding, common.FinalizerName) {
 		smClient, err := r.GetSMClient(ctx, serviceInstance)
 		if err != nil {
@@ -339,7 +339,7 @@ func (r *ServiceBindingReconciler) delete(ctx context.Context, serviceBinding *v
 }
 
 func (r *ServiceBindingReconciler) poll(ctx context.Context, serviceBinding *v1.ServiceBinding, serviceInstance *v1.ServiceInstance) (ctrl.Result, error) {
-	log := log_utils.GetLogger(ctx)
+	log := logutils.GetLogger(ctx)
 	log.Info(fmt.Sprintf("resource is in progress, found operation url %s", serviceBinding.Status.OperationURL))
 
 	smClient, err := r.GetSMClient(ctx, serviceInstance)
@@ -425,7 +425,7 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, serviceBinding *v1.
 }
 
 func (r *ServiceBindingReconciler) getBindingForRecovery(ctx context.Context, smClient sm.Client, serviceBinding *v1.ServiceBinding) (*smClientTypes.ServiceBinding, error) {
-	log := log_utils.GetLogger(ctx)
+	log := logutils.GetLogger(ctx)
 	nameQuery := fmt.Sprintf("name eq '%s'", serviceBinding.Spec.ExternalName)
 	clusterIDQuery := fmt.Sprintf("context/clusterid eq '%s'", r.Config.ClusterID)
 	namespaceQuery := fmt.Sprintf("context/namespace eq '%s'", serviceBinding.Namespace)
@@ -452,7 +452,7 @@ func (r *ServiceBindingReconciler) getBindingForRecovery(ctx context.Context, sm
 }
 
 func (r *ServiceBindingReconciler) maintain(ctx context.Context, binding *v1.ServiceBinding, instance *v1.ServiceInstance) (ctrl.Result, error) {
-	log := log_utils.GetLogger(ctx)
+	log := logutils.GetLogger(ctx)
 	if err := r.maintainSecret(ctx, binding, instance); err != nil {
 		log.Error(err, "failed to maintain secret")
 		return r.handleSecretError(ctx, smClientTypes.UPDATE, err, binding)
@@ -463,7 +463,7 @@ func (r *ServiceBindingReconciler) maintain(ctx context.Context, binding *v1.Ser
 }
 
 func (r *ServiceBindingReconciler) maintainSecret(ctx context.Context, serviceBinding *v1.ServiceBinding, serviceInstance *v1.ServiceInstance) error {
-	log := log_utils.GetLogger(ctx)
+	log := logutils.GetLogger(ctx)
 	if common.GetObservedGeneration(serviceBinding) == serviceBinding.Generation {
 		log.Info("observed generation is up to date, checking if secret exists")
 		if _, err := r.getSecret(ctx, serviceBinding.Namespace, serviceBinding.Spec.SecretName); err == nil {
@@ -499,7 +499,7 @@ func (r *ServiceBindingReconciler) maintainSecret(ctx context.Context, serviceBi
 }
 
 func (r *ServiceBindingReconciler) getServiceInstanceForBinding(ctx context.Context, binding *v1.ServiceBinding) (*v1.ServiceInstance, error) {
-	log := log_utils.GetLogger(ctx)
+	log := logutils.GetLogger(ctx)
 	serviceInstance := &v1.ServiceInstance{}
 	namespace := binding.Namespace
 	if len(binding.Spec.ServiceInstanceNamespace) > 0 {
@@ -544,7 +544,7 @@ func (r *ServiceBindingReconciler) resyncBindingStatus(ctx context.Context, k8sB
 }
 
 func (r *ServiceBindingReconciler) storeBindingSecret(ctx context.Context, k8sBinding *v1.ServiceBinding, smBinding *smClientTypes.ServiceBinding) error {
-	log := log_utils.GetLogger(ctx)
+	log := logutils.GetLogger(ctx)
 	logger := log.WithValues("bindingName", k8sBinding.Name, "secretName", k8sBinding.Spec.SecretName)
 
 	var secret *corev1.Secret
@@ -599,7 +599,7 @@ func (r *ServiceBindingReconciler) createBindingSecret(ctx context.Context, k8sB
 }
 
 func (r *ServiceBindingReconciler) getSecretDefaultData(ctx context.Context, k8sBinding *v1.ServiceBinding, smBinding *smClientTypes.ServiceBinding) (map[string][]byte, error) {
-	log := log_utils.GetLogger(ctx).WithValues("bindingName", k8sBinding.Name, "secretName", k8sBinding.Spec.SecretName)
+	log := logutils.GetLogger(ctx).WithValues("bindingName", k8sBinding.Name, "secretName", k8sBinding.Spec.SecretName)
 
 	var credentialsMap map[string][]byte
 	var credentialProperties []utils.SecretMetadataProperty
@@ -654,7 +654,7 @@ func (r *ServiceBindingReconciler) getSecretDefaultData(ctx context.Context, k8s
 }
 
 func (r *ServiceBindingReconciler) createBindingSecretFromSecretTemplate(ctx context.Context, k8sBinding *v1.ServiceBinding, smBinding *smClientTypes.ServiceBinding) (*corev1.Secret, error) {
-	log := log_utils.GetLogger(ctx)
+	log := logutils.GetLogger(ctx)
 	logger := log.WithValues("bindingName", k8sBinding.Name, "secretName", k8sBinding.Spec.SecretName)
 
 	logger.Info("Create Object using SecretTemplate from ServiceBinding Specs")
@@ -700,7 +700,7 @@ func (r *ServiceBindingReconciler) createBindingSecretFromSecretTemplate(ctx con
 }
 
 func (r *ServiceBindingReconciler) createOrUpdateBindingSecret(ctx context.Context, binding *v1.ServiceBinding, secret *corev1.Secret) error {
-	log := log_utils.GetLogger(ctx)
+	log := logutils.GetLogger(ctx)
 	dbSecret := &corev1.Secret{}
 	create := false
 	if err := r.Client.Get(ctx, types.NamespacedName{Name: binding.Spec.SecretName, Namespace: binding.Namespace}, dbSecret); err != nil {
@@ -731,7 +731,7 @@ func (r *ServiceBindingReconciler) createOrUpdateBindingSecret(ctx context.Conte
 }
 
 func (r *ServiceBindingReconciler) deleteBindingSecret(ctx context.Context, binding *v1.ServiceBinding) error {
-	log := log_utils.GetLogger(ctx)
+	log := logutils.GetLogger(ctx)
 	log.Info("Deleting binding secret")
 	bindingSecret := &corev1.Secret{}
 	if err := r.Client.Get(ctx, types.NamespacedName{
@@ -799,7 +799,7 @@ func (r *ServiceBindingReconciler) validateSecretNameIsAvailable(ctx context.Con
 }
 
 func (r *ServiceBindingReconciler) handleSecretError(ctx context.Context, op smClientTypes.OperationCategory, err error, binding *v1.ServiceBinding) (ctrl.Result, error) {
-	log := log_utils.GetLogger(ctx)
+	log := logutils.GetLogger(ctx)
 	log.Error(err, fmt.Sprintf("failed to store secret %s for binding %s", binding.Spec.SecretName, binding.Name))
 	return utils.HandleOperationFailure(ctx, r.Client, binding, op, err)
 }
@@ -871,7 +871,7 @@ func (r *ServiceBindingReconciler) addInstanceInfo(ctx context.Context, binding 
 }
 
 func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, binding *v1.ServiceBinding, serviceInstance *v1.ServiceInstance) (bool, error) {
-	log := log_utils.GetLogger(ctx)
+	log := logutils.GetLogger(ctx)
 	if err := r.removeForceRotateAnnotationIfNeeded(ctx, binding, log); err != nil {
 		log.Info("Credentials rotation - failed to delete force rotate annotation")
 		return false, err
@@ -972,7 +972,7 @@ func (r *ServiceBindingReconciler) createOldBinding(ctx context.Context, suffix 
 }
 
 func (r *ServiceBindingReconciler) handleStaleServiceBinding(ctx context.Context, serviceBinding *v1.ServiceBinding) (ctrl.Result, error) {
-	log := log_utils.GetLogger(ctx)
+	log := logutils.GetLogger(ctx)
 	originalBindingName, ok := serviceBinding.Annotations[common.StaleBindingOrigBindingNameAnnotation]
 	if !ok {
 		//if the user removed the "OrigBindingName" annotation and rotationOf label not exist as well
@@ -1010,7 +1010,7 @@ func (r *ServiceBindingReconciler) handleStaleServiceBinding(ctx context.Context
 }
 
 func (r *ServiceBindingReconciler) recover(ctx context.Context, serviceBinding *v1.ServiceBinding, smBinding *smClientTypes.ServiceBinding) (ctrl.Result, error) {
-	log := log_utils.GetLogger(ctx)
+	log := logutils.GetLogger(ctx)
 	log.Info(fmt.Sprintf("found existing smBinding in SM with id %s, updating status", smBinding.ID))
 
 	if smBinding.Credentials != nil {

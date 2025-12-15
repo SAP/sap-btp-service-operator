@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/SAP/sap-btp-service-operator/internal/utils/log_utils"
+	"github.com/SAP/sap-btp-service-operator/internal/utils/logutils"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/SAP/sap-btp-service-operator/api/common"
@@ -41,7 +41,7 @@ type SecretMetadataProperty struct {
 type format string
 
 func RemoveFinalizer(ctx context.Context, k8sClient client.Client, object client.Object, finalizerName string) error {
-	log := log_utils.GetLogger(ctx)
+	log := logutils.GetLogger(ctx)
 	if controllerutil.RemoveFinalizer(object, finalizerName) {
 		log.Info(fmt.Sprintf("removing finalizer %s from resource %s named '%s' in namespace '%s'", finalizerName, object.GetObjectKind(), object.GetName(), object.GetNamespace()))
 		return k8sClient.Update(ctx, object)
@@ -50,7 +50,7 @@ func RemoveFinalizer(ctx context.Context, k8sClient client.Client, object client
 }
 
 func UpdateStatus(ctx context.Context, k8sClient client.Client, object common.SAPBTPResource) error {
-	log := log_utils.GetLogger(ctx)
+	log := logutils.GetLogger(ctx)
 	log.Info(fmt.Sprintf("updating %s status", object.GetObjectKind().GroupVersionKind().Kind))
 	object.SetObservedGeneration(getLastObservedGen(object))
 	return k8sClient.Status().Update(ctx, object)
@@ -81,7 +81,7 @@ func NormalizeCredentials(credentialsJSON json.RawMessage) (map[string][]byte, [
 }
 
 func BuildUserInfo(ctx context.Context, userInfo *v1.UserInfo) string {
-	log := log_utils.GetLogger(ctx)
+	log := logutils.GetLogger(ctx)
 	if userInfo == nil {
 		return ""
 	}
@@ -114,7 +114,7 @@ func RandStringRunes(n int) string {
 }
 
 func HandleServiceManagerError(ctx context.Context, k8sClient client.Client, resource common.SAPBTPResource, operationType smClientTypes.OperationCategory, err error) (ctrl.Result, error) {
-	log := log_utils.GetLogger(ctx)
+	log := logutils.GetLogger(ctx)
 	var smError *sm.ServiceManagerError
 	if ok := errors.As(err, &smError); ok {
 		if smError.StatusCode == http.StatusTooManyRequests {
@@ -127,7 +127,7 @@ func HandleServiceManagerError(ctx context.Context, k8sClient client.Client, res
 }
 
 func HandleCredRotationError(ctx context.Context, k8sClient client.Client, binding common.SAPBTPResource, err error) (ctrl.Result, error) {
-	log := log_utils.GetLogger(ctx)
+	log := logutils.GetLogger(ctx)
 	var smError *sm.ServiceManagerError
 	if ok := errors.As(err, &smError); ok {
 		if smError.StatusCode == http.StatusTooManyRequests {
@@ -156,7 +156,7 @@ func IsMarkedForDeletion(object metav1.ObjectMeta) bool {
 }
 
 func RemoveAnnotations(ctx context.Context, k8sClient client.Client, object common.SAPBTPResource, keys ...string) error {
-	log := log_utils.GetLogger(ctx)
+	log := logutils.GetLogger(ctx)
 	annotations := object.GetAnnotations()
 	shouldUpdate := false
 	if annotations != nil {
@@ -176,7 +176,7 @@ func RemoveAnnotations(ctx context.Context, k8sClient client.Client, object comm
 }
 
 func AddWatchForSecretIfNeeded(ctx context.Context, k8sClient client.Client, secret *corev1.Secret, instanceUID string) error {
-	log := log_utils.GetLogger(ctx)
+	log := logutils.GetLogger(ctx)
 	if secret.Annotations == nil {
 		secret.Annotations = make(map[string]string)
 	}
@@ -217,7 +217,7 @@ func GetLabelKeyForInstanceSecret(secretName string) string {
 }
 
 func HandleInstanceSharingError(ctx context.Context, k8sClient client.Client, object common.SAPBTPResource, status metav1.ConditionStatus, reason string, err error) (ctrl.Result, error) {
-	log := log_utils.GetLogger(ctx)
+	log := logutils.GetLogger(ctx)
 
 	errMsg := err.Error()
 	if smError, ok := err.(*sm.ServiceManagerError); ok {
@@ -245,7 +245,7 @@ func HandleInstanceSharingError(ctx context.Context, k8sClient client.Client, ob
 }
 
 func handleRateLimitError(ctx context.Context, sClient client.Client, resource common.SAPBTPResource, operationType smClientTypes.OperationCategory, smError *sm.ServiceManagerError) (ctrl.Result, error) {
-	log := log_utils.GetLogger(ctx)
+	log := logutils.GetLogger(ctx)
 	SetInProgressConditions(ctx, operationType, "", resource, false)
 	if updateErr := UpdateStatus(ctx, sClient, resource); updateErr != nil {
 		log.Info("failed to update status after rate limit error")

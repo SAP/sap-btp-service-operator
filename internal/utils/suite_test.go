@@ -22,7 +22,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/SAP/sap-btp-service-operator/internal/utils/log_utils"
+	"github.com/SAP/sap-btp-service-operator/internal/utils/logutils"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
@@ -71,7 +71,7 @@ var _ = BeforeSuite(func(done Done) {
 
 	ctx = context.Background()
 	log := ctrl.Log.WithName("utils_tests")
-	ctx = context.WithValue(ctx, log_utils.LogKey, log)
+	ctx = context.WithValue(ctx, logutils.LogKey, log)
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 
 	By("bootstrapping test environment")

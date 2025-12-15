@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/SAP/sap-btp-service-operator/internal/utils/log_utils"
+	"github.com/SAP/sap-btp-service-operator/internal/utils/logutils"
 	"github.com/pkg/errors"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -71,7 +71,7 @@ type ServiceInstanceReconciler struct {
 
 func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("serviceinstance", req.NamespacedName).WithValues("correlation_id", uuid.New().String())
-	ctx = context.WithValue(ctx, log_utils.LogKey, log)
+	ctx = context.WithValue(ctx, logutils.LogKey, log)
 
 	serviceInstance := &v1.ServiceInstance{}
 	if err := r.Client.Get(ctx, req.NamespacedName, serviceInstance); err != nil {
@@ -159,7 +159,7 @@ func (r *ServiceInstanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient sm.Client, serviceInstance *v1.ServiceInstance) (ctrl.Result, error) {
-	log := log_utils.GetLogger(ctx)
+	log := logutils.GetLogger(ctx)
 	log.Info("Creating instance in SM")
 	updateHashedSpecValue(serviceInstance)
 	instanceParameters, err := r.buildSMRequestParameters(ctx, serviceInstance)
@@ -213,7 +213,7 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 }
 
 func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient sm.Client, serviceInstance *v1.ServiceInstance) (ctrl.Result, error) {
-	log := log_utils.GetLogger(ctx)
+	log := logutils.GetLogger(ctx)
 	log.Info(fmt.Sprintf("updating instance %s in SM", serviceInstance.Status.InstanceID))
 
 	instanceParameters, err := r.buildSMRequestParameters(ctx, serviceInstance)
@@ -253,7 +253,7 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 }
 
 func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, serviceInstance *v1.ServiceInstance) (ctrl.Result, error) {
-	log := log_utils.GetLogger(ctx)
+	log := logutils.GetLogger(ctx)
 
 	log.Info("deleting instance")
 	if controllerutil.ContainsFinalizer(serviceInstance, common.FinalizerName) {
@@ -311,7 +311,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, serviceI
 }
 
 func (r *ServiceInstanceReconciler) handleInstanceSharing(ctx context.Context, serviceInstance *v1.ServiceInstance, smClient sm.Client) (ctrl.Result, error) {
-	log := log_utils.GetLogger(ctx)
+	log := logutils.GetLogger(ctx)
 	log.Info("Handling change in instance sharing")
 
 	if serviceInstance.GetShared() {
@@ -345,7 +345,7 @@ func (r *ServiceInstanceReconciler) handleInstanceSharing(ctx context.Context, s
 }
 
 func (r *ServiceInstanceReconciler) poll(ctx context.Context, serviceInstance *v1.ServiceInstance) (ctrl.Result, error) {
-	log := log_utils.GetLogger(ctx)
+	log := logutils.GetLogger(ctx)
 	log.Info(fmt.Sprintf("resource is in progress, found operation url %s", serviceInstance.Status.OperationURL))
 	smClient, err := r.GetSMClient(ctx, serviceInstance)
 	if err != nil {
@@ -437,7 +437,7 @@ func (r *ServiceInstanceReconciler) handleAsyncDelete(ctx context.Context, servi
 }
 
 func (r *ServiceInstanceReconciler) getInstanceForRecovery(ctx context.Context, smClient sm.Client, serviceInstance *v1.ServiceInstance) (*smClientTypes.ServiceInstance, error) {
-	log := log_utils.GetLogger(ctx)
+	log := logutils.GetLogger(ctx)
 	parameters := sm.Parameters{
 		FieldQuery: []string{
 			fmt.Sprintf("name eq '%s'", serviceInstance.Spec.ExternalName),
@@ -462,7 +462,7 @@ func (r *ServiceInstanceReconciler) getInstanceForRecovery(ctx context.Context, 
 }
 
 func (r *ServiceInstanceReconciler) recover(ctx context.Context, smClient sm.Client, k8sInstance *v1.ServiceInstance, smInstance *smClientTypes.ServiceInstance) (ctrl.Result, error) {
-	log := log_utils.GetLogger(ctx)
+	log := logutils.GetLogger(ctx)
 
 	log.Info(fmt.Sprintf("found existing instance in SM with id %s, updating status", smInstance.ID))
 	updateHashedSpecValue(k8sInstance)
@@ -511,7 +511,7 @@ func (r *ServiceInstanceReconciler) recover(ctx context.Context, smClient sm.Cli
 }
 
 func (r *ServiceInstanceReconciler) buildSMRequestParameters(ctx context.Context, serviceInstance *v1.ServiceInstance) ([]byte, error) {
-	log := log_utils.GetLogger(ctx)
+	log := logutils.GetLogger(ctx)
 	instanceParameters, paramSecrets, err := utils.BuildSMRequestParameters(serviceInstance.Namespace, serviceInstance.Spec.Parameters, serviceInstance.Spec.ParametersFrom)
 	if err != nil {
 		log.Error(err, "failed to build instance parameters")
@@ -562,7 +562,7 @@ func (r *ServiceInstanceReconciler) buildSMRequestParameters(ctx context.Context
 }
 
 func isFinalState(ctx context.Context, serviceInstance *v1.ServiceInstance) bool {
-	log := log_utils.GetLogger(ctx)
+	log := logutils.GetLogger(ctx)
 
 	if serviceInstance.Status.ForceReconcile {
 		log.Info("instance is not in final state, ForceReconcile is true")
