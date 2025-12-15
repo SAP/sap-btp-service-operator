@@ -94,15 +94,8 @@ manager:
   # Custom CA certificates for HTTPS connections to SAP BTP
   customCACerts:
     enabled: false
-    # Base64-encoded custom CA certificates (concatenated PEM format)
-    # Example: caCerts: "LS0tLS1CRUdJTi..."
-    caCerts: ""
-    # Alternative: provide as a list of named certificates
-    # certificates:
-    #   - name: "custom-ca-1"
-    #     cert: "" # base64 encoded PEM
-    #   - name: "custom-ca-2"
-    #     cert: "" # base64 encoded PEM
+#    certificates:
+#       - "" # base64 encoded PEM
   health_service:
     enabled: false
   kubernetesMatchLabels:

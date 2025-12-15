@@ -49,7 +49,10 @@ func newHTTPClient(ctx context.Context, ccConfig *clientcredentials.Config) (HTT
 			log.Error(certPoolErr, "system cert pool is unavailable, using a new pool")
 			certPool = x509.NewCertPool()
 		}
-		certPool.AppendCertsFromPEM(caPEM)
+		if ok := certPool.AppendCertsFromPEM(caPEM); !ok {
+			log.Error(nil, "no certificates parsed from custom CA bundle")
+			return nil, errors.New("invalid custom CA certificates")
+		}
 
 		oauthTransport, ok := client.Transport.(*oauth2.Transport)
 		if !ok {
