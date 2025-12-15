@@ -25,7 +25,7 @@ type HTTPClient interface {
 func NewAuthClient(ccConfig *clientcredentials.Config, sslDisabled bool) HTTPClient {
 	httpClient := httputil.BuildHTTPClient(sslDisabled)
 	ctx := context.WithValue(context.Background(), oauth2.HTTPClient, httpClient)
-	client, _ := newHttpClient(ctx, ccConfig)
+	client, _ := newHTTPClient(ctx, ccConfig)
 	return client
 }
 
@@ -35,10 +35,10 @@ func NewAuthClientWithTLS(ccConfig *clientcredentials.Config, tlsCertKey, tlsPri
 		return nil, err
 	}
 	ctx := context.WithValue(context.Background(), oauth2.HTTPClient, httpClient)
-	return newHttpClient(ctx, ccConfig)
+	return newHTTPClient(ctx, ccConfig)
 }
 
-func newHttpClient(ctx context.Context, ccConfig *clientcredentials.Config) (HTTPClient, error) {
+func newHTTPClient(ctx context.Context, ccConfig *clientcredentials.Config) (HTTPClient, error) {
 	log := log_utils.GetLogger(ctx)
 	client := oauth2.NewClient(ctx, ccConfig.TokenSource(ctx))
 	if caPEM, err := os.ReadFile(CustomCAPath); err == nil {
