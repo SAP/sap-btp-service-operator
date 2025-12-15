@@ -126,12 +126,12 @@ func NewClient(ctx context.Context, config *ClientConfig, httpClient auth.HTTPCl
 	var authClient auth.HTTPClient
 	var err error
 	if len(config.TLSCertKey) > 0 && len(config.TLSPrivateKey) > 0 {
-		authClient, err = auth.NewAuthClientWithTLS(ccConfig, config.TLSCertKey, config.TLSPrivateKey)
+		authClient, err = auth.NewAuthClientWithTLS(ctx, ccConfig, config.TLSCertKey, config.TLSPrivateKey)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		authClient = auth.NewAuthClient(ccConfig, config.SSLDisabled)
+		authClient = auth.NewAuthClient(ctx, ccConfig, config.SSLDisabled)
 	}
 	return &serviceManagerClient{Context: ctx, Config: config, HTTPClient: authClient}, nil
 }

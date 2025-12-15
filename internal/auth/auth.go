@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"crypto/tls"
 	"crypto/x509"
 	"net/http"
 	"os"
@@ -22,24 +23,25 @@ type HTTPClient interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
-func NewAuthClient(ccConfig *clientcredentials.Config, sslDisabled bool) HTTPClient {
+func NewAuthClient(ctx context.Context, ccConfig *clientcredentials.Config, sslDisabled bool) HTTPClient {
 	httpClient := httputil.BuildHTTPClient(sslDisabled)
-	ctx := context.WithValue(context.Background(), oauth2.HTTPClient, httpClient)
-	client, _ := newHTTPClient(ctx, ccConfig)
+	ctxWithClient := context.WithValue(ctx, oauth2.HTTPClient, httpClient)
+	client, _ := newHTTPClient(ctxWithClient, ccConfig)
 	return client
 }
 
-func NewAuthClientWithTLS(ccConfig *clientcredentials.Config, tlsCertKey, tlsPrivateKey string) (HTTPClient, error) {
+func NewAuthClientWithTLS(ctx context.Context, ccConfig *clientcredentials.Config, tlsCertKey, tlsPrivateKey string) (HTTPClient, error) {
 	httpClient, err := httputil.BuildHTTPClientTLS(tlsCertKey, tlsPrivateKey)
 	if err != nil {
 		return nil, err
 	}
-	ctx := context.WithValue(context.Background(), oauth2.HTTPClient, httpClient)
-	return newHTTPClient(ctx, ccConfig)
+	ctxWithClient := context.WithValue(ctx, oauth2.HTTPClient, httpClient)
+	return newHTTPClient(ctxWithClient, ccConfig)
 }
 
 func newHTTPClient(ctx context.Context, ccConfig *clientcredentials.Config) (HTTPClient, error) {
 	log := logutils.GetLogger(ctx)
+	log.Info("creating new HTTP client with OAuth2")
 	client := oauth2.NewClient(ctx, ccConfig.TokenSource(ctx))
 	if caPEM, err := os.ReadFile(CustomCAPath); err == nil {
 		log.Info("found custom CA, loading it..")
@@ -67,7 +69,9 @@ func newHTTPClient(ctx context.Context, ccConfig *clientcredentials.Config) (HTT
 		} else {
 			baseTransport = baseTransport.Clone()
 		}
-
+		if baseTransport.TLSClientConfig == nil {
+			baseTransport.TLSClientConfig = &tls.Config{}
+		}
 		baseTransport.TLSClientConfig.RootCAs = certPool
 		oauthTransport.Base = baseTransport
 	} else if !os.IsNotExist(err) {
