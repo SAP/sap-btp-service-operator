@@ -91,6 +91,9 @@ manager:
   #   runAsNonRoot: true
   #   fsGroup: 1000
   podSecurityContext: {}
+  # Custom CA certificates for HTTPS connections to SAP BTP
+#  customCACerts:
+#    - "" # base64 encoded PEM
   health_service:
     enabled: false
   kubernetesMatchLabels:

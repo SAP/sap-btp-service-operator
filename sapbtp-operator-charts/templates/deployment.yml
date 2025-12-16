@@ -130,6 +130,12 @@ spec:
             - mountPath: /tmp/k8s-webhook-server/serving-certs
               name: cert
               readOnly: true
+{{- if .Values.manager.customCACerts }}
+            - mountPath: /etc/ssl/certs/custom-ca-certificates.crt
+              name: custom-ca-certs
+              subPath: ca-certificates.crt
+              readOnly: true
+{{- end }}
     {{- if .Values.manager.imagePullSecrets }}
       imagePullSecrets: {{ toYaml .Values.manager.imagePullSecrets | nindent 8 }}
     {{- end }}
@@ -142,6 +148,12 @@ spec:
           secret:
             defaultMode: 420
             secretName: webhook-server-cert
+{{- if .Values.manager.customCACerts }}
+        - name: custom-ca-certs
+          secret:
+            secretName: custom-ca-certs
+            defaultMode: 420
+{{- end }}
       {{- if .Values.manager.nodeSelector }}
       nodeSelector: {{ toYaml .Values.manager.nodeSelector | nindent 8 }}
       {{- end }}

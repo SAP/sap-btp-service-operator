@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/SAP/sap-btp-service-operator/internal/utils/logutils"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	authv1 "k8s.io/api/authentication/v1"
@@ -131,7 +132,7 @@ var _ = Describe("ServiceInstance controller", func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 		log := ctrl.Log.WithName("instanceTest")
-		ctx = context.WithValue(ctx, utils.LogKey{}, log)
+		ctx = context.WithValue(ctx, logutils.LogKey, log)
 		fakeInstanceName = "ic-test-" + uuid.New().String()
 		defaultLookupKey = types.NamespacedName{Name: fakeInstanceName, Namespace: testNamespace}
 
