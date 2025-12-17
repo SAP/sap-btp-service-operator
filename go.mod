@@ -1,6 +1,6 @@
 module github.com/SAP/sap-btp-service-operator
 
-go 1.25.3
+go 1.25.5
 
 require (
 	github.com/Masterminds/sprig/v3 v3.3.0
@@ -69,7 +69,7 @@ require (
 	golang.org/x/text v0.31.0 // indirect
 	golang.org/x/time v0.9.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
-	google.golang.org/protobuf v1.36.6 // indirect
+	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect

@@ -22,6 +22,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/SAP/sap-btp-service-operator/client/sm"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"k8s.io/apimachinery/pkg/labels"
@@ -83,6 +84,9 @@ func main() {
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(loggerUseDevMode)))
+
+	sm.AppVersion = os.Getenv("APP_VERSION")
+	setupLog.Info("starting btp-service-operator", "version", sm.AppVersion)
 
 	mgrOptions := ctrl.Options{
 		Scheme: scheme,

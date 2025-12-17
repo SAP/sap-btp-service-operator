@@ -40,6 +40,8 @@ const (
 	originatingIdentityHeader = "X-Originating-Identity"
 )
 
+var AppVersion string
+
 // Client should be implemented by SM clients
 //
 //go:generate counterfeiter . Client
@@ -446,6 +448,8 @@ func (client *serviceManagerClient) callWithUser(method string, smpath string, b
 		return nil, err
 	}
 	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("client-name", "sap-btp-service-operator")
+	req.Header.Add("client-version", AppVersion)
 	if len(user) > 0 {
 		req.Header.Add(originatingIdentityHeader, user)
 	}
