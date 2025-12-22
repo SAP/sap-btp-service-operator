@@ -360,7 +360,7 @@ Deploy using:
 helm upgrade --install sap-btp-operator sap-btp-operator/sap-btp-operator   --create-namespace   --namespace sap-btp-operator   --values custom-values.yaml
 ```
 
-## How It Works
+## How It Works    ## we probably don't need this
 
 When custom CA certificates are configured, the operator performs the following steps:
 
