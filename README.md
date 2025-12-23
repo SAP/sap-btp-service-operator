@@ -11,7 +11,6 @@ The SAP BTP service operator is based on the [Kubernetes Operator pattern](https
 - [Installation and Setup](#installation-and-setup)
 - [Managing Access Permissions](#managing-access-permissions)
 - [Configuring Multiple Subaccounts](#configuring-multiple-subaccounts)
-- [Using Custom Certificate Authorities](#using-custom-certificate-authorities)
 - [Using the SAP BTP Service Operator](#using-the-sap-btp-service-operator)
 - [Creating Service Instances](#creating-service-instances)
 - [Managing Service Bindings](#managing-service-bindings)
@@ -167,7 +166,21 @@ stringData:
 
 [Back to top](#table-of-contents)
 
-## Managing Access Permissions
+### Using Custom Certificate Authorities
+The SAP BTP Service Operator supports custom Certificate Authority (CA) certificates for HTTPS communication in restricted or disconnected environments where public CAs are unavailable or not trusted.
+In such environments, the operator can be configured to trust organization-specific internal CA certificates in addition to the system CA bundle, enabling secure HTTPS communication with SAP BTP services such as Service Manager and authentication endpoints.
+
+#### Configuration
+
+Custom CA certificates are configured through the Helm chart.
+You configure custom CAs using the `customCACerts` array under `manager` in `values.yaml`.
+Each entry must be a base64-encoded PEM certificate.
+
+```bash
+    --set 'manager.customCACerts[0]'='LS0tLS1CRUdJTi...'  # Base64-encoded PEM certificate
+```
+
+### Managing Access Permissions
 
 By default, the SAP BTP operator has cluster-wide permissions. You can also limit them to one or more namespaces; for this, you need to set the following two Helm parameters:
 
@@ -300,130 +313,6 @@ SAP BTP service operator searches for the credentials in the following order:
 3. Default cluster secret
 
 [Back to top](#table-of-contents)
-
-# Using Custom Certificate Authorities
-
-The SAP BTP Service Operator supports custom Certificate Authority (CA) certificates for HTTPS communication in restricted or disconnected environments where public CAs are unavailable or not trusted.
-
-In such environments, the operator can be configured to trust organization-specific internal CA certificates in addition to the system CA bundle, enabling secure HTTPS communication with SAP BTP services such as Service Manager and authentication endpoints.
-
-## Configuration
-
-Custom CA certificates are configured through the Helm chart.
-
-### Helm Values
-
-You configure custom CAs using the `customCACerts` array under `manager` in `values.yaml`.
-
-Each entry must be a base64-encoded PEM certificate.
-
-```yaml
-manager:
-  customCACerts:
-    - "LS0tLS1CRUdJTi..."  # Base64-encoded PEM certificate
-    - "LS0tLS1CRUdJTi..."  # Optional additional certificate
-```
-
-### Installation with Custom CA
-
-You can provide custom CA certificates either directly via the Helm command or through a values file.
-
-#### Option 1: Provide certificate files via --set-file
-
-```bash
-helm upgrade --install sap-btp-operator sap-btp-operator/sap-btp-operator   --create-namespace   --namespace sap-btp-operator   --set manager.secret.clientid=<clientid>   --set manager.secret.clientsecret=<clientsecret>   --set manager.secret.sm_url=<sm_url>   --set manager.secret.tokenurl=<auth_url>   --set-file manager.customCACerts[0]=/path/to/ca-cert.pem
-```
-
-#### Option 2: Use a custom values file
-
-```yaml
-manager:
-  secret:
-    clientid: "<clientid>"
-    clientsecret: "<clientsecret>"
-    sm_url: "<sm_url>"
-    tokenurl: "<auth_url>"
-  customCACerts:
-    - |
-      -----BEGIN CERTIFICATE-----
-      MIIDXTCCAkWgAwIBAgIJAKJ...
-      -----END CERTIFICATE-----
-    - |
-      -----BEGIN CERTIFICATE-----
-      MIIDYTCCAkmgAwIBAgIJALR...
-      -----END CERTIFICATE-----
-```
-
-Deploy using:
-
-```bash
-helm upgrade --install sap-btp-operator sap-btp-operator/sap-btp-operator   --create-namespace   --namespace sap-btp-operator   --values custom-values.yaml
-```
-
-## How It Works    ## we probably don't need this
-
-When custom CA certificates are configured, the operator performs the following steps:
-
-1. **Secret creation**  
-   The Helm chart creates a Kubernetes Secret named `custom-ca-certs` containing all provided certificates, concatenated into a single file named `ca-certificates.crt`.
-
-2. **Volume mount**  
-   The secret is mounted read-only into the operator pod at:
-   `/etc/ssl/certs/custom-ca-certificates.crt`
-
-3. **CA detection and loading**  
-   At startup, the operator checks for the presence of the custom CA file.
-
-4. **Certificate pool configuration**  
-   The operator loads the system CA bundle and appends the custom CA certificates.
-
-5. **HTTPS communication**  
-   All HTTPS connections initiated by the operator trust both system CAs and the configured custom CA certificates.
-
-
-## Certificate Format
-
-Custom CA certificates must be provided in PEM format. Multiple certificates are concatenated into a single bundle file.
-
-
-## Troubleshooting
-
-### Operator cannot connect to Service Manager
-
-TLS errors such as `x509: certificate signed by unknown authority` may indicate missing or invalid CA configuration.
-
-Verify the CA configuration, certificate format, and certificate chain.
-
-### No certificates parsed from custom CA bundle
-
-Ensure valid PEM format and that the certificate is not double-encoded.
-
-### Custom CA secret not created
-
-Verify that `customCACerts` is populated and the Helm chart supports custom CA.
-
-### Certificate expiration
-
-Update the certificate and upgrade the Helm release to reload the CA bundle.
-
-## Security Considerations
-
-- Certificates are mounted read-only.
-- The operator runs as a non-root user.
-- Restrict access to Kubernetes Secrets.
-- Rotate certificates before expiration.
-- Only include required CA certificates.
-
-## Disabling Custom CA
-
-To use only system CAs, remove or omit `customCACerts` and upgrade the Helm release.
-
-## Related: mTLS Authentication
-
-Custom CA certificates affect server certificate validation only.  
-For mutual TLS authentication, configure client certificates separately.
-
-
 
 ## Using the SAP BTP Service Operator
 
