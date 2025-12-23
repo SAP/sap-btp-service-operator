@@ -18,7 +18,9 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"flag"
+	"net/http"
 	"os"
 	"time"
 
@@ -66,6 +68,48 @@ func init() {
 
 	_ = servicesv1.AddToScheme(scheme)
 	// +kubebuilder:scaffold:scheme
+}
+
+// getFipsCompliantConfig creates a FIPS-compliant Kubernetes rest.Config
+func getFipsCompliantConfig() (*rest.Config, error) {
+	fipsCompliantConfig := ctrl.GetConfigOrDie()
+
+	// Configure FIPS-compliant TLS settings using WrapTransport
+	originalWrapTransport := fipsCompliantConfig.WrapTransport
+	fipsCompliantConfig.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
+		// Apply the original wrapper if it exists
+		if originalWrapTransport != nil {
+			rt = originalWrapTransport(rt)
+		}
+
+		// Apply FIPS-compliant TLS configuration
+		if transport, ok := rt.(*http.Transport); ok {
+			if transport.TLSClientConfig == nil {
+				transport.TLSClientConfig = &tls.Config{}
+			}
+
+			// Configure FIPS-compliant TLS settings
+			transport.TLSClientConfig.MinVersion = tls.VersionTLS12
+			transport.TLSClientConfig.MaxVersion = tls.VersionTLS13
+			transport.TLSClientConfig.CipherSuites = []uint16{
+				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+				tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+				tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+				tls.TLS_RSA_WITH_AES_128_GCM_SHA256,
+				tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
+			}
+			transport.TLSClientConfig.CurvePreferences = []tls.CurveID{
+				tls.CurveP256,
+				tls.CurveP384,
+				tls.CurveP521,
+			}
+		}
+
+		return rt
+	}
+
+	return fipsCompliantConfig, nil
 }
 
 func main() {
@@ -134,7 +178,14 @@ func main() {
 		}
 	}
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), mgrOptions)
+	// Get FIPS-compliant Kubernetes configuration
+	k8sConfig, err := getFipsCompliantConfig()
+	if err != nil {
+		setupLog.Error(err, "unable to get FIPS-compliant kubernetes config")
+		os.Exit(1)
+	}
+
+	mgr, err := ctrl.NewManager(k8sConfig, mgrOptions)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
@@ -150,7 +201,7 @@ func main() {
 	var nonCachedClient client.Client
 	if config.Get().EnableLimitedCache {
 		var clErr error
-		nonCachedClient, clErr = client.New(mgr.GetConfig(), client.Options{Scheme: scheme})
+		nonCachedClient, clErr = client.New(k8sConfig, client.Options{Scheme: scheme})
 		if clErr != nil {
 			setupLog.Error(clErr, "unable to create non cached client")
 			os.Exit(1)
