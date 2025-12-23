@@ -270,7 +270,7 @@ func getReadyCondition(object common.SAPBTPResource) metav1.Condition {
 		reason = common.Provisioned
 	}
 
-	return metav1.Condition{Type: common.ConditionReady, Status: status, Reason: reason}
+	return metav1.Condition{Type: common.ConditionReady, Status: status, Reason: reason, ObservedGeneration: object.GetGeneration()}
 }
 
 func getLastObservedGen(object common.SAPBTPResource) int64 {

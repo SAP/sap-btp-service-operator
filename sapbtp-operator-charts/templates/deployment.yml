@@ -84,6 +84,9 @@ spec:
             - --logger_use_dev_mode={{.Values.manager.logger_use_dev_mode}}
           command:
             - /manager
+          env:
+            - name: APP_VERSION
+              value: "{{ .Chart.AppVersion }}"
           envFrom:
             - configMapRef:
                 name: sap-btp-operator-config
