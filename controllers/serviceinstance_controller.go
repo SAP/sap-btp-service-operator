@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/SAP/sap-btp-service-operator/internal/utils/logutils"
@@ -85,6 +86,34 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 	serviceInstance = serviceInstance.DeepCopy()
 
+	smClient, err := r.GetSMClient(ctx, serviceInstance)
+	if err != nil {
+		log.Error(err, "failed to get sm client")
+		return utils.HandleOperationFailure(ctx, r.Client, serviceInstance, common.Unknown, err)
+	}
+
+	if len(serviceInstance.Status.InstanceID) > 0 {
+		if _, err := smClient.GetInstanceByID(serviceInstance.Status.InstanceID, nil); err != nil {
+			var smError *sm.ServiceManagerError
+			if ok := errors.As(err, &smError); ok {
+				if smError.StatusCode == http.StatusNotFound {
+					log.Info(fmt.Sprintf("instance %s not found in SM", serviceInstance.Status.InstanceID))
+					condition := metav1.Condition{
+						Type:               common.ConditionReady,
+						Status:             metav1.ConditionFalse,
+						ObservedGeneration: serviceInstance.Generation,
+						Reason:             common.Failed,
+						Message:            fmt.Sprintf("instance %s not found in Service Manager", serviceInstance.Status.InstanceID),
+					}
+					meta.SetStatusCondition(&serviceInstance.Status.Conditions, condition)
+					return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceInstance)
+				}
+			}
+			log.Error(err, fmt.Sprintf("failed to get instance %s from SM", serviceInstance.Status.InstanceID))
+			return ctrl.Result{}, err
+		}
+	}
+
 	if utils.IsMarkedForDeletion(serviceInstance.ObjectMeta) {
 		return r.deleteInstance(ctx, serviceInstance)
 	}
@@ -114,12 +143,6 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		if err := r.Client.Update(ctx, serviceInstance); err != nil {
 			return ctrl.Result{}, err
 		}
-	}
-
-	smClient, err := r.GetSMClient(ctx, serviceInstance)
-	if err != nil {
-		log.Error(err, "failed to get sm client")
-		return utils.HandleOperationFailure(ctx, r.Client, serviceInstance, common.Unknown, err)
 	}
 
 	if serviceInstance.Status.InstanceID == "" {
