@@ -607,7 +607,19 @@ func updateRequired(serviceInstance *v1.ServiceInstance) bool {
 		return true
 	}
 
-	return serviceInstance.GetSpecHash() != serviceInstance.Status.HashedSpec
+	currentHash := serviceInstance.GetSpecHash()
+	storedHash := serviceInstance.Status.HashedSpec
+
+	// If stored hash is MD5 (32 chars) and we're now using SHA256 (64 chars),
+	// perform one-time migration by updating the stored hash without triggering update
+	if len(storedHash) == 32 && len(currentHash) == 64 {
+		// This is likely an MD5->SHA256 migration, update the stored hash silently
+		// to prevent unnecessary service updates during FIPS migration
+		serviceInstance.Status.HashedSpec = currentHash
+		return false // No actual spec change, just hash algorithm migration
+	}
+
+	return currentHash != storedHash
 }
 
 func shareOrUnshareRequired(serviceInstance *v1.ServiceInstance) bool {
