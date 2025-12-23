@@ -22,7 +22,7 @@ func BuildHTTPClient(sslDisabled bool) *http.Client {
 	client := getClient()
 	if sslDisabled {
 		// Preserve FIPS compliance even when skipping verification
-		tlsConfig := getFipsCompliantTLSConfig()
+		tlsConfig := GetFipsCompliantTLSConfig()
 		tlsConfig.InsecureSkipVerify = true
 		client.Transport.(*http.Transport).TLSClientConfig = tlsConfig
 	}
@@ -40,7 +40,7 @@ func BuildHTTPClientTLS(tlsCertKey, tlsPrivateKey string) (*http.Client, error) 
 	}
 
 	// Start with FIPS-compliant config and add the client certificate
-	tlsConfig := getFipsCompliantTLSConfig()
+	tlsConfig := GetFipsCompliantTLSConfig()
 	tlsConfig.Certificates = []tls.Certificate{cert}
 	client.Transport.(*http.Transport).TLSClientConfig = tlsConfig
 
@@ -58,7 +58,7 @@ func getClient() *http.Client {
 		IdleConnTimeout:       90 * time.Second,
 		TLSHandshakeTimeout:   10 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
-		TLSClientConfig:       getFipsCompliantTLSConfig(),
+		TLSClientConfig:       GetFipsCompliantTLSConfig(),
 	}
 
 	client := &http.Client{
@@ -68,8 +68,8 @@ func getClient() *http.Client {
 	return client
 }
 
-// getFipsCompliantTLSConfig returns a FIPS-compliant TLS configuration
-func getFipsCompliantTLSConfig() *tls.Config {
+// GetFipsCompliantTLSConfig returns a FIPS-compliant TLS configuration
+func GetFipsCompliantTLSConfig() *tls.Config {
 	return &tls.Config{
 		MinVersion: tls.VersionTLS12,
 		MaxVersion: tls.VersionTLS13,

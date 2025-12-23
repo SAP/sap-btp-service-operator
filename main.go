@@ -18,7 +18,6 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
 	"flag"
 	"net/http"
 	"os"
@@ -34,6 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
+	"github.com/SAP/sap-btp-service-operator/internal/httputil"
 	"github.com/SAP/sap-btp-service-operator/internal/utils"
 
 	"k8s.io/client-go/rest"
@@ -71,7 +71,7 @@ func init() {
 }
 
 // getFipsCompliantConfig creates a FIPS-compliant Kubernetes rest.Config
-func getFipsCompliantConfig() (*rest.Config, error) {
+func getFipsCompliantConfig() *rest.Config {
 	fipsCompliantConfig := ctrl.GetConfigOrDie()
 
 	// Configure FIPS-compliant TLS settings using WrapTransport
@@ -84,32 +84,28 @@ func getFipsCompliantConfig() (*rest.Config, error) {
 
 		// Apply FIPS-compliant TLS configuration
 		if transport, ok := rt.(*http.Transport); ok {
+			// Preserve existing TLS config or create new one
 			if transport.TLSClientConfig == nil {
-				transport.TLSClientConfig = &tls.Config{}
-			}
+				transport.TLSClientConfig = httputil.GetFipsCompliantTLSConfig()
+			} else {
+				// Preserve existing certificate settings while applying FIPS constraints
+				existingConfig := transport.TLSClientConfig.Clone()
+				fipsConfig := httputil.GetFipsCompliantTLSConfig()
 
-			// Configure FIPS-compliant TLS settings
-			transport.TLSClientConfig.MinVersion = tls.VersionTLS12
-			transport.TLSClientConfig.MaxVersion = tls.VersionTLS13
-			transport.TLSClientConfig.CipherSuites = []uint16{
-				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-				tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-				tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-				tls.TLS_RSA_WITH_AES_128_GCM_SHA256,
-				tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
-			}
-			transport.TLSClientConfig.CurvePreferences = []tls.CurveID{
-				tls.CurveP256,
-				tls.CurveP384,
-				tls.CurveP521,
+				// Apply FIPS constraints while preserving certificate validation
+				existingConfig.MinVersion = fipsConfig.MinVersion
+				existingConfig.MaxVersion = fipsConfig.MaxVersion
+				existingConfig.CipherSuites = fipsConfig.CipherSuites
+				existingConfig.CurvePreferences = fipsConfig.CurvePreferences
+
+				transport.TLSClientConfig = existingConfig
 			}
 		}
 
 		return rt
 	}
 
-	return fipsCompliantConfig, nil
+	return fipsCompliantConfig
 }
 
 func main() {
@@ -179,11 +175,7 @@ func main() {
 	}
 
 	// Get FIPS-compliant Kubernetes configuration
-	k8sConfig, err := getFipsCompliantConfig()
-	if err != nil {
-		setupLog.Error(err, "unable to get FIPS-compliant kubernetes config")
-		os.Exit(1)
-	}
+	k8sConfig := getFipsCompliantConfig()
 
 	mgr, err := ctrl.NewManager(k8sConfig, mgrOptions)
 	if err != nil {
