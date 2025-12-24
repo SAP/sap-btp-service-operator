@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"net/http"
 	"strings"
 	"time"
 
@@ -99,6 +100,15 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		if err := utils.InitConditions(ctx, r.Client, serviceBinding); err != nil {
 			return ctrl.Result{}, err
 		}
+	} else {
+		readyCond := meta.FindStatusCondition(serviceBinding.Status.Conditions, common.ConditionReady)
+		if readyCond != nil && readyCond.Reason == common.ResourceNotFound {
+			log.Info(fmt.Sprintf("binding id %s is not found for this cluster, deleting credentials", serviceBinding.Status.BindingID))
+			if err := r.deleteBindingSecret(ctx, serviceBinding); err != nil {
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{}, nil
+		}
 	}
 
 	serviceInstance, instanceErr := r.getServiceInstanceForBinding(ctx, serviceBinding)
@@ -118,6 +128,32 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 				return ctrl.Result{}, updateErr
 			}
 			return ctrl.Result{}, instanceErr
+		}
+	}
+
+	smClient, err := r.GetSMClient(ctx, serviceInstance)
+	if err != nil {
+		return utils.HandleOperationFailure(ctx, r.Client, serviceBinding, common.Unknown, err)
+	}
+
+	if len(serviceBinding.Status.BindingID) > 0 {
+		if _, err := smClient.GetBindingByID(serviceBinding.Status.BindingID, nil); err != nil {
+			var smError *sm.ServiceManagerError
+			if ok := errors.As(err, &smError); ok {
+				if smError.StatusCode == http.StatusNotFound {
+					condition := metav1.Condition{
+						Type:               common.ConditionReady,
+						Status:             metav1.ConditionFalse,
+						ObservedGeneration: serviceBinding.Generation,
+						Reason:             common.ResourceNotFound,
+						Message:            fmt.Sprintf("binding %s not found in Service Manager", serviceInstance.Status.InstanceID),
+					}
+					meta.SetStatusCondition(&serviceBinding.Status.Conditions, condition)
+				}
+				return ctrl.Result{RequeueAfter: time.Hour * 3}, nil
+			}
+			log.Error(err, "failed to get binding by id from SM with unknown error")
+			return ctrl.Result{}, err
 		}
 	}
 
@@ -182,11 +218,6 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			log.Error(err, "secret validation failed")
 			utils.SetBlockedCondition(ctx, err.Error(), serviceBinding)
 			return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
-		}
-
-		smClient, err := r.GetSMClient(ctx, serviceInstance)
-		if err != nil {
-			return utils.HandleOperationFailure(ctx, r.Client, serviceBinding, common.Unknown, err)
 		}
 
 		smBinding, err := r.getBindingForRecovery(ctx, smClient, serviceBinding)

@@ -102,7 +102,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 						Type:               common.ConditionReady,
 						Status:             metav1.ConditionFalse,
 						ObservedGeneration: serviceInstance.Generation,
-						Reason:             common.Failed,
+						Reason:             common.ResourceNotFound,
 						Message:            fmt.Sprintf("instance %s not found in Service Manager", serviceInstance.Status.InstanceID),
 					}
 					meta.SetStatusCondition(&serviceInstance.Status.Conditions, condition)
