@@ -1515,6 +1515,140 @@ var _ = Describe("ServiceInstance controller", func() {
 		})
 
 	})
+
+	Describe("Hash Migration", func() {
+		Context("updateRequired function", func() {
+			var instance *v1.ServiceInstance
+
+			BeforeEach(func() {
+				instance = &v1.ServiceInstance{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-instance",
+						Namespace: testNamespace,
+					},
+					Spec: v1.ServiceInstanceSpec{
+						ServiceOfferingName: fakeOfferingName,
+						ServicePlanName:     fakePlanName,
+						ExternalName:        "test-external-name",
+					},
+					Status: v1.ServiceInstanceStatus{
+						Ready: metav1.ConditionTrue,
+					},
+				}
+			})
+
+			It("should detect MD5 to SHA256 migration and update hash without triggering update", func() {
+				// Simulate MD5 hash (32 characters) stored in status
+				md5Hash := "5d41402abc4b2a76b9719d911017c592" // 32 chars representing old MD5 hash
+				instance.Status.HashedSpec = md5Hash
+
+				// Current hash should be SHA256 (64 characters) - this is what GetSpecHash() returns now
+				currentHash := instance.GetSpecHash()
+				Expect(len(currentHash)).To(Equal(64), "GetSpecHash should return 64-char SHA256 hash")
+
+				// Test the migration logic
+				shouldUpdate, shouldUpdateState := updateRequired(instance)
+
+				// Should not trigger actual update but should update state for hash migration
+				Expect(shouldUpdate).To(BeFalse(), "Should not trigger service update during hash migration")
+				Expect(shouldUpdateState).To(BeTrue(), "Should update state to store new hash format")
+
+				// Verify that the stored hash was updated to the new SHA256 hash
+				Expect(instance.Status.HashedSpec).To(Equal(currentHash), "Stored hash should be updated to SHA256")
+			})
+
+			It("should not migrate when both hashes are SHA256 format", func() {
+				// Both stored and current hashes are SHA256 (64 characters)
+				sha256Hash := instance.GetSpecHash()
+				instance.Status.HashedSpec = sha256Hash
+
+				shouldUpdate, shouldUpdateState := updateRequired(instance)
+
+				// No migration needed, no update needed
+				Expect(shouldUpdate).To(BeFalse(), "Should not update when hashes match")
+				Expect(shouldUpdateState).To(BeFalse(), "Should not update state when no migration needed")
+			})
+
+			It("should trigger update when SHA256 hashes differ", func() {
+				// Set a different SHA256 hash to simulate spec change
+				differentSHA256 := "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3" // 64 chars
+				instance.Status.HashedSpec = differentSHA256
+
+				shouldUpdate, shouldUpdateState := updateRequired(instance)
+
+				// Should trigger update due to hash difference
+				Expect(shouldUpdate).To(BeTrue(), "Should update when SHA256 hashes differ")
+				Expect(shouldUpdateState).To(BeFalse(), "Should not update state when actual spec change detected")
+			})
+
+			It("should not process when instance is not ready", func() {
+				// Set instance as not ready
+				instance.Status.Ready = metav1.ConditionFalse
+				md5Hash := "5d41402abc4b2a76b9719d911017c592"
+				instance.Status.HashedSpec = md5Hash
+
+				shouldUpdate, shouldUpdateState := updateRequired(instance)
+
+				// Should not process updates for non-ready instances
+				Expect(shouldUpdate).To(BeFalse(), "Should not update non-ready instances")
+				Expect(shouldUpdateState).To(BeFalse(), "Should not update state for non-ready instances")
+
+				// Hash should remain unchanged
+				Expect(instance.Status.HashedSpec).To(Equal(md5Hash), "Hash should not be updated for non-ready instances")
+			})
+
+			It("should handle force reconcile flag", func() {
+				// Set force reconcile flag
+				instance.Status.ForceReconcile = true
+				md5Hash := "5d41402abc4b2a76b9719d911017c592"
+				instance.Status.HashedSpec = md5Hash
+
+				shouldUpdate, shouldUpdateState := updateRequired(instance)
+
+				// Force reconcile should override migration logic
+				Expect(shouldUpdate).To(BeTrue(), "Should update when ForceReconcile is true")
+				Expect(shouldUpdateState).To(BeFalse(), "Should not update state when ForceReconcile is triggered")
+			})
+
+			It("should handle edge case with invalid hash lengths", func() {
+				// Test with an unusual hash length (neither 32 nor 64)
+				unusualHash := "abc123" // 6 characters
+				instance.Status.HashedSpec = unusualHash
+
+				shouldUpdate, shouldUpdateState := updateRequired(instance)
+
+				// Should treat as normal hash comparison, not migration
+				Expect(shouldUpdate).To(BeTrue(), "Should update when hash lengths don't match migration pattern")
+				Expect(shouldUpdateState).To(BeFalse(), "Should not update state for non-migration scenarios")
+			})
+
+			Context("with update in progress condition", func() {
+				BeforeEach(func() {
+					// Add update in progress condition
+					instance.Status.Conditions = []metav1.Condition{
+						{
+							Type:               common.ConditionSucceeded,
+							Status:             metav1.ConditionFalse,
+							Reason:             common.UpdateInProgress,
+							Message:            "Update in progress",
+							LastTransitionTime: metav1.Now(),
+						},
+					}
+				})
+
+				It("should continue update process even during migration scenario", func() {
+					md5Hash := "5d41402abc4b2a76b9719d911017c592"
+					instance.Status.HashedSpec = md5Hash
+
+					shouldUpdate, shouldUpdateState := updateRequired(instance)
+
+					// Should continue with update due to in-progress condition
+					Expect(shouldUpdate).To(BeTrue(), "Should continue update when UpdateInProgress condition exists")
+					Expect(shouldUpdateState).To(BeFalse(), "Should not update state when update is in progress")
+				})
+			})
+		})
+	})
 })
 
 func waitForInstanceConditionAndMessage(ctx context.Context, key types.NamespacedName, conditionType, msg string) {

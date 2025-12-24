@@ -138,8 +138,13 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	// Update
-	if updateRequired(serviceInstance) {
+	shouldUpdate, shouldUpdateState := updateRequired(serviceInstance)
+	if shouldUpdate {
 		return r.updateInstance(ctx, smClient, serviceInstance)
+	}
+	if shouldUpdateState {
+		log.Info(fmt.Sprintf("updated instance hashing '%s' to '%s'", serviceInstance.Name, serviceInstance.Status.InstanceID))
+		return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceInstance)
 	}
 
 	// share/unshare
@@ -592,19 +597,19 @@ func isFinalState(ctx context.Context, serviceInstance *v1.ServiceInstance) bool
 	return true
 }
 
-func updateRequired(serviceInstance *v1.ServiceInstance) bool {
+func updateRequired(serviceInstance *v1.ServiceInstance) (bool, bool) {
 	//update is not supported for failed instances (this can occur when instance creation was asynchronously)
 	if serviceInstance.Status.Ready != metav1.ConditionTrue {
-		return false
+		return false, false
 	}
 
 	if serviceInstance.Status.ForceReconcile {
-		return true
+		return true, false
 	}
 
 	cond := meta.FindStatusCondition(serviceInstance.Status.Conditions, common.ConditionSucceeded)
 	if cond != nil && cond.Reason == common.UpdateInProgress { //in case of transient error occurred
-		return true
+		return true, false
 	}
 
 	currentHash := serviceInstance.GetSpecHash()
@@ -615,11 +620,11 @@ func updateRequired(serviceInstance *v1.ServiceInstance) bool {
 	if len(storedHash) == 32 && len(currentHash) == 64 {
 		// This is likely an MD5->SHA256 migration, update the stored hash silently
 		// to prevent unnecessary service updates during FIPS migration
-		serviceInstance.Status.HashedSpec = currentHash
-		return false // No actual spec change, just hash algorithm migration
+		updateHashedSpecValue(serviceInstance)
+		return false, true // No actual spec change, just hash algorithm migration
 	}
 
-	return currentHash != storedHash
+	return currentHash != storedHash, false
 }
 
 func shareOrUnshareRequired(serviceInstance *v1.ServiceInstance) bool {
