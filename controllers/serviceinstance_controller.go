@@ -142,6 +142,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	if len(serviceInstance.Status.HashedSpec) == 32 {
 		// This is likely an MD5->SHA256 migration, update the stored hash silently
 		// to prevent unnecessary service updates during FIPS migration
+		log.Info(fmt.Sprintf("updated hashing for instance '%s' (id=%s)", serviceInstance.Name, serviceInstance.Status.InstanceID))
 		updateHashedSpecValue(serviceInstance)
 		return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceInstance)
 	}
