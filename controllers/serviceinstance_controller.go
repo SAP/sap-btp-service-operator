@@ -137,14 +137,17 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return r.createInstance(ctx, smClient, serviceInstance)
 	}
 
-	// Update
-	shouldUpdate, shouldUpdateState := updateRequired(serviceInstance)
-	if shouldUpdate {
-		return r.updateInstance(ctx, smClient, serviceInstance)
-	}
-	if shouldUpdateState {
-		log.Info(fmt.Sprintf("updated instance hashing '%s' to '%s'", serviceInstance.Name, serviceInstance.Status.InstanceID))
+	// If stored hash is MD5 (32 chars) and we're now using SHA256 (64 chars),
+	// perform one-time migration by updating the stored hash without triggering update
+	if len(serviceInstance.Status.HashedSpec) == 32 {
+		// This is likely an MD5->SHA256 migration, update the stored hash silently
+		// to prevent unnecessary service updates during FIPS migration
+		updateHashedSpecValue(serviceInstance)
 		return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceInstance)
+	}
+
+	if shouldUpdate := updateRequired(serviceInstance); shouldUpdate {
+		return r.updateInstance(ctx, smClient, serviceInstance)
 	}
 
 	// share/unshare
@@ -597,34 +600,25 @@ func isFinalState(ctx context.Context, serviceInstance *v1.ServiceInstance) bool
 	return true
 }
 
-func updateRequired(serviceInstance *v1.ServiceInstance) (bool, bool) {
+func updateRequired(serviceInstance *v1.ServiceInstance) bool {
 	//update is not supported for failed instances (this can occur when instance creation was asynchronously)
 	if serviceInstance.Status.Ready != metav1.ConditionTrue {
-		return false, false
+		return false
 	}
 
 	if serviceInstance.Status.ForceReconcile {
-		return true, false
+		return true
 	}
 
 	cond := meta.FindStatusCondition(serviceInstance.Status.Conditions, common.ConditionSucceeded)
 	if cond != nil && cond.Reason == common.UpdateInProgress { //in case of transient error occurred
-		return true, false
+		return true
 	}
 
 	currentHash := serviceInstance.GetSpecHash()
 	storedHash := serviceInstance.Status.HashedSpec
 
-	// If stored hash is MD5 (32 chars) and we're now using SHA256 (64 chars),
-	// perform one-time migration by updating the stored hash without triggering update
-	if len(storedHash) == 32 && len(currentHash) == 64 {
-		// This is likely an MD5->SHA256 migration, update the stored hash silently
-		// to prevent unnecessary service updates during FIPS migration
-		updateHashedSpecValue(serviceInstance)
-		return false, true // No actual spec change, just hash algorithm migration
-	}
-
-	return currentHash != storedHash, false
+	return currentHash != storedHash
 }
 
 func shareOrUnshareRequired(serviceInstance *v1.ServiceInstance) bool {

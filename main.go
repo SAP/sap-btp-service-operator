@@ -70,44 +70,6 @@ func init() {
 	// +kubebuilder:scaffold:scheme
 }
 
-// getFipsCompliantConfig creates a FIPS-compliant Kubernetes rest.Config
-func getFipsCompliantConfig() *rest.Config {
-	fipsCompliantConfig := ctrl.GetConfigOrDie()
-
-	// Configure FIPS-compliant TLS settings using WrapTransport
-	originalWrapTransport := fipsCompliantConfig.WrapTransport
-	fipsCompliantConfig.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
-		// Apply the original wrapper if it exists
-		if originalWrapTransport != nil {
-			rt = originalWrapTransport(rt)
-		}
-
-		// Apply FIPS-compliant TLS configuration
-		if transport, ok := rt.(*http.Transport); ok {
-			// Preserve existing TLS config or create new one
-			if transport.TLSClientConfig == nil {
-				transport.TLSClientConfig = httputil.GetFipsCompliantTLSConfig()
-			} else {
-				// Preserve existing certificate settings while applying FIPS constraints
-				existingConfig := transport.TLSClientConfig.Clone()
-				fipsConfig := httputil.GetFipsCompliantTLSConfig()
-
-				// Apply FIPS constraints while preserving certificate validation
-				existingConfig.MinVersion = fipsConfig.MinVersion
-				existingConfig.MaxVersion = fipsConfig.MaxVersion
-				existingConfig.CipherSuites = fipsConfig.CipherSuites
-				existingConfig.CurvePreferences = fipsConfig.CurvePreferences
-
-				transport.TLSClientConfig = existingConfig
-			}
-		}
-
-		return rt
-	}
-
-	return fipsCompliantConfig
-}
-
 func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
@@ -273,4 +235,42 @@ func createClusterSecret(client client.Client) {
 	if err := client.Create(context.Background(), clusterSecret); err != nil {
 		setupLog.Error(err, "failed to create cluster secret")
 	}
+}
+
+// getFipsCompliantConfig creates a FIPS-compliant Kubernetes rest.Config
+func getFipsCompliantConfig() *rest.Config {
+	fipsCompliantConfig := ctrl.GetConfigOrDie()
+
+	// Configure FIPS-compliant TLS settings using WrapTransport
+	originalWrapTransport := fipsCompliantConfig.WrapTransport
+	fipsCompliantConfig.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
+		// Apply the original wrapper if it exists
+		if originalWrapTransport != nil {
+			rt = originalWrapTransport(rt)
+		}
+
+		// Apply FIPS-compliant TLS configuration
+		if transport, ok := rt.(*http.Transport); ok {
+			// Preserve existing TLS config or create new one
+			if transport.TLSClientConfig == nil {
+				transport.TLSClientConfig = httputil.GetFipsCompliantTLSConfig()
+			} else {
+				// Preserve existing certificate settings while applying FIPS constraints
+				existingConfig := transport.TLSClientConfig.Clone()
+				fipsConfig := httputil.GetFipsCompliantTLSConfig()
+
+				// Apply FIPS constraints while preserving certificate validation
+				existingConfig.MinVersion = fipsConfig.MinVersion
+				existingConfig.MaxVersion = fipsConfig.MaxVersion
+				existingConfig.CipherSuites = fipsConfig.CipherSuites
+				existingConfig.CurvePreferences = fipsConfig.CurvePreferences
+
+				transport.TLSClientConfig = existingConfig
+			}
+		}
+
+		return rt
+	}
+
+	return fipsCompliantConfig
 }
