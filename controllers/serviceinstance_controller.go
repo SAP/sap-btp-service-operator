@@ -146,7 +146,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceInstance)
 	}
 
-	if shouldUpdate := updateRequired(serviceInstance); shouldUpdate {
+	if updateRequired(serviceInstance) {
 		return r.updateInstance(ctx, smClient, serviceInstance)
 	}
 
