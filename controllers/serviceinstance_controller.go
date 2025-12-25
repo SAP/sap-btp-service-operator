@@ -137,15 +137,16 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return r.createInstance(ctx, smClient, serviceInstance)
 	}
 
+	// If stored hash is MD5 (32 chars) and we're now using SHA256 (64 chars),
+	// perform one-time migration by updating the stored hash without triggering update
+	if len(serviceInstance.Status.HashedSpec) == 32 {
+		// This is likely an MD5->SHA256 migration, update the stored hash silently
+		// to prevent unnecessary service updates during FIPS migration
+		updateHashedSpecValue(serviceInstance)
+		return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceInstance)
+	}
+
 	if updateRequired(serviceInstance) {
-		// If stored hash is MD5 (32 chars) and we're now using SHA256 (64 chars),
-		// perform one-time migration by updating the stored hash without triggering update
-		if len(serviceInstance.Status.HashedSpec) == 32 {
-			// This is likely an MD5->SHA256 migration, update the stored hash silently
-			// to prevent unnecessary service updates during FIPS migration
-			updateHashedSpecValue(serviceInstance)
-			return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceInstance)
-		}
 		return r.updateInstance(ctx, smClient, serviceInstance)
 	}
 
