@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 	"flag"
+	"net/http"
 	"os"
 	"time"
 
@@ -32,6 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
+	"github.com/SAP/sap-btp-service-operator/internal/httputil"
 	"github.com/SAP/sap-btp-service-operator/internal/utils"
 
 	"k8s.io/client-go/rest"
@@ -134,7 +136,10 @@ func main() {
 		}
 	}
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), mgrOptions)
+	// Get FIPS-compliant Kubernetes configuration
+	k8sConfig := getFipsCompliantConfig()
+
+	mgr, err := ctrl.NewManager(k8sConfig, mgrOptions)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
@@ -150,7 +155,7 @@ func main() {
 	var nonCachedClient client.Client
 	if config.Get().EnableLimitedCache {
 		var clErr error
-		nonCachedClient, clErr = client.New(mgr.GetConfig(), client.Options{Scheme: scheme})
+		nonCachedClient, clErr = client.New(k8sConfig, client.Options{Scheme: scheme})
 		if clErr != nil {
 			setupLog.Error(clErr, "unable to create non cached client")
 			os.Exit(1)
@@ -230,4 +235,42 @@ func createClusterSecret(client client.Client) {
 	if err := client.Create(context.Background(), clusterSecret); err != nil {
 		setupLog.Error(err, "failed to create cluster secret")
 	}
+}
+
+// getFipsCompliantConfig creates a FIPS-compliant Kubernetes rest.Config
+func getFipsCompliantConfig() *rest.Config {
+	fipsCompliantConfig := ctrl.GetConfigOrDie()
+
+	// Configure FIPS-compliant TLS settings using WrapTransport
+	originalWrapTransport := fipsCompliantConfig.WrapTransport
+	fipsCompliantConfig.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
+		// Apply the original wrapper if it exists
+		if originalWrapTransport != nil {
+			rt = originalWrapTransport(rt)
+		}
+
+		// Apply FIPS-compliant TLS configuration
+		if transport, ok := rt.(*http.Transport); ok {
+			// Preserve existing TLS config or create new one
+			if transport.TLSClientConfig == nil {
+				transport.TLSClientConfig = httputil.GetFipsCompliantTLSConfig()
+			} else {
+				// Preserve existing certificate settings while applying FIPS constraints
+				existingConfig := transport.TLSClientConfig.Clone()
+				fipsConfig := httputil.GetFipsCompliantTLSConfig()
+
+				// Apply FIPS constraints while preserving certificate validation
+				existingConfig.MinVersion = fipsConfig.MinVersion
+				existingConfig.MaxVersion = fipsConfig.MaxVersion
+				existingConfig.CipherSuites = fipsConfig.CipherSuites
+				existingConfig.CurvePreferences = fipsConfig.CurvePreferences
+
+				transport.TLSClientConfig = existingConfig
+			}
+		}
+
+		return rt
+	}
+
+	return fipsCompliantConfig
 }
