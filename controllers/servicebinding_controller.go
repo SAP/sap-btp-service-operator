@@ -100,15 +100,6 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		if err := utils.InitConditions(ctx, r.Client, serviceBinding); err != nil {
 			return ctrl.Result{}, err
 		}
-	} else {
-		readyCond := meta.FindStatusCondition(serviceBinding.Status.Conditions, common.ConditionReady)
-		if readyCond != nil && readyCond.Reason == common.ResourceNotFound {
-			log.Info(fmt.Sprintf("binding id %s is not found for this cluster, deleting credentials", serviceBinding.Status.BindingID))
-			if err := r.deleteBindingSecret(ctx, serviceBinding); err != nil {
-				return ctrl.Result{}, err
-			}
-			return ctrl.Result{}, nil
-		}
 	}
 
 	serviceInstance, instanceErr := r.getServiceInstanceForBinding(ctx, serviceBinding)
@@ -150,7 +141,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 					}
 					meta.SetStatusCondition(&serviceBinding.Status.Conditions, condition)
 				}
-				return ctrl.Result{RequeueAfter: time.Hour * 3}, nil
+				return ctrl.Result{}, nil
 			}
 			log.Error(err, "failed to get binding by id from SM with unknown error")
 			return ctrl.Result{}, err
