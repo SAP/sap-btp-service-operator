@@ -1,7 +1,7 @@
 package v1
 
 import (
-	"crypto/md5"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 
@@ -139,7 +139,7 @@ var _ = Describe("Service Instance Type Test", func() {
 		spec := instance.Spec
 		spec.Shared = ptr.To(false)
 		specBytes, _ := json.Marshal(spec)
-		hash := md5.Sum(specBytes)
+		hash := sha256.Sum256(specBytes)
 		expectedHash := hex.EncodeToString(hash[:])
 
 		// Get actual hash
