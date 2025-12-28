@@ -628,6 +628,40 @@ var _ = Describe("ServiceInstance controller", func() {
 				Expect(err.Error()).To(ContainSubstring("modifying spec.userInfo is not allowed"))
 			})
 		})
+
+		When("hash spec is md5", func() {
+			When("updateRequired returned true", func() {
+				BeforeEach(func() {
+					serviceInstance.Status.HashedSpec = "6dbc872739e7571d1bbf5d7b82537fa0"
+					serviceInstance.Status.ForceReconcile = true
+					Expect(k8sClient.Status().Update(ctx, serviceInstance)).Should(Succeed())
+					fakeClient.UpdateInstanceReturns(nil, "", nil)
+				})
+
+				It("instance should be updated", func() {
+					newExternalName := "my-new-external-name" + uuid.New().String()
+					serviceInstance.Spec.ExternalName = newExternalName
+					serviceInstance = updateInstance(ctx, serviceInstance)
+					Expect(serviceInstance.Spec.ExternalName).To(Equal(newExternalName))
+					Expect(fakeClient.UpdateInstanceCallCount()).To(Equal(1))
+				})
+			})
+
+			When("updateRequired returned false", func() {
+				BeforeEach(func() {
+					serviceInstance.Status.HashedSpec = "6dbc872739e7571d1bbf5d7b82537fa0"
+					Expect(k8sClient.Status().Update(ctx, serviceInstance)).Should(Succeed())
+					fakeClient.UpdateInstanceReturns(nil, "", nil)
+				})
+				It("should not update the instance in SM", func() {
+					newExternalName := "my-new-external-name" + uuid.New().String()
+					serviceInstance.Spec.ExternalName = newExternalName
+					serviceInstance = updateInstance(ctx, serviceInstance)
+					Expect(serviceInstance.Spec.ExternalName).To(Equal(newExternalName))
+					Expect(fakeClient.UpdateInstanceCallCount()).To(Equal(0))
+				})
+			})
+		})
 	})
 
 	Describe("Delete", func() {

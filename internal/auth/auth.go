@@ -2,7 +2,6 @@ package auth
 
 import (
 	"context"
-	"crypto/tls"
 	"crypto/x509"
 	"net/http"
 	"os"
@@ -70,7 +69,7 @@ func newHTTPClient(ctx context.Context, ccConfig *clientcredentials.Config) (HTT
 			baseTransport = baseTransport.Clone()
 		}
 		if baseTransport.TLSClientConfig == nil {
-			baseTransport.TLSClientConfig = &tls.Config{}
+			baseTransport.TLSClientConfig = httputil.GetFipsCompliantTLSConfig()
 		}
 		baseTransport.TLSClientConfig.RootCAs = certPool
 		oauthTransport.Base = baseTransport

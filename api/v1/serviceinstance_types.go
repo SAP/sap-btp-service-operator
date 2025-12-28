@@ -17,7 +17,7 @@ limitations under the License.
 package v1
 
 import (
-	"crypto/md5"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 
@@ -228,6 +228,6 @@ func (si *ServiceInstance) GetSpecHash() string {
 	spec.Shared = ptr.To(false)
 	specBytes, _ := json.Marshal(spec)
 	s := string(specBytes)
-	hash := md5.Sum([]byte(s))
+	hash := sha256.Sum256([]byte(s))
 	return hex.EncodeToString(hash[:])
 }
