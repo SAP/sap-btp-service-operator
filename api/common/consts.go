@@ -31,6 +31,7 @@ const (
 	ShareNotSupported = "ShareNotSupported"
 	UnShareFailed     = "UnShareFailed"
 	UnShareSucceeded  = "UnShareSucceeded"
+	ResourceNotFound  = "NotFound"
 
 	Blocked = "Blocked"
 	Unknown = "Unknown"
