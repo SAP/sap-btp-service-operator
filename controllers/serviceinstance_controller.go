@@ -92,7 +92,9 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return utils.HandleOperationFailure(ctx, r.Client, serviceInstance, common.Unknown, err)
 	}
 
-	if len(serviceInstance.Status.InstanceID) > 0 {
+	if utils.IsMarkedForDeletion(serviceInstance.ObjectMeta) {
+		return r.deleteInstance(ctx, serviceInstance)
+	} else if len(serviceInstance.Status.InstanceID) > 0 {
 		if _, err := smClient.GetInstanceByID(serviceInstance.Status.InstanceID, nil); err != nil {
 			var smError *sm.ServiceManagerError
 			if ok := errors.As(err, &smError); ok {
@@ -103,7 +105,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 						Status:             metav1.ConditionFalse,
 						ObservedGeneration: serviceInstance.Generation,
 						Reason:             common.ResourceNotFound,
-						Message:            fmt.Sprintf("instance %s not found in Service Manager", serviceInstance.Status.InstanceID),
+						Message:            fmt.Sprintf("Instance %s not found for this cluster or namespace; or it is not managed by this operator-access instance.", serviceInstance.Status.InstanceID),
 					}
 					meta.SetStatusCondition(&serviceInstance.Status.Conditions, condition)
 					return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceInstance)
@@ -114,9 +116,6 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 	}
 
-	if utils.IsMarkedForDeletion(serviceInstance.ObjectMeta) {
-		return r.deleteInstance(ctx, serviceInstance)
-	}
 	if len(serviceInstance.GetConditions()) == 0 {
 		err := utils.InitConditions(ctx, r.Client, serviceInstance)
 		if err != nil {

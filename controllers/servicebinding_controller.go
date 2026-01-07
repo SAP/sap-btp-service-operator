@@ -127,7 +127,9 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return utils.HandleOperationFailure(ctx, r.Client, serviceBinding, common.Unknown, err)
 	}
 
-	if len(serviceBinding.Status.BindingID) > 0 {
+	if utils.IsMarkedForDeletion(serviceBinding.ObjectMeta) {
+		return r.delete(ctx, serviceBinding, serviceInstance)
+	} else if len(serviceBinding.Status.BindingID) > 0 {
 		if _, err := smClient.GetBindingByID(serviceBinding.Status.BindingID, nil); err != nil {
 			var smError *sm.ServiceManagerError
 			if ok := errors.As(err, &smError); ok {
@@ -137,7 +139,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 						Status:             metav1.ConditionFalse,
 						ObservedGeneration: serviceBinding.Generation,
 						Reason:             common.ResourceNotFound,
-						Message:            fmt.Sprintf("binding %s not found in Service Manager", serviceInstance.Status.InstanceID),
+						Message:            fmt.Sprintf("Binding %s not found for this cluster or namespace; or it is not managed by this operator-access instance.", serviceInstance.Status.InstanceID),
 					}
 					meta.SetStatusCondition(&serviceBinding.Status.Conditions, condition)
 				}
@@ -146,10 +148,6 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			log.Error(err, "failed to get binding by id from SM with unknown error")
 			return ctrl.Result{}, err
 		}
-	}
-
-	if utils.IsMarkedForDeletion(serviceBinding.ObjectMeta) {
-		return r.delete(ctx, serviceBinding, serviceInstance)
 	}
 
 	if controllerutil.AddFinalizer(serviceBinding, common.FinalizerName) {
