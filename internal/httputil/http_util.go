@@ -72,7 +72,7 @@ func getClient() *http.Client {
 func GetFipsCompliantTLSConfig() *tls.Config {
 	return &tls.Config{
 		MinVersion: tls.VersionTLS12,
-		MaxVersion: tls.VersionTLS13, // Allow both 1.2 and 1.3
+		MaxVersion: tls.VersionTLS13,
 		CipherSuites: []uint16{
 			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
 			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
