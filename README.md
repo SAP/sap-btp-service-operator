@@ -1,5 +1,8 @@
 # SAP Business Technology Platform (SAP BTP) Service Operator for Kubernetes
 
+[![REUSE status](https://api.reuse.software/badge/github.com/SAP/sap-btp-service-operator)](https://api.reuse.software/info/github.com/SAP/sap-btp-service-operator)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+
 With the SAP BTP service operator, you can consume [SAP BTP services](https://platformx-d8bd51250.dispatcher.us2.hana.ondemand.com/protected/index.html#/viewServices?) from your Kubernetes cluster using Kubernetes-native tools. 
 SAP BTP service operator allows you to provision and manage service instances and service bindings of SAP BTP services so that your Kubernetes-native applications can access and use needed services from the cluster.  
 The SAP BTP service operator is based on the [Kubernetes Operator pattern](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/).
@@ -21,6 +24,7 @@ The SAP BTP service operator is based on the [Kubernetes Operator pattern](https
 - [Service Instance Properties](#service-instance-properties)
 - [Service Binding Properties](#service-binding-properties)
 - [Uninstalling the SAP BTP Service Operator](#uninstalling-the-sap-btp-service-operator)
+- [License](#license)
 - [Troubleshooting and Support](#troubleshooting-and-support)
 
 ## Overview and Architecture
@@ -890,7 +894,19 @@ We currently do not accept community contributions.
 
 ### License
 
-Copyright 2024 SAP SE and sap-btp-service-operator contributors. Please see our LICENSE for copyright and license information. Detailed information including third-party components and their licensing/copyright information is available via the REUSE tool.
+This project is licensed under the Apache License, Version 2.0 - see the [LICENSE](LICENSE) file for details.
+
+### Copyright Notice
+
+Copyright 2024 SAP SE and sap-btp-service-operator contributors.
+
+### Third-Party Components
+
+This project includes third-party software components. Detailed information including third-party components and their licensing/copyright information is available via the [REUSE tool](https://api.reuse.software/info/github.com/SAP/sap-btp-service-operator).
+
+### REUSE Compliance
+
+This repository is [REUSE](https://reuse.software/) compliant. All files in this repository include proper license and copyright information according to the REUSE specification. For comprehensive licensing information, please use the REUSE tool or check the individual file headers.
 
 [Back to top](#table-of-contents)
 
