@@ -87,6 +87,8 @@ spec:
           env:
             - name: APP_VERSION
               value: "{{ .Chart.AppVersion }}"
+            - name: GODEBUG
+              value: "{{ .Values.manager.fips }}"
           envFrom:
             - configMapRef:
                 name: sap-btp-operator-config

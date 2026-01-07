@@ -14,6 +14,7 @@ manager:
   enable_leader_election: true
   logger_use_dev_mode: true
   management_namespace:
+  fips: "fips140=on"
   image:
     repository: ghcr.io/sap/sap-btp-service-operator/controller
     tag: master
