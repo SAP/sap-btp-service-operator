@@ -30,6 +30,10 @@ spec:
           image: "{{.Values.externalImages.kubectl.image.repository}}:{{.Values.externalImages.kubectl.image.tag}}"
           {{- end }}
           command: ["/bin/sh"]
+          {{- if .Values.deleteJob.securityContext }}
+          securityContext:
+          {{- toYaml .Values.deleteJob.securityContext | nindent 12 }}
+          {{- end }}
           args:
             - "-c"
             - |
