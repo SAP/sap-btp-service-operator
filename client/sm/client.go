@@ -592,8 +592,12 @@ func handleResponseError(response *http.Response) error {
 		body = []byte(fmt.Sprintf("error reading response body: %s", err))
 	}
 
+	statusCode := response.StatusCode
+	if response.Header.Get("X-Cf-RouterError") == "unknown_route" {
+		statusCode = http.StatusServiceUnavailable
+	}
 	smError := &ServiceManagerError{
-		StatusCode:      response.StatusCode,
+		StatusCode:      statusCode,
 		ResponseHeaders: response.Header,
 	}
 	_ = json.Unmarshal(body, &smError)

@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/SAP/sap-btp-service-operator/internal/utils/logutils"
 	"github.com/pkg/errors"
@@ -94,7 +95,19 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	if utils.IsMarkedForDeletion(serviceInstance.ObjectMeta) {
 		return r.deleteInstance(ctx, serviceInstance)
-	} else if len(serviceInstance.Status.InstanceID) > 0 {
+	}
+
+	// If stored hash is MD5 (32 chars) and we're now using SHA256 (64 chars),
+	// perform one-time migration by updating the stored hash without triggering update
+	if len(serviceInstance.Status.HashedSpec) == 32 {
+		// This is likely an MD5->SHA256 migration, update the stored hash silently
+		// to prevent unnecessary service updates during FIPS migration
+		log.Info(fmt.Sprintf("updated hashing for instance '%s' (id=%s)", serviceInstance.Name, serviceInstance.Status.InstanceID))
+		updateHashedSpecValue(serviceInstance)
+		return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceInstance)
+	}
+
+	if len(serviceInstance.Status.InstanceID) > 0 {
 		if _, err := smClient.GetInstanceByID(serviceInstance.Status.InstanceID, nil); err != nil {
 			var smError *sm.ServiceManagerError
 			if ok := errors.As(err, &smError); ok {
@@ -104,10 +117,12 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 						Type:               common.ConditionReady,
 						Status:             metav1.ConditionFalse,
 						ObservedGeneration: serviceInstance.Generation,
+						LastTransitionTime: metav1.NewTime(time.Now()),
 						Reason:             common.ResourceNotFound,
-						Message:            fmt.Sprintf("Instance %s not found for this cluster or namespace; or it is not managed by this operator-access instance.", serviceInstance.Status.InstanceID),
+						Message:            fmt.Sprintf(common.ResourceNotFoundMessageFormat, "instance", serviceInstance.Status.InstanceID),
 					}
-					meta.SetStatusCondition(&serviceInstance.Status.Conditions, condition)
+					serviceInstance.Status.Conditions = []metav1.Condition{condition}
+					serviceInstance.Status.Ready = metav1.ConditionFalse
 					return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceInstance)
 				}
 			}
@@ -121,16 +136,6 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		if err != nil {
 			return ctrl.Result{}, err
 		}
-	}
-
-	// If stored hash is MD5 (32 chars) and we're now using SHA256 (64 chars),
-	// perform one-time migration by updating the stored hash without triggering update
-	if len(serviceInstance.Status.HashedSpec) == 32 {
-		// This is likely an MD5->SHA256 migration, update the stored hash silently
-		// to prevent unnecessary service updates during FIPS migration
-		log.Info(fmt.Sprintf("updated hashing for instance '%s' (id=%s)", serviceInstance.Name, serviceInstance.Status.InstanceID))
-		updateHashedSpecValue(serviceInstance)
-		return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceInstance)
 	}
 
 	if len(serviceInstance.Status.OperationURL) > 0 {

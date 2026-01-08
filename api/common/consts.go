@@ -43,4 +43,7 @@ const (
 	// Constance for seceret template
 	InstanceKey    = "instance"
 	CredentialsKey = "credentials"
+
+	//messages
+	ResourceNotFoundMessageFormat = "%s %s not found for this cluster or namespace; or it is not managed by this operator-access instance."
 )
