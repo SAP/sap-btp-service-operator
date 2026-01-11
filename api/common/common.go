@@ -86,10 +86,15 @@ type SAPBTPResource interface {
 }
 
 func GetObservedGeneration(obj SAPBTPResource) int64 {
-	cond := meta.FindStatusCondition(obj.GetConditions(), ConditionSucceeded)
 	observedGen := int64(0)
-	if cond != nil {
-		observedGen = cond.ObservedGeneration
+	if len(obj.GetConditions()) == 0 {
+		return observedGen
 	}
+
+	cond := meta.FindStatusCondition(obj.GetConditions(), ConditionSucceeded)
+	if cond == nil {
+		cond = &obj.GetConditions()[0]
+	}
+	observedGen = cond.ObservedGeneration
 	return observedGen
 }

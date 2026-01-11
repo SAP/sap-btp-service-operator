@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"net/http"
 	"strings"
 	"time"
 
@@ -125,6 +126,30 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return r.delete(ctx, serviceBinding, serviceInstance)
 	}
 
+	smClient, err := r.GetSMClient(ctx, serviceInstance)
+	if err != nil {
+		return utils.HandleOperationFailure(ctx, r.Client, serviceBinding, common.Unknown, err)
+	}
+	if len(serviceBinding.Status.BindingID) > 0 {
+		if bindingExist, err := isBindingExistInSM(smClient, serviceInstance, serviceBinding.Status.BindingID, log); err != nil {
+			log.Error(err, "failed to check if binding exist in sm due to unknown error")
+			return ctrl.Result{}, err
+		} else if !bindingExist {
+			log.Info("binding not found in SM, updating status")
+			condition := metav1.Condition{
+				Type:               common.ConditionReady,
+				Status:             metav1.ConditionFalse,
+				ObservedGeneration: serviceBinding.Generation,
+				LastTransitionTime: metav1.NewTime(time.Now()),
+				Reason:             common.ResourceNotFound,
+				Message:            fmt.Sprintf(common.ResourceNotFoundMessageFormat, "binding", serviceBinding.Status.BindingID),
+			}
+			serviceBinding.Status.Conditions = []metav1.Condition{condition}
+			serviceBinding.Status.Ready = metav1.ConditionFalse
+			return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
+		}
+	}
+
 	if controllerutil.AddFinalizer(serviceBinding, common.FinalizerName) {
 		log.Info(fmt.Sprintf("added finalizer '%s' to service binding", common.FinalizerName))
 		if err := r.Client.Update(ctx, serviceBinding); err != nil {
@@ -182,11 +207,6 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			log.Error(err, "secret validation failed")
 			utils.SetBlockedCondition(ctx, err.Error(), serviceBinding)
 			return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
-		}
-
-		smClient, err := r.GetSMClient(ctx, serviceInstance)
-		if err != nil {
-			return utils.HandleOperationFailure(ctx, r.Client, serviceBinding, common.Unknown, err)
 		}
 
 		smBinding, err := r.getBindingForRecovery(ctx, smClient, serviceBinding)
@@ -1126,4 +1146,27 @@ func truncateString(str string, length int) string {
 		return str[:length]
 	}
 	return str
+}
+
+func isBindingExistInSM(smClient sm.Client, instance *v1.ServiceInstance, bindingID string, log logr.Logger) (bool, error) {
+	log.Info("checking if k8s instance status is NotFound")
+	instanceReadyCond := meta.FindStatusCondition(instance.GetConditions(), common.ConditionReady)
+	if instanceReadyCond != nil && instanceReadyCond.Reason == common.ResourceNotFound {
+		log.Info("k8s instance is in NotFound state -> invalid binding")
+		return false, nil
+	}
+
+	log.Info(fmt.Sprintf("trying to get from SM binding with id %s", bindingID))
+	if _, err := smClient.GetBindingByID(bindingID, nil); err != nil {
+		var smError *sm.ServiceManagerError
+		if ok := errors.As(err, &smError); ok {
+			log.Error(smError, fmt.Sprintf("SM returned status code %d", smError.StatusCode))
+			if smError.StatusCode == http.StatusNotFound {
+				return false, nil
+			}
+		}
+		return false, err
+	}
+	log.Info("binding found in SM")
+	return true, nil
 }

@@ -1549,6 +1549,26 @@ var _ = Describe("ServiceInstance controller", func() {
 		})
 
 	})
+
+	When("instance id exist on resource but not found in sm", func() {
+		BeforeEach(func() {
+			serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, true)
+			Expect(len(serviceInstance.Status.InstanceID) > 0).To(Equal(true))
+			fakeClient.GetInstanceByIDReturns(nil, &sm.ServiceManagerError{
+				StatusCode: http.StatusNotFound,
+			})
+		})
+		When("updating instance", func() {
+			It("should update status to ready=false", func() {
+				serviceInstance.Spec.ExternalName = "new-name"
+				Expect(k8sClient.Update(ctx, serviceInstance)).To(Succeed())
+				waitForResourceCondition(ctx, serviceInstance, common.ConditionReady, metav1.ConditionFalse, common.ResourceNotFound, fmt.Sprintf(common.ResourceNotFoundMessageFormat, "instance", serviceInstance.Status.InstanceID))
+
+				By("deleting the instance should succeed")
+				deleteInstance(ctx, serviceInstance, true)
+			})
+		})
+	})
 })
 
 func waitForInstanceConditionAndMessage(ctx context.Context, key types.NamespacedName, conditionType, msg string) {
