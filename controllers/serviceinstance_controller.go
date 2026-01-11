@@ -87,12 +87,6 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 	serviceInstance = serviceInstance.DeepCopy()
 
-	smClient, err := r.GetSMClient(ctx, serviceInstance)
-	if err != nil {
-		log.Error(err, "failed to get sm client")
-		return utils.HandleOperationFailure(ctx, r.Client, serviceInstance, common.Unknown, err)
-	}
-
 	if utils.IsMarkedForDeletion(serviceInstance.ObjectMeta) {
 		return r.deleteInstance(ctx, serviceInstance)
 	}
@@ -107,6 +101,11 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceInstance)
 	}
 
+	smClient, err := r.GetSMClient(ctx, serviceInstance)
+	if err != nil {
+		log.Error(err, "failed to get sm client")
+		return utils.HandleOperationFailure(ctx, r.Client, serviceInstance, common.Unknown, err)
+	}
 	if len(serviceInstance.Status.InstanceID) > 0 {
 		if _, err := smClient.GetInstanceByID(serviceInstance.Status.InstanceID, nil); err != nil {
 			var smError *sm.ServiceManagerError

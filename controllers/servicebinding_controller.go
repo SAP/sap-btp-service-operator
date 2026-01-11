@@ -122,13 +122,13 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 	}
 
+	if utils.IsMarkedForDeletion(serviceBinding.ObjectMeta) {
+		return r.delete(ctx, serviceBinding, serviceInstance)
+	}
+
 	smClient, err := r.GetSMClient(ctx, serviceInstance)
 	if err != nil {
 		return utils.HandleOperationFailure(ctx, r.Client, serviceBinding, common.Unknown, err)
-	}
-
-	if utils.IsMarkedForDeletion(serviceBinding.ObjectMeta) {
-		return r.delete(ctx, serviceBinding, serviceInstance)
 	}
 	if len(serviceBinding.Status.BindingID) > 0 {
 		if bindingExist, err := isBindingExistInSM(smClient, serviceInstance, serviceBinding.Status.BindingID, log); err != nil {
