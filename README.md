@@ -167,8 +167,9 @@ stringData:
 [Back to top](#table-of-contents)
 
 ### Using Custom Certificate Authorities
-The SAP BTP Service Operator supports custom Certificate Authority (CA) certificates for HTTPS communication in restricted or disconnected environments where public CAs are unavailable or not trusted.
-In such environments, the operator can be configured to trust organization-specific internal CA certificates in addition to the system CA bundle, enabling secure HTTPS communication with SAP BTP services such as Service Manager and authentication endpoints.
+The SAP BTP Service Operator can be configured to trust custom CA certificates in addition to the standard system CA bundle. This enables the operator to establish secure HTTPS connections with SAP BTP using certificates from your own trusted sources.
+
+This is particularly useful in restricted or disconnected environments where public CAs may be unavailable.
 
 #### Configuration
 
