@@ -170,7 +170,22 @@ stringData:
 
 [Back to top](#table-of-contents)
 
-## Managing Access Permissions
+### Using Custom Certificate Authorities
+The SAP BTP Service Operator can be configured to trust custom CA certificates in addition to the standard system CA bundle. This enables the operator to establish secure HTTPS connections with SAP BTP using certificates from your own trusted sources.
+
+This is particularly useful in restricted or disconnected environments where public CAs may be unavailable.
+
+#### Configuration
+
+Custom CA certificates are configured through the Helm chart.
+You configure custom CAs using the `customCACerts` array under `manager` in `values.yaml`.
+Each entry must be a base64-encoded PEM certificate.
+
+```bash
+    --set 'manager.customCACerts[0]'='LS0tLS1CRUdJTi...'  # Base64-encoded PEM certificate
+```
+
+### Managing Access Permissions
 
 By default, the SAP BTP operator has cluster-wide permissions. You can also limit them to one or more namespaces; for this, you need to set the following two Helm parameters:
 
