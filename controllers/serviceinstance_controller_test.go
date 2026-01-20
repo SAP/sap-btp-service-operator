@@ -628,6 +628,40 @@ var _ = Describe("ServiceInstance controller", func() {
 				Expect(err.Error()).To(ContainSubstring("modifying spec.userInfo is not allowed"))
 			})
 		})
+
+		When("hash spec is md5", func() {
+			When("updateRequired returned true", func() {
+				BeforeEach(func() {
+					serviceInstance.Status.HashedSpec = "6dbc872739e7571d1bbf5d7b82537fa0"
+					serviceInstance.Status.ForceReconcile = true
+					Expect(k8sClient.Status().Update(ctx, serviceInstance)).Should(Succeed())
+					fakeClient.UpdateInstanceReturns(nil, "", nil)
+				})
+
+				It("instance should be updated", func() {
+					newExternalName := "my-new-external-name" + uuid.New().String()
+					serviceInstance.Spec.ExternalName = newExternalName
+					serviceInstance = updateInstance(ctx, serviceInstance)
+					Expect(serviceInstance.Spec.ExternalName).To(Equal(newExternalName))
+					Expect(fakeClient.UpdateInstanceCallCount()).To(Equal(1))
+				})
+			})
+
+			When("updateRequired returned false", func() {
+				BeforeEach(func() {
+					serviceInstance.Status.HashedSpec = "6dbc872739e7571d1bbf5d7b82537fa0"
+					Expect(k8sClient.Status().Update(ctx, serviceInstance)).Should(Succeed())
+					fakeClient.UpdateInstanceReturns(nil, "", nil)
+				})
+				It("should not update the instance in SM", func() {
+					newExternalName := "my-new-external-name" + uuid.New().String()
+					serviceInstance.Spec.ExternalName = newExternalName
+					serviceInstance = updateInstance(ctx, serviceInstance)
+					Expect(serviceInstance.Spec.ExternalName).To(Equal(newExternalName))
+					Expect(fakeClient.UpdateInstanceCallCount()).To(Equal(0))
+				})
+			})
+		})
 	})
 
 	Describe("Delete", func() {
@@ -1514,6 +1548,26 @@ var _ = Describe("ServiceInstance controller", func() {
 			})
 		})
 
+	})
+
+	When("instance id exist on resource but not found in sm", func() {
+		BeforeEach(func() {
+			serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, true)
+			Expect(len(serviceInstance.Status.InstanceID) > 0).To(Equal(true))
+			fakeClient.GetInstanceByIDReturns(nil, &sm.ServiceManagerError{
+				StatusCode: http.StatusNotFound,
+			})
+		})
+		When("updating instance", func() {
+			It("should update status to ready=false", func() {
+				serviceInstance.Spec.ExternalName = "new-name"
+				Expect(k8sClient.Update(ctx, serviceInstance)).To(Succeed())
+				waitForResourceCondition(ctx, serviceInstance, common.ConditionReady, metav1.ConditionFalse, common.ResourceNotFound, fmt.Sprintf(common.ResourceNotFoundMessageFormat, "instance", serviceInstance.Status.InstanceID))
+
+				By("deleting the instance should succeed")
+				deleteInstance(ctx, serviceInstance, true)
+			})
+		})
 	})
 })
 

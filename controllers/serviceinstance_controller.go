@@ -20,7 +20,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"strings"
+	"time"
 
 	"github.com/SAP/sap-btp-service-operator/internal/utils/logutils"
 	"github.com/pkg/errors"
@@ -88,6 +90,46 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	if utils.IsMarkedForDeletion(serviceInstance.ObjectMeta) {
 		return r.deleteInstance(ctx, serviceInstance)
 	}
+
+	// If stored hash is MD5 (32 chars) and we're now using SHA256 (64 chars),
+	// perform one-time migration by updating the stored hash without triggering update
+	if len(serviceInstance.Status.HashedSpec) == 32 {
+		// This is likely an MD5->SHA256 migration, update the stored hash silently
+		// to prevent unnecessary service updates during FIPS migration
+		log.Info(fmt.Sprintf("updated hashing for instance '%s' (id=%s)", serviceInstance.Name, serviceInstance.Status.InstanceID))
+		updateHashedSpecValue(serviceInstance)
+		return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceInstance)
+	}
+
+	smClient, err := r.GetSMClient(ctx, serviceInstance)
+	if err != nil {
+		log.Error(err, "failed to get sm client")
+		return utils.HandleOperationFailure(ctx, r.Client, serviceInstance, common.Unknown, err)
+	}
+	if len(serviceInstance.Status.InstanceID) > 0 {
+		if _, err := smClient.GetInstanceByID(serviceInstance.Status.InstanceID, nil); err != nil {
+			var smError *sm.ServiceManagerError
+			if ok := errors.As(err, &smError); ok {
+				if smError.StatusCode == http.StatusNotFound {
+					log.Info(fmt.Sprintf("instance %s not found in SM", serviceInstance.Status.InstanceID))
+					condition := metav1.Condition{
+						Type:               common.ConditionReady,
+						Status:             metav1.ConditionFalse,
+						ObservedGeneration: serviceInstance.Generation,
+						LastTransitionTime: metav1.NewTime(time.Now()),
+						Reason:             common.ResourceNotFound,
+						Message:            fmt.Sprintf(common.ResourceNotFoundMessageFormat, "instance", serviceInstance.Status.InstanceID),
+					}
+					serviceInstance.Status.Conditions = []metav1.Condition{condition}
+					serviceInstance.Status.Ready = metav1.ConditionFalse
+					return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceInstance)
+				}
+			}
+			log.Error(err, fmt.Sprintf("failed to get instance %s from SM", serviceInstance.Status.InstanceID))
+			return ctrl.Result{}, err
+		}
+	}
+
 	if len(serviceInstance.GetConditions()) == 0 {
 		err := utils.InitConditions(ctx, r.Client, serviceInstance)
 		if err != nil {
@@ -116,12 +158,6 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 	}
 
-	smClient, err := r.GetSMClient(ctx, serviceInstance)
-	if err != nil {
-		log.Error(err, "failed to get sm client")
-		return utils.HandleOperationFailure(ctx, r.Client, serviceInstance, common.Unknown, err)
-	}
-
 	if serviceInstance.Status.InstanceID == "" {
 		log.Info("Instance ID is empty, checking if instance exist in SM")
 		smInstance, err := r.getInstanceForRecovery(ctx, smClient, serviceInstance)
@@ -137,7 +173,6 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return r.createInstance(ctx, smClient, serviceInstance)
 	}
 
-	// Update
 	if updateRequired(serviceInstance) {
 		return r.updateInstance(ctx, smClient, serviceInstance)
 	}

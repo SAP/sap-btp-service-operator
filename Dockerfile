@@ -17,8 +17,10 @@ COPY internal/ internal/
 COPY client/ client/
 
 ARG TARGETOS TARGETARCH
+ARG GOFIPS140
+
 # Build
-RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH GO111MODULE=on go build -a -o manager main.go
+RUN CGO_ENABLED=0 GOFIPS140=v1.0.0 GOOS=$TARGETOS GOARCH=$TARGETARCH GO111MODULE=on go build -a -o manager main.go
 
 
 FROM alpine:3.23
