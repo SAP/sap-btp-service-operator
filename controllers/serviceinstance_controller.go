@@ -172,7 +172,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		// if instance was not recovered then create new instance
 		return r.createInstance(ctx, smClient, serviceInstance)
 	} else if serviceInstance.Status.Ready == metav1.ConditionFalse { //async provision failed
-		log.Info(fmt.Sprintf("instance %s failed during async provision, deleting it"))
+		log.Info(fmt.Sprintf("instance %s failed during async provision, deleting it", serviceInstance.Status.InstanceID))
 		operationURL, deprovisionErr := smClient.Deprovision(serviceInstance.Status.InstanceID, nil, utils.BuildUserInfo(ctx, serviceInstance.Spec.UserInfo))
 		if deprovisionErr != nil {
 			return utils.HandleServiceManagerError(ctx, r.Client, serviceInstance, smClientTypes.DELETE, deprovisionErr)
