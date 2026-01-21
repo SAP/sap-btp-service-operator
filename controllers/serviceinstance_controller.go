@@ -171,6 +171,21 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 		// if instance was not recovered then create new instance
 		return r.createInstance(ctx, smClient, serviceInstance)
+	} else if serviceInstance.Status.Ready == metav1.ConditionFalse { //async provision failed
+		log.Info(fmt.Sprintf("instance %s failed during async provision, deleting it"))
+		operationURL, deprovisionErr := smClient.Deprovision(serviceInstance.Status.InstanceID, nil, utils.BuildUserInfo(ctx, serviceInstance.Spec.UserInfo))
+		if deprovisionErr != nil {
+			return utils.HandleServiceManagerError(ctx, r.Client, serviceInstance, smClientTypes.DELETE, deprovisionErr)
+		}
+
+		if operationURL != "" {
+			log.Info(fmt.Sprintf("deprovision of instance %s is async", serviceInstance.Status.InstanceID))
+			return r.handleAsyncDelete(ctx, serviceInstance, operationURL)
+		}
+
+		log.Info("instance was deleted successfully")
+		serviceInstance.Status.InstanceID = ""
+		return ctrl.Result{RequeueAfter: time.Second}, r.Update(ctx, serviceInstance)
 	}
 
 	if updateRequired(serviceInstance) {
@@ -464,11 +479,7 @@ func (r *ServiceInstanceReconciler) handleAsyncDelete(ctx context.Context, servi
 	serviceInstance.Status.OperationType = smClientTypes.DELETE
 	utils.SetInProgressConditions(ctx, smClientTypes.DELETE, "", serviceInstance, false)
 
-	if err := utils.UpdateStatus(ctx, r.Client, serviceInstance); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	return ctrl.Result{RequeueAfter: r.Config.PollInterval}, nil
+	return ctrl.Result{RequeueAfter: r.Config.PollInterval}, utils.UpdateStatus(ctx, r.Client, serviceInstance)
 }
 
 func (r *ServiceInstanceReconciler) getInstanceForRecovery(ctx context.Context, smClient sm.Client, serviceInstance *v1.ServiceInstance) (*smClientTypes.ServiceInstance, error) {
@@ -598,6 +609,10 @@ func (r *ServiceInstanceReconciler) buildSMRequestParameters(ctx context.Context
 
 func isFinalState(ctx context.Context, serviceInstance *v1.ServiceInstance) bool {
 	log := logutils.GetLogger(ctx)
+
+	if len(serviceInstance.Status.InstanceID) == 0 {
+		return false
+	}
 
 	if serviceInstance.Status.ForceReconcile {
 		log.Info("instance is not in final state, ForceReconcile is true")
