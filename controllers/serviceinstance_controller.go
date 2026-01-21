@@ -172,20 +172,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		// if instance was not recovered then create new instance
 		return r.createInstance(ctx, smClient, serviceInstance)
 	} else if serviceInstance.Status.Ready == metav1.ConditionFalse { //async provision failed
-		log.Info(fmt.Sprintf("instance %s failed during async provision, deleting it", serviceInstance.Status.InstanceID))
-		operationURL, deprovisionErr := smClient.Deprovision(serviceInstance.Status.InstanceID, nil, utils.BuildUserInfo(ctx, serviceInstance.Spec.UserInfo))
-		if deprovisionErr != nil {
-			return utils.HandleServiceManagerError(ctx, r.Client, serviceInstance, smClientTypes.DELETE, deprovisionErr)
-		}
-
-		if operationURL != "" {
-			log.Info(fmt.Sprintf("deprovision of instance %s is async", serviceInstance.Status.InstanceID))
-			return r.handleAsyncDelete(ctx, serviceInstance, operationURL)
-		}
-
-		log.Info("instance was deleted successfully")
-		serviceInstance.Status.InstanceID = ""
-		return ctrl.Result{RequeueAfter: time.Second}, r.Update(ctx, serviceInstance)
+		return r.handleUnusableInstance(ctx, serviceInstance, smClient)
 	}
 
 	if updateRequired(serviceInstance) {
@@ -546,6 +533,7 @@ func (r *ServiceInstanceReconciler) recover(ctx context.Context, smClient sm.Cli
 	case smClientTypes.INPROGRESS:
 		k8sInstance.Status.OperationURL = sm.BuildOperationURL(smInstance.LastOperation.ID, smInstance.ID, smClientTypes.ServiceInstancesURL)
 		k8sInstance.Status.OperationType = smInstance.LastOperation.Type
+		k8sInstance.Status.InstanceID = smInstance.ID
 		utils.SetInProgressConditions(ctx, smInstance.LastOperation.Type, smInstance.LastOperation.Description, k8sInstance, false)
 	case smClientTypes.SUCCEEDED:
 		utils.SetSuccessConditions(operationType, k8sInstance, false)
@@ -605,6 +593,24 @@ func (r *ServiceInstanceReconciler) buildSMRequestParameters(ctx context.Context
 	}
 
 	return instanceParameters, nil
+}
+
+func (r *ServiceInstanceReconciler) handleUnusableInstance(ctx context.Context, serviceInstance *v1.ServiceInstance, smClient sm.Client) (ctrl.Result, error) {
+	log := logutils.GetLogger(ctx)
+	log.Info(fmt.Sprintf("instance %s failed during async provision, deleting it", serviceInstance.Status.InstanceID))
+	operationURL, deprovisionErr := smClient.Deprovision(serviceInstance.Status.InstanceID, nil, utils.BuildUserInfo(ctx, serviceInstance.Spec.UserInfo))
+	if deprovisionErr != nil {
+		return utils.HandleServiceManagerError(ctx, r.Client, serviceInstance, smClientTypes.DELETE, deprovisionErr)
+	}
+
+	if operationURL != "" {
+		log.Info(fmt.Sprintf("deprovision of instance %s is async", serviceInstance.Status.InstanceID))
+		return r.handleAsyncDelete(ctx, serviceInstance, operationURL)
+	}
+
+	log.Info("instance was deleted successfully")
+	serviceInstance.Status.InstanceID = ""
+	return ctrl.Result{RequeueAfter: time.Second}, r.Update(ctx, serviceInstance)
 }
 
 func isFinalState(ctx context.Context, serviceInstance *v1.ServiceInstance) bool {

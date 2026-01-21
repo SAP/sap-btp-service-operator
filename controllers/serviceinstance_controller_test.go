@@ -148,6 +148,7 @@ var _ = Describe("ServiceInstance controller", func() {
 		if serviceInstance != nil {
 			deleteAndWait(ctx, serviceInstance)
 		}
+		_ = k8sClient.Get(ctx, types.NamespacedName{Name: "instance-params-secret", Namespace: testNamespace}, paramsSecret)
 		deleteAndWait(ctx, paramsSecret)
 	})
 
@@ -798,6 +799,11 @@ var _ = Describe("ServiceInstance controller", func() {
 				}
 				fakeClient.ListInstancesReturns(&smclientTypes.ServiceInstances{
 					ServiceInstances: []smclientTypes.ServiceInstance{recoveredInstance}}, nil)
+				fakeClient.StatusReturns(&smclientTypes.Operation{
+					ID:    "1234",
+					Type:  smClientTypes.DELETE,
+					State: smClientTypes.INPROGRESS,
+				}, nil)
 
 				deleteInstance(ctx, serviceInstance, true)
 				Expect(fakeClient.DeprovisionCallCount()).To(Equal(1))
@@ -1304,6 +1310,7 @@ var _ = Describe("ServiceInstance controller", func() {
 							Shared:       pointer.Bool(true),
 						}}
 					instance.SetGeneration(2)
+					instance.Status.InstanceID = uuid.NewString()
 					Expect(isFinalState(ctx, instance)).To(BeTrue())
 				})
 			})

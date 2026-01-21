@@ -323,7 +323,7 @@ func createSecret(ctx context.Context, secretName string, namespace string, cred
 		Data: credentialsMap,
 	}
 
-	Expect(k8sClient.Create(ctx, secret)).To(Succeed())
+	Expect(client.IgnoreAlreadyExists(k8sClient.Create(ctx, secret))).To(Succeed())
 
 	Eventually(func() bool {
 		err := k8sClient.Get(ctx, types.NamespacedName{Name: secretName, Namespace: namespace}, secret)
