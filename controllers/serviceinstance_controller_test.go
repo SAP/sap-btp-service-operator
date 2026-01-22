@@ -337,15 +337,30 @@ var _ = Describe("ServiceInstance controller", func() {
 			})
 
 			When("polling ends with failure", func() {
-				It("should update to failure condition with the broker err description", func() {
+				BeforeEach(func() {
+					fakeClient.StatusStub = func(url string, parameters *sm.Parameters) (*smClientTypes.Operation, error) {
+						if strings.Contains(url, "successful-instance-id") {
+							return &smClientTypes.Operation{
+								Type:        smClientTypes.CREATE,
+								State:       smClientTypes.SUCCEEDED,
+								Description: "completed",
+							}, nil
+						}
+
+						return &smClientTypes.Operation{
+							Type:   smClientTypes.CREATE,
+							State:  smClientTypes.FAILED,
+							Errors: []byte(`{"error": "brokerError","description":"broker-failure"}`),
+						}, nil
+					}
+				})
+				It("should update to failure condition with the broker err description and retry until succeeds", func() {
 					serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, false)
-					fakeClient.StatusReturns(&smclientTypes.Operation{
-						ID:     "1234",
-						Type:   smClientTypes.CREATE,
-						State:  smClientTypes.FAILED,
-						Errors: []byte(`{"error": "brokerError","description":"broker-failure"}`),
-					}, nil)
 					waitForInstanceConditionAndMessage(ctx, defaultLookupKey, common.ConditionSucceeded, "broker-failure")
+
+					fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: "successful-instance-id", Location: "/v1/service_instances/successful-instance-id/operations/1234"}, nil)
+					waitForResourceCondition(ctx, serviceInstance, common.ConditionReady, metav1.ConditionTrue, "", "")
+					Expect(serviceInstance.Status.InstanceID).To(Equal("successful-instance-id"))
 				})
 			})
 

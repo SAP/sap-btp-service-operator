@@ -255,8 +255,7 @@ func handleRateLimitError(ctx context.Context, sClient client.Client, resource c
 	retryAfterStr := smError.ResponseHeaders.Get("Retry-After")
 	if len(retryAfterStr) > 0 {
 		log.Info(fmt.Sprintf("SM returned 429 with Retry-After: %s, requeueing after it...", retryAfterStr))
-		retryAfter, err := time.Parse(time.DateTime, retryAfterStr[:len(time.DateTime)]) // format 2024-11-11 14:59:33 +0000 UTC
-		if err != nil {
+		if retryAfter, err := time.Parse(time.DateTime, retryAfterStr[:len(time.DateTime)]); err != nil { // format 2024-11-11 14:59:33 +0000 UTC
 			log.Error(err, "failed to parse Retry-After header, using default requeue time")
 		} else {
 			timeToRequeue := time.Until(retryAfter)
@@ -265,7 +264,7 @@ func handleRateLimitError(ctx context.Context, sClient client.Client, resource c
 		}
 	}
 
-	return ctrl.Result{Requeue: true}, nil
+	return ctrl.Result{}, smError
 }
 
 func serialize(value interface{}) ([]byte, format, error) {

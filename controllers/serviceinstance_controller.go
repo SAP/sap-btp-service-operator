@@ -609,15 +609,15 @@ func (r *ServiceInstanceReconciler) handleUnusableInstance(ctx context.Context, 
 		return r.handleAsyncDelete(ctx, serviceInstance, operationURL)
 	}
 
-	log.Info("instance was deleted successfully")
+	log.Info("instance was deleted successfully from sm")
 	serviceInstance.Status.InstanceID = ""
-	return ctrl.Result{RequeueAfter: time.Second}, r.Update(ctx, serviceInstance)
+	return ctrl.Result{RequeueAfter: time.Second}, r.Status().Update(ctx, serviceInstance)
 }
 
 func isFinalState(ctx context.Context, serviceInstance *v1.ServiceInstance) bool {
 	log := logutils.GetLogger(ctx)
 
-	if len(serviceInstance.Status.InstanceID) == 0 {
+	if !serviceInstanceReady(serviceInstance) {
 		return false
 	}
 
