@@ -799,11 +799,6 @@ var _ = Describe("ServiceInstance controller", func() {
 				}
 				fakeClient.ListInstancesReturns(&smclientTypes.ServiceInstances{
 					ServiceInstances: []smclientTypes.ServiceInstance{recoveredInstance}}, nil)
-				fakeClient.StatusReturns(&smclientTypes.Operation{
-					ID:    "1234",
-					Type:  smClientTypes.DELETE,
-					State: smClientTypes.INPROGRESS,
-				}, nil)
 
 				deleteInstance(ctx, serviceInstance, true)
 				Expect(fakeClient.DeprovisionCallCount()).To(Equal(1))
