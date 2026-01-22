@@ -557,6 +557,7 @@ var _ = Describe("ServiceBinding controller", func() {
 
 		When("referenced service instance is failed", func() {
 			It("should retry and succeed once the instance is ready", func() {
+				fakeClient.ProvisionReturns(nil, errors.New("failed")) //instance is retried if failed
 				createdInstance.Status.Ready = metav1.ConditionFalse
 				updateInstanceStatus(ctx, createdInstance)
 
@@ -564,8 +565,7 @@ var _ = Describe("ServiceBinding controller", func() {
 				Expect(err).ToNot(HaveOccurred())
 				waitForResourceCondition(ctx, binding, common.ConditionSucceeded, metav1.ConditionFalse, "", "service instance is not ready")
 
-				createdInstance.Status.Ready = metav1.ConditionTrue
-				updateInstanceStatus(ctx, createdInstance)
+				fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: "12345678", Tags: []byte("[\"test\"]")}, nil)
 				waitForResourceToBeReady(ctx, binding)
 			})
 		})

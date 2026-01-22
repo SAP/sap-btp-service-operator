@@ -1314,6 +1314,7 @@ var _ = Describe("ServiceInstance controller", func() {
 								},
 							},
 							HashedSpec: "929e78f4449f8036ce39da3cc3e7eaea",
+							Ready:      metav1.ConditionTrue,
 						},
 						Spec: v1.ServiceInstanceSpec{
 							ExternalName: "name",
