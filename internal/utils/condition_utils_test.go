@@ -174,75 +174,6 @@ var _ = Describe("Condition Utils", func() {
 		})
 	})
 
-	Context("ShouldRetryOperation", func() {
-		It("should return true for in progress condition", func() {
-			resource := &v1.ServiceBinding{
-				Status: v1.ServiceBindingStatus{
-					Conditions: []metav1.Condition{
-						{
-							Type:   common.ConditionSucceeded,
-							Status: metav1.ConditionFalse,
-						},
-						{
-							Type:   common.ConditionFailed,
-							Status: metav1.ConditionFalse,
-						},
-					},
-				},
-			}
-
-			Expect(ShouldRetryOperation(resource)).To(BeTrue())
-		})
-
-		It("should return false for failed condition", func() {
-			resource := &v1.ServiceBinding{
-				Status: v1.ServiceBindingStatus{
-					Conditions: []metav1.Condition{
-						{
-							Type:   common.ConditionSucceeded,
-							Status: metav1.ConditionFalse,
-						},
-						{
-							Type:   common.ConditionFailed,
-							Status: metav1.ConditionTrue,
-						},
-					},
-				},
-			}
-
-			Expect(ShouldRetryOperation(resource)).To(BeFalse())
-		})
-
-		It("should return false for succeeded condition", func() {
-			resource := &v1.ServiceBinding{
-				Status: v1.ServiceBindingStatus{
-					Conditions: []metav1.Condition{
-						{
-							Type:   common.ConditionSucceeded,
-							Status: metav1.ConditionTrue,
-						},
-						{
-							Type:   common.ConditionFailed,
-							Status: metav1.ConditionFalse,
-						},
-					},
-				},
-			}
-
-			Expect(ShouldRetryOperation(resource)).To(BeFalse())
-		})
-
-		It("should return false for empty conditions", func() {
-			resource := &v1.ServiceBinding{
-				Status: v1.ServiceBindingStatus{
-					Conditions: []metav1.Condition{},
-				},
-			}
-
-			Expect(ShouldRetryOperation(resource)).To(BeFalse())
-		})
-	})
-
 	Context("IsFailed", func() {
 		It("Should return false when no conditions available", func() {
 			sb := &v1.ServiceBinding{Status: v1.ServiceBindingStatus{Conditions: []metav1.Condition{}}}
@@ -250,32 +181,14 @@ var _ = Describe("Condition Utils", func() {
 			Expect(result).Should(BeFalse())
 		})
 
-		It("Should return true when ConditionFailed is true", func() {
-			sb := &v1.ServiceBinding{Status: v1.ServiceBindingStatus{Conditions: []metav1.Condition{{Type: common.ConditionFailed, Status: metav1.ConditionTrue}}}}
-			result := IsFailed(sb)
-			Expect(result).Should(BeTrue())
+		It("Should return true when ConditionSucceeded is false", func() {
+			sb := &v1.ServiceBinding{Status: v1.ServiceBindingStatus{Conditions: []metav1.Condition{{Type: common.ConditionSucceeded, Status: metav1.ConditionFalse}}}}
+			Expect(IsFailed(sb)).To(BeTrue())
 		})
 
-		It("Should return false when ConditionFailed is false", func() {
-			sb := &v1.ServiceBinding{Status: v1.ServiceBindingStatus{Conditions: []metav1.Condition{{Type: common.ConditionFailed, Status: metav1.ConditionFalse}}}}
-			result := IsFailed(sb)
-			Expect(result).Should(BeFalse())
-		})
-
-		It("Should return true when ConditionSucceeded is false and reason is Blocked", func() {
-			sb := &v1.ServiceBinding{
-				Status: v1.ServiceBindingStatus{Conditions: []metav1.Condition{{Type: common.ConditionSucceeded, Status: metav1.ConditionFalse, Reason: common.Blocked}}},
-			}
-			result := IsFailed(sb)
-			Expect(result).Should(BeTrue())
-		})
-
-		It("Should return false when ConditionSucceeded is true and reason is Blocked", func() {
-			sb := &v1.ServiceBinding{
-				Status: v1.ServiceBindingStatus{Conditions: []metav1.Condition{{Type: common.ConditionSucceeded, Status: metav1.ConditionTrue, Reason: common.Blocked}}},
-			}
-			result := IsFailed(sb)
-			Expect(result).Should(BeFalse())
+		It("Should return false when ConditionSucceeded is true", func() {
+			sb := &v1.ServiceBinding{Status: v1.ServiceBindingStatus{Conditions: []metav1.Condition{{Type: common.ConditionSucceeded, Status: metav1.ConditionTrue}}}}
+			Expect(IsFailed(sb)).Should(BeFalse())
 		})
 	})
 

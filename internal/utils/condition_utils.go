@@ -69,7 +69,7 @@ func SetInProgressConditions(ctx context.Context, operationType smClientTypes.Op
 
 	conditions := object.GetConditions()
 	if len(conditions) > 0 {
-		meta.RemoveStatusCondition(&conditions, common.ConditionFailed)
+		meta.RemoveStatusCondition(&conditions, common.ConditionFailed) // backward compatibility
 	}
 	observedGen := object.GetGeneration()
 	if isAsyncOperation {
@@ -101,7 +101,7 @@ func SetSuccessConditions(operationType smClientTypes.OperationCategory, object 
 
 	conditions := object.GetConditions()
 	if len(conditions) > 0 {
-		meta.RemoveStatusCondition(&conditions, common.ConditionFailed)
+		meta.RemoveStatusCondition(&conditions, common.ConditionFailed) // backward compatibility
 	}
 	observedGen := object.GetGeneration()
 	if isAsyncOperation {
@@ -173,16 +173,8 @@ func SetFailureConditions(operationType smClientTypes.OperationCategory, errorMe
 		Message:            message,
 		ObservedGeneration: observedGen,
 	}
-	failedCondition := metav1.Condition{
-		Type:               common.ConditionFailed,
-		Status:             metav1.ConditionTrue,
-		Reason:             reason,
-		Message:            message,
-		ObservedGeneration: observedGen,
-	}
 
 	meta.SetStatusCondition(&conditions, lastOpCondition)
-	meta.SetStatusCondition(&conditions, failedCondition)
 	meta.SetStatusCondition(&conditions, getReadyCondition(object))
 
 	object.SetConditions(conditions)
@@ -193,7 +185,7 @@ func HandleOperationFailure(ctx context.Context, k8sClient client.Client, object
 	log.Info(fmt.Sprintf("operation %s of %s encountered a transient error %s, retrying operation :)", operationType, object.GetControllerName(), err.Error()))
 
 	conditions := object.GetConditions()
-	meta.RemoveStatusCondition(&conditions, common.ConditionFailed)
+	meta.RemoveStatusCondition(&conditions, common.ConditionFailed) //backward compatible
 	lastOpCondition := metav1.Condition{
 		Type:               common.ConditionSucceeded,
 		Status:             metav1.ConditionFalse,
@@ -219,12 +211,6 @@ func SetBlockedCondition(ctx context.Context, message string, object common.SAPB
 	SetInProgressConditions(ctx, common.Unknown, message, object, false)
 	lastOpCondition := meta.FindStatusCondition(object.GetConditions(), common.ConditionSucceeded)
 	lastOpCondition.Reason = common.Blocked
-}
-
-func ShouldRetryOperation(object common.SAPBTPResource) bool {
-	conditions := object.GetConditions()
-	return meta.IsStatusConditionPresentAndEqual(conditions, common.ConditionSucceeded, metav1.ConditionFalse) &&
-		!meta.IsStatusConditionPresentAndEqual(conditions, common.ConditionFailed, metav1.ConditionTrue) //failed condition is used in async operations - we don't want to retry async operations
 }
 
 func SetSharedCondition(object common.SAPBTPResource, status metav1.ConditionStatus, reason, msg string) {
@@ -256,10 +242,7 @@ func IsFailed(resource common.SAPBTPResource) bool {
 	if len(resource.GetConditions()) == 0 {
 		return false
 	}
-	return meta.IsStatusConditionPresentAndEqual(resource.GetConditions(), common.ConditionFailed, metav1.ConditionTrue) ||
-		(resource.GetConditions()[0].Status == metav1.ConditionFalse &&
-			resource.GetConditions()[0].Type == common.ConditionSucceeded &&
-			resource.GetConditions()[0].Reason == common.Blocked)
+	return meta.IsStatusConditionPresentAndEqual(resource.GetConditions(), common.ConditionSucceeded, metav1.ConditionFalse)
 }
 
 func getReadyCondition(object common.SAPBTPResource) metav1.Condition {

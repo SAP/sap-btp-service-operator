@@ -345,7 +345,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						State:  smClientTypes.FAILED,
 						Errors: []byte(`{"error": "brokerError","description":"broker-failure"}`),
 					}, nil)
-					waitForInstanceConditionAndMessage(ctx, defaultLookupKey, common.ConditionFailed, "broker-failure")
+					waitForInstanceConditionAndMessage(ctx, defaultLookupKey, common.ConditionSucceeded, "broker-failure")
 				})
 			})
 
@@ -766,7 +766,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 				It("should not delete the k8s instance and condition is updated with failure", func() {
 					deleteInstance(ctx, serviceInstance, false)
-					waitForResourceCondition(ctx, serviceInstance, common.ConditionFailed, metav1.ConditionTrue, common.DeleteFailed, "broker-failure")
+					waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.DeleteFailed, "broker-failure")
 				})
 			})
 		})
@@ -926,7 +926,7 @@ var _ = Describe("ServiceInstance controller", func() {
 						})
 						It("should recover the instance with status Ready=false", func() {
 							serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, false)
-							waitForResourceCondition(ctx, serviceInstance, common.ConditionFailed, metav1.ConditionTrue, common.CreateFailed, "")
+							waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.CreateFailed, "")
 							Expect(fakeClient.ProvisionCallCount()).To(Equal(0))
 							Expect(serviceInstance.Status.InstanceID).To(Equal(fakeInstanceID))
 						})

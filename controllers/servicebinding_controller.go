@@ -171,7 +171,10 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	if !serviceInstanceReady(serviceInstance) {
 		log.Info(fmt.Sprintf("service instance name: %s namespace: %s is not ready, unable to create binding", serviceInstance.Name, serviceInstance.Namespace))
 		utils.SetBlockedCondition(ctx, "service instance is not ready", serviceBinding)
-		return ctrl.Result{Requeue: true}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
+		if err := utils.UpdateStatus(ctx, r.Client, serviceBinding); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, errors.New("ServiceInstance is not ready")
 	}
 
 	// should rotate creds
@@ -391,6 +394,7 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, serviceBinding *v1.
 	case smClientTypes.INPROGRESS:
 		fallthrough
 	case smClientTypes.PENDING:
+		log.Info(fmt.Sprintf("%s is still in progress", serviceBinding.Status.OperationURL))
 		if len(status.Description) != 0 {
 			utils.SetInProgressConditions(ctx, status.Type, status.Description, serviceBinding, true)
 			if err := utils.UpdateStatus(ctx, r.Client, serviceBinding); err != nil {
@@ -400,22 +404,21 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, serviceBinding *v1.
 		}
 		return ctrl.Result{RequeueAfter: r.Config.PollInterval}, nil
 	case smClientTypes.FAILED:
-		// if async operation failed we should not retry
+		log.Info(fmt.Sprintf("%s ended with failure", serviceBinding.Status.OperationURL))
 		utils.SetFailureConditions(status.Type, status.Description, serviceBinding, true)
-		if serviceBinding.Status.OperationType == smClientTypes.DELETE {
-			serviceBinding.Status.OperationURL = ""
-			serviceBinding.Status.OperationType = ""
-			if err := utils.UpdateStatus(ctx, r.Client, serviceBinding); err != nil {
-				log.Error(err, "unable to update ServiceBinding status")
-				return ctrl.Result{}, err
-			}
-			errMsg := "Async unbind operation failed"
-			if status.Errors != nil {
-				errMsg = fmt.Sprintf("Async unbind operation failed, errors: %s", string(status.Errors))
-			}
-			return ctrl.Result{}, errors.New(errMsg)
+		serviceBinding.Status.OperationURL = ""
+		serviceBinding.Status.OperationType = ""
+		if err := utils.UpdateStatus(ctx, r.Client, serviceBinding); err != nil {
+			log.Error(err, "unable to update ServiceBinding status")
+			return ctrl.Result{}, err
 		}
+		errMsg := fmt.Sprintf("Async binding %s operation failed", serviceBinding.Status.OperationType)
+		if status.Errors != nil {
+			errMsg = fmt.Sprintf("Async unbind operation failed, errors: %s", string(status.Errors))
+		}
+		return ctrl.Result{}, errors.New(errMsg)
 	case smClientTypes.SUCCEEDED:
+		log.Info(fmt.Sprintf("%s completed successfully", serviceBinding.Status.OperationURL))
 		utils.SetSuccessConditions(status.Type, serviceBinding, true)
 		switch serviceBinding.Status.OperationType {
 		case smClientTypes.CREATE:
@@ -903,9 +906,6 @@ func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, bindin
 			log.Info("Credentials rotation - finished successfully")
 			now := metav1.NewTime(time.Now())
 			binding.Status.LastCredentialsRotationTime = &now
-			return false, r.stopRotation(ctx, binding)
-		} else if utils.IsFailed(binding) {
-			log.Info("Credentials rotation - binding failed stopping rotation")
 			return false, r.stopRotation(ctx, binding)
 		}
 		log.Info("Credentials rotation - waiting to finish")
