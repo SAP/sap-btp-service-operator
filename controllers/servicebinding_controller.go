@@ -202,7 +202,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 
 		log.Info("binding in final state, maintaining secret")
-		return r.maintain(ctx, smClient, serviceBinding, serviceInstance)
+		return r.maintain(ctx, smClient, serviceBinding)
 	}
 
 	if serviceBinding.Status.BindingID == "" {
@@ -478,7 +478,7 @@ func (r *ServiceBindingReconciler) getBindingForRecovery(ctx context.Context, sm
 	return nil, nil
 }
 
-func (r *ServiceBindingReconciler) maintain(ctx context.Context, smClient sm.Client, binding *v1.ServiceBinding, instance *v1.ServiceInstance) (ctrl.Result, error) {
+func (r *ServiceBindingReconciler) maintain(ctx context.Context, smClient sm.Client, binding *v1.ServiceBinding) (ctrl.Result, error) {
 	log := logutils.GetLogger(ctx)
 	if err := r.maintainSecret(ctx, smClient, binding); err != nil {
 		log.Error(err, "failed to maintain secret")
