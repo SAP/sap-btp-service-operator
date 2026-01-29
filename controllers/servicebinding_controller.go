@@ -480,7 +480,7 @@ func (r *ServiceBindingReconciler) getBindingForRecovery(ctx context.Context, sm
 
 func (r *ServiceBindingReconciler) maintain(ctx context.Context, smClient sm.Client, binding *v1.ServiceBinding, instance *v1.ServiceInstance) (ctrl.Result, error) {
 	log := logutils.GetLogger(ctx)
-	if err := r.maintainSecret(ctx, smClient, binding, instance); err != nil {
+	if err := r.maintainSecret(ctx, smClient, binding); err != nil {
 		log.Error(err, "failed to maintain secret")
 		return r.handleSecretError(ctx, smClientTypes.UPDATE, err, binding)
 	}
@@ -489,7 +489,7 @@ func (r *ServiceBindingReconciler) maintain(ctx context.Context, smClient sm.Cli
 	return ctrl.Result{}, nil
 }
 
-func (r *ServiceBindingReconciler) maintainSecret(ctx context.Context, smClient sm.Client, serviceBinding *v1.ServiceBinding, serviceInstance *v1.ServiceInstance) error {
+func (r *ServiceBindingReconciler) maintainSecret(ctx context.Context, smClient sm.Client, serviceBinding *v1.ServiceBinding) error {
 	log := logutils.GetLogger(ctx)
 	if common.GetObservedGeneration(serviceBinding) == serviceBinding.Generation {
 		log.Info("observed generation is up to date, checking if secret exists")
