@@ -202,7 +202,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 
 		log.Info("binding in final state, maintaining secret")
-		return r.maintain(ctx, serviceBinding, serviceInstance)
+		return r.maintain(ctx, smClient, serviceBinding, serviceInstance)
 	}
 
 	if serviceBinding.Status.BindingID == "" {
@@ -436,7 +436,11 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, serviceBinding *v1.
 			}
 			utils.SetSuccessConditions(status.Type, serviceBinding, false)
 		case smClientTypes.DELETE:
-			return r.deleteSecretAndRemoveFinalizer(ctx, serviceBinding)
+			if utils.IsMarkedForDeletion(serviceBinding.ObjectMeta) {
+				return r.deleteSecretAndRemoveFinalizer(ctx, serviceBinding)
+			}
+			serviceBinding.Status.BindingID = ""
+			return ctrl.Result{RequeueAfter: time.Second}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
 		}
 	}
 
@@ -474,9 +478,9 @@ func (r *ServiceBindingReconciler) getBindingForRecovery(ctx context.Context, sm
 	return nil, nil
 }
 
-func (r *ServiceBindingReconciler) maintain(ctx context.Context, binding *v1.ServiceBinding, instance *v1.ServiceInstance) (ctrl.Result, error) {
+func (r *ServiceBindingReconciler) maintain(ctx context.Context, smClient sm.Client, binding *v1.ServiceBinding, instance *v1.ServiceInstance) (ctrl.Result, error) {
 	log := logutils.GetLogger(ctx)
-	if err := r.maintainSecret(ctx, binding, instance); err != nil {
+	if err := r.maintainSecret(ctx, smClient, binding, instance); err != nil {
 		log.Error(err, "failed to maintain secret")
 		return r.handleSecretError(ctx, smClientTypes.UPDATE, err, binding)
 	}
@@ -485,7 +489,7 @@ func (r *ServiceBindingReconciler) maintain(ctx context.Context, binding *v1.Ser
 	return ctrl.Result{}, nil
 }
 
-func (r *ServiceBindingReconciler) maintainSecret(ctx context.Context, serviceBinding *v1.ServiceBinding, serviceInstance *v1.ServiceInstance) error {
+func (r *ServiceBindingReconciler) maintainSecret(ctx context.Context, smClient sm.Client, serviceBinding *v1.ServiceBinding, serviceInstance *v1.ServiceInstance) error {
 	log := logutils.GetLogger(ctx)
 	if common.GetObservedGeneration(serviceBinding) == serviceBinding.Generation {
 		log.Info("observed generation is up to date, checking if secret exists")
@@ -499,10 +503,6 @@ func (r *ServiceBindingReconciler) maintainSecret(ctx context.Context, serviceBi
 	}
 
 	log.Info("maintaining binding's secret")
-	smClient, err := r.GetSMClient(ctx, serviceInstance)
-	if err != nil {
-		return err
-	}
 	smBinding, err := smClient.GetBindingByID(serviceBinding.Status.BindingID, nil)
 	if err != nil {
 		log.Error(err, "failed to get binding for update secret")
@@ -1054,6 +1054,7 @@ func (r *ServiceBindingReconciler) handleFailedBinding(ctx context.Context, serv
 	if unbindErr != nil {
 		return utils.HandleServiceManagerError(ctx, r.Client, serviceBinding, smClientTypes.DELETE, unbindErr)
 	}
+
 	if operationURL != "" {
 		log.Info("delete binding request is async")
 		serviceBinding.Status.OperationURL = operationURL
@@ -1061,6 +1062,7 @@ func (r *ServiceBindingReconciler) handleFailedBinding(ctx context.Context, serv
 		utils.SetInProgressConditions(ctx, smClientTypes.DELETE, "deleting failed binding", serviceBinding, true)
 		return ctrl.Result{RequeueAfter: r.Config.PollInterval}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
 	}
+
 	log.Info("binding deleted successfully")
 	serviceBinding.Status.BindingID = ""
 	return ctrl.Result{RequeueAfter: time.Second}, utils.UpdateStatus(ctx, r.Client, serviceBinding)

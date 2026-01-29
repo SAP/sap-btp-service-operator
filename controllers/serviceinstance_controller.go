@@ -448,6 +448,12 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, serviceInstance *v
 			}
 			serviceInstance.Status.Ready = metav1.ConditionTrue
 		} else if serviceInstance.Status.OperationType == smClientTypes.DELETE {
+			if !utils.IsMarkedForDeletion(serviceInstance.ObjectMeta) {
+				serviceInstance.Status.OperationURL = ""
+				serviceInstance.Status.OperationType = ""
+				serviceInstance.Status.InstanceID = ""
+				return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceInstance)
+			}
 			// delete was successful - remove our finalizer from the list and update it.
 			if err := utils.RemoveFinalizer(ctx, r.Client, serviceInstance, common.FinalizerName); err != nil {
 				return ctrl.Result{}, err

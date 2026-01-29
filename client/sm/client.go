@@ -360,9 +360,12 @@ func (client *serviceManagerClient) delete(url string, q *Parameters, user strin
 		return "", err
 	}
 	switch response.StatusCode {
-	case http.StatusGone:
-		fallthrough
 	case http.StatusNotFound:
+		if response.Header.Get("X-Cf-RouterError") == "unknown_route" {
+			return "", handleResponseError(response)
+		}
+		fallthrough
+	case http.StatusGone:
 		fallthrough
 	case http.StatusOK:
 		return "", nil
