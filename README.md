@@ -168,6 +168,8 @@ stringData:
 
 **Note**: To rotate the credentials between the BTP service operator and Service Manager, you have to create a new binding for the `service-operator-access` service instance, and then execute the setup script again with the new set of credentials. Afterward, you can delete the old binding.
 
+**Note**: The `service-operator-access` credentials are intended exclusively for technical communication between the BTP Service Operator and Service Manager. They are not designed for direct API access. If you need to call Service Manager APIs directly, create a separate Service Manager instance with the `subaccount-admin` plan and use those credentials instead.
+
 [Back to top](#table-of-contents)
 
 ### Using Custom Certificate Authorities
