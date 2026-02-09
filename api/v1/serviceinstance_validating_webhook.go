@@ -45,7 +45,7 @@ func (si *ServiceInstance) ValidateCreate(_ context.Context, _ runtime.Object) (
 	return nil, nil
 }
 
-func (si *ServiceInstance) ValidateUpdate(_ context.Context, oldObj, newObj runtime.Object) (warnings admission.Warnings, err error) {
+func (si *ServiceInstance) ValidateUpdate(_ context.Context, _, _ runtime.Object) (warnings admission.Warnings, err error) {
 	return nil, nil
 }
 
