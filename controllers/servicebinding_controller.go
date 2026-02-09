@@ -119,6 +119,9 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 				return ctrl.Result{}, updateErr
 			}
 			return ctrl.Result{}, instanceErr
+		} else if len(serviceBinding.Status.BindingID) == 0 {
+			log.Info("service instance not found, binding is marked for deletion and has no binding id, removing finalizer if exists")
+			return ctrl.Result{}, utils.RemoveFinalizer(ctx, r.Client, serviceBinding, common.FinalizerName)
 		}
 	}
 

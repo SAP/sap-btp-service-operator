@@ -46,13 +46,6 @@ func (si *ServiceInstance) ValidateCreate(_ context.Context, _ runtime.Object) (
 }
 
 func (si *ServiceInstance) ValidateUpdate(_ context.Context, oldObj, newObj runtime.Object) (warnings admission.Warnings, err error) {
-	oldInstance := oldObj.(*ServiceInstance)
-	newInstance := newObj.(*ServiceInstance)
-	serviceinstancelog.Info("validate update", "name", newInstance.ObjectMeta.Name)
-
-	if oldInstance.Spec.BTPAccessCredentialsSecret != newInstance.Spec.BTPAccessCredentialsSecret {
-		return nil, fmt.Errorf("changing the btpAccessCredentialsSecret for an existing instance is not allowed")
-	}
 	return nil, nil
 }
 
