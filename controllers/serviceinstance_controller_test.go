@@ -890,23 +890,35 @@ var _ = Describe("ServiceInstance controller", func() {
 				When("last operation state is FAILED", func() {
 					BeforeEach(func() {
 						recoveredInstance.LastOperation = &smClientTypes.Operation{State: smClientTypes.FAILED, Type: smClientTypes.CREATE}
-						fakeClient.ListInstancesReturns(&smclientTypes.ServiceInstances{
+						fakeClient.ListInstancesReturnsOnCall(0, &smclientTypes.ServiceInstances{
 							ServiceInstances: []smclientTypes.ServiceInstance{recoveredInstance}}, nil)
+						fakeClient.ListInstancesReturnsOnCall(1, &smclientTypes.ServiceInstances{
+							ServiceInstances: []smclientTypes.ServiceInstance{}}, nil)
+						fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: "new-instance-id"}, nil)
 					})
 
-					It("should recover the existing instance and update condition failure", func() {
+					It("should recover the existing instance, delete it and provision a new instance", func() {
 						serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, false)
 						waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.CreateFailed, "")
-						Expect(serviceInstance.Status.InstanceID).To(Equal(fakeInstanceID))
-						Expect(fakeClient.ProvisionCallCount()).To(Equal(0))
+						Eventually(func() bool {
+							err := k8sClient.Get(ctx, types.NamespacedName{Name: serviceInstance.Name, Namespace: serviceInstance.Namespace}, serviceInstance)
+							if err != nil {
+								return false
+							}
+							return serviceInstance.Status.InstanceID == "new-instance-id"
+						}, timeout, interval).Should(BeTrue())
+						Expect(fakeClient.ListInstancesCallCount()).To(Equal(2))
+						Expect(fakeClient.DeprovisionCallCount()).To(Equal(1))
+						Expect(fakeClient.ProvisionCallCount()).To(Equal(1))
 					})
 				})
 
-				When("no last operation", func() {
+				FWhen("no last operation", func() {
 					JustBeforeEach(func() {
 						recoveredInstance.LastOperation = nil
 						fakeClient.ListInstancesReturns(&smclientTypes.ServiceInstances{
 							ServiceInstances: []smclientTypes.ServiceInstance{recoveredInstance}}, nil)
+						fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: "new-instance-id"}, nil)
 					})
 					When("instance is ready in SM", func() {
 						BeforeEach(func() {
@@ -923,14 +935,23 @@ var _ = Describe("ServiceInstance controller", func() {
 						BeforeEach(func() {
 							recoveredInstance.Ready = false
 						})
-						It("should recover the instance with status Ready=false", func() {
+						It("should recover the instance with status Ready=false, delete it and create a new one", func() {
 							serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, false)
 							waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.CreateFailed, "")
-							Expect(fakeClient.ProvisionCallCount()).To(Equal(0))
-							Expect(serviceInstance.Status.InstanceID).To(Equal(fakeInstanceID))
+							fakeClient.ListInstancesReturns(&smclientTypes.ServiceInstances{
+								ServiceInstances: []smclientTypes.ServiceInstance{}}, nil)
+							Eventually(func() bool {
+								err := k8sClient.Get(ctx, types.NamespacedName{Name: serviceInstance.Name, Namespace: serviceInstance.Namespace}, serviceInstance)
+								if err != nil {
+									return false
+								}
+								return serviceInstance.Status.InstanceID == "new-instance-id"
+							}, timeout, interval).Should(BeTrue())
+							Expect(fakeClient.ListInstancesCallCount() > 2).To(BeTrue())
+							Expect(fakeClient.DeprovisionCallCount() > 1).To(BeTrue())
+							Expect(fakeClient.ProvisionCallCount()).To(Equal(1))
 						})
 					})
-
 				})
 			})
 		})
