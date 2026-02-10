@@ -125,7 +125,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 	}
 
-	if utils.IsMarkedForDeletion(serviceBinding.ObjectMeta) {
+	if shouldBindingBeDeleted(serviceBinding) {
 		return r.delete(ctx, serviceBinding, serviceInstance)
 	}
 
@@ -227,8 +227,8 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return r.createBinding(ctx, smClient, serviceInstance, serviceBinding)
 	}
 
-	//binding exists in sm but not ready
-	return r.handleFailedBinding(ctx, serviceBinding, smClient)
+	log.Info("nothing to do for this binding")
+	return ctrl.Result{}, nil
 }
 
 func (r *ServiceBindingReconciler) SetupWithManager(mgr ctrl.Manager) error {
@@ -358,6 +358,11 @@ func (r *ServiceBindingReconciler) delete(ctx context.Context, serviceBinding *v
 			return ctrl.Result{RequeueAfter: r.Config.PollInterval}, nil
 		}
 
+		serviceBinding.Status.BindingID = ""
+		if err := utils.UpdateStatus(ctx, r.Client, serviceBinding); err != nil {
+			log.Error(err, "unable to update ServiceBinding status after deletion")
+			return ctrl.Result{}, err
+		}
 		log.Info("Binding was deleted successfully")
 		return r.deleteSecretAndRemoveFinalizer(ctx, serviceBinding)
 	}
@@ -1050,27 +1055,6 @@ func (r *ServiceBindingReconciler) recover(ctx context.Context, serviceBinding *
 	return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
 }
 
-func (r *ServiceBindingReconciler) handleFailedBinding(ctx context.Context, serviceBinding *v1.ServiceBinding, smClient sm.Client) (ctrl.Result, error) {
-	log := logutils.GetLogger(ctx)
-	log.Info(fmt.Sprintf("binding %s failed to be created, deleting it", serviceBinding.Status.BindingID))
-	operationURL, unbindErr := smClient.Unbind(serviceBinding.Status.BindingID, nil, utils.BuildUserInfo(ctx, serviceBinding.Spec.UserInfo))
-	if unbindErr != nil {
-		return utils.HandleServiceManagerError(ctx, r.Client, serviceBinding, smClientTypes.DELETE, unbindErr)
-	}
-
-	if operationURL != "" {
-		log.Info("delete binding request is async")
-		serviceBinding.Status.OperationURL = operationURL
-		serviceBinding.Status.OperationType = smClientTypes.DELETE
-		utils.SetInProgressConditions(ctx, smClientTypes.DELETE, "deleting failed binding", serviceBinding, true)
-		return ctrl.Result{RequeueAfter: r.Config.PollInterval}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
-	}
-
-	log.Info("binding deleted successfully")
-	serviceBinding.Status.BindingID = ""
-	return ctrl.Result{RequeueAfter: time.Second}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
-}
-
 func isStaleServiceBinding(binding *v1.ServiceBinding) bool {
 	if utils.IsMarkedForDeletion(binding.ObjectMeta) {
 		return false
@@ -1193,4 +1177,9 @@ func isBindingExistInSM(smClient sm.Client, instance *v1.ServiceInstance, bindin
 	}
 	log.Info("binding found in SM")
 	return true, nil
+}
+
+func shouldBindingBeDeleted(serviceBinding *v1.ServiceBinding) bool {
+	return utils.IsMarkedForDeletion(serviceBinding.ObjectMeta) ||
+		(len(serviceBinding.Status.BindingID) > 0 && meta.IsStatusConditionFalse(serviceBinding.Status.Conditions, common.ConditionReady))
 }

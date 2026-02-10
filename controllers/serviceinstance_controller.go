@@ -87,7 +87,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 	serviceInstance = serviceInstance.DeepCopy()
 
-	if shouldBeDeleted(serviceInstance) {
+	if shouldInstanceBeDeleted(serviceInstance) {
 		return r.deleteInstance(ctx, serviceInstance)
 	}
 
@@ -738,7 +738,7 @@ func getErrorMsgFromLastOperation(status *smClientTypes.Operation) string {
 	return errMsg
 }
 
-func shouldBeDeleted(serviceInstance *v1.ServiceInstance) bool {
+func shouldInstanceBeDeleted(serviceInstance *v1.ServiceInstance) bool {
 	return utils.IsMarkedForDeletion(serviceInstance.ObjectMeta) ||
 		(serviceInstance.Status.OperationURL == "" && len(serviceInstance.Status.InstanceID) > 0 && serviceInstance.Status.Ready == metav1.ConditionFalse) //async provision failed
 }
