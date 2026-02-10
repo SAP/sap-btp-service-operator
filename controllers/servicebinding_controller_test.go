@@ -467,7 +467,7 @@ var _ = Describe("ServiceBinding controller", func() {
 			})
 
 			When("bind polling returns FAILED state", func() {
-				It("should fail with the error returned from SM", func() {
+				It("should fail with the error returned from SM and create a new binding", func() {
 					errorMessage := "no binding for you"
 
 					fakeClient.StatusStub = func(url string, parameters *sm.Parameters) (*smClientTypes.Operation, error) {

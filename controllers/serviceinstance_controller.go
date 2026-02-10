@@ -387,7 +387,7 @@ func (r *ServiceInstanceReconciler) handleInstanceSharing(ctx context.Context, s
 
 func (r *ServiceInstanceReconciler) poll(ctx context.Context, serviceInstance *v1.ServiceInstance) (ctrl.Result, error) {
 	log := logutils.GetLogger(ctx)
-	log.Info(fmt.Sprintf("resource is in progress, found operation url %s", serviceInstance.Status.OperationURL))
+	log.Info(fmt.Sprintf("instance resource is in progress, found operation url %s", serviceInstance.Status.OperationURL))
 	smClient, err := r.GetSMClient(ctx, serviceInstance)
 	if err != nil {
 		log.Error(err, "failed to get sm client")
