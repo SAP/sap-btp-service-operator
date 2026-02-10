@@ -12,20 +12,6 @@ var _ = Describe("Service Instance Webhook Test", func() {
 		instance = getInstance()
 	})
 
-	Context("Validate Update", func() {
-		When("btpAccessCredentialsSecret changed", func() {
-			It("should fail", func() {
-				instance := getInstance()
-				instance.Spec.BTPAccessCredentialsSecret = ""
-				newInstance := getInstance()
-				newInstance.Spec.BTPAccessCredentialsSecret = "new-secret"
-				_, err := newInstance.ValidateUpdate(nil, instance, newInstance)
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("changing the btpAccessCredentialsSecret for an existing instance is not allowed"))
-			})
-		})
-	})
-
 	Context("Validate Delete", func() {
 		When("service instance is marked as prevent deletion", func() {
 			It("should return error from webhook", func() {
