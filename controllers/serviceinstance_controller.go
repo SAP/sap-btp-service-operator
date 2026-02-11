@@ -740,7 +740,7 @@ func getErrorMsgFromLastOperation(status *smClientTypes.Operation) string {
 
 func shouldInstanceBeDeleted(serviceInstance *v1.ServiceInstance) bool {
 	return utils.IsMarkedForDeletion(serviceInstance.ObjectMeta) ||
-		(serviceInstance.Status.OperationURL == "" && len(serviceInstance.Status.InstanceID) > 0 && serviceInstance.Status.Ready == metav1.ConditionFalse) //async provision failed
+		(len(serviceInstance.Status.OperationURL) == 0 && len(serviceInstance.Status.InstanceID) > 0 && serviceInstance.Status.Ready == metav1.ConditionFalse) //async provision failed
 }
 
 type SecretPredicate struct {
