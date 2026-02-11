@@ -87,7 +87,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 	serviceInstance = serviceInstance.DeepCopy()
 
-	if utils.IsMarkedForDeletion(serviceInstance.ObjectMeta) {
+	if shouldInstanceBeDeleted(serviceInstance) {
 		return r.deleteInstance(ctx, serviceInstance)
 	}
 
@@ -290,17 +290,8 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, serviceInstance *v1.ServiceInstance) (ctrl.Result, error) {
 	log := logutils.GetLogger(ctx)
 
-	log.Info("deleting instance")
 	if controllerutil.ContainsFinalizer(serviceInstance, common.FinalizerName) {
-		for key, secretName := range serviceInstance.Labels {
-			if strings.HasPrefix(key, common.InstanceSecretRefLabel) {
-				if err := utils.RemoveWatchForSecret(ctx, r.Client, types.NamespacedName{Name: secretName, Namespace: serviceInstance.Namespace}, string(serviceInstance.UID)); err != nil {
-					log.Error(err, fmt.Sprintf("failed to unwatch secret %s", secretName))
-					return ctrl.Result{}, err
-				}
-			}
-		}
-
+		log.Info("instance has finalizer, deleting it from sm")
 		smClient, err := r.GetSMClient(ctx, serviceInstance)
 		if err != nil {
 			log.Error(err, "failed to get sm client")
@@ -324,6 +315,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, serviceI
 
 		if len(serviceInstance.Status.OperationURL) > 0 && serviceInstance.Status.OperationType == smClientTypes.DELETE {
 			// ongoing delete operation - poll status from SM
+			log.Info("instance deletion is already in progress, checking status")
 			return r.poll(ctx, serviceInstance)
 		}
 
@@ -338,6 +330,20 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, serviceI
 			return r.handleAsyncDelete(ctx, serviceInstance, operationURL)
 		}
 
+		for key, secretName := range serviceInstance.Labels {
+			if strings.HasPrefix(key, common.InstanceSecretRefLabel) {
+				if err := utils.RemoveWatchForSecret(ctx, r.Client, types.NamespacedName{Name: secretName, Namespace: serviceInstance.Namespace}, string(serviceInstance.UID)); err != nil {
+					log.Error(err, fmt.Sprintf("failed to unwatch secret %s", secretName))
+					return ctrl.Result{}, err
+				}
+			}
+		}
+
+		serviceInstance.Status.InstanceID = ""
+		if err := r.Client.Status().Update(ctx, serviceInstance); err != nil {
+			log.Error(err, "failed to update service instance status after deletion")
+			return ctrl.Result{}, err
+		}
 		log.Info("Instance was deleted successfully, removing finalizer")
 		// remove our finalizer from the list and update it.
 		return ctrl.Result{}, utils.RemoveFinalizer(ctx, r.Client, serviceInstance, common.FinalizerName)
@@ -381,7 +387,7 @@ func (r *ServiceInstanceReconciler) handleInstanceSharing(ctx context.Context, s
 
 func (r *ServiceInstanceReconciler) poll(ctx context.Context, serviceInstance *v1.ServiceInstance) (ctrl.Result, error) {
 	log := logutils.GetLogger(ctx)
-	log.Info(fmt.Sprintf("resource is in progress, found operation url %s", serviceInstance.Status.OperationURL))
+	log.Info(fmt.Sprintf("instance resource is in progress, found operation url %s", serviceInstance.Status.OperationURL))
 	smClient, err := r.GetSMClient(ctx, serviceInstance)
 	if err != nil {
 		log.Error(err, "failed to get sm client")
@@ -412,6 +418,7 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, serviceInstance *v
 	case smClientTypes.INPROGRESS:
 		fallthrough
 	case smClientTypes.PENDING:
+		log.Info(fmt.Sprintf("operation %s %s is still in progress", serviceInstance.Status.OperationType, serviceInstance.Status.OperationURL))
 		if len(status.Description) > 0 {
 			log.Info(fmt.Sprintf("last operation description is '%s'", status.Description))
 			utils.SetInProgressConditions(ctx, status.Type, status.Description, serviceInstance, true)
@@ -423,17 +430,16 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, serviceInstance *v
 		return ctrl.Result{RequeueAfter: r.Config.PollInterval}, nil
 	case smClientTypes.FAILED:
 		errMsg := getErrorMsgFromLastOperation(status)
+		log.Info(fmt.Sprintf("operation %s %s failed, error: %s", serviceInstance.Status.OperationType, serviceInstance.Status.OperationURL, errMsg))
 		utils.SetFailureConditions(status.Type, errMsg, serviceInstance, true)
-		// in order to delete eventually the object we need return with error
-		if serviceInstance.Status.OperationType == smClientTypes.DELETE {
-			serviceInstance.Status.OperationURL = ""
-			serviceInstance.Status.OperationType = ""
-			if err := utils.UpdateStatus(ctx, r.Client, serviceInstance); err != nil {
-				return ctrl.Result{}, err
-			}
-			return ctrl.Result{}, errors.New(errMsg)
+		serviceInstance.Status.OperationURL = ""
+		serviceInstance.Status.OperationType = ""
+		if err := utils.UpdateStatus(ctx, r.Client, serviceInstance); err != nil {
+			return ctrl.Result{}, err
 		}
+		return ctrl.Result{}, errors.New(errMsg)
 	case smClientTypes.SUCCEEDED:
+		log.Info(fmt.Sprintf("operation %s %s completed succefully", serviceInstance.Status.OperationType, serviceInstance.Status.OperationURL))
 		if serviceInstance.Status.OperationType == smClientTypes.CREATE {
 			smInstance, err := smClient.GetInstanceByID(serviceInstance.Status.InstanceID, nil)
 			if err != nil {
@@ -445,10 +451,14 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, serviceInstance *v
 			}
 			serviceInstance.Status.Ready = metav1.ConditionTrue
 		} else if serviceInstance.Status.OperationType == smClientTypes.DELETE {
-			// delete was successful - remove our finalizer from the list and update it.
+			log.Info(fmt.Sprintf("instance %s deleted successfully from sm, removing finalizer", serviceInstance.Status.InstanceID))
 			if err := utils.RemoveFinalizer(ctx, r.Client, serviceInstance, common.FinalizerName); err != nil {
 				return ctrl.Result{}, err
 			}
+			serviceInstance.Status.OperationURL = ""
+			serviceInstance.Status.OperationType = ""
+			serviceInstance.Status.InstanceID = ""
+			return ctrl.Result{RequeueAfter: time.Second}, utils.UpdateStatus(ctx, r.Client, serviceInstance)
 		}
 		utils.SetSuccessConditions(status.Type, serviceInstance, true)
 	}
@@ -464,11 +474,7 @@ func (r *ServiceInstanceReconciler) handleAsyncDelete(ctx context.Context, servi
 	serviceInstance.Status.OperationType = smClientTypes.DELETE
 	utils.SetInProgressConditions(ctx, smClientTypes.DELETE, "", serviceInstance, false)
 
-	if err := utils.UpdateStatus(ctx, r.Client, serviceInstance); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	return ctrl.Result{RequeueAfter: r.Config.PollInterval}, nil
+	return ctrl.Result{RequeueAfter: r.Config.PollInterval}, utils.UpdateStatus(ctx, r.Client, serviceInstance)
 }
 
 func (r *ServiceInstanceReconciler) getInstanceForRecovery(ctx context.Context, smClient sm.Client, serviceInstance *v1.ServiceInstance) (*smClientTypes.ServiceInstance, error) {
@@ -535,6 +541,7 @@ func (r *ServiceInstanceReconciler) recover(ctx context.Context, smClient sm.Cli
 	case smClientTypes.INPROGRESS:
 		k8sInstance.Status.OperationURL = sm.BuildOperationURL(smInstance.LastOperation.ID, smInstance.ID, smClientTypes.ServiceInstancesURL)
 		k8sInstance.Status.OperationType = smInstance.LastOperation.Type
+		k8sInstance.Status.InstanceID = smInstance.ID
 		utils.SetInProgressConditions(ctx, smInstance.LastOperation.Type, smInstance.LastOperation.Description, k8sInstance, false)
 	case smClientTypes.SUCCEEDED:
 		utils.SetSuccessConditions(operationType, k8sInstance, false)
@@ -599,6 +606,10 @@ func (r *ServiceInstanceReconciler) buildSMRequestParameters(ctx context.Context
 func isFinalState(ctx context.Context, serviceInstance *v1.ServiceInstance) bool {
 	log := logutils.GetLogger(ctx)
 
+	if !serviceInstanceReady(serviceInstance) {
+		return false
+	}
+
 	if serviceInstance.Status.ForceReconcile {
 		log.Info("instance is not in final state, ForceReconcile is true")
 		return false
@@ -607,11 +618,6 @@ func isFinalState(ctx context.Context, serviceInstance *v1.ServiceInstance) bool
 	observedGen := common.GetObservedGeneration(serviceInstance)
 	if serviceInstance.Generation != observedGen {
 		log.Info(fmt.Sprintf("instance is not in final state, generation: %d, observedGen: %d", serviceInstance.Generation, observedGen))
-		return false
-	}
-
-	if utils.ShouldRetryOperation(serviceInstance) {
-		log.Info("instance is not in final state, last operation failed, retrying")
 		return false
 	}
 
@@ -730,6 +736,11 @@ func getErrorMsgFromLastOperation(status *smClientTypes.Operation) string {
 		}
 	}
 	return errMsg
+}
+
+func shouldInstanceBeDeleted(serviceInstance *v1.ServiceInstance) bool {
+	return utils.IsMarkedForDeletion(serviceInstance.ObjectMeta) ||
+		(len(serviceInstance.Status.OperationURL) == 0 && len(serviceInstance.Status.InstanceID) > 0 && serviceInstance.Status.Ready == metav1.ConditionFalse) //async provision failed
 }
 
 type SecretPredicate struct {

@@ -8,12 +8,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/SAP/sap-btp-service-operator/api/common"
+	"github.com/SAP/sap-btp-service-operator/internal/utils"
 	"github.com/SAP/sap-btp-service-operator/internal/utils/logutils"
 	"github.com/lithammer/dedent"
 	authv1 "k8s.io/api/authentication/v1"
-
-	"github.com/SAP/sap-btp-service-operator/api/common"
-	"github.com/SAP/sap-btp-service-operator/internal/utils"
 	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 
@@ -468,17 +467,33 @@ var _ = Describe("ServiceBinding controller", func() {
 			})
 
 			When("bind polling returns FAILED state", func() {
-				It("should fail with the error returned from SM", func() {
+				It("should fail with the error returned from SM and create a new binding", func() {
 					errorMessage := "no binding for you"
-					fakeClient.StatusReturns(&smClientTypes.Operation{
-						Type:        smClientTypes.CREATE,
-						State:       smClientTypes.FAILED,
-						Description: errorMessage,
-					}, nil)
+
+					fakeClient.StatusStub = func(url string, parameters *sm.Parameters) (*smClientTypes.Operation, error) {
+						if strings.Contains(url, "successful-binding-id") {
+							return &smClientTypes.Operation{
+								Type:        smClientTypes.CREATE,
+								State:       smClientTypes.SUCCEEDED,
+								Description: "completed",
+							}, nil
+						}
+
+						return &smClientTypes.Operation{
+							Type:        smClientTypes.CREATE,
+							State:       smClientTypes.FAILED,
+							Description: errorMessage,
+						}, nil
+					}
 
 					binding, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "existing-name", "", false)
 					Expect(err).ToNot(HaveOccurred())
-					waitForResourceCondition(ctx, binding, common.ConditionFailed, metav1.ConditionTrue, "", errorMessage)
+					waitForResourceCondition(ctx, binding, common.ConditionSucceeded, metav1.ConditionFalse, "", errorMessage)
+
+					fakeClient.BindReturns(nil, fmt.Sprintf("/v1/service_bindings/%s/operations/an-operation-id", "successful-binding-id"), nil)
+					fakeClient.GetBindingByIDReturns(&smClientTypes.ServiceBinding{}, nil)
+					waitForResourceCondition(ctx, binding, common.ConditionReady, metav1.ConditionTrue, "", "")
+					Expect(binding.Status.BindingID).To(Equal("successful-binding-id"))
 				})
 			})
 
@@ -491,7 +506,7 @@ var _ = Describe("ServiceBinding controller", func() {
 				It("should eventually succeed", func() {
 					binding, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "", "", false)
 					Expect(err).ToNot(HaveOccurred())
-					waitForResourceCondition(ctx, binding, common.ConditionFailed, metav1.ConditionTrue, "", "no polling for you")
+					waitForResourceCondition(ctx, binding, common.ConditionSucceeded, metav1.ConditionTrue, "", "no polling for you")
 					fakeClient.ListBindingsReturns(&smClientTypes.ServiceBindings{
 						ServiceBindings: []smClientTypes.ServiceBinding{
 							{
@@ -542,6 +557,7 @@ var _ = Describe("ServiceBinding controller", func() {
 
 		When("referenced service instance is failed", func() {
 			It("should retry and succeed once the instance is ready", func() {
+				fakeClient.ProvisionReturns(nil, errors.New("failed")) //instance is retried if failed
 				createdInstance.Status.Ready = metav1.ConditionFalse
 				updateInstanceStatus(ctx, createdInstance)
 
@@ -549,8 +565,7 @@ var _ = Describe("ServiceBinding controller", func() {
 				Expect(err).ToNot(HaveOccurred())
 				waitForResourceCondition(ctx, binding, common.ConditionSucceeded, metav1.ConditionFalse, "", "service instance is not ready")
 
-				createdInstance.Status.Ready = metav1.ConditionTrue
-				updateInstanceStatus(ctx, createdInstance)
+				fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: "12345678", Tags: []byte("[\"test\"]")}, nil)
 				waitForResourceToBeReady(ctx, binding)
 			})
 		})
@@ -1056,8 +1071,8 @@ stringData:
 						if err != nil {
 							return false
 						}
-						failedCond := meta.FindStatusCondition(createdBinding.GetConditions(), common.ConditionFailed)
-						return failedCond != nil && strings.Contains(failedCond.Message, errorMessage)
+						cond := meta.FindStatusCondition(createdBinding.GetConditions(), common.ConditionSucceeded)
+						return cond != nil && strings.Contains(cond.Message, errorMessage)
 					}, timeout, interval).Should(BeTrue())
 					fakeClient.UnbindReturns("", nil)
 					deleteAndWait(ctx, createdBinding)
@@ -1141,8 +1156,6 @@ stringData:
 						switch testCase.lastOpState {
 						case smClientTypes.FAILED:
 							Expect(utils.IsFailed(createdBinding))
-						case smClientTypes.INPROGRESS:
-							Expect(utils.ShouldRetryOperation(createdBinding))
 						case smClientTypes.SUCCEEDED:
 							Expect(isResourceReady(createdBinding))
 						}

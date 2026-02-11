@@ -53,6 +53,7 @@ const (
 	ConditionSucceeded = "Succeeded"
 
 	// ConditionFailed represents information about a final failure that should not be retried.
+	// Deprecated: use succeeded with proper message
 	ConditionFailed = "Failed"
 
 	// ConditionReady represents if the resource ready for usage.
