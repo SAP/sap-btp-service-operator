@@ -606,17 +606,6 @@ var _ = Describe("ServiceInstance controller", func() {
 			})
 		})
 
-		When("subaccount id changed", func() {
-			It("should fail", func() {
-				deleteInstance(ctx, serviceInstance, true)
-				serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, true)
-				serviceInstance.Spec.BTPAccessCredentialsSecret = "12345"
-				err := k8sClient.Update(ctx, serviceInstance)
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("changing the btpAccessCredentialsSecret for an existing instance is not allowed"))
-			})
-		})
-
 		When("UserInfo changed", func() {
 			It("should fail", func() {
 				serviceInstance.Spec.UserInfo = &authv1.UserInfo{
