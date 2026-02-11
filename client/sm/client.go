@@ -360,17 +360,17 @@ func (client *serviceManagerClient) delete(url string, q *Parameters, user strin
 		return "", err
 	}
 	switch response.StatusCode {
-	case http.StatusNotFound:
-		if response.Header.Get("X-Cf-RouterError") == "unknown_route" {
-			return "", handleResponseError(response)
-		}
-		fallthrough
 	case http.StatusGone:
 		fallthrough
 	case http.StatusOK:
 		return "", nil
 	case http.StatusAccepted:
 		return response.Header.Get("Location"), nil
+	case http.StatusNotFound:
+		if response.Header.Get("X-Cf-RouterError") == "unknown_route" {
+			response.StatusCode = http.StatusServiceUnavailable
+		}
+		fallthrough
 	default:
 		return "", handleResponseError(response)
 	}
@@ -595,12 +595,8 @@ func handleResponseError(response *http.Response) error {
 		body = []byte(fmt.Sprintf("error reading response body: %s", err))
 	}
 
-	statusCode := response.StatusCode
-	if response.Header.Get("X-Cf-RouterError") == "unknown_route" {
-		statusCode = http.StatusServiceUnavailable
-	}
 	smError := &ServiceManagerError{
-		StatusCode:      statusCode,
+		StatusCode:      response.StatusCode,
 		ResponseHeaders: response.Header,
 	}
 	_ = json.Unmarshal(body, &smError)
