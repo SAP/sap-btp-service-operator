@@ -93,8 +93,8 @@ func (r *SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				e.ObjectNew.(*corev1.Secret).Data,
 			)
 		},
-		DeleteFunc: func(e event.DeleteEvent) bool { return true },
-		CreateFunc: func(e event.CreateEvent) bool { return false },
+		DeleteFunc: func(_ event.DeleteEvent) bool { return true },
+		CreateFunc: func(_ event.CreateEvent) bool { return false },
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).
