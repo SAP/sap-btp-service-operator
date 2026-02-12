@@ -88,7 +88,7 @@ func (r *SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	dataChangedPredicate := predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			return !reflect.DeepEqual(
+			return e.ObjectNew.GetDeletionTimestamp() != nil || !reflect.DeepEqual(
 				e.ObjectOld.(*corev1.Secret).Data,
 				e.ObjectNew.(*corev1.Secret).Data,
 			)
