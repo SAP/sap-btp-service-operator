@@ -177,13 +177,25 @@ func RemoveAnnotations(ctx context.Context, k8sClient client.Client, object comm
 
 func AddWatchForSecretIfNeeded(ctx context.Context, k8sClient client.Client, secret *corev1.Secret, instanceUID string) error {
 	log := logutils.GetLogger(ctx)
+	updateRequired := false
 	if secret.Annotations == nil {
 		secret.Annotations = make(map[string]string)
 	}
 	if len(secret.Annotations[common.WatchSecretAnnotation+string(instanceUID)]) == 0 {
-		log.Info(fmt.Sprintf("adding secret watch for secret %s", secret.Name))
+		log.Info(fmt.Sprintf("adding secret watch annotation for instance %s on secret %s", instanceUID, secret.Name))
 		secret.Annotations[common.WatchSecretAnnotation+instanceUID] = "true"
+		updateRequired = true
+	}
+	if secret.Labels == nil {
+		secret.Labels = make(map[string]string)
+	}
+	if secret.Labels[common.WatchSecretLabel] != "true" {
+		log.Info(fmt.Sprintf("adding watch label for secret %s", secret.Name))
+		secret.Labels[common.WatchSecretLabel] = "true"
 		controllerutil.AddFinalizer(secret, common.FinalizerName)
+		updateRequired = true
+	}
+	if updateRequired {
 		return k8sClient.Update(ctx, secret)
 	}
 
@@ -198,6 +210,7 @@ func RemoveWatchForSecret(ctx context.Context, k8sClient client.Client, secretKe
 
 	delete(secret.Annotations, common.WatchSecretAnnotation+instanceUID)
 	if !IsSecretWatched(secret.Annotations) {
+		delete(secret.Labels, common.WatchSecretLabel)
 		controllerutil.RemoveFinalizer(secret, common.FinalizerName)
 	}
 	return k8sClient.Update(ctx, secret)

@@ -185,6 +185,7 @@ var _ = Describe("Controller Util", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(updatedSecret.Finalizers[0]).To(Equal(common.FinalizerName))
 			Expect(updatedSecret.Annotations[common.WatchSecretAnnotation+"123"]).To(Equal("true"))
+			Expect(updatedSecret.Labels[common.WatchSecretLabel]).To(Equal("true"))
 
 		})
 	})
