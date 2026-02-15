@@ -210,7 +210,7 @@ func RemoveWatchForSecret(ctx context.Context, k8sClient client.Client, secretKe
 
 	delete(secret.Annotations, common.WatchSecretAnnotation+instanceUID)
 	existInstanceAnnotation := false
-	for key, _ := range secret.Annotations {
+	for key := range secret.Annotations {
 		if strings.HasPrefix(key, common.WatchSecretAnnotation) {
 			existInstanceAnnotation = true
 			break
