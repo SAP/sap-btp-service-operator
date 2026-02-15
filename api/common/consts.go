@@ -5,6 +5,7 @@ const (
 	ClusterSecretLabel        = "services.cloud.sap.com/cluster-secret"
 	InstanceSecretRefLabel    = "services.cloud.sap.com/secret-ref_"
 	WatchSecretAnnotation     = "services.cloud.sap.com/watch-secret-"
+	WatchSecretLabel          = "services.cloud.sap.com/watch-secret"
 
 	NamespaceLabel = "_namespace"
 	K8sNameLabel   = "_k8sname"

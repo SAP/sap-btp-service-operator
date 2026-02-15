@@ -6,8 +6,9 @@ import (
 	"reflect"
 
 	"github.com/SAP/sap-btp-service-operator/internal/utils/logutils"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
@@ -78,50 +79,41 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	predicates := predicate.Funcs{
+	labelSelector := metav1.LabelSelector{
+		MatchLabels: map[string]string{common.WatchSecretLabel: "true"},
+	}
+	selectorPredicate, err := predicate.LabelSelectorPredicate(labelSelector)
+	if err != nil {
+		return err
+	}
+
+	dataChangedPredicate := predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			return (utils.IsSecretWatched(e.ObjectNew.GetAnnotations()) && isSecretDataChanged(e)) || isSecretInDelete(e)
+			oldSecret := e.ObjectOld.(*corev1.Secret)
+			newSecret := e.ObjectNew.(*corev1.Secret)
+			return (utils.IsSecretWatched(newSecret) && isSecretDataChanged(oldSecret, newSecret)) || isSecretInDelete(newSecret)
 		},
 		CreateFunc: func(e event.CreateEvent) bool {
-			return utils.IsSecretWatched(e.Object.GetAnnotations())
+			return utils.IsSecretWatched(e.Object)
 		},
 		DeleteFunc: func(e event.DeleteEvent) bool {
-			return utils.IsSecretWatched(e.Object.GetAnnotations())
+			return utils.IsSecretWatched(e.Object)
 		},
 		GenericFunc: func(e event.GenericEvent) bool {
-			return utils.IsSecretWatched(e.Object.GetAnnotations())
+			return utils.IsSecretWatched(e.Object)
 		},
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&corev1.Secret{}).
-		WithEventFilter(predicates).
+		For(&corev1.Secret{}, builder.WithPredicates(selectorPredicate, dataChangedPredicate)).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
 		Complete(r)
 }
 
-func isSecretDataChanged(e event.UpdateEvent) bool {
-	// Type assert to *v1.Secret
-	oldSecret, okOld := e.ObjectOld.(*corev1.Secret)
-	newSecret, okNew := e.ObjectNew.(*corev1.Secret)
-	if !okOld || !okNew {
-		// If the objects are not Secrets, skip the event
-		return false
-	}
-
-	// Compare the Data field (byte slices)
+func isSecretDataChanged(oldSecret, newSecret *corev1.Secret) bool {
 	return !reflect.DeepEqual(oldSecret.Data, newSecret.Data) || !reflect.DeepEqual(oldSecret.StringData, newSecret.StringData)
 }
 
-func isSecretInDelete(e event.UpdateEvent) bool {
-	// Type assert to *v1.Secret
-
-	newSecret, okNew := e.ObjectNew.(*corev1.Secret)
-	if !okNew {
-		// If the objects are not Secrets, skip the event
-		return false
-	}
-
-	// Compare the Data field (byte slices)
-	return !newSecret.GetDeletionTimestamp().IsZero() && controllerutil.ContainsFinalizer(newSecret, common.FinalizerName)
+func isSecretInDelete(secret *corev1.Secret) bool {
+	return !secret.GetDeletionTimestamp().IsZero() && controllerutil.ContainsFinalizer(secret, common.FinalizerName)
 }
