@@ -8,6 +8,7 @@ import (
 	"github.com/SAP/sap-btp-service-operator/internal/utils/logutils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
@@ -88,17 +89,44 @@ func (r *SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	dataChangedPredicate := predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			return e.ObjectNew.GetDeletionTimestamp() != nil || !reflect.DeepEqual(
-				e.ObjectOld.(*corev1.Secret).Data,
-				e.ObjectNew.(*corev1.Secret).Data,
-			)
+			return (utils.IsSecretWatched(e.ObjectNew.GetLabels()) && isSecretDataChanged(e)) || isSecretInDelete(e)
 		},
-		DeleteFunc: func(_ event.DeleteEvent) bool { return true },
-		CreateFunc: func(_ event.CreateEvent) bool { return false },
+		CreateFunc: func(e event.CreateEvent) bool {
+			return utils.IsSecretWatched(e.Object.GetLabels())
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			return utils.IsSecretWatched(e.Object.GetLabels())
+		},
+		GenericFunc: func(e event.GenericEvent) bool {
+			return utils.IsSecretWatched(e.Object.GetLabels())
+		},
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&corev1.Secret{}, builder.WithPredicates(selectorPredicate, dataChangedPredicate)).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
 		Complete(r)
+}
+
+func isSecretDataChanged(e event.UpdateEvent) bool {
+	oldSecret, okOld := e.ObjectOld.(*corev1.Secret)
+	newSecret, okNew := e.ObjectNew.(*corev1.Secret)
+	if !okOld || !okNew {
+		// If the objects are not Secrets, skip the event
+		return false
+	}
+
+	// Compare the Data field (byte slices)
+	return !reflect.DeepEqual(oldSecret.Data, newSecret.Data) || !reflect.DeepEqual(oldSecret.StringData, newSecret.StringData)
+}
+
+func isSecretInDelete(e event.UpdateEvent) bool {
+	newSecret, okNew := e.ObjectNew.(*corev1.Secret)
+	if !okNew {
+		// If the objects are not Secrets, skip the event
+		return false
+	}
+
+	// Compare the Data field (byte slices)
+	return !newSecret.GetDeletionTimestamp().IsZero() && controllerutil.ContainsFinalizer(newSecret, common.FinalizerName)
 }

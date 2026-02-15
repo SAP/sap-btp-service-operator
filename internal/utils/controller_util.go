@@ -216,13 +216,8 @@ func RemoveWatchForSecret(ctx context.Context, k8sClient client.Client, secretKe
 	return k8sClient.Update(ctx, secret)
 }
 
-func IsSecretWatched(secretAnnotations map[string]string) bool {
-	for key := range secretAnnotations {
-		if strings.HasPrefix(key, common.WatchSecretAnnotation) {
-			return true
-		}
-	}
-	return false
+func IsSecretWatched(secretLabels map[string]string) bool {
+	return secretLabels != nil && secretLabels[common.WatchSecretLabel] == "true"
 }
 
 func GetLabelKeyForInstanceSecret(secretName string) string {
