@@ -209,7 +209,14 @@ func RemoveWatchForSecret(ctx context.Context, k8sClient client.Client, secretKe
 	}
 
 	delete(secret.Annotations, common.WatchSecretAnnotation+instanceUID)
-	if !IsSecretWatched(secret.Annotations) {
+	existInstanceAnnotation := false
+	for key, _ := range secret.Annotations {
+		if strings.HasPrefix(key, common.WatchSecretAnnotation) {
+			existInstanceAnnotation = true
+			break
+		}
+	}
+	if !existInstanceAnnotation {
 		delete(secret.Labels, common.WatchSecretLabel)
 		controllerutil.RemoveFinalizer(secret, common.FinalizerName)
 	}
