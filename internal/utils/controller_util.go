@@ -23,7 +23,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/rand"
 
-	v1 "k8s.io/api/authentication/v1"
+	authv1 "k8s.io/api/authentication/v1"
 )
 
 const (
@@ -80,7 +80,7 @@ func NormalizeCredentials(credentialsJSON json.RawMessage) (map[string][]byte, [
 	return normalized, metadata, nil
 }
 
-func BuildUserInfo(ctx context.Context, userInfo *v1.UserInfo) string {
+func BuildUserInfo(ctx context.Context, userInfo *authv1.UserInfo) string {
 	log := logutils.GetLogger(ctx)
 	if userInfo == nil {
 		return ""

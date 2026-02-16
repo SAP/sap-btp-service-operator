@@ -26,6 +26,7 @@ import (
 
 	"github.com/SAP/sap-btp-service-operator/internal/utils/logutils"
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -143,12 +144,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	if isFinalState(ctx, serviceInstance) {
-		if len(serviceInstance.Status.HashedSpec) == 0 {
-			updateHashedSpecValue(serviceInstance)
-			return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceInstance)
-		}
-
-		return ctrl.Result{}, nil
+		return r.maintainFinalState(ctx, smClient, serviceInstance)
 	}
 
 	if controllerutil.AddFinalizer(serviceInstance, common.FinalizerName) {
@@ -574,7 +570,6 @@ func (r *ServiceInstanceReconciler) buildSMRequestParameters(ctx context.Context
 				log.Error(err, fmt.Sprintf("failed to mark secret for watch %s", secret.Name))
 				return nil, err
 			}
-
 		}
 	}
 
@@ -601,6 +596,31 @@ func (r *ServiceInstanceReconciler) buildSMRequestParameters(ctx context.Context
 	}
 
 	return instanceParameters, nil
+}
+
+func (r *ServiceInstanceReconciler) maintainFinalState(ctx context.Context, smClient sm.Client, serviceInstance *v1.ServiceInstance) (ctrl.Result, error) {
+	log := logutils.GetLogger(ctx)
+	// validate params secret is watched
+	for _, param := range serviceInstance.Spec.ParametersFrom {
+		if param.SecretKeyRef != nil {
+			secret := &corev1.Secret{}
+			if err := r.Get(ctx, types.NamespacedName{Name: param.SecretKeyRef.Name, Namespace: serviceInstance.Namespace}, secret); err != nil {
+				log.Error(err, fmt.Sprintf("failed to get secret %s", param.SecretKeyRef.Name))
+				return ctrl.Result{}, err
+			}
+			if err := utils.AddWatchForSecretIfNeeded(ctx, r.Client, secret, string(serviceInstance.UID)); err != nil {
+				log.Error(err, fmt.Sprintf("failed to mark secret for watch %s", param.SecretKeyRef.Name))
+				return ctrl.Result{}, err
+			}
+		}
+	}
+
+	if len(serviceInstance.Status.HashedSpec) == 0 {
+		log.Info("instance is missing HashedSpec value, updating it")
+		updateHashedSpecValue(serviceInstance)
+		return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceInstance)
+	}
+	return ctrl.Result{}, nil
 }
 
 func isFinalState(ctx context.Context, serviceInstance *v1.ServiceInstance) bool {
