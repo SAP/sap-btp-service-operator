@@ -79,10 +79,9 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	labelSelector := metav1.LabelSelector{
+	labelSelectorPredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{
 		MatchLabels: map[string]string{common.WatchSecretLabel: "true"},
-	}
-	selectorPredicate, err := predicate.LabelSelectorPredicate(labelSelector)
+	})
 	if err != nil {
 		return err
 	}
@@ -105,7 +104,7 @@ func (r *SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&corev1.Secret{}, builder.WithPredicates(selectorPredicate, dataChangedPredicate)).
+		For(&corev1.Secret{}, builder.WithPredicates(labelSelectorPredicate, dataChangedPredicate)).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
 		Complete(r)
 }
