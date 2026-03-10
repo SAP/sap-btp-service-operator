@@ -32,6 +32,7 @@ manager:
     tokenurlsuffix: "/oauth/token"
 #   annotations: {}
   rbacProxy:
+    enabled: true
     image:
       repository: quay.io/brancz/kube-rbac-proxy
       sha: ""

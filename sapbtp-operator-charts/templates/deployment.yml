@@ -40,6 +40,7 @@ spec:
       {{- toYaml .Values.manager.podSecurityContext | nindent 8 }}
       {{- end }}
       containers:
+        {{- if .Values.manager.rbacProxy.enabled }}
         - args:
             - --secure-listen-address=0.0.0.0:8443
             - --upstream=http://127.0.0.1:8080/
@@ -76,8 +77,11 @@ spec:
           ports:
             - containerPort: 8443
               name: https
+        {{- end }}
         - args:
+            {{- if .Values.manager.rbacProxy.enabled }}
             - --metrics-addr=127.0.0.1:8080
+            {{- end }}
             {{- if .Values.manager.enable_leader_election }}
             - --enable-leader-election
             {{- end}}
@@ -112,6 +116,11 @@ spec:
             - containerPort: 9443
               name: webhook-server
               protocol: TCP
+            {{- if not .Values.manager.rbacProxy.enabled }}
+            - containerPort: 8080
+              name: metrics
+              protocol: TCP
+            {{- end }}
           livenessProbe:
             httpGet:
               path: /healthz

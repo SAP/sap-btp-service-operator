@@ -41,9 +41,15 @@ metadata:
   namespace: {{.Release.Namespace}}
 spec:
   ports:
+    {{- if .Values.manager.rbacProxy.enabled }}
     - name: https
       port: 8443
       targetPort: https
+    {{- else }}
+    - name: metrics
+      port: 8080
+      targetPort: metrics
+    {{- end }}
   selector:
     control-plane: controller-manager
     app.kubernetes.io/instance: sap-btp-operator
