@@ -49,10 +49,10 @@ manager:
   # output of data will be in form {"auths":{"myhost":{"auth":<encoded username:password>},"myhost1":{"auth":<encoded username:password>}}}
   #    name: registrySecretName
   #    authentication:
-  #      - password: mypwd
+  #      - password: 
   #        username: myuser
   #        host: myhost
-  #      - password: mypwd1
+  #      - password: 
   #        username: myuser1
   #        host: myhost1
   certificates:
