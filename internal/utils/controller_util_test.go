@@ -35,7 +35,7 @@ var _ = Describe("Controller Util", func() {
 			}
 			boolean := SecretMetadataProperty{
 				Name:   "keyBool",
-				Format: string(JSON),
+				Format: string(TEXT),
 			}
 			num := SecretMetadataProperty{
 				Name:   "keyNum",
