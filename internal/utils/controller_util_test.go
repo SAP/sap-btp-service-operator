@@ -35,7 +35,7 @@ var _ = Describe("Controller Util", func() {
 			}
 			boolean := SecretMetadataProperty{
 				Name:   "keyBool",
-				Format: string(JSON),
+				Format: string(TEXT),
 			}
 			num := SecretMetadataProperty{
 				Name:   "keyNum",
@@ -209,6 +209,62 @@ var _ = Describe("Controller Util", func() {
 			Expect(succeededCond).NotTo(BeNil())
 			Expect(succeededCond.Status).To(Equal(metav1.ConditionFalse))
 			Expect(succeededCond.Reason).To(Equal(common.CreateInProgress))
+		})
+	})
+
+	Context("serialize", func() {
+		It("should return the bytes as-is with JSON format for []byte input", func() {
+			input := []byte(`{"key":"value"}`)
+			data, f, err := serialize(input)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(f).To(Equal(JSON))
+			Expect(data).To(Equal(input))
+		})
+
+		It("should return string bytes with TEXT format for string input", func() {
+			input := "hello world"
+			data, f, err := serialize(input)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(f).To(Equal(TEXT))
+			Expect(data).To(Equal([]byte(input)))
+		})
+
+		It("should marshal and return JSON format for a struct input", func() {
+			input := map[string]interface{}{"key": "value", "num": float64(42)}
+			data, f, err := serialize(input)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(f).To(Equal(JSON))
+			var result map[string]interface{}
+			Expect(json.Unmarshal(data, &result)).To(Succeed())
+			Expect(result).To(Equal(input))
+		})
+
+		It("should return UNKNOWN format and error for non-marshalable input", func() {
+			input := make(chan int)
+			_, f, err := serialize(input)
+			Expect(err).To(HaveOccurred())
+			Expect(f).To(Equal(UNKNOWN))
+		})
+
+		It("should marshal and return TEXT format for boolean input", func() {
+			data, f, err := serialize(true)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(f).To(Equal(TEXT))
+			Expect(data).To(Equal([]byte("true")))
+		})
+
+		It("should marshal and return TEXT format for boolean input as string", func() {
+			data, f, err := serialize("true")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(f).To(Equal(TEXT))
+			Expect(data).To(Equal([]byte("true")))
+		})
+
+		It("should return JSON format for nil input", func() {
+			data, f, err := serialize(nil)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(f).To(Equal(JSON))
+			Expect(data).To(Equal([]byte("null")))
 		})
 	})
 })
