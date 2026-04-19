@@ -169,7 +169,7 @@ func main() {
 		Log:         ctrl.Log.WithName("controllers").WithName("ServiceInstance"),
 		Scheme:      mgr.GetScheme(),
 		Config:      config.Get(),
-		Recorder:    mgr.GetEventRecorderFor("ServiceInstance"),
+		Recorder:    mgr.GetEventRecorder("ServiceInstance"),
 		GetSMClient: utils.GetSMClient,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ServiceInstance")
@@ -180,7 +180,7 @@ func main() {
 		Log:         ctrl.Log.WithName("controllers").WithName("ServiceBinding"),
 		Scheme:      mgr.GetScheme(),
 		Config:      config.Get(),
-		Recorder:    mgr.GetEventRecorderFor("ServiceBinding"),
+		Recorder:    mgr.GetEventRecorder("ServiceBinding"),
 		GetSMClient: utils.GetSMClient,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ServiceBinding")

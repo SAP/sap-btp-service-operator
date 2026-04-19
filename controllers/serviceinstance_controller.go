@@ -38,7 +38,7 @@ import (
 	"github.com/SAP/sap-btp-service-operator/internal/utils"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -64,7 +64,7 @@ type ServiceInstanceReconciler struct {
 	Scheme      *runtime.Scheme
 	GetSMClient func(ctx context.Context, serviceInstance *v1.ServiceInstance) (sm.Client, error)
 	Config      config.Config
-	Recorder    record.EventRecorder
+	Recorder    events.EventRecorder
 }
 
 // +kubebuilder:rbac:groups=services.cloud.sap.com,resources=serviceinstances,verbs=get;list;watch;create;update;patch;delete
