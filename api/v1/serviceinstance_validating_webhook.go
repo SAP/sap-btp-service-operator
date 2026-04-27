@@ -23,39 +23,36 @@ import (
 
 	"github.com/SAP/sap-btp-service-operator/api/common"
 
-	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 func (si *ServiceInstance) SetupWebhookWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).For(si).WithValidator(si).Complete()
+	return ctrl.NewWebhookManagedBy(mgr, si).WithValidator(si).Complete()
 }
 
 // +kubebuilder:webhook:verbs=delete;update;create,path=/validate-services-cloud-sap-com-v1-serviceinstance,mutating=false,failurePolicy=fail,groups=services.cloud.sap.com,resources=serviceinstances,versions=v1,name=vserviceinstance.kb.io,sideEffects=None,admissionReviewVersions=v1beta1;v1
 
-var _ webhook.CustomValidator = &ServiceInstance{}
+var _ admission.Validator[*ServiceInstance] = &ServiceInstance{}
 
 // log is for logging in this package.
 var serviceinstancelog = logf.Log.WithName("serviceinstance-resource")
 
-func (si *ServiceInstance) ValidateCreate(_ context.Context, _ runtime.Object) (warnings admission.Warnings, err error) {
+func (si *ServiceInstance) ValidateCreate(_ context.Context, _ *ServiceInstance) (warnings admission.Warnings, err error) {
 	return nil, nil
 }
 
-func (si *ServiceInstance) ValidateUpdate(_ context.Context, _, _ runtime.Object) (warnings admission.Warnings, err error) {
+func (si *ServiceInstance) ValidateUpdate(_ context.Context, _, _ *ServiceInstance) (warnings admission.Warnings, err error) {
 	return nil, nil
 }
 
-func (si *ServiceInstance) ValidateDelete(_ context.Context, newObj runtime.Object) (warnings admission.Warnings, err error) {
-	newInstance := newObj.(*ServiceInstance)
-	serviceinstancelog.Info("validate delete", "name", newInstance.ObjectMeta.Name)
-	if newInstance.ObjectMeta.Annotations != nil {
-		preventDeletion, ok := newInstance.ObjectMeta.Annotations[common.PreventDeletion]
+func (si *ServiceInstance) ValidateDelete(_ context.Context, obj *ServiceInstance) (warnings admission.Warnings, err error) {
+	serviceinstancelog.Info("validate delete", "name", obj.ObjectMeta.Name)
+	if obj.ObjectMeta.Annotations != nil {
+		preventDeletion, ok := obj.ObjectMeta.Annotations[common.PreventDeletion]
 		if ok && strings.ToLower(preventDeletion) == "true" {
-			return nil, fmt.Errorf("service instance '%s' is marked with \"prevent deletion\"", newInstance.ObjectMeta.Name)
+			return nil, fmt.Errorf("service instance '%s' is marked with \"prevent deletion\"", obj.ObjectMeta.Name)
 		}
 	}
 	return nil, nil
