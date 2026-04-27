@@ -162,7 +162,7 @@ var _ = BeforeSuite(func(done Done) {
 			return fakeClient, nil
 		},
 		Config:   testConfig,
-		Recorder: k8sManager.GetEventRecorderFor("ServiceInstance"),
+		Recorder: k8sManager.GetEventRecorder("ServiceInstance"),
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
@@ -174,7 +174,7 @@ var _ = BeforeSuite(func(done Done) {
 			return fakeClient, nil
 		},
 		Config:   testConfig,
-		Recorder: k8sManager.GetEventRecorderFor("ServiceBinding"),
+		Recorder: k8sManager.GetEventRecorder("ServiceBinding"),
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 

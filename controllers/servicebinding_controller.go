@@ -34,7 +34,7 @@ import (
 	"github.com/SAP/sap-btp-service-operator/internal/utils"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 
 	"fmt"
 
@@ -73,7 +73,7 @@ type ServiceBindingReconciler struct {
 	Scheme      *runtime.Scheme
 	GetSMClient func(ctx context.Context, instance *v1.ServiceInstance) (sm.Client, error)
 	Config      config.Config
-	Recorder    record.EventRecorder
+	Recorder    events.EventRecorder
 }
 
 // +kubebuilder:rbac:groups=services.cloud.sap.com,resources=servicebindings,verbs=get;list;watch;create;update;patch;delete
@@ -509,7 +509,7 @@ func (r *ServiceBindingReconciler) maintainSecret(ctx context.Context, smClient 
 		}
 
 		log.Info("binding's secret was not found")
-		r.Recorder.Event(serviceBinding, corev1.EventTypeWarning, "SecretDeleted", "SecretDeleted")
+		r.Recorder.Eventf(serviceBinding, nil, corev1.EventTypeWarning, "SecretDeleted", "SecretDeleted", "SecretDeleted")
 	}
 
 	log.Info("maintaining binding's secret")
@@ -751,7 +751,7 @@ func (r *ServiceBindingReconciler) createOrUpdateBindingSecret(ctx context.Conte
 			}
 			return nil
 		}
-		r.Recorder.Event(binding, corev1.EventTypeNormal, "SecretCreated", "SecretCreated")
+		r.Recorder.Eventf(binding, nil, corev1.EventTypeNormal, "SecretCreated", "SecretCreated", "SecretCreated")
 		return nil
 	}
 
