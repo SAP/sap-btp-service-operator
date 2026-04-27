@@ -1538,6 +1538,38 @@ var _ = Describe("ServiceInstance controller", func() {
 				checkSecretAnnotationsAndLabels(ctx, k8sClient, paramsSecret, []*v1.ServiceInstance{serviceInstance})
 
 			})
+			FIt("instance in final state should retry when secret temporarily unavailable", func() {
+				// Create instance with watchParametersFromChanges enabled and secret exists
+				serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, true)
+				checkSecretAnnotationsAndLabels(ctx, k8sClient, paramsSecret, []*v1.ServiceInstance{serviceInstance})
+
+				// Get the instance UID before we delete the secret
+				instanceUID := string(serviceInstance.GetUID())
+
+				// Verify instance is in final state
+				Expect(serviceInstance.Status.Ready).To(Equal(metav1.ConditionTrue))
+
+				// Delete the secret while instance is in final state
+				// This simulates temporary unavailability during ExternalSecrets update
+				deleteAndWait(ctx, paramsSecret)
+
+				// Recreate the secret (simulating ExternalSecrets recreating it after update)
+				paramsSecret = createParamsSecret(ctx, "instance-params-secret", testNamespace)
+
+				// Without our fix: maintainFinalState() returns error, reconciliation stops
+				// With our fix: maintainFinalState() requeues every 10s, eventually succeeds
+				// Wait for the secret to be watched again (should happen within 15 seconds)
+				Eventually(func() bool {
+					err := k8sClient.Get(ctx, getResourceNamespacedName(paramsSecret), paramsSecret)
+					if err != nil {
+						return false
+					}
+					// Check if watch label and annotation were re-added by maintainFinalState()
+					hasLabel := paramsSecret.Labels[common.WatchSecretLabel] == "true"
+					hasAnnotation := paramsSecret.Annotations[common.WatchSecretAnnotation+instanceUID] == "true"
+					return hasLabel && hasAnnotation
+				}, "20s", "1s").Should(BeTrue(), "maintainFinalState should have retried and added watch back to secret")
+			})
 		})
 		When("secret updated and instance don't watch secret", func() {
 			AfterEach(func() {

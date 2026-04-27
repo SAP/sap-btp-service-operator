@@ -607,6 +607,10 @@ func (r *ServiceInstanceReconciler) maintainFinalState(ctx context.Context, serv
 			if param.SecretKeyRef != nil {
 				secret := &corev1.Secret{}
 				if err := r.Get(ctx, types.NamespacedName{Name: param.SecretKeyRef.Name, Namespace: serviceInstance.Namespace}, secret); err != nil {
+					if apierrors.IsNotFound(err) {
+						log.Info(fmt.Sprintf("secret %s not found, will retry - secret may not be created yet or temporarily unavailable during update", param.SecretKeyRef.Name))
+						return ctrl.Result{RequeueAfter: time.Second}, nil
+					}
 					log.Error(err, fmt.Sprintf("failed to get secret %s", param.SecretKeyRef.Name))
 					return ctrl.Result{}, err
 				}
