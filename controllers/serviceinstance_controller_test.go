@@ -1538,6 +1538,35 @@ var _ = Describe("ServiceInstance controller", func() {
 				checkSecretAnnotationsAndLabels(ctx, k8sClient, paramsSecret, []*v1.ServiceInstance{serviceInstance})
 
 			})
+			It("instance in final state should retry when secret temporarily unavailable", func() {
+				// Verify instance is in final state
+				deleteAndWait(ctx, paramsSecret)
+				// Delete the secret while instance is in final state
+				// This simulates temporary unavailability during ExternalSecrets update
+				spec := v1.ServiceInstanceSpec{
+					ExternalName:        fakeInstanceExternalName,
+					ServicePlanName:     fakePlanName,
+					ServiceOfferingName: fakeOfferingName,
+					Parameters: &runtime.RawExtension{
+						Raw: []byte(`{"key": "value"}`),
+					},
+				}
+				serviceInstance = createInstance(ctx, fakeInstanceName, spec, nil, true)
+				serviceInstance.Spec.WatchParametersFromChanges = pointer.Bool(true)
+				serviceInstance.Spec.ParametersFrom = []v1.ParametersFromSource{
+					{
+						SecretKeyRef: &v1.SecretKeyReference{
+							Name: "instance-params-secret",
+							Key:  "secret-parameter",
+						},
+					},
+				}
+				serviceInstance = updateInstance(ctx, serviceInstance)
+				// Recreate the secret (simulating ExternalSecrets recreating it after update)
+				paramsSecret = createParamsSecret(ctx, "instance-params-secret", testNamespace)
+				waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionTrue, common.Updated, "")
+				checkSecretAnnotationsAndLabels(ctx, k8sClient, paramsSecret, []*v1.ServiceInstance{serviceInstance})
+			})
 		})
 		When("secret updated and instance don't watch secret", func() {
 			AfterEach(func() {
