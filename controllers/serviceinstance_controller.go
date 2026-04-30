@@ -95,7 +95,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	if len(serviceInstance.Status.OperationURL) > 0 &&
-		!(utils.IsMarkedForDeletion(serviceInstance.ObjectMeta) && serviceInstance.Status.OperationType != smClientTypes.DELETE) { //instance is marked for deletion but polling is not for deletion -> need to trigger sm delete
+		(serviceInstance.Status.OperationType == smClientTypes.DELETE || !utils.IsMarkedForDeletion(serviceInstance.ObjectMeta)) {
 		// ongoing operation - poll status from SM
 		return r.poll(ctx, serviceInstance, smClient)
 	}
