@@ -156,7 +156,8 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 	}
 
-	if len(serviceBinding.Status.OperationURL) > 0 {
+	if len(serviceBinding.Status.OperationURL) > 0 &&
+		(serviceBinding.Status.OperationType == smClientTypes.DELETE || !utils.IsMarkedForDeletion(serviceBinding.ObjectMeta)) {
 		// ongoing operation - poll status from SM
 		return r.poll(ctx, serviceBinding, serviceInstance)
 	}
@@ -415,6 +416,10 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, serviceBinding *v1.
 		utils.SetFailureConditions(status.Type, status.Description, serviceBinding, true)
 		serviceBinding.Status.OperationURL = ""
 		serviceBinding.Status.OperationType = ""
+		trueVal := true
+		if serviceBinding.Status.OperationType == smClientTypes.CREATE {
+			serviceBinding.Status.AsyncBindFailed = &trueVal
+		}
 		if err := utils.UpdateStatus(ctx, r.Client, serviceBinding); err != nil {
 			log.Error(err, "unable to update ServiceBinding status")
 			return ctrl.Result{}, err
@@ -457,6 +462,7 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, serviceBinding *v1.
 	log.Info(fmt.Sprintf("finished polling operation %s '%s'", serviceBinding.Status.OperationType, serviceBinding.Status.OperationURL))
 	serviceBinding.Status.OperationURL = ""
 	serviceBinding.Status.OperationType = ""
+	serviceBinding.Status.AsyncBindFailed = nil
 
 	return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
 }
@@ -1199,5 +1205,5 @@ func isBindingExistInSM(smClient sm.Client, instance *v1.ServiceInstance, bindin
 
 func shouldBindingBeDeleted(serviceBinding *v1.ServiceBinding) bool {
 	return utils.IsMarkedForDeletion(serviceBinding.ObjectMeta) ||
-		(len(serviceBinding.Status.OperationURL) == 0 && len(serviceBinding.Status.BindingID) > 0 && serviceBinding.Status.Ready == metav1.ConditionFalse)
+		serviceBinding.IsAsyncBindFailed()
 }
