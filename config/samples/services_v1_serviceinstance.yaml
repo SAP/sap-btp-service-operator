@@ -1,7 +1,9 @@
 apiVersion: services.cloud.sap.com/v1
 kind: ServiceInstance
 metadata:
-  name: sample-instance-1
+  name: privatelink
 spec:
-  serviceOfferingName: service-manager
-  servicePlanName: subaccount-audit
+  serviceOfferingName: privatelink
+  servicePlanName: standard
+  parameters:
+    serviceName: com.amazonaws.vpce.eu-central-1.vpce-svc-00000000000abcdef

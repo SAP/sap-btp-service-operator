@@ -327,6 +327,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, serviceI
 		}
 
 		serviceInstance.Status.InstanceID = ""
+		serviceInstance.Status.AsyncProvisionFailed = nil
 		if err := r.Client.Status().Update(ctx, serviceInstance); err != nil {
 			log.Error(err, "failed to update service instance status after deletion")
 			return ctrl.Result{}, err
@@ -413,8 +414,6 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, serviceInstance *v
 		errMsg := getErrorMsgFromLastOperation(status)
 		log.Info(fmt.Sprintf("operation %s %s failed, error: %s", serviceInstance.Status.OperationType, serviceInstance.Status.OperationURL, errMsg))
 		utils.SetFailureConditions(status.Type, errMsg, serviceInstance, true)
-		serviceInstance.Status.OperationURL = ""
-		serviceInstance.Status.OperationType = ""
 		if serviceInstance.Status.OperationType == smClientTypes.CREATE {
 			log.Info(fmt.Sprintf("async provision failed for instance %s", serviceInstance.Status.InstanceID))
 			trueVal := true
@@ -422,6 +421,8 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, serviceInstance *v
 		} else if serviceInstance.Status.OperationType == smClientTypes.DELETE {
 			serviceInstance.Status.AsyncProvisionFailed = nil
 		}
+		serviceInstance.Status.OperationURL = ""
+		serviceInstance.Status.OperationType = ""
 		if err := utils.UpdateStatus(ctx, r.Client, serviceInstance); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -446,6 +447,7 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, serviceInstance *v
 			serviceInstance.Status.OperationURL = ""
 			serviceInstance.Status.OperationType = ""
 			serviceInstance.Status.InstanceID = ""
+			serviceInstance.Status.AsyncProvisionFailed = nil
 			return ctrl.Result{RequeueAfter: time.Second}, utils.UpdateStatus(ctx, r.Client, serviceInstance)
 		}
 		utils.SetSuccessConditions(status.Type, serviceInstance, true)
@@ -536,6 +538,10 @@ func (r *ServiceInstanceReconciler) recover(ctx context.Context, smClient sm.Cli
 		utils.SetSuccessConditions(operationType, k8sInstance, false)
 	case smClientTypes.FAILED:
 		utils.SetFailureConditions(operationType, description, k8sInstance, false)
+		if operationType == smClientTypes.CREATE {
+			trueVal := true
+			k8sInstance.Status.AsyncProvisionFailed = &trueVal
+		}
 	}
 
 	return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, k8sInstance)
