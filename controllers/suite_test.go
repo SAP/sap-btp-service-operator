@@ -142,6 +142,8 @@ var _ = BeforeSuite(func(done Done) {
 	testConfig := config.Get()
 	testConfig.SyncPeriod = syncPeriod
 	testConfig.PollInterval = pollInterval
+	testConfig.RetryBaseDelay = time.Millisecond * 50
+	testConfig.RetryMaxDelay = time.Second * 2
 
 	By("registering webhooks")
 	k8sManager.GetWebhookServer().Register("/mutate-services-cloud-sap-com-v1-serviceinstance", &webhook.Admission{Handler: &webhooks.ServiceInstanceDefaulter{Decoder: admission.NewDecoder(k8sManager.GetScheme())}})
