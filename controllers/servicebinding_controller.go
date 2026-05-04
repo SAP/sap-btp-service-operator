@@ -126,14 +126,15 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return utils.HandleOperationFailure(ctx, r.Client, serviceBinding, common.Unknown, err)
 	}
 
+	// poll only if delete sm operation is in progress or there is create/update ongoing operation and instance is not marked for deletion
+	// if marked for deletion we should trigger the sm delete and ignore the current operation url
 	if len(serviceBinding.Status.OperationURL) > 0 &&
 		(serviceBinding.Status.OperationType == smClientTypes.DELETE || !utils.IsMarkedForDeletion(serviceBinding.ObjectMeta)) {
-		// ongoing operation - poll status from SM
-		return r.poll(ctx, serviceBinding, smClient)
+		return r.poll(ctx, smClient, serviceBinding)
 	}
 
 	if shouldBindingBeDeleted(serviceBinding) {
-		return r.delete(ctx, serviceBinding, smClient)
+		return r.delete(ctx, smClient, serviceBinding)
 	}
 
 	if len(serviceBinding.Status.BindingID) > 0 {
@@ -302,7 +303,7 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 	return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
 }
 
-func (r *ServiceBindingReconciler) delete(ctx context.Context, serviceBinding *v1.ServiceBinding, smClient sm.Client) (ctrl.Result, error) {
+func (r *ServiceBindingReconciler) delete(ctx context.Context, smClient sm.Client, serviceBinding *v1.ServiceBinding) (ctrl.Result, error) {
 	log := logutils.GetLogger(ctx)
 	log.Info(fmt.Sprintf("binding in delete phase, marked for deletion=%v, bindingID=%s, ready=%s", utils.IsMarkedForDeletion(serviceBinding.ObjectMeta), serviceBinding.Status.BindingID, serviceBinding.Status.Ready))
 	if controllerutil.ContainsFinalizer(serviceBinding, common.FinalizerName) {
@@ -333,7 +334,7 @@ func (r *ServiceBindingReconciler) delete(ctx context.Context, serviceBinding *v
 
 		if len(serviceBinding.Status.OperationURL) > 0 && serviceBinding.Status.OperationType == smClientTypes.DELETE {
 			// ongoing delete operation - poll status from SM
-			return r.poll(ctx, serviceBinding, smClient)
+			return r.poll(ctx, smClient, serviceBinding)
 		}
 
 		log.Info(fmt.Sprintf("Deleting binding with id %v from SM, resourceMarkedForDeletions=%v", serviceBinding.Status.BindingID, utils.IsMarkedForDeletion(serviceBinding.ObjectMeta)))
@@ -366,7 +367,7 @@ func (r *ServiceBindingReconciler) delete(ctx context.Context, serviceBinding *v
 	return ctrl.Result{}, nil
 }
 
-func (r *ServiceBindingReconciler) poll(ctx context.Context, serviceBinding *v1.ServiceBinding, smClient sm.Client) (ctrl.Result, error) {
+func (r *ServiceBindingReconciler) poll(ctx context.Context, smClient sm.Client, serviceBinding *v1.ServiceBinding) (ctrl.Result, error) {
 	log := logutils.GetLogger(ctx)
 	log.Info(fmt.Sprintf("binding resource is in progress, found operation url %s", serviceBinding.Status.OperationURL))
 
@@ -456,7 +457,6 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, serviceBinding *v1.
 	log.Info(fmt.Sprintf("finished polling operation %s '%s'", serviceBinding.Status.OperationType, serviceBinding.Status.OperationURL))
 	serviceBinding.Status.OperationURL = ""
 	serviceBinding.Status.OperationType = ""
-	serviceBinding.Status.AsyncBindFailed = nil
 
 	return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
 }

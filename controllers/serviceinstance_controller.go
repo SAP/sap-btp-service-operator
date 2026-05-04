@@ -97,11 +97,11 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	if len(serviceInstance.Status.OperationURL) > 0 &&
 		(serviceInstance.Status.OperationType == smClientTypes.DELETE || !utils.IsMarkedForDeletion(serviceInstance.ObjectMeta)) {
 		// ongoing operation - poll status from SM
-		return r.poll(ctx, serviceInstance, smClient)
+		return r.poll(ctx, smClient, serviceInstance)
 	}
 
 	if shouldInstanceBeDeleted(serviceInstance) {
-		return r.deleteInstance(ctx, serviceInstance, smClient)
+		return r.deleteInstance(ctx, smClient, serviceInstance)
 	}
 
 	// If stored hash is MD5 (32 chars) and we're now using SHA256 (64 chars),
@@ -285,7 +285,7 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 	return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceInstance)
 }
 
-func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, serviceInstance *v1.ServiceInstance, smClient sm.Client) (ctrl.Result, error) {
+func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient sm.Client, serviceInstance *v1.ServiceInstance) (ctrl.Result, error) {
 	log := logutils.GetLogger(ctx)
 
 	if controllerutil.ContainsFinalizer(serviceInstance, common.FinalizerName) {
@@ -373,7 +373,7 @@ func (r *ServiceInstanceReconciler) handleInstanceSharing(ctx context.Context, s
 	return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceInstance)
 }
 
-func (r *ServiceInstanceReconciler) poll(ctx context.Context, serviceInstance *v1.ServiceInstance, smClient sm.Client) (ctrl.Result, error) {
+func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client, serviceInstance *v1.ServiceInstance) (ctrl.Result, error) {
 	log := logutils.GetLogger(ctx)
 	log.Info(fmt.Sprintf("instance resource is in progress, found operation url %s for operation type %s", serviceInstance.Status.OperationURL, serviceInstance.Status.OperationType))
 	status, statusErr := smClient.Status(serviceInstance.Status.OperationURL, nil)
@@ -418,8 +418,6 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, serviceInstance *v
 			log.Info(fmt.Sprintf("async provision failed for instance %s", serviceInstance.Status.InstanceID))
 			trueVal := true
 			serviceInstance.Status.AsyncProvisionFailed = &trueVal
-		} else if serviceInstance.Status.OperationType == smClientTypes.DELETE {
-			serviceInstance.Status.AsyncProvisionFailed = nil
 		}
 		serviceInstance.Status.OperationURL = ""
 		serviceInstance.Status.OperationType = ""
@@ -455,7 +453,6 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, serviceInstance *v
 
 	serviceInstance.Status.OperationURL = ""
 	serviceInstance.Status.OperationType = ""
-	serviceInstance.Status.AsyncProvisionFailed = nil
 
 	return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceInstance)
 }
@@ -538,10 +535,10 @@ func (r *ServiceInstanceReconciler) recover(ctx context.Context, smClient sm.Cli
 		utils.SetSuccessConditions(operationType, k8sInstance, false)
 	case smClientTypes.FAILED:
 		utils.SetFailureConditions(operationType, description, k8sInstance, false)
-		if operationType == smClientTypes.CREATE {
-			trueVal := true
-			k8sInstance.Status.AsyncProvisionFailed = &trueVal
-		}
+		//if operationType == smClientTypes.CREATE {
+		//	trueVal := true
+		//	k8sInstance.Status.AsyncProvisionFailed = &trueVal
+		//}
 	}
 
 	return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, k8sInstance)
