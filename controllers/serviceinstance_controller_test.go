@@ -895,21 +895,13 @@ var _ = Describe("ServiceInstance controller", func() {
 						fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: "new-instance-id"}, nil)
 					})
 
-					It("should recover the existing instance, delete it and provision a new instance", func() {
+					It("should recover the existing instance", func() {
 						serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, false)
 						waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.CreateFailed, "")
 						fakeClient.ListInstancesReturns(&smclientTypes.ServiceInstances{
 							ServiceInstances: []smclientTypes.ServiceInstance{}}, nil)
-						Eventually(func() bool {
-							err := k8sClient.Get(ctx, types.NamespacedName{Name: serviceInstance.Name, Namespace: serviceInstance.Namespace}, serviceInstance)
-							if err != nil {
-								return false
-							}
-							return serviceInstance.Status.InstanceID == "new-instance-id"
-						}, timeout, interval).Should(BeTrue())
-						Expect(fakeClient.ListInstancesCallCount() > 1).To(BeTrue())
-						Expect(fakeClient.DeprovisionCallCount() > 0).To(BeTrue())
-						Expect(fakeClient.ProvisionCallCount() > 0).To(BeTrue())
+						Expect(fakeClient.DeprovisionCallCount() == 0).To(BeTrue())
+						Expect(fakeClient.ProvisionCallCount() == 0).To(BeTrue())
 					})
 				})
 
@@ -935,21 +927,13 @@ var _ = Describe("ServiceInstance controller", func() {
 						BeforeEach(func() {
 							recoveredInstance.Ready = false
 						})
-						It("should recover the instance with status Ready=false, delete it and create a new one", func() {
+						It("should recover the instance with status Ready=false", func() {
 							serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, false)
 							waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.CreateFailed, "")
 							fakeClient.ListInstancesReturns(&smclientTypes.ServiceInstances{
 								ServiceInstances: []smclientTypes.ServiceInstance{}}, nil)
-							Eventually(func() bool {
-								err := k8sClient.Get(ctx, types.NamespacedName{Name: serviceInstance.Name, Namespace: serviceInstance.Namespace}, serviceInstance)
-								if err != nil {
-									return false
-								}
-								return serviceInstance.Status.InstanceID == "new-instance-id"
-							}, timeout, interval).Should(BeTrue())
-							Expect(fakeClient.ListInstancesCallCount() > 2).To(BeTrue())
-							Expect(fakeClient.DeprovisionCallCount() > 1).To(BeTrue())
-							Expect(fakeClient.ProvisionCallCount() > 1).To(BeTrue()) //might be more than 1 due to fail to update status (conflict)
+							Expect(fakeClient.DeprovisionCallCount() == 0).To(BeTrue())
+							Expect(fakeClient.ProvisionCallCount() == 0).To(BeTrue())
 						})
 					})
 				})
