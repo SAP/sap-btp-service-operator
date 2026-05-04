@@ -356,7 +356,14 @@ var _ = Describe("ServiceInstance controller", func() {
 				})
 				It("should update to failure condition with the broker err description and retry until succeeds", func() {
 					serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, false)
-					waitForInstanceConditionAndMessage(ctx, defaultLookupKey, common.ConditionSucceeded, "broker-failure")
+					si := &v1.ServiceInstance{}
+					Eventually(func() bool {
+						if err := k8sClient.Get(ctx, defaultLookupKey, si); err != nil {
+							return false
+						}
+						return si.Status.AsyncProvisionFailed != nil && *si.Status.AsyncProvisionFailed
+					}, timeout, interval).Should(BeTrue())
+					serviceInstance = waitForInstanceConditionAndMessage(ctx, defaultLookupKey, common.ConditionSucceeded, "broker-failure")
 
 					fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: "successful-instance-id", Location: "/v1/service_instances/successful-instance-id/operations/1234"}, nil)
 					waitForResourceCondition(ctx, serviceInstance, common.ConditionReady, metav1.ConditionTrue, "", "")
@@ -1583,7 +1590,7 @@ var _ = Describe("ServiceInstance controller", func() {
 	})
 })
 
-func waitForInstanceConditionAndMessage(ctx context.Context, key types.NamespacedName, conditionType, msg string) {
+func waitForInstanceConditionAndMessage(ctx context.Context, key types.NamespacedName, conditionType, msg string) *v1.ServiceInstance {
 	si := &v1.ServiceInstance{}
 	Eventually(func() bool {
 		if err := k8sClient.Get(ctx, key, si); err != nil {
@@ -1592,6 +1599,8 @@ func waitForInstanceConditionAndMessage(ctx context.Context, key types.Namespace
 		cond := meta.FindStatusCondition(si.GetConditions(), conditionType)
 		return cond != nil && strings.Contains(cond.Message, msg)
 	}, timeout, interval).Should(BeTrue())
+
+	return si
 }
 
 func waitForInstanceToBeShared(ctx context.Context, serviceInstance *v1.ServiceInstance) {
