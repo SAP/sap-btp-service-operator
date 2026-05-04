@@ -406,7 +406,9 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, smClient sm.Client,
 		return ctrl.Result{RequeueAfter: r.Config.PollInterval}, nil
 	case smClientTypes.FAILED:
 		log.Info(fmt.Sprintf("%s ended with failure", serviceBinding.Status.OperationURL))
-		utils.SetFailureConditions(status.Type, status.Description, serviceBinding, true)
+		if !serviceBinding.IsAsyncBindFailed() { //keep the original error message in case deletion failed (deletion that was triggered due to asyncBindFailed = true)
+			utils.SetFailureConditions(status.Type, status.Description, serviceBinding, true)
+		}
 		if serviceBinding.Status.OperationType == smClientTypes.CREATE {
 			log.Info(fmt.Sprintf("async binding failed for binding id %s", serviceBinding.Status.BindingID))
 			trueVal := true
