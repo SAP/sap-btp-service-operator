@@ -604,7 +604,7 @@ func (r *ServiceInstanceReconciler) maintainFinalState(ctx context.Context, serv
 		for _, param := range serviceInstance.Spec.ParametersFrom {
 			if param.SecretKeyRef != nil {
 				secret := &corev1.Secret{}
-				if err := r.Get(ctx, types.NamespacedName{Name: param.SecretKeyRef.Name, Namespace: serviceInstance.Namespace}, secret); err != nil {
+				if err := utils.GetSecretWithFallback(ctx, types.NamespacedName{Name: param.SecretKeyRef.Name, Namespace: serviceInstance.Namespace}, secret); err != nil {
 					log.Error(err, fmt.Sprintf("failed to get secret %s", param.SecretKeyRef.Name))
 					return ctrl.Result{}, err
 				}
