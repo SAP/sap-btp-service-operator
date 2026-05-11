@@ -215,10 +215,6 @@ type ServiceInstanceList struct {
 	Items           []ServiceInstance `json:"items"`
 }
 
-func init() {
-	SchemeBuilder.Register(&ServiceInstance{}, &ServiceInstanceList{})
-}
-
 func (si *ServiceInstance) Hub() {}
 
 func (si *ServiceInstance) GetShared() bool {

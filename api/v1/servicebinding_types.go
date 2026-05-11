@@ -226,8 +226,4 @@ type CredentialsRotationPolicy struct {
 	RotatedBindingTTL string `json:"rotatedBindingTTL,omitempty"`
 }
 
-func init() {
-	SchemeBuilder.Register(&ServiceBinding{}, &ServiceBindingList{})
-}
-
 func (sb *ServiceBinding) Hub() {}
