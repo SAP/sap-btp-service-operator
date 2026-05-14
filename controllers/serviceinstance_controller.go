@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"k8s.io/utils/pointer"
 	"net/http"
 	"strings"
 	"time"
@@ -93,7 +94,6 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		log.Error(err, "failed to get sm client")
 		return utils.HandleOperationFailure(ctx, r.Client, serviceInstance, common.Unknown, err)
 	}
-
 	if len(serviceInstance.Status.OperationURL) > 0 &&
 		(serviceInstance.Status.OperationType == smClientTypes.DELETE || !utils.IsMarkedForDeletion(serviceInstance.ObjectMeta)) {
 		// ongoing operation - poll status from SM
@@ -413,13 +413,9 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client
 	case smClientTypes.FAILED:
 		errMsg := getErrorMsgFromLastOperation(status)
 		log.Info(fmt.Sprintf("operation %s %s failed, error: %s", serviceInstance.Status.OperationType, serviceInstance.Status.OperationURL, errMsg))
-		if !serviceInstance.IsAsyncProvisionFailed() { // do not override original error message in case of failed async instance deletion error
-			utils.SetFailureConditions(status.Type, errMsg, serviceInstance, true)
-		}
 		if serviceInstance.Status.OperationType == smClientTypes.CREATE {
 			log.Info(fmt.Sprintf("async provision failed for instance %s", serviceInstance.Status.InstanceID))
-			trueVal := true
-			serviceInstance.Status.AsyncProvisionFailed = &trueVal
+			serviceInstance.Status.AsyncProvisionFailed = pointer.Bool(true)
 		}
 		serviceInstance.Status.OperationURL = ""
 		serviceInstance.Status.OperationType = ""

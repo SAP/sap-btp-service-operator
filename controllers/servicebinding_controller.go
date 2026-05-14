@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"k8s.io/utils/pointer"
 	"net/http"
 	"strings"
 	"time"
@@ -411,8 +412,7 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, smClient sm.Client,
 		}
 		if serviceBinding.Status.OperationType == smClientTypes.CREATE {
 			log.Info(fmt.Sprintf("async binding failed for binding id %s", serviceBinding.Status.BindingID))
-			trueVal := true
-			serviceBinding.Status.AsyncBindFailed = &trueVal
+			serviceBinding.Status.AsyncBindFailed = pointer.Bool(true)
 		}
 		serviceBinding.Status.OperationURL = ""
 		serviceBinding.Status.OperationType = ""
