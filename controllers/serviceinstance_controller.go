@@ -413,6 +413,7 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client
 	case smClientTypes.FAILED:
 		errMsg := getErrorMsgFromLastOperation(status)
 		log.Info(fmt.Sprintf("operation %s %s failed, error: %s", serviceInstance.Status.OperationType, serviceInstance.Status.OperationURL, errMsg))
+		utils.SetFailureConditions(status.Type, errMsg, serviceInstance, true)
 		if serviceInstance.Status.OperationType == smClientTypes.CREATE {
 			log.Info(fmt.Sprintf("async provision failed for instance %s", serviceInstance.Status.InstanceID))
 			serviceInstance.Status.AsyncProvisionFailed = pointer.Bool(true)
