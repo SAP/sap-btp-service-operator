@@ -33,8 +33,8 @@ func (r *RetryStore) Get(key types.NamespacedName) *RetryState {
 	}
 
 	// return copy to avoid races
-	copy := *s
-	return &copy
+	ccopy := *s
+	return &ccopy
 }
 
 func (r *RetryStore) RegisterFailure(key types.NamespacedName) *RetryState {

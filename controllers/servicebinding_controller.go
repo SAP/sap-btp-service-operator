@@ -19,10 +19,11 @@ package controllers
 import (
 	"context"
 	"encoding/json"
-	"k8s.io/utils/pointer"
 	"net/http"
 	"strings"
 	"time"
+
+	"k8s.io/utils/pointer"
 
 	commonutils "github.com/SAP/sap-btp-service-operator/api/common/utils"
 	"github.com/SAP/sap-btp-service-operator/internal/utils/logutils"
