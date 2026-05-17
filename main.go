@@ -171,6 +171,7 @@ func main() {
 		Config:      config.Get(),
 		Recorder:    mgr.GetEventRecorder("ServiceInstance"),
 		GetSMClient: utils.GetSMClient,
+		Retries:     utils.NewRetryStore(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ServiceInstance")
 		os.Exit(1)

@@ -65,6 +65,7 @@ type ServiceInstanceReconciler struct {
 	GetSMClient func(ctx context.Context, serviceInstance *v1.ServiceInstance) (sm.Client, error)
 	Config      config.Config
 	Recorder    events.EventRecorder
+	Retries     *utils.RetryStore
 }
 
 // +kubebuilder:rbac:groups=services.cloud.sap.com,resources=serviceinstances,verbs=get;list;watch;create;update;patch;delete
@@ -75,6 +76,14 @@ type ServiceInstanceReconciler struct {
 func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("serviceinstance", req.NamespacedName).WithValues("correlation_id", uuid.New().String())
 	ctx = context.WithValue(ctx, logutils.LogKey, log)
+
+	retry := r.Retries.Get(req.NamespacedName)
+	if retry != nil && time.Now().Before(retry.NextRetry) {
+		remaining := time.Until(retry.NextRetry)
+		log.Info(fmt.Sprintf("skipping reconcile due to backoff. attempts=%d retryIn=%s", retry.Attempts, remaining))
+
+		return ctrl.Result{RequeueAfter: remaining}, nil
+	}
 
 	serviceInstance := &v1.ServiceInstance{}
 	if err := r.Client.Get(ctx, req.NamespacedName, serviceInstance); err != nil {
@@ -241,6 +250,7 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 
 	log.Info(fmt.Sprintf("Instance provisioned successfully, instanceID: %s, subaccountID: %s", serviceInstance.Status.InstanceID,
 		serviceInstance.Status.SubaccountID))
+	r.Retries.Reset(types.NamespacedName{Name: serviceInstance.Name, Namespace: serviceInstance.Namespace})
 	utils.SetSuccessConditions(smClientTypes.CREATE, serviceInstance, false)
 	return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceInstance)
 }
@@ -416,6 +426,9 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client
 		if serviceInstance.Status.OperationType == smClientTypes.CREATE ||
 			(serviceInstance.Status.OperationType == smClientTypes.DELETE && !utils.IsMarkedForDeletion(serviceInstance.ObjectMeta)) {
 			log.Info(fmt.Sprintf("async provision failed for instance %s", serviceInstance.Status.InstanceID))
+			key := types.NamespacedName{Namespace: serviceInstance.GetNamespace(), Name: serviceInstance.GetName()}
+			newState := r.Retries.RegisterFailure(key)
+			log.Info(fmt.Sprintf("async provision failed. attempts=%d nextRetry=%s currrent error=%s\n", newState.Attempts, newState.NextRetry.Format(time.RFC3339), errMsg))
 			return r.handleFailedAsyncProvision(ctx, smClient, serviceInstance)
 		}
 		serviceInstance.Status.OperationURL = ""
@@ -451,6 +464,7 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client
 
 	serviceInstance.Status.OperationURL = ""
 	serviceInstance.Status.OperationType = ""
+	r.Retries.Reset(types.NamespacedName{Name: serviceInstance.Name, Namespace: serviceInstance.Namespace})
 
 	return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceInstance)
 }
