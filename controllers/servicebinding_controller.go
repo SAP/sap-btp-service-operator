@@ -94,6 +94,9 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
+
+	log.Info(fmt.Sprintf("*** staring reconcile of ServiceBinding %s/%s ***", serviceBinding.Namespace, serviceBinding.Name))
+
 	serviceBinding = serviceBinding.DeepCopy()
 	log.Info(fmt.Sprintf("Current generation is %v and observed is %v", serviceBinding.Generation, common.GetObservedGeneration(serviceBinding)))
 
