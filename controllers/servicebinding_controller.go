@@ -419,7 +419,8 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, smClient sm.Client,
 	case smClientTypes.FAILED:
 		log.Info(fmt.Sprintf("%s ended with failure", serviceBinding.Status.OperationURL))
 		utils.SetFailureConditions(status.Type, status.Description, serviceBinding, true)
-		if serviceBinding.Status.OperationType == smClientTypes.CREATE {
+		if serviceBinding.Status.OperationType == smClientTypes.CREATE ||
+			(serviceBinding.Status.OperationType == smClientTypes.DELETE && !utils.IsMarkedForDeletion(serviceBinding.ObjectMeta)) {
 			errMsg := getErrorMsgFromLastOperation(status)
 			log.Info(fmt.Sprintf("async binding failed for binding id %s, error: %s", serviceBinding.Status.BindingID, errMsg))
 			key := types.NamespacedName{Namespace: serviceBinding.GetNamespace(), Name: serviceBinding.GetName()}

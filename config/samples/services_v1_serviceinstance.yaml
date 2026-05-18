@@ -1,7 +1,7 @@
 apiVersion: services.cloud.sap.com/v1
 kind: ServiceInstance
 metadata:
-  name: overview-instance-5
+  name: sample-instance-1
 spec:
-  serviceOfferingName: overview-service-keren
-  servicePlanName: small
+  serviceOfferingName: service-manager
+  servicePlanName: subaccount-audit
