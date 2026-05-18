@@ -183,6 +183,7 @@ func main() {
 		Config:      config.Get(),
 		Recorder:    mgr.GetEventRecorder("ServiceBinding"),
 		GetSMClient: utils.GetSMClient,
+		Retries:     utils.NewRetryStore(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ServiceBinding")
 		os.Exit(1)

@@ -80,7 +80,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	retry := r.Retries.Get(req.NamespacedName)
 	if retry != nil && time.Now().Before(retry.NextRetry) {
 		remaining := time.Until(retry.NextRetry)
-		log.Info(fmt.Sprintf("skipping reconcile due to backoff. attempts=%d retryIn=%s", retry.Attempts, remaining))
+		log.Info(fmt.Sprintf("skipping instance reconcile due to backoff. attempts=%d retryIn=%s", retry.Attempts, remaining))
 
 		return ctrl.Result{RequeueAfter: remaining}, nil
 	}

@@ -178,6 +178,7 @@ var _ = BeforeSuite(func(done Done) {
 		},
 		Config:   testConfig,
 		Recorder: k8sManager.GetEventRecorder("ServiceBinding"),
+		Retries:  utils.NewRetryStore(),
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 

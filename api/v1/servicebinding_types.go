@@ -158,10 +158,6 @@ type ServiceBinding struct {
 	Status ServiceBindingStatus `json:"status,omitempty"`
 }
 
-func (sb *ServiceBinding) IsAsyncBindFailed() bool {
-	return sb.Status.AsyncBindFailed != nil && *sb.Status.AsyncBindFailed
-}
-
 func (sb *ServiceBinding) GetConditions() []metav1.Condition {
 	return sb.Status.Conditions
 }
