@@ -54,6 +54,7 @@ type ServiceInstanceSpec struct {
 	ServicePlanID string `json:"servicePlanID,omitempty"`
 
 	// The name of the instance in Service Manager
+	// +kubebuilder:validation:MaxLength=100
 	ExternalName string `json:"externalName,omitempty"`
 
 	// Indicates the desired shared state
