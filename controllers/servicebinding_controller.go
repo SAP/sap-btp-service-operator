@@ -309,6 +309,7 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 	serviceBinding.Status.BindingID = smBinding.ID
 	serviceBinding.Status.SubaccountID = subaccountID
 	serviceBinding.Status.Ready = metav1.ConditionTrue
+	r.Retries.Reset(types.NamespacedName{Name: serviceBinding.Name, Namespace: serviceBinding.Namespace})
 	utils.SetSuccessConditions(smClientTypes.CREATE, serviceBinding, false)
 	log.Info("Updating binding", "bindingID", smBinding.ID)
 
@@ -463,13 +464,13 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, smClient sm.Client,
 
 			log.Info("reset binding id after successful async delete operation")
 			serviceBinding.Status.BindingID = ""
-			return ctrl.Result{RequeueAfter: time.Second}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
 		}
 	}
 
 	log.Info(fmt.Sprintf("finished polling operation %s '%s'", serviceBinding.Status.OperationType, serviceBinding.Status.OperationURL))
 	serviceBinding.Status.OperationURL = ""
 	serviceBinding.Status.OperationType = ""
+	r.Retries.Reset(types.NamespacedName{Name: serviceBinding.Name, Namespace: serviceBinding.Namespace})
 
 	return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
 }
