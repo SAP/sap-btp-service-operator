@@ -152,9 +152,9 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	if len(serviceBinding.Status.BindingID) > 0 {
 		if bindingExist, err := isBindingExistInSM(smClient, serviceInstance, serviceBinding.Status.BindingID, log); err != nil {
 			log.Error(err, "failed to check if binding exist in sm due to unknown error")
-			return ctrl.Result{}, err
+			return utils.HandleServiceManagerError(ctx, r.Client, serviceBinding, common.Unknown, err, false)
 		} else if !bindingExist {
-			log.Info("binding not found in SM, updating status")
+			log.Info("binding not found in SM for this operator, updating status")
 			condition := metav1.Condition{
 				Type:               common.ConditionReady,
 				Status:             metav1.ConditionFalse,
@@ -229,7 +229,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		smBinding, err := r.getBindingForRecovery(ctx, smClient, serviceBinding)
 		if err != nil {
 			log.Error(err, "failed to check binding recovery")
-			return utils.HandleServiceManagerError(ctx, r.Client, serviceBinding, smClientTypes.CREATE, err)
+			return utils.HandleServiceManagerError(ctx, r.Client, serviceBinding, smClientTypes.CREATE, err, true)
 		}
 		if smBinding != nil {
 			return r.recover(ctx, serviceBinding, smBinding)
@@ -273,7 +273,7 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 
 	if bindErr != nil {
 		log.Error(err, "failed to create service binding", "serviceInstanceID", serviceInstance.Status.InstanceID)
-		return utils.HandleServiceManagerError(ctx, r.Client, serviceBinding, smClientTypes.CREATE, bindErr)
+		return utils.HandleServiceManagerError(ctx, r.Client, serviceBinding, smClientTypes.CREATE, bindErr, true)
 	}
 
 	if operationURL != "" {
@@ -324,7 +324,7 @@ func (r *ServiceBindingReconciler) delete(ctx context.Context, smClient sm.Clien
 			log.Info("No binding id found validating binding does not exists in SM before removing finalizer")
 			smBinding, err := r.getBindingForRecovery(ctx, smClient, serviceBinding)
 			if err != nil {
-				return utils.HandleServiceManagerError(ctx, r.Client, serviceBinding, smClientTypes.DELETE, err)
+				return utils.HandleServiceManagerError(ctx, r.Client, serviceBinding, smClientTypes.DELETE, err, true)
 			}
 			if smBinding != nil {
 				log.Info("binding exists in SM continue with deletion")
@@ -353,7 +353,7 @@ func (r *ServiceBindingReconciler) delete(ctx context.Context, smClient sm.Clien
 		log.Info(fmt.Sprintf("Deleting binding with id %v from SM, resourceMarkedForDeletions=%v", serviceBinding.Status.BindingID, utils.IsMarkedForDeletion(serviceBinding.ObjectMeta)))
 		operationURL, unbindErr := smClient.Unbind(serviceBinding.Status.BindingID, nil, utils.BuildUserInfo(ctx, serviceBinding.Spec.UserInfo))
 		if unbindErr != nil {
-			return utils.HandleServiceManagerError(ctx, r.Client, serviceBinding, smClientTypes.DELETE, unbindErr)
+			return utils.HandleServiceManagerError(ctx, r.Client, serviceBinding, smClientTypes.DELETE, unbindErr, true)
 		}
 
 		if operationURL != "" {

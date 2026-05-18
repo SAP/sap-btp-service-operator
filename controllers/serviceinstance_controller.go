@@ -170,7 +170,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		smInstance, err := r.getInstanceForRecovery(ctx, smClient, serviceInstance)
 		if err != nil {
 			log.Error(err, "failed to check instance recovery")
-			return utils.HandleServiceManagerError(ctx, r.Client, serviceInstance, smClientTypes.CREATE, err)
+			return utils.HandleServiceManagerError(ctx, r.Client, serviceInstance, smClientTypes.CREATE, err, true)
 		}
 		if smInstance != nil {
 			return r.recover(ctx, smClient, serviceInstance, smInstance)
@@ -225,7 +225,7 @@ func (r *ServiceInstanceReconciler) createInstance(ctx context.Context, smClient
 	if provisionErr != nil {
 		log.Error(provisionErr, "failed to create service instance", "serviceOfferingName", serviceInstance.Spec.ServiceOfferingName,
 			"servicePlanName", serviceInstance.Spec.ServicePlanName)
-		return utils.HandleServiceManagerError(ctx, r.Client, serviceInstance, smClientTypes.CREATE, provisionErr)
+		return utils.HandleServiceManagerError(ctx, r.Client, serviceInstance, smClientTypes.CREATE, provisionErr, true)
 	}
 
 	serviceInstance.Status.InstanceID = provision.InstanceID
@@ -274,7 +274,7 @@ func (r *ServiceInstanceReconciler) updateInstance(ctx context.Context, smClient
 
 	if err != nil {
 		log.Error(err, fmt.Sprintf("failed to update service instance with ID %s", serviceInstance.Status.InstanceID))
-		return utils.HandleServiceManagerError(ctx, r.Client, serviceInstance, smClientTypes.UPDATE, err)
+		return utils.HandleServiceManagerError(ctx, r.Client, serviceInstance, smClientTypes.UPDATE, err, true)
 	}
 
 	if operationURL != "" {
@@ -304,7 +304,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 			log.Info("No instance id found validating instance does not exists in SM before removing finalizer")
 			smInstance, err := r.getInstanceForRecovery(ctx, smClient, serviceInstance)
 			if err != nil {
-				return utils.HandleServiceManagerError(ctx, r.Client, serviceInstance, smClientTypes.DELETE, err)
+				return utils.HandleServiceManagerError(ctx, r.Client, serviceInstance, smClientTypes.DELETE, err, true)
 			}
 			if smInstance != nil {
 				log.Info("instance exists in SM continue with deletion")
@@ -319,7 +319,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 		log.Info(fmt.Sprintf("Deleting instance with id %v from SM", serviceInstance.Status.InstanceID))
 		operationURL, deprovisionErr := smClient.Deprovision(serviceInstance.Status.InstanceID, nil, utils.BuildUserInfo(ctx, serviceInstance.Spec.UserInfo))
 		if deprovisionErr != nil {
-			return utils.HandleServiceManagerError(ctx, r.Client, serviceInstance, smClientTypes.DELETE, deprovisionErr)
+			return utils.HandleServiceManagerError(ctx, r.Client, serviceInstance, smClientTypes.DELETE, deprovisionErr, true)
 		}
 
 		if operationURL != "" {
