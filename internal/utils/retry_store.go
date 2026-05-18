@@ -1,10 +1,11 @@
 package utils
 
 import (
-	"k8s.io/apimachinery/pkg/types"
 	"math"
 	"sync"
 	"time"
+
+	"k8s.io/apimachinery/pkg/types"
 )
 
 type RetryState struct {
