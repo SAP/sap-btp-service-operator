@@ -555,10 +555,20 @@ var _ = Describe("ServiceBinding controller", func() {
 			})
 		})
 
-		When("referenced service instance is failed", func() {
-			It("should retry and succeed once the instance is ready", func() {
-				fakeClient.ProvisionReturns(nil, errors.New("failed")) //instance is retried if failed
-				createdInstance.Status.Ready = metav1.ConditionFalse
+		When("instance is provisioned but update failed", func() {
+			It("binding creation succeeds", func() {
+				fakeClient.UpdateInstanceReturns(nil, "", errors.New("update failed"))
+				createdInstance.Spec.ExternalName = "new-name" // trigger update
+				updateInstance(ctx, createdInstance)
+				waitForResourceCondition(ctx, createdInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.UpdateFailed, "update failed")
+				createAndValidateBinding(ctx, bindingName, bindingTestNamespace, instanceName, "", "binding-external-name", "", fakeBindingID)
+			})
+		})
+
+		When("referenced service instance is not provisioned", func() {
+			It("binding creation should retry and succeed once the instance is ready", func() {
+				fakeClient.ProvisionReturns(nil, errors.New("failed"))
+				createdInstance.Status = v1.ServiceInstanceStatus{Conditions: make([]metav1.Condition, 0)} // trigger provision
 				updateInstanceStatus(ctx, createdInstance)
 
 				binding, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "binding-external-name", "", false)

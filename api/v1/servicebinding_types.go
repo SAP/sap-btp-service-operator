@@ -134,6 +134,8 @@ type ServiceBindingStatus struct {
 
 	// Last generation that was acted on
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+
+	AsyncBindFailed *bool `json:"asyncBindFailed,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -153,6 +155,10 @@ type ServiceBinding struct {
 
 	Spec   ServiceBindingSpec   `json:"spec,omitempty"`
 	Status ServiceBindingStatus `json:"status,omitempty"`
+}
+
+func (sb *ServiceBinding) IsAsyncBindFailed() bool {
+	return sb.Status.AsyncBindFailed != nil && *sb.Status.AsyncBindFailed
 }
 
 func (sb *ServiceBinding) GetConditions() []metav1.Condition {
@@ -218,10 +224,6 @@ type CredentialsRotationPolicy struct {
 	RotationFrequency string `json:"rotationFrequency,omitempty"`
 	// For how long to keep the rotated binding.
 	RotatedBindingTTL string `json:"rotatedBindingTTL,omitempty"`
-}
-
-func init() {
-	SchemeBuilder.Register(&ServiceBinding{}, &ServiceBindingList{})
 }
 
 func (sb *ServiceBinding) Hub() {}

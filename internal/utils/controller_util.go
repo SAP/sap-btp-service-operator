@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -289,9 +288,6 @@ func serialize(value interface{}) ([]byte, format, error) {
 	}
 	if strVal, ok := value.(string); ok {
 		return []byte(strVal), TEXT, nil
-	}
-	if boolVal, ok := value.(bool); ok {
-		return []byte(strconv.FormatBool(boolVal)), TEXT, nil
 	}
 	data, err := json.Marshal(value)
 	if err != nil {

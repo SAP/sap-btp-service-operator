@@ -279,6 +279,8 @@ spec:
               subaccountID:
                 description: The subaccount id of the service binding
                 type: string
+              asyncBindFailed:
+                type: boolean
             required:
             - conditions
             type: object

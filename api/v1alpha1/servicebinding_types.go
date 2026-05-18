@@ -196,7 +196,3 @@ type CredentialsRotationPolicy struct {
 	// For how long to keep the rotated binding.
 	RotatedBindingTTL string `json:"rotatedBindingTTL,omitempty"`
 }
-
-func init() {
-	SchemeBuilder.Register(&ServiceBinding{}, &ServiceBindingList{})
-}

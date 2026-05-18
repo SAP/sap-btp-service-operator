@@ -177,7 +177,3 @@ type ServiceInstanceList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []ServiceInstance `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&ServiceInstance{}, &ServiceInstanceList{})
-}

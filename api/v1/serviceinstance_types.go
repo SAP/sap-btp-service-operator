@@ -130,6 +130,8 @@ type ServiceInstanceStatus struct {
 
 	// Last generation that was acted on
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+
+	AsyncProvisionFailed *bool `json:"asyncProvisionFailed,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -151,6 +153,10 @@ type ServiceInstance struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	Spec              ServiceInstanceSpec   `json:"spec,omitempty"`
 	Status            ServiceInstanceStatus `json:"status,omitempty"`
+}
+
+func (si *ServiceInstance) IsAsyncProvisionFailed() bool {
+	return si.Status.AsyncProvisionFailed != nil && *si.Status.AsyncProvisionFailed
 }
 
 func (si *ServiceInstance) GetConditions() []metav1.Condition {
@@ -207,10 +213,6 @@ type ServiceInstanceList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []ServiceInstance `json:"items"`
-}
-
-func init() {
-	SchemeBuilder.Register(&ServiceInstance{}, &ServiceInstanceList{})
 }
 
 func (si *ServiceInstance) Hub() {}
