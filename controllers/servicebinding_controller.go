@@ -481,7 +481,7 @@ func (r *ServiceBindingReconciler) handleFailedAsyncBinding(ctx context.Context,
 	operationURL, unbindErr := smClient.Unbind(serviceBinding.Status.BindingID, nil, utils.BuildUserInfo(ctx, serviceBinding.Spec.UserInfo))
 	if unbindErr != nil {
 		log.Error(unbindErr, fmt.Sprintf("handleFailedAsyncBinding unbind binding with id %s failed", serviceBinding.Status.BindingID))
-		return ctrl.Result{}, unbindErr
+		return utils.HandleServiceManagerError(ctx, r.Client, serviceBinding, smClientTypes.DELETE, unbindErr, false)
 	}
 
 	if operationURL != "" {

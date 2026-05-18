@@ -475,7 +475,7 @@ func (r *ServiceInstanceReconciler) handleFailedAsyncProvision(ctx context.Conte
 	operationURL, deprovisionErr := smClient.Deprovision(serviceInstance.Status.InstanceID, nil, utils.BuildUserInfo(ctx, serviceInstance.Spec.UserInfo))
 	if deprovisionErr != nil {
 		log.Error(deprovisionErr, fmt.Sprintf("handleFailedAsyncProvision failed to deprovision instance: %s", serviceInstance.Status.InstanceID))
-		return ctrl.Result{}, deprovisionErr
+		return utils.HandleServiceManagerError(ctx, r.Client, serviceInstance, smClientTypes.DELETE, deprovisionErr, false)
 	}
 
 	if operationURL != "" {
