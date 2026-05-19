@@ -37,8 +37,10 @@ type SecretReconciler struct {
 // +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;create;update
 
 func (r *SecretReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
-	log := r.Log.WithValues("secret", req.NamespacedName).WithValues("correlation_id", uuid.New().String())
+	correlationID := uuid.New().String()
+	log := r.Log.WithValues("secret", req.NamespacedName).WithValues("correlation_id", correlationID)
 	ctx = context.WithValue(ctx, logutils.LogKey, log)
+	ctx = context.WithValue(ctx, logutils.CorrelationIDKey, correlationID)
 	log.Info(fmt.Sprintf("reconciling params secret %s", req.NamespacedName))
 	// Fetch the Secret
 	secret := &corev1.Secret{}
