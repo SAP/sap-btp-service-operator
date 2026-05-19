@@ -85,7 +85,6 @@ spec:
               externalName:
                 description: The name of the instance in Service Manager
                 type: string
-                maxLength: 100
               parameters:
                 description: |-
                   Provisioning parameters for the instance.
@@ -154,23 +153,25 @@ spec:
                       items:
                         type: string
                       type: array
-                    description: Any additional information provided by the authenticator.
+                    description: extra is any additional information provided by the
+                      authenticator.
                     type: object
                   groups:
-                    description: The names of groups this user is a part of.
+                    description: groups is the names of groups this user is a part
+                      of.
                     items:
                       type: string
                     type: array
                     x-kubernetes-list-type: atomic
                   uid:
                     description: |-
-                      A unique value that identifies this user across time. If this user is
+                      uid is a unique value that identifies this user across time. If this user is
                       deleted and another user by the same name is added, they will have
                       different UIDs.
                     type: string
                   username:
-                    description: The name that uniquely identifies this user among
-                      all active users.
+                    description: username is the name that uniquely identifies this
+                      user among all active users.
                     type: string
                 type: object
               watchParametersFromChanges:
@@ -275,8 +276,6 @@ spec:
                 items:
                   type: string
                 type: array
-              asyncProvisionFailed:
-                type: boolean
             required:
             - conditions
             type: object
@@ -343,7 +342,6 @@ spec:
               externalName:
                 description: The name of the instance in Service Manager
                 type: string
-                maxLength: 100
               parameters:
                 description: |-
                   Provisioning parameters for the instance.
@@ -410,23 +408,25 @@ spec:
                       items:
                         type: string
                       type: array
-                    description: Any additional information provided by the authenticator.
+                    description: extra is any additional information provided by the
+                      authenticator.
                     type: object
                   groups:
-                    description: The names of groups this user is a part of.
+                    description: groups is the names of groups this user is a part
+                      of.
                     items:
                       type: string
                     type: array
                     x-kubernetes-list-type: atomic
                   uid:
                     description: |-
-                      A unique value that identifies this user across time. If this user is
+                      uid is a unique value that identifies this user across time. If this user is
                       deleted and another user by the same name is added, they will have
                       different UIDs.
                     type: string
                   username:
-                    description: The name that uniquely identifies this user among
-                      all active users.
+                    description: username is the name that uniquely identifies this
+                      user among all active users.
                     type: string
                 type: object
             required:

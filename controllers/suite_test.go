@@ -165,6 +165,7 @@ var _ = BeforeSuite(func(done Done) {
 		},
 		Config:   testConfig,
 		Recorder: k8sManager.GetEventRecorder("ServiceInstance"),
+		Retries:  utils.NewRetryStore(testConfig.RetryBaseDelay, testConfig.RetryMaxDelay),
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
@@ -177,6 +178,7 @@ var _ = BeforeSuite(func(done Done) {
 		},
 		Config:   testConfig,
 		Recorder: k8sManager.GetEventRecorder("ServiceBinding"),
+		Retries:  utils.NewRetryStore(testConfig.RetryBaseDelay, testConfig.RetryMaxDelay),
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 

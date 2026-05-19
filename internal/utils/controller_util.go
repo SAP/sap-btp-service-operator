@@ -113,7 +113,7 @@ func RandStringRunes(n int) string {
 	return string(b)
 }
 
-func HandleServiceManagerError(ctx context.Context, k8sClient client.Client, resource common.SAPBTPResource, operationType smClientTypes.OperationCategory, err error) (ctrl.Result, error) {
+func HandleServiceManagerError(ctx context.Context, k8sClient client.Client, resource common.SAPBTPResource, operationType smClientTypes.OperationCategory, err error, updateStatus bool) (ctrl.Result, error) {
 	log := logutils.GetLogger(ctx)
 	var smError *sm.ServiceManagerError
 	if ok := errors.As(err, &smError); ok {
@@ -123,7 +123,10 @@ func HandleServiceManagerError(ctx context.Context, k8sClient client.Client, res
 		}
 	}
 
-	return HandleOperationFailure(ctx, k8sClient, resource, operationType, err)
+	if updateStatus {
+		return HandleOperationFailure(ctx, k8sClient, resource, operationType, err)
+	}
+	return ctrl.Result{}, err
 }
 
 func HandleCredRotationError(ctx context.Context, k8sClient client.Client, binding common.SAPBTPResource, err error) (ctrl.Result, error) {

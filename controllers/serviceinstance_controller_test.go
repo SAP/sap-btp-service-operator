@@ -356,13 +356,6 @@ var _ = Describe("ServiceInstance controller", func() {
 				})
 				It("should update to failure condition with the broker err description and retry until succeeds", func() {
 					serviceInstance = createInstance(ctx, fakeInstanceName, instanceSpec, nil, false)
-					si := &v1.ServiceInstance{}
-					Eventually(func() bool {
-						if err := k8sClient.Get(ctx, defaultLookupKey, si); err != nil {
-							return false
-						}
-						return si.Status.AsyncProvisionFailed != nil && *si.Status.AsyncProvisionFailed
-					}, timeout, interval).Should(BeTrue())
 					serviceInstance = waitForInstanceConditionAndMessage(ctx, defaultLookupKey, common.ConditionSucceeded, "broker-failure")
 
 					fakeClient.ProvisionReturns(&sm.ProvisionResponse{InstanceID: "successful-instance-id", Location: "/v1/service_instances/successful-instance-id/operations/1234"}, nil)

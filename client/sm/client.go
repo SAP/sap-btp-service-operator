@@ -457,7 +457,7 @@ func (client *serviceManagerClient) callWithUser(method string, smpath string, b
 	req.Header.Add("client-version", AppVersion)
 	correlationID := logutils.GetCorrelationID(client.Context)
 	if correlationID != "" {
-		req.Header.Add("X-Correlation-ID", correlationID)
+		req.Header.Add("X-CorrelationID", correlationID)
 	}
 	if len(user) > 0 {
 		req.Header.Add(originatingIdentityHeader, user)

@@ -633,9 +633,9 @@ stringData:
   newKey: {{ .credentials.secret_key }}
   tags: {{ .instance.tags }}`)
 
-				createdBinding, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "", secretTemplate, true)
+				createdBinding, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "", secretTemplate, false)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(isResourceReady(createdBinding)).To(BeTrue())
+				waitForResourceToBeReady(ctx, createdBinding)
 				By("Verify binding secret created")
 				bindingSecret := getSecret(ctx, createdBinding.Spec.SecretName, createdBinding.Namespace, true)
 				validateSecretData(bindingSecret, "newKey", "secret_value")
@@ -655,9 +655,9 @@ stringData:
   newKey: {{ .credentials.secret_key }}
   tags: {{ .instance.tags }}`)
 
-				createdBinding, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "", secretTemplate, true)
+				createdBinding, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "", secretTemplate, false)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(isResourceReady(createdBinding)).To(BeTrue())
+				waitForResourceToBeReady(ctx, createdBinding)
 				By("Verify binding secret created")
 				bindingSecret := getSecret(ctx, createdBinding.Spec.SecretName, createdBinding.Namespace, true)
 				validateSecretData(bindingSecret, "newKey", "secret_value")
@@ -788,9 +788,9 @@ stringData:
   newKey: {{ .credentials.auth.basic.password }}
   tags: {{ .instance.tags }}`)
 
-				createdBinding, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "", secretTemplate, true)
+				createdBinding, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "", secretTemplate, false)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(isResourceReady(createdBinding)).To(BeTrue())
+				waitForResourceToBeReady(ctx, createdBinding)
 				By("Verify binding secret created")
 				bindingSecret := getSecret(ctx, createdBinding.Spec.SecretName, createdBinding.Namespace, true)
 				validateSecretData(bindingSecret, "newKey", "secret_value")

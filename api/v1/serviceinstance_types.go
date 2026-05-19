@@ -54,6 +54,7 @@ type ServiceInstanceSpec struct {
 	ServicePlanID string `json:"servicePlanID,omitempty"`
 
 	// The name of the instance in Service Manager
+	// +kubebuilder:validation:MaxLength=100
 	ExternalName string `json:"externalName,omitempty"`
 
 	// Indicates the desired shared state
@@ -130,8 +131,6 @@ type ServiceInstanceStatus struct {
 
 	// Last generation that was acted on
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
-
-	AsyncProvisionFailed *bool `json:"asyncProvisionFailed,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -153,10 +152,6 @@ type ServiceInstance struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	Spec              ServiceInstanceSpec   `json:"spec,omitempty"`
 	Status            ServiceInstanceStatus `json:"status,omitempty"`
-}
-
-func (si *ServiceInstance) IsAsyncProvisionFailed() bool {
-	return si.Status.AsyncProvisionFailed != nil && *si.Status.AsyncProvisionFailed
 }
 
 func (si *ServiceInstance) GetConditions() []metav1.Condition {

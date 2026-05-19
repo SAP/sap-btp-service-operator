@@ -43,6 +43,7 @@ type ServiceBindingSpec struct {
 
 	// The name of the binding in Service Manager
 	// +optional
+	// +kubebuilder:validation:MaxLength=100
 	ExternalName string `json:"externalName"`
 
 	// SecretName is the name of the secret where credentials will be stored
@@ -155,10 +156,6 @@ type ServiceBinding struct {
 
 	Spec   ServiceBindingSpec   `json:"spec,omitempty"`
 	Status ServiceBindingStatus `json:"status,omitempty"`
-}
-
-func (sb *ServiceBinding) IsAsyncBindFailed() bool {
-	return sb.Status.AsyncBindFailed != nil && *sb.Status.AsyncBindFailed
 }
 
 func (sb *ServiceBinding) GetConditions() []metav1.Condition {

@@ -40,7 +40,6 @@ func NewAuthClientWithTLS(ctx context.Context, ccConfig *clientcredentials.Confi
 
 func newHTTPClient(ctx context.Context, ccConfig *clientcredentials.Config) (HTTPClient, error) {
 	log := logutils.GetLogger(ctx)
-	log.Info("creating new HTTP client with OAuth2")
 	client := oauth2.NewClient(ctx, ccConfig.TokenSource(ctx))
 	if caPEM, err := os.ReadFile(CustomCAPath); err == nil {
 		log.Info("found custom CA, loading it..")
