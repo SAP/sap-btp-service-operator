@@ -73,8 +73,10 @@ type ServiceInstanceReconciler struct {
 // +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;create;update
 
 func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("serviceinstance", req.NamespacedName).WithValues("correlation_id", uuid.New().String())
+	correlationID := uuid.New().String()
+	log := r.Log.WithValues("serviceinstance", req.NamespacedName).WithValues("correlation_id", correlationID)
 	ctx = context.WithValue(ctx, logutils.LogKey, log)
+	ctx = context.WithValue(ctx, logutils.CorrelationIDKey, correlationID)
 
 	serviceInstance := &v1.ServiceInstance{}
 	if err := r.Client.Get(ctx, req.NamespacedName, serviceInstance); err != nil {

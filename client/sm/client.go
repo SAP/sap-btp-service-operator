@@ -32,6 +32,7 @@ import (
 	"github.com/SAP/sap-btp-service-operator/client/sm/types"
 	"github.com/SAP/sap-btp-service-operator/internal/auth"
 	"github.com/SAP/sap-btp-service-operator/internal/httputil"
+	"github.com/SAP/sap-btp-service-operator/internal/utils/logutils"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
 )
@@ -454,6 +455,10 @@ func (client *serviceManagerClient) callWithUser(method string, smpath string, b
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("client-name", "sap-btp-service-operator")
 	req.Header.Add("client-version", AppVersion)
+	correlationID := logutils.GetCorrelationID(client.Context)
+	if correlationID != "" {
+		req.Header.Add("X-Correlation-ID", correlationID)
+	}
 	if len(user) > 0 {
 		req.Header.Add(originatingIdentityHeader, user)
 	}
