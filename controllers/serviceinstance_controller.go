@@ -74,9 +74,12 @@ type ServiceInstanceReconciler struct {
 // +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;create;update
 
 func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("serviceinstance", req.NamespacedName).WithValues("correlation_id", uuid.New().String())
-
+	correlationID := uuid.New().String()
 	retry := r.Retries.Get(req.NamespacedName)
+	if retry != nil {
+		correlationID = retry.CorrelationID
+	}
+	log := r.Log.WithValues("serviceinstance", req.NamespacedName).WithValues("correlation_id", correlationID)
 	if retry != nil && time.Now().Before(retry.NextRetry) {
 		remaining := time.Until(retry.NextRetry)
 		log.Info(fmt.Sprintf("skipping instance reconcile due to backoff. attempts=%d retryIn=%s", retry.Attempts, remaining))
@@ -85,6 +88,8 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	ctx = context.WithValue(ctx, logutils.LogKey, log)
+	ctx = context.WithValue(ctx, logutils.CorrelationIDKey, correlationID)
+
 	serviceInstance := &v1.ServiceInstance{}
 	if err := r.Client.Get(ctx, req.NamespacedName, serviceInstance); err != nil {
 		if !apierrors.IsNotFound(err) {
@@ -427,7 +432,7 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client
 			(serviceInstance.Status.OperationType == smClientTypes.DELETE && !utils.IsMarkedForDeletion(serviceInstance.ObjectMeta)) {
 			log.Info(fmt.Sprintf("async provision failed for instance %s", serviceInstance.Status.InstanceID))
 			key := types.NamespacedName{Namespace: serviceInstance.GetNamespace(), Name: serviceInstance.GetName()}
-			newState := r.Retries.RegisterFailure(key)
+			newState := r.Retries.RegisterFailure(key, logutils.GetCorrelationID(ctx))
 			log.Info(fmt.Sprintf("async provision failed. attempts=%d nextRetry=%s currrent error=%s\n", newState.Attempts, newState.NextRetry.Format(time.RFC3339), errMsg))
 			return r.handleFailedAsyncProvision(ctx, smClient, serviceInstance)
 		}

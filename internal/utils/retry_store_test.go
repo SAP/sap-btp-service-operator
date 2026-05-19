@@ -33,7 +33,7 @@ var _ = Describe("RetryStore", func() {
 		})
 
 		It("returns a copy so mutations do not affect stored state", func() {
-			store.RegisterFailure(key)
+			store.RegisterFailure(key, "")
 			got := store.Get(key)
 			Expect(got).ToNot(BeNil())
 			originalAttempts := got.Attempts
@@ -47,20 +47,20 @@ var _ = Describe("RetryStore", func() {
 
 	Describe("RegisterFailure", func() {
 		It("creates an entry on first call with Attempts == 1", func() {
-			state := store.RegisterFailure(key)
+			state := store.RegisterFailure(key, "")
 			Expect(state).ToNot(BeNil())
 			Expect(state.Attempts).To(Equal(1))
 		})
 
 		It("sets NextRetry in the future on first call", func() {
 			before := time.Now()
-			state := store.RegisterFailure(key)
+			state := store.RegisterFailure(key, "")
 			Expect(state.NextRetry).To(BeTemporally(">", before))
 		})
 
 		It("increments Attempts on each subsequent call", func() {
 			for i := 1; i <= 3; i++ {
-				state := store.RegisterFailure(key)
+				state := store.RegisterFailure(key, "")
 				Expect(state.Attempts).To(Equal(i))
 			}
 		})
@@ -77,7 +77,7 @@ var _ = Describe("RetryStore", func() {
 		})
 
 		It("stores state that is retrievable via Get", func() {
-			store.RegisterFailure(key)
+			store.RegisterFailure(key, "")
 			got := store.Get(key)
 			Expect(got).ToNot(BeNil())
 			Expect(got.Attempts).To(Equal(1))
@@ -85,14 +85,14 @@ var _ = Describe("RetryStore", func() {
 
 		It("does not affect state for a different key", func() {
 			other := types.NamespacedName{Namespace: "default", Name: "other"}
-			store.RegisterFailure(key)
+			store.RegisterFailure(key, "")
 			Expect(store.Get(other)).To(BeNil())
 		})
 	})
 
 	Describe("Reset", func() {
 		It("removes the entry so Get returns nil", func() {
-			store.RegisterFailure(key)
+			store.RegisterFailure(key, "")
 			store.Reset(key)
 			Expect(store.Get(key)).To(BeNil())
 		})
@@ -104,8 +104,8 @@ var _ = Describe("RetryStore", func() {
 
 		It("does not affect other keys", func() {
 			other := types.NamespacedName{Namespace: "default", Name: "other"}
-			store.RegisterFailure(key)
-			store.RegisterFailure(other)
+			store.RegisterFailure(key, "")
+			store.RegisterFailure(other, "")
 			store.Reset(key)
 
 			Expect(store.Get(key)).To(BeNil())
@@ -113,11 +113,11 @@ var _ = Describe("RetryStore", func() {
 		})
 
 		It("allows RegisterFailure to restart the counter after a reset", func() {
-			store.RegisterFailure(key)
-			store.RegisterFailure(key)
+			store.RegisterFailure(key, "")
+			store.RegisterFailure(key, "")
 			store.Reset(key)
 
-			state := store.RegisterFailure(key)
+			state := store.RegisterFailure(key, "")
 			Expect(state.Attempts).To(Equal(1))
 		})
 	})
@@ -152,7 +152,7 @@ var _ = Describe("RetryStore", func() {
 				go func(i int) {
 					defer wg.Done()
 					if i%2 == 0 {
-						store.RegisterFailure(key)
+						store.RegisterFailure(key, "")
 					} else {
 						store.Reset(key)
 					}
@@ -162,7 +162,7 @@ var _ = Describe("RetryStore", func() {
 		})
 
 		It("handles concurrent Gets without data races", func() {
-			store.RegisterFailure(key)
+			store.RegisterFailure(key, "")
 			const goroutines = 20
 			var wg sync.WaitGroup
 			wg.Add(goroutines)

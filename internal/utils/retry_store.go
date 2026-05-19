@@ -9,8 +9,9 @@ import (
 )
 
 type RetryState struct {
-	Attempts  int
-	NextRetry time.Time
+	Attempts      int
+	NextRetry     time.Time
+	CorrelationID string
 }
 
 type RetryStore struct {
@@ -42,13 +43,13 @@ func (r *RetryStore) Get(key types.NamespacedName) *RetryState {
 	return &ccopy
 }
 
-func (r *RetryStore) RegisterFailure(key types.NamespacedName) *RetryState {
+func (r *RetryStore) RegisterFailure(key types.NamespacedName, correlationID string) *RetryState {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	s, exists := r.state[key]
 	if !exists {
-		s = &RetryState{}
+		s = &RetryState{CorrelationID: correlationID}
 		r.state[key] = s
 	}
 

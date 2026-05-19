@@ -84,16 +84,20 @@ type ServiceBindingReconciler struct {
 // +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;create;update
 
 func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("servicebinding", req.NamespacedName).WithValues("correlation_id", uuid.New().String(), req.Name, req.Namespace)
-
+	correlationID := uuid.New().String()
 	retry := r.Retries.Get(req.NamespacedName)
+	if retry != nil {
+		correlationID = retry.CorrelationID
+	}
+	log := r.Log.WithValues("servicebinding", req.NamespacedName).WithValues("correlation_id", correlationID, req.Name, req.Namespace)
 	if retry != nil && time.Now().Before(retry.NextRetry) {
 		remaining := time.Until(retry.NextRetry)
 		log.Info(fmt.Sprintf("skipping binding reconcile due to backoff. attempts=%d retryIn=%s", retry.Attempts, remaining))
 		return ctrl.Result{RequeueAfter: remaining}, nil
 	}
-
 	ctx = context.WithValue(ctx, logutils.LogKey, log)
+	ctx = context.WithValue(ctx, logutils.CorrelationIDKey, correlationID)
+
 	serviceBinding := &v1.ServiceBinding{}
 	if err := r.Client.Get(ctx, req.NamespacedName, serviceBinding); err != nil {
 		if !apierrors.IsNotFound(err) {
@@ -423,7 +427,7 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, smClient sm.Client,
 			errMsg := getErrorMsgFromLastOperation(status)
 			log.Info(fmt.Sprintf("async binding failed for binding id %s, error: %s", serviceBinding.Status.BindingID, errMsg))
 			key := types.NamespacedName{Namespace: serviceBinding.GetNamespace(), Name: serviceBinding.GetName()}
-			newState := r.Retries.RegisterFailure(key)
+			newState := r.Retries.RegisterFailure(key, logutils.GetCorrelationID(ctx))
 			log.Info(fmt.Sprintf("async binding failed. attempts=%d nextRetry=%s currrent error=%s\n", newState.Attempts, newState.NextRetry.Format(time.RFC3339), errMsg))
 			return r.handleFailedAsyncBinding(ctx, smClient, serviceBinding)
 		}
