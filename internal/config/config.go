@@ -24,8 +24,8 @@ type Config struct {
 	EnableLimitedCache     bool          `envconfig:"enable_limited_cache"`
 	ClusterID              string        `envconfig:"cluster_id"`
 	InitialClusterID       string        `envconfig:"initial_cluster_id"`
-	RetryBaseDelay         time.Duration
-	RetryMaxDelay          time.Duration
+	RetryBaseDelay         time.Duration `envconfig:"retry_base_delay"`
+	RetryMaxDelay          time.Duration `envconfig:"retry_max_delay"`
 }
 
 func Get() Config {

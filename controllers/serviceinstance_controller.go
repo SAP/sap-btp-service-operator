@@ -454,12 +454,11 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client
 			if err := utils.RemoveFinalizer(ctx, r.Client, serviceInstance, common.FinalizerName); err != nil {
 				return ctrl.Result{}, err
 			}
-			serviceInstance.Status.OperationURL = ""
-			serviceInstance.Status.OperationType = ""
 			serviceInstance.Status.InstanceID = ""
-			return ctrl.Result{RequeueAfter: time.Second}, utils.UpdateStatus(ctx, r.Client, serviceInstance)
 		}
-		utils.SetSuccessConditions(status.Type, serviceInstance, true)
+		if serviceInstance.Status.OperationType != smClientTypes.DELETE {
+			utils.SetSuccessConditions(status.Type, serviceInstance, true)
+		}
 	}
 
 	serviceInstance.Status.OperationURL = ""
@@ -493,7 +492,6 @@ func (r *ServiceInstanceReconciler) handleFailedAsyncProvision(ctx context.Conte
 		log.Error(err, "handleFailedAsyncProvision failed to update service instance status after deletion")
 		return ctrl.Result{}, err
 	}
-	r.Retries.Reset(types.NamespacedName{Name: serviceInstance.Name, Namespace: serviceInstance.Namespace})
 	return ctrl.Result{RequeueAfter: r.Config.PollInterval}, nil
 }
 

@@ -499,7 +499,6 @@ func (r *ServiceBindingReconciler) handleFailedAsyncBinding(ctx context.Context,
 		log.Error(err, "handleFailedAsyncBinding failed to update service binding status after deletion")
 		return ctrl.Result{}, err
 	}
-	r.Retries.Reset(types.NamespacedName{Name: serviceBinding.Name, Namespace: serviceBinding.Namespace})
 	return ctrl.Result{RequeueAfter: r.Config.PollInterval}, nil
 }
 

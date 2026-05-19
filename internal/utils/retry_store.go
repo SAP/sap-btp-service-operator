@@ -52,9 +52,9 @@ func (r *RetryStore) RegisterFailure(key types.NamespacedName) *RetryState {
 		r.state[key] = s
 	}
 
+	s.Attempts++
 	backoff := r.calculateBackoff(s.Attempts)
 	s.NextRetry = time.Now().Add(backoff)
-	s.Attempts++
 	return s
 }
 
