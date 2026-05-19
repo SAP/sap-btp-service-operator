@@ -83,8 +83,10 @@ type ServiceBindingReconciler struct {
 // +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;create;update
 
 func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("servicebinding", req.NamespacedName).WithValues("correlation_id", uuid.New().String(), req.Name, req.Namespace)
+	correlationID := uuid.New().String()
+	log := r.Log.WithValues("servicebinding", req.NamespacedName).WithValues("correlation_id", correlationID, req.Name, req.Namespace)
 	ctx = context.WithValue(ctx, logutils.LogKey, log)
+	ctx = context.WithValue(ctx, logutils.CorrelationIDKey, correlationID)
 
 	serviceBinding := &v1.ServiceBinding{}
 	if err := r.Client.Get(ctx, req.NamespacedName, serviceBinding); err != nil {
