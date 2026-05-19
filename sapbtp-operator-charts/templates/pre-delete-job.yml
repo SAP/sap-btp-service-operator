@@ -19,7 +19,11 @@ spec:
       serviceAccountName: sap-btp-operator
       {{- if .Values.manager.imagePullSecrets }}
       imagePullSecrets: {{ toYaml .Values.manager.imagePullSecrets | nindent 8 }}
-      {{- end }}      
+      {{- end }}
+      {{- with .Values.manager.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
         - name: pre-delete-operator
           {{- if and ( .Values.externalImages.kubectl.image.sha ) ( .Values.externalImages.kubectl.image.tag ) }}
@@ -28,6 +32,10 @@ spec:
           image: "{{.Values.externalImages.kubectl.image.repository}}@sha256:{{.Values.externalImages.kubectl.image.sha}}"
           {{- else }}
           image: "{{.Values.externalImages.kubectl.image.repository}}:{{.Values.externalImages.kubectl.image.tag}}"
+          {{- end }}
+          {{- with .Values.manager.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
           {{- end }}
           command: ["/bin/sh"]
           args:
