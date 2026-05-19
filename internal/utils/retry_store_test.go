@@ -16,7 +16,7 @@ var _ = Describe("RetryStore", func() {
 	)
 
 	BeforeEach(func() {
-		store = NewRetryStore()
+		store = NewRetryStore(10*time.Second, 3*time.Hour)
 		key = types.NamespacedName{Namespace: "default", Name: "my-resource"}
 	})
 
@@ -68,9 +68,9 @@ var _ = Describe("RetryStore", func() {
 		It("increases backoff duration with each failure (exponential backoff)", func() {
 			// Compare computed backoff durations directly instead of wall-clock NextRetry
 			// to avoid flakiness when consecutive calls happen within the same nanosecond.
-			d0 := calculateBackoff(0)
-			d1 := calculateBackoff(1)
-			d2 := calculateBackoff(2)
+			d0 := store.calculateBackoff(0)
+			d1 := store.calculateBackoff(1)
+			d2 := store.calculateBackoff(2)
 
 			Expect(d1).To(BeNumerically(">", d0))
 			Expect(d2).To(BeNumerically(">", d1))
@@ -124,22 +124,22 @@ var _ = Describe("RetryStore", func() {
 
 	Describe("calculateBackoff", func() {
 		It("returns 10s for the first attempt (attempt == 0)", func() {
-			Expect(calculateBackoff(0)).To(Equal(10 * time.Second))
+			Expect(store.calculateBackoff(0)).To(Equal(10 * time.Second))
 		})
 
 		It("doubles with each attempt", func() {
-			Expect(calculateBackoff(1)).To(Equal(20 * time.Second))
-			Expect(calculateBackoff(2)).To(Equal(40 * time.Second))
-			Expect(calculateBackoff(3)).To(Equal(80 * time.Second))
+			Expect(store.calculateBackoff(1)).To(Equal(20 * time.Second))
+			Expect(store.calculateBackoff(2)).To(Equal(40 * time.Second))
+			Expect(store.calculateBackoff(3)).To(Equal(80 * time.Second))
 		})
 
 		It("caps at 3 hours for very large attempt numbers", func() {
 			maxDelay := 3 * time.Hour
-			Expect(calculateBackoff(1000)).To(Equal(maxDelay))
+			Expect(store.calculateBackoff(1000)).To(Equal(maxDelay))
 		})
 
 		It("caps at 3 hours before overflow (large attempt that overflows float64 to MaxInt64)", func() {
-			Expect(calculateBackoff(10000)).To(Equal(3 * time.Hour))
+			Expect(store.calculateBackoff(10000)).To(Equal(3 * time.Hour))
 		})
 	})
 
