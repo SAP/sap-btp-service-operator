@@ -14,13 +14,17 @@ type RetryState struct {
 }
 
 type RetryStore struct {
-	mu    sync.Mutex
-	state map[types.NamespacedName]*RetryState
+	mu        sync.Mutex
+	state     map[types.NamespacedName]*RetryState
+	baseDelay time.Duration
+	maxDelay  time.Duration
 }
 
-func NewRetryStore() *RetryStore {
+func NewRetryStore(baseDelay, maxDelay time.Duration) *RetryStore {
 	return &RetryStore{
-		state: make(map[types.NamespacedName]*RetryState),
+		state:     make(map[types.NamespacedName]*RetryState),
+		baseDelay: baseDelay,
+		maxDelay:  maxDelay,
 	}
 }
 
@@ -48,7 +52,7 @@ func (r *RetryStore) RegisterFailure(key types.NamespacedName) *RetryState {
 		r.state[key] = s
 	}
 
-	backoff := calculateBackoff(s.Attempts)
+	backoff := r.calculateBackoff(s.Attempts)
 	s.NextRetry = time.Now().Add(backoff)
 	s.Attempts++
 	return s
@@ -60,18 +64,15 @@ func (r *RetryStore) Reset(key types.NamespacedName) {
 	delete(r.state, key)
 }
 
-func calculateBackoff(attempt int) time.Duration {
-	base := 10 * time.Second
-	maxDelay := 3 * time.Hour
-
-	backoff := float64(base.Nanoseconds()) * math.Pow(2, float64(attempt))
+func (r *RetryStore) calculateBackoff(attempt int) time.Duration {
+	backoff := float64(r.baseDelay.Nanoseconds()) * math.Pow(2, float64(attempt))
 	if backoff > math.MaxInt64 {
-		return maxDelay
+		return r.maxDelay
 	}
 
 	calculated := time.Duration(backoff)
-	if calculated > maxDelay {
-		return maxDelay
+	if calculated > r.maxDelay {
+		return r.maxDelay
 	}
 
 	return calculated

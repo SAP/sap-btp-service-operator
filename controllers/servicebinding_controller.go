@@ -85,16 +85,15 @@ type ServiceBindingReconciler struct {
 
 func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("servicebinding", req.NamespacedName).WithValues("correlation_id", uuid.New().String(), req.Name, req.Namespace)
-	ctx = context.WithValue(ctx, logutils.LogKey, log)
 
 	retry := r.Retries.Get(req.NamespacedName)
 	if retry != nil && time.Now().Before(retry.NextRetry) {
 		remaining := time.Until(retry.NextRetry)
 		log.Info(fmt.Sprintf("skipping binding reconcile due to backoff. attempts=%d retryIn=%s", retry.Attempts, remaining))
-
 		return ctrl.Result{RequeueAfter: remaining}, nil
 	}
 
+	ctx = context.WithValue(ctx, logutils.LogKey, log)
 	serviceBinding := &v1.ServiceBinding{}
 	if err := r.Client.Get(ctx, req.NamespacedName, serviceBinding); err != nil {
 		if !apierrors.IsNotFound(err) {
@@ -500,6 +499,7 @@ func (r *ServiceBindingReconciler) handleFailedAsyncBinding(ctx context.Context,
 		log.Error(err, "handleFailedAsyncBinding failed to update service binding status after deletion")
 		return ctrl.Result{}, err
 	}
+	r.Retries.Reset(types.NamespacedName{Name: serviceBinding.Name, Namespace: serviceBinding.Namespace})
 	return ctrl.Result{RequeueAfter: r.Config.PollInterval}, nil
 }
 

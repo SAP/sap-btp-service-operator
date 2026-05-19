@@ -75,7 +75,6 @@ type ServiceInstanceReconciler struct {
 
 func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("serviceinstance", req.NamespacedName).WithValues("correlation_id", uuid.New().String())
-	ctx = context.WithValue(ctx, logutils.LogKey, log)
 
 	retry := r.Retries.Get(req.NamespacedName)
 	if retry != nil && time.Now().Before(retry.NextRetry) {
@@ -85,6 +84,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{RequeueAfter: remaining}, nil
 	}
 
+	ctx = context.WithValue(ctx, logutils.LogKey, log)
 	serviceInstance := &v1.ServiceInstance{}
 	if err := r.Client.Get(ctx, req.NamespacedName, serviceInstance); err != nil {
 		if !apierrors.IsNotFound(err) {
@@ -493,6 +493,7 @@ func (r *ServiceInstanceReconciler) handleFailedAsyncProvision(ctx context.Conte
 		log.Error(err, "handleFailedAsyncProvision failed to update service instance status after deletion")
 		return ctrl.Result{}, err
 	}
+	r.Retries.Reset(types.NamespacedName{Name: serviceInstance.Name, Namespace: serviceInstance.Namespace})
 	return ctrl.Result{RequeueAfter: r.Config.PollInterval}, nil
 }
 
