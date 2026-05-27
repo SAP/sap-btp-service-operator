@@ -14,7 +14,8 @@ jobs:
     permissions:
       contents: read
     steps:
-
+    - name: Debug username
+      run: echo "${{ secrets.OPERATOR_USER }}"
     - name: Set up Go 1.26.2
       uses: actions/setup-go@v2
       with:
