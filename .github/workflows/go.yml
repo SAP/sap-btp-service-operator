@@ -15,7 +15,16 @@ jobs:
       contents: read
     steps:
     - name: Debug username
-      run: echo "${{ secrets.OPERATOR_USER }}"
+      run: |
+        echo "length=${#OP_USER}"
+        echo "first_char=${OP_USER:0:1}"
+        echo "last_char=${OP_USER: -1}"
+      env:
+        OP_USER: ${{ secrets.OPERATOR_USER }}
+    - name: Who am I
+      run: |
+        curl -s -u "${{ secrets.OPERATOR_USER }}:${{ secrets.OPERATOR_PAT }}" \
+          https://api.github.com/user
     - name: Set up Go 1.26.2
       uses: actions/setup-go@v2
       with:
