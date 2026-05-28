@@ -6,7 +6,8 @@ jobs:
   release:
     name: Release SAPBTP Operator
     runs-on: ubuntu-latest
-    contents: write
+    permissions:
+      contents: write
     env:
       TAG_NAME: ${{ github.event.release.tag_name }}
       CHART_URL: https://github.com/SAP/sap-btp-service-operator/releases/download/${{ github.event.release.tag_name }}/sap-btp-operator-${{ github.event.release.tag_name }}.tgz
