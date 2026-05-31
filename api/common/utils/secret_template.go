@@ -7,8 +7,8 @@ import (
 	"io"
 	"text/template"
 
-	sprigv3 "github.com/Masterminds/sprig/v3"
 	"github.com/SAP/sap-btp-service-operator/api/common"
+	sprigin "github.com/go-sprout/sprout/sprigin"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -336,7 +336,7 @@ func ParseTemplate(templateName, text string) (*template.Template, error) {
 }
 
 func filteredFuncMap() template.FuncMap {
-	funcs := sprigv3.TxtFuncMap()
+	funcs := sprigin.TxtFuncMap()
 
 	for sprigFunc := range funcs {
 		if _, ok := allowedSprigFunctions[sprigFunc]; !ok {
