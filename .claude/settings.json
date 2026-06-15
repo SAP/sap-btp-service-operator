@@ -1,0 +1,55 @@
+{
+  "enabledPlugins": {
+    "gopls-lsp@claude-plugins-official": true,
+    "code-review@claude-plugins-official": true,
+    "code-simplifier@claude-plugins-official": true
+  },
+  "env": {
+    "GO111MODULE": "on",
+    "CGO_ENABLED": "0"
+  },
+  "includeCoAuthoredBy": false,
+  "gitAttribution": false,
+  "respectGitignore": true,
+  "permissions": {
+    "deny": [
+      "Bash(git reset --hard:*)",
+      "Bash(git clean -fd:*)",
+      "Bash(rm -rf:*)"
+    ],
+    "allow": [
+      "Bash(gh:*)",
+      "Bash(go list:*)",
+      "Bash(go build:*)",
+      "Bash(go vet:*)",
+      "Bash(go test:*)",
+      "Bash(go run:*)",
+      "Bash(go generate:*)",
+      "Bash(go clean:*)",
+      "Bash(go fmt:*)",
+      "Bash(go mod:*)",
+      "Bash(make:*)",
+      "Bash(git:*)",
+      "Bash(grep:*)",
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(echo:*)",
+      "Bash(jq:*)",
+      "WebSearch",
+      "mcp__ide__getDiagnostics"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude plugin marketplace update cfs-ai-plugins"
+          }
+        ]
+      }
+    ]
+  }
+}
