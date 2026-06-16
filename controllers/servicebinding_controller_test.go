@@ -1093,7 +1093,6 @@ stringData:
 				BeforeEach(func() {
 					fakeClient.UnbindReturns(sm.BuildOperationURL("an-operation-id", fakeBindingID, smClientTypes.ServiceBindingsURL), nil)
 					fakeClient.StatusReturns(nil, fmt.Errorf("no polling for you"))
-					//fakeClient.GetBindingByIDReturns(&smClientTypes.ServiceBinding{ID: fakeBindingID, LastOperation: &smClientTypes.Operation{State: smClientTypes.SUCCEEDED, Type: smClientTypes.CREATE}}, nil)
 				})
 
 				It("should recover and eventually succeed", func() {
@@ -1104,9 +1103,13 @@ stringData:
 							return false
 						}
 						cond := meta.FindStatusCondition(createdBinding.GetConditions(), common.ConditionSucceeded)
-						return cond != nil && strings.Contains(cond.Message, string(smClientTypes.INPROGRESS))
+						return cond != nil && cond.Message == "no polling for you"
 					}, timeout, interval).Should(BeTrue())
-					fakeClient.UnbindReturns("", nil)
+					fakeClient.StatusReturns(&smClientTypes.Operation{
+						Type:        smClientTypes.DELETE,
+						State:       smClientTypes.SUCCEEDED,
+						Description: "deleted",
+					}, nil)
 					deleteAndWait(ctx, createdBinding)
 				})
 			})

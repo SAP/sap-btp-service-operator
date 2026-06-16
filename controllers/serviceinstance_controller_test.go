@@ -735,42 +735,69 @@ var _ = Describe("ServiceInstance controller", func() {
 		})
 
 		Context("Async", func() {
-			BeforeEach(func() {
-				fakeClient.DeprovisionReturns("/v1/service_instances/id/operations/1234", nil)
-				fakeClient.StatusReturns(&smclientTypes.Operation{
-					ID:    "1234",
-					Type:  smClientTypes.DELETE,
-					State: smClientTypes.INPROGRESS,
-				}, nil)
-				deleteInstance(ctx, serviceInstance, false)
-				waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.DeleteInProgress, "")
-			})
-			When("polling ends with success", func() {
+			When("polling succeeds", func() {
 				BeforeEach(func() {
+					fakeClient.DeprovisionReturns("/v1/service_instances/id/operations/1234", nil)
 					fakeClient.StatusReturns(&smclientTypes.Operation{
 						ID:    "1234",
 						Type:  smClientTypes.DELETE,
-						State: smClientTypes.SUCCEEDED,
+						State: smClientTypes.INPROGRESS,
 					}, nil)
+					deleteInstance(ctx, serviceInstance, false)
+					waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.DeleteInProgress, "")
 				})
-				It("should delete the k8s instance", func() {
-					deleteInstance(ctx, serviceInstance, true)
+				When("polling ends with success", func() {
+					BeforeEach(func() {
+						fakeClient.StatusReturns(&smclientTypes.Operation{
+							ID:    "1234",
+							Type:  smClientTypes.DELETE,
+							State: smClientTypes.SUCCEEDED,
+						}, nil)
+					})
+					It("should delete the k8s instance", func() {
+						deleteInstance(ctx, serviceInstance, true)
+					})
+				})
+
+				When("polling ends with failure", func() {
+					BeforeEach(func() {
+						fakeClient.StatusReturns(&smclientTypes.Operation{
+							ID:     "1234",
+							Type:   smClientTypes.DELETE,
+							State:  smClientTypes.FAILED,
+							Errors: []byte(`{"error": "brokerError","description":"broker-failure"}`),
+						}, nil)
+					})
+
+					It("should not delete the k8s instance and condition is updated with failure", func() {
+						deleteInstance(ctx, serviceInstance, false)
+						waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.DeleteFailed, "broker-failure")
+					})
 				})
 			})
 
-			When("polling ends with failure", func() {
+			When("polling returns error", func() {
 				BeforeEach(func() {
-					fakeClient.StatusReturns(&smclientTypes.Operation{
-						ID:     "1234",
-						Type:   smClientTypes.DELETE,
-						State:  smClientTypes.FAILED,
-						Errors: []byte(`{"error": "brokerError","description":"broker-failure"}`),
-					}, nil)
+					fakeClient.DeprovisionReturns(sm.BuildOperationURL("an-operation-id", fakeInstanceID, smClientTypes.ServiceInstancesURL), nil)
+					fakeClient.StatusReturns(nil, fmt.Errorf("no polling for you"))
 				})
 
-				It("should not delete the k8s instance and condition is updated with failure", func() {
-					deleteInstance(ctx, serviceInstance, false)
-					waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.DeleteFailed, "broker-failure")
+				It("should recover and eventually succeed", func() {
+					Expect(k8sClient.Delete(ctx, serviceInstance)).To(Succeed())
+					Eventually(func() bool {
+						err := k8sClient.Get(ctx, types.NamespacedName{Name: serviceInstance.Name, Namespace: serviceInstance.Namespace}, serviceInstance)
+						if err != nil {
+							return false
+						}
+						cond := meta.FindStatusCondition(serviceInstance.GetConditions(), common.ConditionSucceeded)
+						return cond != nil && cond.Message == "no polling for you"
+					}, timeout, interval).Should(BeTrue())
+					fakeClient.StatusReturns(&smClientTypes.Operation{
+						Type:        smClientTypes.DELETE,
+						State:       smClientTypes.SUCCEEDED,
+						Description: "deleted",
+					}, nil)
+					deleteAndWait(ctx, serviceInstance)
 				})
 			})
 		})
