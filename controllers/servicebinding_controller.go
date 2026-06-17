@@ -389,18 +389,7 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, smClient sm.Client,
 	status, statusErr := smClient.Status(serviceBinding.Status.OperationURL, nil)
 	if statusErr != nil {
 		log.Info(fmt.Sprintf("failed to fetch operation, got error from SM: %s", statusErr.Error()), "operationURL", serviceBinding.Status.OperationURL)
-		utils.SetInProgressConditions(ctx, serviceBinding.Status.OperationType, string(smClientTypes.INPROGRESS), serviceBinding, false)
-		freshStatus := v1.ServiceBindingStatus{
-			Conditions: serviceBinding.GetConditions(),
-		}
-		if utils.IsMarkedForDeletion(serviceBinding.ObjectMeta) {
-			freshStatus.BindingID = serviceBinding.Status.BindingID
-		}
-		serviceBinding.Status = freshStatus
-		if err := utils.UpdateStatus(ctx, r.Client, serviceBinding); err != nil {
-			log.Error(err, "failed to update status during polling")
-		}
-		return ctrl.Result{}, statusErr
+		return utils.HandleServiceManagerError(ctx, r.Client, serviceBinding, serviceBinding.Status.OperationType, statusErr, true)
 	}
 
 	if status == nil {
