@@ -1,5 +1,6 @@
 # Build the manager binary
-FROM --platform=$BUILDPLATFORM golang:1.26.3-alpine3.24 as builder
+
+FROM --platform=$BUILDPLATFORM golang:1.26.4-alpine3.24 as builder
 
 WORKDIR /workspace
 # Copy the Go Modules manifests
