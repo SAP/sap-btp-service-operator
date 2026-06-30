@@ -184,11 +184,12 @@ type FakeClient struct {
 	shareInstanceReturnsOnCall map[int]struct {
 		result1 error
 	}
-	StatusStub        func(string, *sm.Parameters) (*types.Operation, error)
+	StatusStub        func(string, types.OperationCategory, *sm.Parameters) (*types.Operation, error)
 	statusMutex       sync.RWMutex
 	statusArgsForCall []struct {
 		arg1 string
-		arg2 *sm.Parameters
+		arg2 types.OperationCategory
+		arg3 *sm.Parameters
 	}
 	statusReturns struct {
 		result1 *types.Operation
@@ -1035,19 +1036,20 @@ func (fake *FakeClient) ShareInstanceReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakeClient) Status(arg1 string, arg2 *sm.Parameters) (*types.Operation, error) {
+func (fake *FakeClient) Status(arg1 string, arg2 types.OperationCategory, arg3 *sm.Parameters) (*types.Operation, error) {
 	fake.statusMutex.Lock()
 	ret, specificReturn := fake.statusReturnsOnCall[len(fake.statusArgsForCall)]
 	fake.statusArgsForCall = append(fake.statusArgsForCall, struct {
 		arg1 string
-		arg2 *sm.Parameters
-	}{arg1, arg2})
+		arg2 types.OperationCategory
+		arg3 *sm.Parameters
+	}{arg1, arg2, arg3})
 	stub := fake.StatusStub
 	fakeReturns := fake.statusReturns
-	fake.recordInvocation("Status", []interface{}{arg1, arg2})
+	fake.recordInvocation("Status", []interface{}{arg1, arg2, arg3})
 	fake.statusMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2)
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -1061,17 +1063,17 @@ func (fake *FakeClient) StatusCallCount() int {
 	return len(fake.statusArgsForCall)
 }
 
-func (fake *FakeClient) StatusCalls(stub func(string, *sm.Parameters) (*types.Operation, error)) {
+func (fake *FakeClient) StatusCalls(stub func(string, types.OperationCategory, *sm.Parameters) (*types.Operation, error)) {
 	fake.statusMutex.Lock()
 	defer fake.statusMutex.Unlock()
 	fake.StatusStub = stub
 }
 
-func (fake *FakeClient) StatusArgsForCall(i int) (string, *sm.Parameters) {
+func (fake *FakeClient) StatusArgsForCall(i int) (string, types.OperationCategory, *sm.Parameters) {
 	fake.statusMutex.RLock()
 	defer fake.statusMutex.RUnlock()
 	argsForCall := fake.statusArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *FakeClient) StatusReturns(result1 *types.Operation, result2 error) {
@@ -1304,38 +1306,6 @@ func (fake *FakeClient) UpdateInstanceReturnsOnCall(i int, result1 *types.Servic
 func (fake *FakeClient) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.bindMutex.RLock()
-	defer fake.bindMutex.RUnlock()
-	fake.callMutex.RLock()
-	defer fake.callMutex.RUnlock()
-	fake.deprovisionMutex.RLock()
-	defer fake.deprovisionMutex.RUnlock()
-	fake.getBindingByIDMutex.RLock()
-	defer fake.getBindingByIDMutex.RUnlock()
-	fake.getInstanceByIDMutex.RLock()
-	defer fake.getInstanceByIDMutex.RUnlock()
-	fake.listBindingsMutex.RLock()
-	defer fake.listBindingsMutex.RUnlock()
-	fake.listInstancesMutex.RLock()
-	defer fake.listInstancesMutex.RUnlock()
-	fake.listOfferingsMutex.RLock()
-	defer fake.listOfferingsMutex.RUnlock()
-	fake.listPlansMutex.RLock()
-	defer fake.listPlansMutex.RUnlock()
-	fake.provisionMutex.RLock()
-	defer fake.provisionMutex.RUnlock()
-	fake.renameBindingMutex.RLock()
-	defer fake.renameBindingMutex.RUnlock()
-	fake.shareInstanceMutex.RLock()
-	defer fake.shareInstanceMutex.RUnlock()
-	fake.statusMutex.RLock()
-	defer fake.statusMutex.RUnlock()
-	fake.unShareInstanceMutex.RLock()
-	defer fake.unShareInstanceMutex.RUnlock()
-	fake.unbindMutex.RLock()
-	defer fake.unbindMutex.RUnlock()
-	fake.updateInstanceMutex.RLock()
-	defer fake.updateInstanceMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

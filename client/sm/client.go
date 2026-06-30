@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -64,7 +65,7 @@ type Client interface {
 	ListOfferings(*Parameters) (*types.ServiceOfferings, error)
 	ListPlans(*Parameters) (*types.ServicePlans, error)
 
-	Status(string, *Parameters) (*types.Operation, error)
+	Status(string, types.OperationCategory, *Parameters) (*types.Operation, error)
 
 	// Call makes HTTP request to the Service Manager server with authentication.
 	// It should be used only in case there is no already implemented method for such an operation
@@ -226,9 +227,19 @@ func (client *serviceManagerClient) GetBindingByID(id string, q *Parameters) (*t
 	return binding, err
 }
 
-func (client *serviceManagerClient) Status(url string, q *Parameters) (*types.Operation, error) {
+func (client *serviceManagerClient) Status(url string, operationType types.OperationCategory, q *Parameters) (*types.Operation, error) {
 	operation := &types.Operation{}
 	err := client.get(operation, url, q)
+
+	//when polling for delete and resource was already deleted SM returns 404 - operation completed successfully
+	if operationType == types.DELETE {
+		var smError *ServiceManagerError
+		if ok := errors.As(err, &smError); ok {
+			if smError.StatusCode == http.StatusNotFound {
+				return &types.Operation{State: types.SUCCEEDED}, nil
+			}
+		}
+	}
 
 	return operation, err
 }

@@ -386,7 +386,7 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, smClient sm.Client,
 	log := logutils.GetLogger(ctx)
 	log.Info(fmt.Sprintf("binding resource is in progress, found operation url %s", serviceBinding.Status.OperationURL))
 
-	status, statusErr := smClient.Status(serviceBinding.Status.OperationURL, nil)
+	status, statusErr := smClient.Status(serviceBinding.Status.OperationURL, serviceBinding.Status.OperationType, nil)
 	if statusErr != nil {
 		log.Info(fmt.Sprintf("failed to fetch operation, got error from SM: %s", statusErr.Error()), "operationURL", serviceBinding.Status.OperationURL)
 		return utils.HandleServiceManagerError(ctx, r.Client, serviceBinding, serviceBinding.Status.OperationType, statusErr, true)
