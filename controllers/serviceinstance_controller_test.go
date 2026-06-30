@@ -338,7 +338,7 @@ var _ = Describe("ServiceInstance controller", func() {
 
 			When("polling ends with failure", func() {
 				BeforeEach(func() {
-					fakeClient.StatusStub = func(url string, parameters *sm.Parameters) (*smClientTypes.Operation, error) {
+					fakeClient.StatusStub = func(url string, operationType smClientTypes.OperationCategory, parameters *sm.Parameters) (*smClientTypes.Operation, error) {
 						if strings.Contains(url, "successful-instance-id") {
 							return &smClientTypes.Operation{
 								Type:        smClientTypes.CREATE,
