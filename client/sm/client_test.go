@@ -1001,7 +1001,7 @@ TSTAhYWEQVZqRKYQMYGHpNlU
 			}
 		})
 
-		It("should return it", func() {
+		It("should return the operation when exist", func() {
 			result, err := client.Status(types.ServiceInstancesURL+"/1234/"+operation.ID, types.CREATE, params)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(result).To(Equal(operation))

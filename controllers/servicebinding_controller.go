@@ -414,6 +414,7 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, smClient sm.Client,
 				}
 			}
 		}
+		log.Info("status error is 'SM not found' for delete operation, return error and poll again")
 		return utils.HandleServiceManagerError(ctx, r.Client, serviceBinding, serviceBinding.Status.OperationType, statusErr, true)
 	}
 
