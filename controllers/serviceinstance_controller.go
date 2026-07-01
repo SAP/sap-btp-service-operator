@@ -390,7 +390,7 @@ func (r *ServiceInstanceReconciler) handleInstanceSharing(ctx context.Context, s
 func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client, serviceInstance *v1.ServiceInstance) (ctrl.Result, error) {
 	log := logutils.GetLogger(ctx)
 	log.Info(fmt.Sprintf("instance %s is '%s' in progress, polling operation %s", serviceInstance.Status.InstanceID, serviceInstance.Status.OperationType, serviceInstance.Status.OperationURL))
-	status, statusErr := smClient.Status(serviceInstance.Status.OperationURL, nil)
+	status, statusErr := smClient.Status(serviceInstance.Status.OperationURL, serviceInstance.Status.OperationType, nil)
 	if statusErr != nil {
 		log.Info(fmt.Sprintf("failed to fetch operation, got error from SM: %s", statusErr.Error()), "operationURL", serviceInstance.Status.OperationURL)
 		return utils.HandleServiceManagerError(ctx, r.Client, serviceInstance, serviceInstance.Status.OperationType, statusErr, true)

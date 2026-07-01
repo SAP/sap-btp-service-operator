@@ -986,7 +986,7 @@ TSTAhYWEQVZqRKYQMYGHpNlU
 		Expect(opUrl).To(Equal("/v1/service_instances/1234/operations/5678"))
 	})
 
-	When("checking status of existing op", func() {
+	Context("Status", func() {
 		var operation *types.Operation
 		BeforeEach(func() {
 			operation = &types.Operation{
@@ -1001,11 +1001,43 @@ TSTAhYWEQVZqRKYQMYGHpNlU
 			}
 		})
 
-		It("should return it", func() {
-			result, err := client.Status(types.ServiceInstancesURL+"/1234/"+operation.ID, params)
+		It("should return the operation when exist", func() {
+			result, err := client.Status(types.ServiceInstancesURL+"/1234/"+operation.ID, types.CREATE, params)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(result).To(Equal(operation))
 		})
+
+		When("SM returned 404", func() {
+			When("last operation is delete", func() {
+				BeforeEach(func() {
+					handlerDetails = []HandlerDetails{
+						{Method: http.MethodGet, Path: types.ServiceInstancesURL + "/", ResponseStatusCode: http.StatusNotFound},
+					}
+				})
+				It("should return succeeded operation", func() {
+					result, err := client.Status(types.ServiceInstancesURL+"/1234/"+operation.ID, types.DELETE, params)
+					Expect(err).ShouldNot(HaveOccurred())
+					Expect(result.State).To(Equal(types.SUCCEEDED))
+				})
+			})
+
+			When("last operation is not delete", func() {
+				BeforeEach(func() {
+					handlerDetails = []HandlerDetails{
+						{Method: http.MethodGet, Path: types.ServiceInstancesURL + "/", ResponseStatusCode: http.StatusNotFound},
+					}
+				})
+				It("should fail for create", func() {
+					_, err := client.Status(types.ServiceInstancesURL+"/1234/"+operation.ID, types.CREATE, params)
+					expectErrorToContainSubstringAndStatusCode(err, "", http.StatusNotFound)
+				})
+				It("should fail for update", func() {
+					_, err := client.Status(types.ServiceInstancesURL+"/1234/"+operation.ID, types.UPDATE, params)
+					expectErrorToContainSubstringAndStatusCode(err, "", http.StatusNotFound)
+				})
+			})
+		})
+
 	})
 })
 

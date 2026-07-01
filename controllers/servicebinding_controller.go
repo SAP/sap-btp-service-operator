@@ -386,9 +386,35 @@ func (r *ServiceBindingReconciler) poll(ctx context.Context, smClient sm.Client,
 	log := logutils.GetLogger(ctx)
 	log.Info(fmt.Sprintf("binding resource is in progress, found operation url %s", serviceBinding.Status.OperationURL))
 
-	status, statusErr := smClient.Status(serviceBinding.Status.OperationURL, nil)
+	status, statusErr := smClient.Status(serviceBinding.Status.OperationURL, serviceBinding.Status.OperationType, nil)
 	if statusErr != nil {
-		log.Info(fmt.Sprintf("failed to fetch operation, got error from SM: %s", statusErr.Error()), "operationURL", serviceBinding.Status.OperationURL)
+		log.Info(fmt.Sprintf("failed to fetch operation, got error from SM: %s", statusErr.Error()), "operationURL", serviceBinding.Status.OperationURL, "operationType", serviceBinding.Status.OperationType)
+		if serviceBinding.Status.OperationType == smClientTypes.DELETE {
+			var smError *sm.ServiceManagerError
+			if ok := errors.As(statusErr, &smError); ok && smError.StatusCode == http.StatusInternalServerError {
+				log.Info("sm returned 500 for polling delete operation, checking if binding still exist")
+				if _, err := smClient.GetBindingByID(serviceBinding.Status.BindingID, nil); err != nil {
+					if ok = errors.As(err, &smError); ok {
+						log.Error(smError, fmt.Sprintf("SM returned status code %d", smError.StatusCode))
+						if smError.StatusCode == http.StatusNotFound {
+							log.Info("binding does not exist in SM after deletion, deleting binding secret")
+							if _, err := r.deleteSecretAndRemoveFinalizer(ctx, serviceBinding); err != nil {
+								log.Error(err, "failed to delete binding secret and remove finalizer after delete operation completed")
+								return ctrl.Result{}, err
+							}
+							serviceBinding.Status.BindingID = ""
+							serviceBinding.Status.OperationURL = ""
+							serviceBinding.Status.OperationType = ""
+							r.Retries.Reset(types.NamespacedName{Name: serviceBinding.Name, Namespace: serviceBinding.Namespace})
+							return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
+						}
+					}
+					log.Info("status error is not 'SM not found', return error and poll again")
+					return ctrl.Result{}, statusErr
+				}
+			}
+		}
+		log.Info("status error is 'SM not found' for delete operation, return error and poll again")
 		return utils.HandleServiceManagerError(ctx, r.Client, serviceBinding, serviceBinding.Status.OperationType, statusErr, true)
 	}
 
