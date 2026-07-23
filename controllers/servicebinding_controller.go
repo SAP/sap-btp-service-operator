@@ -1231,7 +1231,7 @@ func truncateString(str string, length int) string {
 	if len(str) > length {
 		return str[:length]
 	}
-	return str
+	return strings.TrimRight(str, "-_.")
 }
 
 func isBindingExistInSM(smClient sm.Client, instance *v1.ServiceInstance, bindingID string, log logr.Logger) (bool, error) {
