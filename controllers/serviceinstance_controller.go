@@ -652,6 +652,7 @@ func (r *ServiceInstanceReconciler) maintainFinalState(ctx context.Context, serv
 		updateHashedSpecValue(serviceInstance)
 		return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceInstance)
 	}
+	log.Info("maintain finished successfully")
 	return ctrl.Result{}, nil
 }
 
@@ -686,13 +687,17 @@ func isFinalState(ctx context.Context, serviceInstance *v1.ServiceInstance) bool
 }
 
 func updateRequired(serviceInstance *v1.ServiceInstance) bool {
+	if serviceInstance.Status.ForceReconcile {
+		return true
+	}
+
+	if serviceInstance.IsSubscribedToParamSecretsChanges() {
+		return true
+	}
+
 	//update is not supported for failed instances (this can occur when instance creation was asynchronously)
 	if serviceInstance.Status.Ready != metav1.ConditionTrue {
 		return false
-	}
-
-	if serviceInstance.Status.ForceReconcile {
-		return true
 	}
 
 	cond := meta.FindStatusCondition(serviceInstance.Status.Conditions, common.ConditionSucceeded)
