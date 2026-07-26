@@ -13,6 +13,7 @@ The SAP BTP service operator is based on the [Kubernetes Operator pattern](https
 - [Prerequisites for Deployment](#prerequisites-for-deployment)
 - [Installation and Setup](#installation-and-setup)
 - [Managing Access Permissions](#managing-access-permissions)
+- [Limited Cache Mode](#limited-cache-mode)
 - [Configuring Multiple Subaccounts](#configuring-multiple-subaccounts)
 - [Using the SAP BTP Service Operator](#using-the-sap-btp-service-operator)
 - [Creating Service Instances](#creating-service-instances)
@@ -197,6 +198,30 @@ By default, the SAP BTP operator has cluster-wide permissions. You can also limi
 ```
 
 **Note**: If `allow_cluster_access` is set to `true`, then the `allowed_namespaces` parameter is ignored.
+
+### Limited Cache Mode
+
+In clusters with a large number of Secrets and ConfigMaps, the operator's default behavior of caching all such resources cluster-wide can exhaust available memory and cause the operator to crash. Limited cache mode addresses this by restricting the informer cache to only the Secrets and ConfigMaps that are used by the BTP operator.
+
+This mode is enabled by default in Kyma environments and can be activated in any cluster where memory pressure is a concern.
+
+### How It Works
+
+When limited cache mode is enabled:
+
+The controller-runtime informer cache only watches Secrets and ConfigMaps that carry the label `services.cloud.sap.com/managed-by-sap-btp-operator=true`. All other Secrets and ConfigMaps are excluded from the in-memory cache.
+
+**Important**: When this mode is enabled, every Secret used by the operator (including credentials secrets and parameter secrets referenced via `parametersFrom`) must carry the label `services.cloud.sap.com/managed-by-sap-btp-operator=true`, otherwise the operator will not be able to read/watch them.
+
+### Enabling Limited Cache Mode
+
+Set the following Helm parameter during installation or upgrade:
+
+```bash
+--set manager.enable_limited_cache=true
+```
+
+[Back to top](#table-of-contents)
 
 [Back to top](#table-of-contents)
 
@@ -1031,6 +1056,39 @@ If a Kubernetes custom resource (CR) representing an SAP BTP service instance or
    - If the connection is not re-established, verify that the cluster ID in your Kubernetes cluster matches the one associated with the SAP BTP service instance or binding. You can find the cluster ID in the context details visible in the cockpit or BTP CLI. If the IDs don’t match, reconfigure your cluster with the correct ID.
 
 You’re welcome to raise issues related to feature requests, bugs, or give general feedback on this project’s [GitHub Issues page](https://github.com/sap/sap-btp-service-operator/issues). The SAP BTP service operator project maintainers will respond to the best of their abilities.
+
+### ServiceInstance/ServiceBinding is not updated when a watched parameters Secret is modified
+
+I have a `ServiceInstance` configured with `parametersFrom` referencing a Secret, and `watchParametersFromChanges: true`, but updating the Secret does not trigger an update of the service instance.
+
+**Solution**
+
+If [limited cache mode](#limited-cache-mode) is enabled, the operator only watches Secrets that carry the label `services.cloud.sap.com/managed-by-sap-btp-operator=true`. A Secret without this label is not tracked by the operator’s informer, so changes to it go undetected.
+
+Add the label to the parameters Secret:
+
+```bash
+kubectl label secret <secret-name> services.cloud.sap.com/managed-by-sap-btp-operator=true
+```
+
+Or include it in the Secret manifest:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: <secret-name>
+  labels:
+    services.cloud.sap.com/managed-by-sap-btp-operator: "true"
+type: Opaque
+stringData:
+  secret-parameter: |
+    {
+      "key": "value"
+    }
+```
+
+After labeling the Secret, the operator will detect subsequent changes and reconcile the `ServiceInstance` accordingly.
 
 [Back to top](#table-of-contents)
 
