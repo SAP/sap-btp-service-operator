@@ -206,8 +206,11 @@ func AddWatchForSecretIfNeeded(ctx context.Context, k8sClient client.Client, sec
 }
 
 func RemoveWatchForSecret(ctx context.Context, k8sClient client.Client, secretKey apimachinerytypes.NamespacedName, instanceUID string) error {
+	log := logutils.GetLogger(ctx)
+	log.Info(fmt.Sprintf("removing secret watch annotation for instance %s, secret key: %v", instanceUID, secretKey))
 	secret := &corev1.Secret{}
-	if err := k8sClient.Get(ctx, secretKey, secret); err != nil {
+	if err := GetSecretWithFallback(ctx, secretKey, secret); err != nil {
+		log.Error(err, fmt.Sprintf("failed to get secret %s, unable to remove watch", secretKey.Name))
 		return client.IgnoreNotFound(err)
 	}
 
@@ -223,6 +226,7 @@ func RemoveWatchForSecret(ctx context.Context, k8sClient client.Client, secretKe
 		delete(secret.Labels, common.WatchSecretLabel)
 		controllerutil.RemoveFinalizer(secret, common.FinalizerName)
 	}
+
 	return k8sClient.Update(ctx, secret)
 }
 
