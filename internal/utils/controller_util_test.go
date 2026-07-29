@@ -211,4 +211,38 @@ var _ = Describe("Controller Util", func() {
 			Expect(succeededCond.Reason).To(Equal(common.CreateInProgress))
 		})
 	})
+
+	Context("TruncateStringToValidLabelValue", func() {
+		It("returns the string unchanged when shorter than length", func() {
+			Expect(TruncateStringToValidLabelValue("short", 10)).To(Equal("short"))
+		})
+
+		It("returns the string unchanged when equal to length", func() {
+			Expect(TruncateStringToValidLabelValue("exact", 5)).To(Equal("exact"))
+		})
+
+		It("truncates a string that exceeds length", func() {
+			Expect(TruncateStringToValidLabelValue("toolongstring", 6)).To(Equal("toolon"))
+		})
+
+		It("strips trailing hyphens after truncation", func() {
+			Expect(TruncateStringToValidLabelValue("abc---xyz", 6)).To(Equal("abc"))
+		})
+
+		It("strips trailing underscores after truncation", func() {
+			Expect(TruncateStringToValidLabelValue("abc___xyz", 6)).To(Equal("abc"))
+		})
+
+		It("strips trailing dots after truncation", func() {
+			Expect(TruncateStringToValidLabelValue("abc...xyz", 6)).To(Equal("abc"))
+		})
+
+		It("strips mixed trailing invalid characters after truncation", func() {
+			Expect(TruncateStringToValidLabelValue("abc-._xyz", 6)).To(Equal("abc"))
+		})
+
+		It("returns an empty string unchanged", func() {
+			Expect(TruncateStringToValidLabelValue("", 10)).To(Equal(""))
+		})
+	})
 })

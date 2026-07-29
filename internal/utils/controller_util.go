@@ -302,3 +302,10 @@ func serialize(value interface{}) ([]byte, format, error) {
 	}
 	return data, JSON, nil
 }
+
+func TruncateStringToValidLabelValue(str string, length int) string {
+	if len(str) > length {
+		return strings.TrimRight(str[:length], "-_.")
+	}
+	return str
+}
