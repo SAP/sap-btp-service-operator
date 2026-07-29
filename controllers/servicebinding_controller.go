@@ -1049,7 +1049,7 @@ func (r *ServiceBindingReconciler) createOldBinding(ctx context.Context, suffix 
 	}
 	oldBinding.Labels = map[string]string{
 		common.StaleBindingIDLabel:         binding.Status.BindingID,
-		common.StaleBindingRotationOfLabel: truncateString(binding.Name, 63),
+		common.StaleBindingRotationOfLabel: utils.TruncateStringToValidLabelValue(binding.Name, 63),
 	}
 	oldBinding.Annotations = map[string]string{
 		common.StaleBindingOrigBindingNameAnnotation: binding.Name,
@@ -1225,13 +1225,6 @@ func singleKeyMap(credentialsMap map[string][]byte, key string) (map[string][]by
 	return map[string][]byte{
 		key: credBytes,
 	}, nil
-}
-
-func truncateString(str string, length int) string {
-	if len(str) > length {
-		return str[:length]
-	}
-	return strings.TrimRight(str, "-_.")
 }
 
 func isBindingExistInSM(smClient sm.Client, instance *v1.ServiceInstance, bindingID string, log logr.Logger) (bool, error) {

@@ -1464,7 +1464,7 @@ stringData:
 				Expect(oldBinding.Annotations[common.StaleBindingOrigBindingNameAnnotation]).To(Equal(longBindingName))
 				Expect(len(oldBinding.Labels)).To(Equal(2))
 				Expect(oldBinding.Labels[common.StaleBindingIDLabel]).To(Equal(origBindingID))
-				Expect(oldBinding.Labels[common.StaleBindingRotationOfLabel]).To(Equal(truncateString(binding.Name, 63)))
+				Expect(oldBinding.Labels[common.StaleBindingRotationOfLabel]).To(Equal(utils.TruncateStringToValidLabelValue(binding.Name, 63)))
 
 				secret = getSecret(ctx, oldBinding.Spec.SecretName, bindingTestNamespace, true)
 				val = secret.Data["secret_key2"]
