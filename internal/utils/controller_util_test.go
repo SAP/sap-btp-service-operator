@@ -238,7 +238,11 @@ var _ = Describe("Controller Util", func() {
 		})
 
 		It("strips mixed trailing invalid characters after truncation", func() {
-			Expect(TruncateStringToValidLabelValue("abc-._xyz", 6)).To(Equal("abc"))
+			Expect(TruncateStringToValidLabelValue("abc.-_xyz", 6)).To(Equal("abc"))
+		})
+
+		It("strips mixed trailing invalid characters after truncation", func() {
+			Expect(TruncateStringToValidLabelValue("abc.--._._xyz", 6)).To(Equal("abc"))
 		})
 
 		It("returns an empty string unchanged", func() {
