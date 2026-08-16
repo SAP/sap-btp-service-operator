@@ -4,8 +4,8 @@ go 1.26.5
 
 require (
 	github.com/evanphx/json-patch/v5 v5.9.11
-	github.com/go-sprout/sprout v1.1.0
 	github.com/go-logr/logr v1.4.4
+	github.com/go-sprout/sprout v1.1.0
 	github.com/google/uuid v1.6.0
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/lithammer/dedent v1.1.0
@@ -16,7 +16,7 @@ require (
 	k8s.io/api v0.36.3
 	k8s.io/apimachinery v0.36.3
 	k8s.io/client-go v0.36.3
-	k8s.io/utils v0.0.0-20260617174310-a95e086a2553
+	k8s.io/utils v0.0.0-20260707023825-cf1189d6abe3
 	sigs.k8s.io/controller-runtime v0.24.1
 	sigs.k8s.io/yaml v1.6.0
 )
