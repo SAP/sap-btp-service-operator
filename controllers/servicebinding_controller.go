@@ -557,7 +557,7 @@ func (r *ServiceBindingReconciler) maintain(ctx context.Context, smClient sm.Cli
 
 	log.Info("maintain finished successfully")
 
-	utils.SetSuccessConditions(smClientTypes.CREATE, binding, false)
+	//utils.SetSuccessConditions(smClientTypes.CREATE, binding, false)
 	return ctrl.Result{}, r.Status().Update(ctx, binding)
 }
 
