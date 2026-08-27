@@ -268,11 +268,6 @@ func HandleInstanceSharingError(ctx context.Context, k8sClient client.Client, ob
 
 func handleRateLimitError(ctx context.Context, sClient client.Client, resource common.SAPBTPResource, operationType smClientTypes.OperationCategory, smError *sm.ServiceManagerError) (ctrl.Result, error) {
 	log := logutils.GetLogger(ctx)
-	if updateErr := UpdateStatus(ctx, sClient, resource); updateErr != nil {
-		log.Info("failed to update status after rate limit error")
-		return ctrl.Result{}, updateErr
-	}
-
 	retryAfterStr := smError.ResponseHeaders.Get("Retry-After")
 	if len(retryAfterStr) > 0 {
 		log.Info(fmt.Sprintf("SM returned 429 with Retry-After: %s, requeueing after it...", retryAfterStr))
@@ -285,6 +280,7 @@ func handleRateLimitError(ctx context.Context, sClient client.Client, resource c
 		}
 	}
 
+	log.Error(smError, "invalid Retry-After header, using default requeue time")
 	return ctrl.Result{}, smError
 }
 
