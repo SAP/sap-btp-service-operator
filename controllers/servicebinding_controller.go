@@ -556,12 +556,6 @@ func (r *ServiceBindingReconciler) maintain(ctx context.Context, smClient sm.Cli
 	}
 
 	log.Info("maintain finished successfully")
-
-	cond := meta.FindStatusCondition(binding.Status.Conditions, common.ConditionSucceeded)
-	if cond == nil || cond.Status == metav1.ConditionFalse {
-		utils.SetSuccessConditions(smClientTypes.CREATE, binding, false)
-		return ctrl.Result{}, r.Status().Update(ctx, binding)
-	}
 	return ctrl.Result{}, nil
 }
 
@@ -571,6 +565,11 @@ func (r *ServiceBindingReconciler) maintainSecret(ctx context.Context, smClient 
 		log.Info("observed generation is up to date, checking if secret exists")
 		if _, err := r.getSecret(ctx, serviceBinding.Namespace, serviceBinding.Spec.SecretName); err == nil {
 			log.Info("secret exists, no need to maintain secret")
+			cond := meta.FindStatusCondition(serviceBinding.Status.Conditions, common.ConditionSucceeded)
+			if cond == nil || cond.Reason == common.InProgress {
+				utils.SetSuccessConditions(smClientTypes.CREATE, serviceBinding, false)
+				return utils.UpdateStatus(ctx, r.Client, serviceBinding)
+			}
 			return nil
 		}
 
@@ -589,7 +588,7 @@ func (r *ServiceBindingReconciler) maintainSecret(ctx context.Context, smClient 
 			if err = r.storeBindingSecret(ctx, serviceBinding, smBinding); err != nil {
 				return err
 			}
-			log.Info("Updating binding", "bindingID", smBinding.ID)
+			log.Info("Updating binding status", "bindingID", smBinding.ID)
 			utils.SetSuccessConditions(smClientTypes.UPDATE, serviceBinding, false)
 		}
 	}
