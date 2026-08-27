@@ -4,11 +4,8 @@ import (
 	"encoding/json"
 
 	"github.com/SAP/sap-btp-service-operator/api/common"
-	"github.com/SAP/sap-btp-service-operator/client/sm"
-	smclientTypes "github.com/SAP/sap-btp-service-operator/client/sm/types"
-	"k8s.io/apimachinery/pkg/api/meta"
-
 	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
+	"github.com/SAP/sap-btp-service-operator/client/sm"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	authv1 "k8s.io/api/authentication/v1"
@@ -199,16 +196,22 @@ var _ = Describe("Controller Util", func() {
 		AfterEach(func() {
 			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
 		})
-		It("should update the condition to in progress", func() {
+		It("should return nil if retry after is valid", func() {
 			headers := map[string][]string{"Retry-After": {"2024-11-11 14:59:33 +0000 UTC"}}
-			_, err := handleRateLimitError(ctx, k8sClient, resource, smclientTypes.CREATE, &sm.ServiceManagerError{ResponseHeaders: headers})
+			_, err := handleRateLimitError(ctx, &sm.ServiceManagerError{ResponseHeaders: headers})
 			Expect(err).ToNot(HaveOccurred())
-			conds := resource.GetConditions()
-			Expect(len(conds)).To(Equal(2))
-			succeededCond := meta.FindStatusCondition(conds, common.ConditionSucceeded)
-			Expect(succeededCond).NotTo(BeNil())
-			Expect(succeededCond.Status).To(Equal(metav1.ConditionFalse))
-			Expect(succeededCond.Reason).To(Equal(common.CreateInProgress))
+		})
+
+		It("should return error if retry after is invalid", func() {
+			headers := map[string][]string{"Retry-After": {"2024444-11-11 14:59:33 +0000 UTC"}}
+			_, err := handleRateLimitError(ctx, &sm.ServiceManagerError{ResponseHeaders: headers})
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("should return error if retry after header not exist", func() {
+			headers := map[string][]string{}
+			_, err := handleRateLimitError(ctx, &sm.ServiceManagerError{ResponseHeaders: headers})
+			Expect(err).To(HaveOccurred())
 		})
 	})
 
