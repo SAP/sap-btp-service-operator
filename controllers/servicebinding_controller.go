@@ -557,8 +557,12 @@ func (r *ServiceBindingReconciler) maintain(ctx context.Context, smClient sm.Cli
 
 	log.Info("maintain finished successfully")
 
-	//utils.SetSuccessConditions(smClientTypes.CREATE, binding, false)
-	return ctrl.Result{}, r.Status().Update(ctx, binding)
+	cond := meta.FindStatusCondition(binding.Status.Conditions, common.ConditionSucceeded)
+	if cond == nil || cond.Status == metav1.ConditionFalse {
+		utils.SetSuccessConditions(smClientTypes.CREATE, binding, false)
+		return ctrl.Result{}, r.Status().Update(ctx, binding)
+	}
+	return ctrl.Result{}, nil
 }
 
 func (r *ServiceBindingReconciler) maintainSecret(ctx context.Context, smClient sm.Client, serviceBinding *v1.ServiceBinding) error {
