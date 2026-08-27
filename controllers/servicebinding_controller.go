@@ -556,7 +556,9 @@ func (r *ServiceBindingReconciler) maintain(ctx context.Context, smClient sm.Cli
 	}
 
 	log.Info("maintain finished successfully")
-	return ctrl.Result{}, nil
+
+	utils.SetSuccessConditions(smClientTypes.CREATE, binding, false)
+	return ctrl.Result{}, r.Status().Update(ctx, binding)
 }
 
 func (r *ServiceBindingReconciler) maintainSecret(ctx context.Context, smClient sm.Client, serviceBinding *v1.ServiceBinding) error {

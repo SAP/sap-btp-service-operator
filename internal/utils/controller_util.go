@@ -268,7 +268,6 @@ func HandleInstanceSharingError(ctx context.Context, k8sClient client.Client, ob
 
 func handleRateLimitError(ctx context.Context, sClient client.Client, resource common.SAPBTPResource, operationType smClientTypes.OperationCategory, smError *sm.ServiceManagerError) (ctrl.Result, error) {
 	log := logutils.GetLogger(ctx)
-	SetInProgressConditions(ctx, operationType, "", resource, false)
 	if updateErr := UpdateStatus(ctx, sClient, resource); updateErr != nil {
 		log.Info("failed to update status after rate limit error")
 		return ctrl.Result{}, updateErr
