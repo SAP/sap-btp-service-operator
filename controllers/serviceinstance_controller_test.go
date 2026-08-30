@@ -1033,14 +1033,13 @@ var _ = Describe("ServiceInstance controller", func() {
 				})
 
 				When("shared failed with rate limit error", func() {
-					It("status should be shared in progress", func() {
+					It("should succeed eventually", func() {
 						fakeClient.ShareInstanceReturns(&sm.ServiceManagerError{
 							StatusCode:  http.StatusTooManyRequests,
 							Description: "transient",
 						})
 						serviceInstance.Spec.Shared = pointer.Bool(true)
 						updateInstance(ctx, serviceInstance)
-						waitForResourceCondition(ctx, serviceInstance, common.ConditionSucceeded, metav1.ConditionFalse, common.InProgress, "Operation in progress")
 						fakeClient.ShareInstanceReturns(nil)
 						waitForInstanceToBeShared(ctx, serviceInstance)
 					})

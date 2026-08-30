@@ -119,7 +119,7 @@ func HandleServiceManagerError(ctx context.Context, k8sClient client.Client, res
 	if ok := errors.As(err, &smError); ok {
 		if smError.StatusCode == http.StatusTooManyRequests {
 			log.Info(fmt.Sprintf("SM returned 429 (%s), requeueing...", smError.Error()))
-			return handleRateLimitError(ctx, k8sClient, resource, operationType, smError)
+			return handleRateLimitError(ctx, smError)
 		}
 	}
 
@@ -135,7 +135,7 @@ func HandleCredRotationError(ctx context.Context, k8sClient client.Client, bindi
 	if ok := errors.As(err, &smError); ok {
 		if smError.StatusCode == http.StatusTooManyRequests {
 			log.Info(fmt.Sprintf("SM returned 429 (%s), requeueing...", smError.Error()))
-			return handleRateLimitError(ctx, k8sClient, binding, common.Unknown, smError)
+			return handleRateLimitError(ctx, smError)
 		}
 		log.Info(fmt.Sprintf("SM returned error: %s", smError.Error()))
 	}
@@ -247,7 +247,7 @@ func HandleInstanceSharingError(ctx context.Context, k8sClient client.Client, ob
 		errMsg = smError.Error()
 
 		if smError.StatusCode == http.StatusTooManyRequests {
-			return handleRateLimitError(ctx, k8sClient, object, common.Unknown, smError)
+			return handleRateLimitError(ctx, smError)
 		} else if reason == common.ShareFailed &&
 			(smError.StatusCode == http.StatusBadRequest || smError.StatusCode == http.StatusInternalServerError) {
 			/* non-transient error may occur only when sharing
@@ -266,14 +266,8 @@ func HandleInstanceSharingError(ctx context.Context, k8sClient client.Client, ob
 	return ctrl.Result{}, err
 }
 
-func handleRateLimitError(ctx context.Context, sClient client.Client, resource common.SAPBTPResource, operationType smClientTypes.OperationCategory, smError *sm.ServiceManagerError) (ctrl.Result, error) {
+func handleRateLimitError(ctx context.Context, smError *sm.ServiceManagerError) (ctrl.Result, error) {
 	log := logutils.GetLogger(ctx)
-	SetInProgressConditions(ctx, operationType, "", resource, false)
-	if updateErr := UpdateStatus(ctx, sClient, resource); updateErr != nil {
-		log.Info("failed to update status after rate limit error")
-		return ctrl.Result{}, updateErr
-	}
-
 	retryAfterStr := smError.ResponseHeaders.Get("Retry-After")
 	if len(retryAfterStr) > 0 {
 		log.Info(fmt.Sprintf("SM returned 429 with Retry-After: %s, requeueing after it...", retryAfterStr))
@@ -286,6 +280,7 @@ func handleRateLimitError(ctx context.Context, sClient client.Client, resource c
 		}
 	}
 
+	log.Error(smError, "invalid Retry-After header, using default requeue time")
 	return ctrl.Result{}, smError
 }
 

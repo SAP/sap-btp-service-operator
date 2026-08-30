@@ -148,7 +148,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 				}
 			}
 			log.Error(err, fmt.Sprintf("failed to get instance %s from SM", serviceInstance.Status.InstanceID))
-			return ctrl.Result{}, err
+			return utils.HandleServiceManagerError(ctx, r.Client, serviceInstance, common.Unknown, err, false)
 		}
 	}
 
