@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -133,6 +134,15 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 				return ctrl.Result{}, err
 			}
 			return ctrl.Result{}, utils.RemoveFinalizer(ctx, r.Client, serviceBinding, common.FinalizerName)
+		}
+	}
+
+	if len(serviceBinding.Status.BindingID) == 0 &&
+		(len(serviceBinding.Spec.ServiceInstanceNamespace) > 0 && serviceBinding.Spec.ServiceInstanceNamespace != serviceBinding.Namespace) {
+		if !crossNamespaceBindingAllowed(serviceInstance, serviceBinding) {
+			log.Info(fmt.Sprintf("service instance does not allow cross binding, unable to create binding %s", serviceBinding.Name))
+			utils.SetFailureConditions(smClientTypes.CREATE, fmt.Sprintf("instance %s in namespace %s does not allow binding creation in this namespace", serviceInstance.Name, serviceInstance.Namespace), serviceBinding, false)
+			return ctrl.Result{}, r.Status().Update(ctx, serviceBinding)
 		}
 	}
 
@@ -1253,4 +1263,22 @@ func isBindingExistInSM(smClient sm.Client, instance *v1.ServiceInstance, bindin
 	}
 	log.Info("binding found in SM")
 	return true, nil
+}
+
+func crossNamespaceBindingAllowed(instance *v1.ServiceInstance, binding *v1.ServiceBinding) bool {
+	if len(instance.Annotations) == 0 {
+		return false
+	}
+
+	if allowed, ok := instance.Annotations[common.AllowCrossNamespaceBindingAnnotation]; !ok || allowed != "true" {
+		return false
+	}
+
+	if namespaces, ok := instance.Annotations[common.AllowedNamespacesForBindingAnnotation]; ok {
+		allowedNamespaces := strings.Split(namespaces, ",")
+		if !slices.Contains(allowedNamespaces, binding.Namespace) {
+			return false
+		}
+	}
+	return true
 }
