@@ -436,6 +436,45 @@ my-secret   Opaque   5      32s
 
 See [Using Secrets](https://kubernetes.io/docs/concepts/configuration/secret/) to learn about different options on how to use the credentials from your application running in the Kubernetes cluster.
 
+#### Creating a Service Binding for a Service Instance in a Different Namespace
+
+By default, a `ServiceBinding` must be created in the same namespace as the service instance it refers to. To bind an application in one namespace to a service instance in another namespace, two things are needed: the service instance must allow it, and the service binding must name the namespace of the service instance.
+
+1. On the service instance, allow cross-namespace service bindings by adding the annotation `services.cloud.sap.com/allowCrossNamespaceBinding: "true"`. The value must be exactly `"true"`.
+
+   To limit which namespaces the service bindings can be created in, additionally add the annotation `services.cloud.sap.com/allowedNamespacesForBinding` with a comma-separated list of namespaces, without spaces:
+
+```yaml
+apiVersion: services.cloud.sap.com/v1
+kind: ServiceInstance
+metadata:
+  name: sample-instance
+  namespace: instance-namespace
+  annotations:
+    services.cloud.sap.com/allowCrossNamespaceBinding: "true"
+    services.cloud.sap.com/allowedNamespacesForBinding: "app-namespace-a,app-namespace-b"
+spec:
+  serviceOfferingName: sample-service
+  servicePlanName: sample-plan
+```
+
+2. In the `ServiceBinding`, set the `serviceInstanceNamespace` field to the namespace of the service instance:
+
+```yaml
+apiVersion: services.cloud.sap.com/v1
+kind: ServiceBinding
+metadata:
+  name: sample-binding
+  namespace: app-namespace-a
+spec:
+  serviceInstanceName: sample-instance
+  serviceInstanceNamespace: instance-namespace
+```
+
+If the service instance does not allow the binding, because the `services.cloud.sap.com/allowCrossNamespaceBinding: "true"` annotation is missing, or because the binding's namespace is not on the `services.cloud.sap.com/allowedNamespacesForBinding` list, the binding is not created. Its `Succeeded` condition is set to `false` with the reason `Blocked` and the message `couldn't find the service instance 'sample-instance' in namespace 'instance-namespace' or instance does not allow cross namespace binding`. This is the same message that appears when the service instance does not exist. The operator retries automatically: once the service instance allows the binding, the binding is created without any further action on your side.
+
+The same conditions apply when the credentials of a cross-namespace service binding are rotated (see [Automating Service Binding Rotation](#automating-service-binding-rotation)): the rotation creates a new service binding, which is created only if the service instance allows it at that time.
+
 [Back to top](#table-of-contents)
 
 ## Service Binding Secret Formats
@@ -845,10 +884,8 @@ secret-parameter: |
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `services.cloud.sap.com/preventDeletion` | `map[string]string` | You can prevent deletion of any service instance by adding the following annotation: `services.cloud.sap.com/preventDeletion: "true"`. To enable back the deletion of the instance, either remove the annotation or set it to `false`. |
-| `services.cloud.sap.com/allowCrossNamespaceBinding` | `map[string]string` | You bind an application to a service instance by creating a service binding. By default, the service binding must be in the same namespace as the service instance. To allow service bindings for the instance in other namespaces, add the following annotation to the service instance: `services.cloud.sap.com/allowCrossNamespaceBinding: "true"`. If this annotation is missing or has any other value, a service binding for the instance in another namespace is not created: its `Succeeded` condition is set to `false` with the reason `Blocked` and the message `couldn't find the service instance '<instance-name>' in namespace '<instance-namespace>' or instance does not allow cross namespace binding`. To restrict cross-namespace binding to specific namespaces, additionally use the `services.cloud.sap.com/allowedNamespacesForBinding` annotation. |
-| `services.cloud.sap.com/allowedNamespacesForBinding` | `map[string]string` | Optional. Restricts cross-namespace binding to specific namespaces. This annotation takes effect only when the service instance is also annotated with `services.cloud.sap.com/allowCrossNamespaceBinding: "true"`. Provide a comma-separated list, without spaces, of the namespaces in which service bindings for the instance can be created, for example: `services.cloud.sap.com/allowedNamespacesForBinding: "namespace-a,namespace-b"`. A service binding in a namespace that is not on the list is not created; its `Succeeded` condition is set to `false` with the reason `Blocked`, as described above. If this annotation is not set, service bindings for the instance can be created in any namespace. |
-
-Note that the checks above also apply when the credentials of an existing cross-namespace service binding are rotated: credentials rotation creates a new service binding in SAP Service Manager, and the new binding is created only if the service instance allows cross-namespace binding at that time.
+| `services.cloud.sap.com/allowCrossNamespaceBinding` | `map[string]string` | By default, a service binding must be created in the same namespace as the service instance it refers to. To allow the creation of service bindings for the service instance in other namespaces, annotate it with `services.cloud.sap.com/allowCrossNamespaceBinding: "true"`. The value must be exactly `"true"`; if the annotation is missing or has any other value, a cross-namespace service binding for the instance is not created, and its `Succeeded` condition is set to `false` with the reason `Blocked`. See [Creating a Service Binding for a Service Instance in a Different Namespace](#creating-a-service-binding-for-a-service-instance-in-a-different-namespace). |
+| `services.cloud.sap.com/allowedNamespacesForBinding` | `map[string]string` | Optional. Limits cross-namespace service bindings to specific namespaces. It takes effect only when the service instance is also annotated with `services.cloud.sap.com/allowCrossNamespaceBinding: "true"`. The value is a comma-separated list, without spaces, of the namespaces in which service bindings for the instance can be created, for example: `services.cloud.sap.com/allowedNamespacesForBinding: "namespace-a,namespace-b"`. A service binding in a namespace that is not on the list is not created (an empty value allows no namespace). If this annotation is not set, service bindings for the instance can be created in any namespace. |
 
 ### Service Binding Properties
 
@@ -857,7 +894,7 @@ Note that the checks above also apply when the credentials of an existing cross-
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `serviceInstanceName*` | `string` | The Kubernetes name of the service instance to bind. |
-| `serviceInstanceNamespace` | `string` | The namespace of the service instance to bind, if not specified the default is the binding’s namespace. Note that a service binding can reference a service instance in a different namespace only if the service instance is annotated with `services.cloud.sap.com/allowCrossNamespaceBinding: "true"`. If the service instance is not annotated this way, or if its `services.cloud.sap.com/allowedNamespacesForBinding` annotation is set and does not include the binding’s namespace, the binding is not created and its `Succeeded` condition is set to `false` with the reason `Blocked`. See [Annotations](#annotations). |
+| `serviceInstanceNamespace` | `string` | The namespace of the service instance to bind, if not specified the default is the binding’s namespace. A service binding can reference a service instance in a different namespace only if the service instance allows it. See [Creating a Service Binding for a Service Instance in a Different Namespace](#creating-a-service-binding-for-a-service-instance-in-a-different-namespace). |
 | `externalName` | `string` | The name for the service binding in SAP BTP, defaults to the binding `metadata.name` if not specified. |
 | `secretName` | `string` | The name of the secret where the credentials are stored, defaults to the binding `metadata.name` if not specified. |
 | `secretKey` | `string` | The secret key is a part of the Secret object, which stores service-binding data (credentials) received from the broker. When the secret key is used, all the credentials are stored under a single key. This makes it a convenient way to store credentials data in one file when using volumeMounts. [Example](#service-binding-secret-formats) |
