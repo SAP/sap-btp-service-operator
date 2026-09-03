@@ -1473,7 +1473,7 @@ stringData:
 		})
 	})
 
-	FContext("Cross Namespace", func() {
+	Context("Cross Namespace", func() {
 		var crossBinding *v1.ServiceBinding
 		var serviceInstanceInAnotherNamespace *v1.ServiceInstance
 		BeforeEach(func() {
