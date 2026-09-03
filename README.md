@@ -1033,6 +1033,29 @@ btp delete services/binding \
 
 **Note**: `force_k8s_binding` is supported only for Kubernetes instances that are in the `Delete Failed` state.
 
+### Binding creation fails with "instance not found", but the instance exists in a different namespace
+
+My `ServiceBinding` references a service instance in a different namespace through `serviceInstanceNamespace`. The instance exists and is ready, but the binding is not created and the message says the instance was not found. This can also happen when the credentials of a binding that worked before are rotated: rotation creates a new binding, which is subject to the same checks. Its `Succeeded` condition is `false` with the reason `Blocked` and the message `couldn't find the service instance '<instance-name>' in namespace '<instance-namespace>' or instance does not allow cross namespace binding`.
+
+**Solution**
+
+A service instance must explicitly allow service bindings from other namespaces. The operator reports a missing instance and an instance that does not allow cross-namespace binding with the same message, so that the annotations cannot be used to discover service instances in other namespaces.
+
+1. Check that `serviceInstanceName` and `serviceInstanceNamespace` in the binding are correct.
+2. Allow cross-namespace binding on the service instance:
+
+   ```bash
+   kubectl annotate serviceinstance <instance-name> services.cloud.sap.com/allowCrossNamespaceBinding=true -n <instance-namespace>
+   ```
+
+3. If the service instance also carries the `services.cloud.sap.com/allowedNamespacesForBinding` annotation, make sure the namespace of the binding is on the list. The list is comma-separated, without spaces:
+
+   ```bash
+   kubectl annotate serviceinstance <instance-name> services.cloud.sap.com/allowedNamespacesForBinding=<namespace-a>,<namespace-b> -n <instance-namespace> --overwrite
+   ```
+
+The operator retries the binding automatically after the service instance is annotated. See [Creating a Service Binding for a Service Instance in a Different Namespace](#creating-a-service-binding-for-a-service-instance-in-a-different-namespace).
+
 ### Cluster is unavailable, and I still have service instances and bindings
 
 I cannot delete service instances and bindings because the cluster in which they were created is no longer available.
