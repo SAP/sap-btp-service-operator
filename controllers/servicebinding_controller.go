@@ -140,9 +140,10 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	if len(serviceBinding.Status.BindingID) == 0 &&
 		(len(serviceBinding.Spec.ServiceInstanceNamespace) > 0 && serviceBinding.Spec.ServiceInstanceNamespace != serviceBinding.Namespace) {
 		if !crossNamespaceBindingAllowed(serviceInstance, serviceBinding) {
-			log.Info(fmt.Sprintf("service instance does not allow cross binding, unable to create binding %s", serviceBinding.Name))
-			utils.SetFailureConditions(smClientTypes.CREATE, fmt.Sprintf("instance %s in namespace %s does not allow binding creation in this namespace", serviceInstance.Name, serviceInstance.Namespace), serviceBinding, false)
-			return ctrl.Result{}, r.Status().Update(ctx, serviceBinding)
+			log.Error(errors.New("service instance does not allow cross binding"), fmt.Sprintf("unable to create binding %s", serviceBinding.Name))
+			if !utils.IsMarkedForDeletion(serviceBinding.ObjectMeta) {
+				return r.handleInstanceForBindingNotFound(ctx, serviceBinding)
+			}
 		}
 	}
 
@@ -1139,13 +1140,13 @@ func (r *ServiceBindingReconciler) handleInstanceForBindingNotFound(ctx context.
 	if len(serviceBinding.Spec.ServiceInstanceNamespace) > 0 {
 		instanceNamespace = serviceBinding.Spec.ServiceInstanceNamespace
 	}
-	errMsg := fmt.Sprintf("couldn't find the service instance '%s' in namespace '%s'", serviceBinding.Spec.ServiceInstanceName, instanceNamespace)
-	log.Info(errMsg)
-	utils.SetBlockedCondition(ctx, errMsg, serviceBinding)
+	err := fmt.Errorf("couldn't find the service instance '%s' in namespace '%s' or instance does not allow cross namespace binding", serviceBinding.Spec.ServiceInstanceName, instanceNamespace)
+	log.Error(err, "unable to create binding")
+	utils.SetBlockedCondition(ctx, err.Error(), serviceBinding)
 	if updateErr := utils.UpdateStatus(ctx, r.Client, serviceBinding); updateErr != nil {
 		return ctrl.Result{}, updateErr
 	}
-	return ctrl.Result{}, fmt.Errorf("instance %s not found in namespace %s", serviceBinding.Spec.ServiceInstanceName, instanceNamespace)
+	return ctrl.Result{}, err
 }
 
 func isStaleServiceBinding(binding *v1.ServiceBinding) bool {
