@@ -1478,6 +1478,10 @@ stringData:
 		var serviceInstanceInAnotherNamespace *v1.ServiceInstance
 		BeforeEach(func() {
 			serviceInstanceInAnotherNamespace = createInstance(ctx, instanceName, testNamespace, instanceExternalName)
+			serviceInstanceInAnotherNamespace.Annotations = map[string]string{
+				common.AllowCrossNamespaceBindingAnnotation: "true",
+			}
+			Expect(k8sClient.Update(ctx, serviceInstanceInAnotherNamespace)).To(Succeed())
 		})
 
 		AfterEach(func() {
@@ -1495,6 +1499,91 @@ stringData:
 
 				By("Verify binding secret created")
 				getSecret(ctx, createdBinding.Spec.SecretName, createdBinding.Namespace, true)
+			})
+		})
+
+		When("cross namespace annotation is not set on the instance", func() {
+			BeforeEach(func() {
+				serviceInstanceInAnotherNamespace.Annotations = nil
+				Expect(k8sClient.Update(ctx, serviceInstanceInAnotherNamespace)).To(Succeed())
+			})
+			AfterEach(func() {
+				if crossBinding != nil {
+					deleteAndWait(ctx, crossBinding)
+					crossBinding = nil
+				}
+			})
+			It("should fail", func() {
+				var err error
+				crossBinding, err = createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, testNamespace, "cross-binding-external-name", "", false)
+				Expect(err).ToNot(HaveOccurred())
+				waitForResourceCondition(ctx, crossBinding, common.ConditionSucceeded, metav1.ConditionFalse, common.Blocked,
+					fmt.Sprintf("couldn't find the service instance '%s' in namespace '%s' or instance does not allow cross namespace binding", instanceName, testNamespace))
+			})
+		})
+
+		When("cross namespace annotation is set to false on the instance", func() {
+			BeforeEach(func() {
+				serviceInstanceInAnotherNamespace.Annotations[common.AllowCrossNamespaceBindingAnnotation] = "false"
+				Expect(k8sClient.Update(ctx, serviceInstanceInAnotherNamespace)).To(Succeed())
+			})
+			AfterEach(func() {
+				if crossBinding != nil {
+					deleteAndWait(ctx, crossBinding)
+					crossBinding = nil
+				}
+			})
+			It("should fail", func() {
+				var err error
+				crossBinding, err = createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, testNamespace, "cross-binding-external-name", "", false)
+				Expect(err).ToNot(HaveOccurred())
+				waitForResourceCondition(ctx, crossBinding, common.ConditionSucceeded, metav1.ConditionFalse, common.Blocked,
+					fmt.Sprintf("couldn't find the service instance '%s' in namespace '%s' or instance does not allow cross namespace binding", instanceName, testNamespace))
+			})
+		})
+
+		Context("allowed namespaces annotation", func() {
+			AfterEach(func() {
+				if crossBinding != nil {
+					deleteAndWait(ctx, crossBinding)
+					crossBinding = nil
+				}
+			})
+
+			When("binding namespace is in the allowed list", func() {
+				BeforeEach(func() {
+					serviceInstanceInAnotherNamespace.Annotations[common.AllowedNamespacesForBindingAnnotation] = bindingTestNamespace
+					Expect(k8sClient.Update(ctx, serviceInstanceInAnotherNamespace)).To(Succeed())
+				})
+				It("should succeed", func() {
+					crossBinding = createAndValidateBinding(ctx, bindingName, bindingTestNamespace, instanceName, testNamespace, "cross-binding-external-name", "", fakeBindingID)
+					getSecret(ctx, crossBinding.Spec.SecretName, crossBinding.Namespace, true)
+				})
+			})
+
+			When("binding namespace is in the allowed list among multiple namespaces", func() {
+				BeforeEach(func() {
+					serviceInstanceInAnotherNamespace.Annotations[common.AllowedNamespacesForBindingAnnotation] = "other-ns," + bindingTestNamespace + ",another-ns"
+					Expect(k8sClient.Update(ctx, serviceInstanceInAnotherNamespace)).To(Succeed())
+				})
+				It("should succeed", func() {
+					crossBinding = createAndValidateBinding(ctx, bindingName, bindingTestNamespace, instanceName, testNamespace, "cross-binding-external-name", "", fakeBindingID)
+					getSecret(ctx, crossBinding.Spec.SecretName, crossBinding.Namespace, true)
+				})
+			})
+
+			When("binding namespace is NOT in the allowed list", func() {
+				BeforeEach(func() {
+					serviceInstanceInAnotherNamespace.Annotations[common.AllowedNamespacesForBindingAnnotation] = "other-ns,another-ns"
+					Expect(k8sClient.Update(ctx, serviceInstanceInAnotherNamespace)).To(Succeed())
+				})
+				It("should fail with not-allowed condition", func() {
+					var err error
+					crossBinding, err = createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, testNamespace, "cross-binding-external-name", "", false)
+					Expect(err).ToNot(HaveOccurred())
+					waitForResourceCondition(ctx, crossBinding, common.ConditionSucceeded, metav1.ConditionFalse, common.Blocked,
+						fmt.Sprintf("couldn't find the service instance '%s' in namespace '%s' or instance does not allow cross namespace binding", instanceName, testNamespace))
+				})
 			})
 		})
 
