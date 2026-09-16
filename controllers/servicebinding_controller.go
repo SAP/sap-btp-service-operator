@@ -563,20 +563,25 @@ func (r *ServiceBindingReconciler) maintainSecret(ctx context.Context, smClient 
 	log := logutils.GetLogger(ctx)
 	if common.GetObservedGeneration(serviceBinding) == serviceBinding.Generation {
 		log.Info("observed generation is up to date, checking if secret exists")
-		if _, err := r.getSecret(ctx, serviceBinding.Namespace, serviceBinding.Spec.SecretName); err == nil {
-			log.Info("secret exists, no need to maintain secret")
-			cond := meta.FindStatusCondition(serviceBinding.Status.Conditions, common.ConditionSucceeded)
-			if cond == nil || cond.Reason == common.InProgress {
-				utils.SetSuccessConditions(smClientTypes.CREATE, serviceBinding, false)
-				return utils.UpdateStatus(ctx, r.Client, serviceBinding)
+		if secret, err := r.getSecret(ctx, serviceBinding.Namespace, serviceBinding.Spec.SecretName); err == nil {
+			if fmt.Sprintf("%d", serviceBinding.Generation) == secret.Annotations["bindingGeneration"] {
+				log.Info("secret exists for current generation, no need to maintain secret")
+				cond := meta.FindStatusCondition(serviceBinding.Status.Conditions, common.ConditionSucceeded)
+				if cond == nil || cond.Status == metav1.ConditionFalse {
+					utils.SetSuccessConditions(smClientTypes.UPDATE, serviceBinding, false)
+					return utils.UpdateStatus(ctx, r.Client, serviceBinding)
+				}
+				return nil
 			}
-			return nil
+		} else {
+			log.Error(err, "failed to get binding secret, will maintain secret")
+			if apierrors.IsNotFound(err) {
+				r.Recorder.Eventf(serviceBinding, nil, corev1.EventTypeWarning, "SecretDeleted", "SecretDeleted", "SecretDeleted")
+			}
 		}
-
-		log.Info("binding's secret was not found")
-		r.Recorder.Eventf(serviceBinding, nil, corev1.EventTypeWarning, "SecretDeleted", "SecretDeleted", "SecretDeleted")
 	}
 
+	// secret not exist or not generated from binding's current generation
 	log.Info("maintaining binding's secret")
 	smBinding, err := smClient.GetBindingByID(serviceBinding.Status.BindingID, nil)
 	if err != nil {
@@ -590,10 +595,10 @@ func (r *ServiceBindingReconciler) maintainSecret(ctx context.Context, smClient 
 			}
 			log.Info("Updating binding status", "bindingID", smBinding.ID)
 			utils.SetSuccessConditions(smClientTypes.UPDATE, serviceBinding, false)
+			return utils.UpdateStatus(ctx, r.Client, serviceBinding)
 		}
 	}
-
-	return utils.UpdateStatus(ctx, r.Client, serviceBinding)
+	return nil
 }
 
 func (r *ServiceBindingReconciler) getServiceInstanceForBinding(ctx context.Context, binding *v1.ServiceBinding) (*v1.ServiceInstance, error) {
@@ -674,6 +679,7 @@ func (r *ServiceBindingReconciler) storeBindingSecret(ctx context.Context, k8sBi
 		secret.Annotations = map[string]string{}
 	}
 	secret.Annotations["binding"] = k8sBinding.Name
+	secret.Annotations["bindingGeneration"] = fmt.Sprintf("%d", k8sBinding.Generation)
 
 	return r.createOrUpdateBindingSecret(ctx, k8sBinding, secret)
 }
@@ -801,7 +807,7 @@ func (r *ServiceBindingReconciler) createOrUpdateBindingSecret(ctx context.Conte
 	log := logutils.GetLogger(ctx)
 	dbSecret := &corev1.Secret{}
 	create := false
-	if err := r.Client.Get(ctx, types.NamespacedName{Name: binding.Spec.SecretName, Namespace: binding.Namespace}, dbSecret); err != nil {
+	if err := r.Get(ctx, types.NamespacedName{Name: binding.Spec.SecretName, Namespace: binding.Namespace}, dbSecret); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return err
 		}
@@ -810,7 +816,7 @@ func (r *ServiceBindingReconciler) createOrUpdateBindingSecret(ctx context.Conte
 
 	if create {
 		log.Info("Creating binding secret", "name", secret.Name)
-		if err := r.Client.Create(ctx, secret); err != nil {
+		if err := r.Create(ctx, secret); err != nil {
 			if !apierrors.IsAlreadyExists(err) {
 				return err
 			}
@@ -825,7 +831,7 @@ func (r *ServiceBindingReconciler) createOrUpdateBindingSecret(ctx context.Conte
 	dbSecret.StringData = secret.StringData
 	dbSecret.Labels = secret.Labels
 	dbSecret.Annotations = secret.Annotations
-	return r.Client.Update(ctx, dbSecret)
+	return r.Update(ctx, dbSecret)
 }
 
 func (r *ServiceBindingReconciler) deleteBindingSecret(ctx context.Context, binding *v1.ServiceBinding) error {
