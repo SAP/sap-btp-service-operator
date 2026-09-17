@@ -194,6 +194,18 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return r.handleInstanceSharing(ctx, serviceInstance, smClient)
 	}
 
+	if serviceInstance.Status.Ready == "true" {
+		cond := meta.FindStatusCondition(serviceInstance.Status.Conditions, common.ConditionSucceeded)
+		if cond == nil || cond.Status != metav1.ConditionTrue {
+			log.Info("updating instance status 'succeeded' to true")
+			opType := smClientTypes.CREATE
+			if cond != nil && cond.Reason == common.UpdateFailed {
+				opType = smClientTypes.UPDATE
+			}
+			utils.SetSuccessConditions(opType, serviceInstance, false)
+			return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceInstance)
+		}
+	}
 	log.Info("No action required")
 	return ctrl.Result{}, nil
 }
@@ -701,7 +713,7 @@ func updateRequired(serviceInstance *v1.ServiceInstance) bool {
 	}
 
 	cond := meta.FindStatusCondition(serviceInstance.Status.Conditions, common.ConditionSucceeded)
-	if cond != nil && cond.Reason == common.UpdateInProgress { //in case of transient error occurred
+	if cond != nil && (cond.Reason == common.UpdateInProgress || cond.Reason == common.UpdateFailed) {
 		return true
 	}
 
