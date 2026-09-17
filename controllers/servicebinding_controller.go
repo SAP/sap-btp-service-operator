@@ -575,10 +575,11 @@ func (r *ServiceBindingReconciler) maintainSecret(ctx context.Context, smClient 
 	if common.GetObservedGeneration(serviceBinding) == serviceBinding.Generation {
 		log.Info("observed generation is up to date, checking if secret exists")
 		if secret, err := r.getSecret(ctx, serviceBinding.Namespace, serviceBinding.Spec.SecretName); err == nil {
-			if fmt.Sprintf("%d", serviceBinding.Generation) == secret.Annotations["bindingGeneration"] {
+			if secret.Annotations != nil && fmt.Sprintf("%d", serviceBinding.Generation) == secret.Annotations["bindingGeneration"] {
 				log.Info("secret exists for current generation, no need to maintain secret")
 				cond := meta.FindStatusCondition(serviceBinding.Status.Conditions, common.ConditionSucceeded)
 				if cond == nil || cond.Status == metav1.ConditionFalse {
+					log.Info("secret is updated with current binding generation, updating success condition for binding")
 					utils.SetSuccessConditions(smClientTypes.UPDATE, serviceBinding, false)
 					return utils.UpdateStatus(ctx, r.Client, serviceBinding)
 				}
@@ -587,6 +588,7 @@ func (r *ServiceBindingReconciler) maintainSecret(ctx context.Context, smClient 
 		} else {
 			log.Error(err, "failed to get binding secret, will maintain secret")
 			if apierrors.IsNotFound(err) {
+				log.Info("secret does not exist for binding")
 				r.Recorder.Eventf(serviceBinding, nil, corev1.EventTypeWarning, "SecretDeleted", "SecretDeleted", "SecretDeleted")
 			}
 		}
