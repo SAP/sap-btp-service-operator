@@ -1143,6 +1143,7 @@ stringData:
 							ServiceBindings: []smClientTypes.ServiceBinding{*fakeBinding(testCase.lastOpState)},
 						}, nil)
 					fakeClient.StatusReturns(&smClientTypes.Operation{ResourceID: fakeBindingID, State: smClientTypes.INPROGRESS}, nil)
+					fakeClient.GetBindingByIDReturns(fakeBinding(testCase.lastOpState), nil)
 				})
 
 				AfterEach(func() {
@@ -1392,6 +1393,7 @@ stringData:
 				fakeClient.BindReturns(&smClientTypes.ServiceBinding{ID: bindingID, Credentials: json.RawMessage(`{"secret_key": "secret_value", "escaped": "{\"escaped_key\":\"escaped_val\"}"}`)}, "", nil)
 				fakeClient.RenameBindingReturns(nil, nil)
 				binding = createAndValidateBinding(ctx, longBindingName, bindingTestNamespace, instanceName, "", longBindingName, "", bindingID)
+				fakeClient.GetBindingByIDReturns(&smClientTypes.ServiceBinding{ID: bindingID, Credentials: json.RawMessage(`{"secret_key": "secret_value"}`)}, nil)
 				fakeClient.ListBindingsStub = func(params *sm.Parameters) (*smClientTypes.ServiceBindings, error) {
 					if params == nil || params.FieldQuery == nil || len(params.FieldQuery) == 0 {
 						return nil, nil
