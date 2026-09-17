@@ -198,7 +198,11 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		cond := meta.FindStatusCondition(serviceInstance.Status.Conditions, common.ConditionSucceeded)
 		if cond == nil || cond.Status != metav1.ConditionTrue {
 			log.Info("updating instance status 'succeeded' to true")
-			utils.SetSuccessConditions(smClientTypes.CREATE, serviceInstance, false)
+			opType := smClientTypes.CREATE
+			if cond != nil && cond.Reason == common.UpdateFailed {
+				opType = smClientTypes.UPDATE
+			}
+			utils.SetSuccessConditions(opType, serviceInstance, false)
 			return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceInstance)
 		}
 	}
