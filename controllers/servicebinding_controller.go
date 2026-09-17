@@ -1274,18 +1274,17 @@ func isBindingExistInSM(smClient sm.Client, instance *v1.ServiceInstance, bindin
 
 func crossNamespaceBindingAllowed(instance *v1.ServiceInstance, binding *v1.ServiceBinding) bool {
 	if len(instance.Annotations) == 0 {
-		return false
+		return true
 	}
 
-	if allowed, ok := instance.Annotations[common.AllowCrossNamespaceBindingAnnotation]; !ok || allowed != "true" {
-		return false
-	}
-
-	if namespaces, ok := instance.Annotations[common.AllowedNamespacesForBindingAnnotation]; ok {
-		allowedNamespaces := strings.Split(namespaces, ",")
-		if !slices.Contains(allowedNamespaces, binding.Namespace) {
-			return false
+	if allowed, ok := instance.Annotations[common.AllowCrossNamespaceBindingAnnotation]; allowed == "true" || !ok {
+		if namespaces, ok := instance.Annotations[common.AllowedNamespacesForBindingAnnotation]; ok {
+			allowedNamespaces := strings.Split(namespaces, ",")
+			if !slices.Contains(allowedNamespaces, binding.Namespace) {
+				return false
+			}
 		}
+		return true
 	}
-	return true
+	return false
 }
