@@ -20,6 +20,8 @@ const (
 	StaleBindingRotationOfLabel           string         = "services.cloud.sap.com/rotationOf"
 	StaleBindingOrigBindingNameAnnotation string         = "services.cloud.sap.com/original-binding-name"
 	ForceRotateAnnotation                 string         = "services.cloud.sap.com/forceRotate"
+	AllowCrossNamespaceBindingAnnotation  string         = "services.cloud.sap.com/allowCrossNamespaceBinding"
+	AllowedNamespacesForBindingAnnotation string         = "services.cloud.sap.com/allowedNamespacesForBinding"
 	PreventDeletion                       string         = "services.cloud.sap.com/preventDeletion"
 	UseInstanceMetadataNameInSecret       string         = "services.cloud.sap.com/useInstanceMetadataName"
 )
