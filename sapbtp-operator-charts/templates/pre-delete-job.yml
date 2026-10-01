@@ -37,6 +37,10 @@ spec:
           securityContext:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          {{- with .Values.manager.preDeleteJob.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           command: ["/bin/sh"]
           args:
             - "-c"
