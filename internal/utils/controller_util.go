@@ -66,7 +66,7 @@ func NormalizeCredentials(credentialsJSON json.RawMessage) (map[string][]byte, [
 	normalized := make(map[string][]byte)
 	metadata := make([]SecretMetadataProperty, 0)
 	for propertyName, value := range credentialsMap {
-		keyString := strings.Replace(propertyName, " ", "_", -1)
+		keyString := strings.ReplaceAll(propertyName, " ", "_")
 		normalizedValue, typpe, err := serialize(value)
 		if err != nil {
 			return nil, nil, err

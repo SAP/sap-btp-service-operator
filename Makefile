@@ -4,7 +4,7 @@ IMG ?= controller:latest
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:crdVersions=v1"
 TEST_PROFILE ?= $(CURDIR)/profile.cov
-LINT_VERSION = 1.54.0
+LINT_VERSION = 2.15.0
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
@@ -102,9 +102,9 @@ envtest:
 lint:
 	@echo "Running golangci-lint"
 	@echo "----------------------------------------"
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v$(LINT_VERSION)
 	golangci-lint version
-	golangci-lint run --skip-dirs "pkg/mod"
+	golangci-lint run
 
 lint-deps:
 

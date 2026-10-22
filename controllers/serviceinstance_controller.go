@@ -91,7 +91,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	ctx = context.WithValue(ctx, logutils.CorrelationIDKey, correlationID)
 
 	serviceInstance := &v1.ServiceInstance{}
-	if err := r.Client.Get(ctx, req.NamespacedName, serviceInstance); err != nil {
+	if err := r.Get(ctx, req.NamespacedName, serviceInstance); err != nil {
 		if !apierrors.IsNotFound(err) {
 			log.Error(err, "unable to fetch ServiceInstance")
 		}
@@ -165,7 +165,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	if controllerutil.AddFinalizer(serviceInstance, common.FinalizerName) {
 		log.Info(fmt.Sprintf("added finalizer '%s' to service instance", common.FinalizerName))
-		if err := r.Client.Update(ctx, serviceInstance); err != nil {
+		if err := r.Update(ctx, serviceInstance); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
@@ -354,7 +354,7 @@ func (r *ServiceInstanceReconciler) deleteInstance(ctx context.Context, smClient
 		}
 
 		serviceInstance.Status.InstanceID = ""
-		if err := r.Client.Status().Update(ctx, serviceInstance); err != nil {
+		if err := r.Status().Update(ctx, serviceInstance); err != nil {
 			log.Error(err, "failed to update service instance status after deletion")
 			return ctrl.Result{}, err
 		}
@@ -446,7 +446,8 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client
 		return ctrl.Result{}, errors.New(errMsg)
 	case smClientTypes.SUCCEEDED:
 		log.Info(fmt.Sprintf("operation %s %s completed succefully", serviceInstance.Status.OperationType, serviceInstance.Status.OperationURL))
-		if serviceInstance.Status.OperationType == smClientTypes.CREATE {
+		switch serviceInstance.Status.OperationType {
+		case smClientTypes.CREATE:
 			smInstance, err := smClient.GetInstanceByID(serviceInstance.Status.InstanceID, nil)
 			if err != nil {
 				log.Error(err, fmt.Sprintf("instance %s succeeded but could not fetch it from SM", serviceInstance.Status.InstanceID))
@@ -456,7 +457,7 @@ func (r *ServiceInstanceReconciler) poll(ctx context.Context, smClient sm.Client
 				serviceInstance.Status.SubaccountID = smInstance.Labels["subaccount_id"][0]
 			}
 			serviceInstance.Status.Ready = metav1.ConditionTrue
-		} else if serviceInstance.Status.OperationType == smClientTypes.DELETE {
+		case smClientTypes.DELETE:
 			log.Info(fmt.Sprintf("instance %s deleted successfully from sm, removing finalizer", serviceInstance.Status.InstanceID))
 			if err := utils.RemoveFinalizer(ctx, r.Client, serviceInstance, common.FinalizerName); err != nil {
 				return ctrl.Result{}, err
@@ -495,7 +496,7 @@ func (r *ServiceInstanceReconciler) handleFailedAsyncProvision(ctx context.Conte
 	serviceInstance.Status.OperationURL = ""
 	serviceInstance.Status.OperationType = ""
 	serviceInstance.Status.InstanceID = ""
-	if err := r.Client.Status().Update(ctx, serviceInstance); err != nil {
+	if err := r.Status().Update(ctx, serviceInstance); err != nil {
 		log.Error(err, "handleFailedAsyncProvision failed to update service instance status after deletion")
 		return ctrl.Result{}, err
 	}
@@ -633,7 +634,7 @@ func (r *ServiceInstanceReconciler) buildSMRequestParameters(ctx context.Context
 	if instanceLabelsChanged {
 		serviceInstance.Labels = newInstanceLabels
 		log.Info("updating instance with secret labels")
-		return instanceParameters, r.Client.Update(ctx, serviceInstance)
+		return instanceParameters, r.Update(ctx, serviceInstance)
 	}
 
 	return instanceParameters, nil

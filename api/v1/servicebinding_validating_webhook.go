@@ -44,7 +44,7 @@ var _ admission.Validator[*ServiceBinding] = &ServiceBinding{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (sb *ServiceBinding) ValidateCreate(_ context.Context, obj *ServiceBinding) (admission.Warnings, error) {
-	servicebindinglog.Info("validate create", "name", obj.ObjectMeta.Name)
+	servicebindinglog.Info("validate create", "name", obj.Name)
 	if obj.Spec.CredRotationPolicy != nil {
 		if err := obj.validateCredRotatingConfig(); err != nil {
 			return nil, err
@@ -55,7 +55,7 @@ func (sb *ServiceBinding) ValidateCreate(_ context.Context, obj *ServiceBinding)
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (sb *ServiceBinding) ValidateUpdate(_ context.Context, oldObj, newObj *ServiceBinding) (admission.Warnings, error) {
-	servicebindinglog.Info("validate update", "name", newObj.ObjectMeta.Name)
+	servicebindinglog.Info("validate update", "name", newObj.Name)
 	if newObj.Spec.CredRotationPolicy != nil {
 		if err := newObj.validateCredRotatingConfig(); err != nil {
 			return nil, err
@@ -89,15 +89,15 @@ func (sb *ServiceBinding) ValidateUpdate(_ context.Context, oldObj, newObj *Serv
 }
 
 func (sb *ServiceBinding) validateRotationFields(old *ServiceBinding) bool {
-	if sb.ObjectMeta.Labels == nil {
+	if sb.Labels == nil {
 		return false
 	}
 
-	isValid := sb.ObjectMeta.Labels[common.StaleBindingIDLabel] == old.ObjectMeta.Labels[common.StaleBindingIDLabel] &&
-		sb.ObjectMeta.Labels[common.StaleBindingRotationOfLabel] == old.ObjectMeta.Labels[common.StaleBindingRotationOfLabel]
+	isValid := sb.Labels[common.StaleBindingIDLabel] == old.Labels[common.StaleBindingIDLabel] &&
+		sb.Labels[common.StaleBindingRotationOfLabel] == old.Labels[common.StaleBindingRotationOfLabel]
 
-	if old.ObjectMeta.Annotations != nil && len(old.ObjectMeta.Annotations[common.StaleBindingOrigBindingNameAnnotation]) > 0 {
-		isValid = isValid && sb.ObjectMeta.Annotations[common.StaleBindingOrigBindingNameAnnotation] == old.ObjectMeta.Annotations[common.StaleBindingOrigBindingNameAnnotation]
+	if old.Annotations != nil && len(old.Annotations[common.StaleBindingOrigBindingNameAnnotation]) > 0 {
+		isValid = isValid && sb.Annotations[common.StaleBindingOrigBindingNameAnnotation] == old.Annotations[common.StaleBindingOrigBindingNameAnnotation]
 	}
 	return isValid
 }
@@ -119,7 +119,7 @@ func (sb *ServiceBinding) specChanged(oldBinding *ServiceBinding) bool {
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (sb *ServiceBinding) ValidateDelete(_ context.Context, _ *ServiceBinding) (admission.Warnings, error) {
-	servicebindinglog.Info("validate delete", "name", sb.ObjectMeta.Name)
+	servicebindinglog.Info("validate delete", "name", sb.Name)
 
 	// TODO(user): fill in your validation logic upon object deletion.
 	return nil, nil
