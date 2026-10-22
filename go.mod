@@ -1,6 +1,6 @@
 module github.com/SAP/sap-btp-service-operator
 
-go 1.27.2
+go 1.27.3
 
 require (
 	github.com/evanphx/json-patch/v5 v5.9.11
@@ -13,9 +13,9 @@ require (
 	github.com/onsi/gomega v1.43.0
 	github.com/pkg/errors v0.9.1
 	golang.org/x/oauth2 v0.37.0
-	k8s.io/api v0.37.0
-	k8s.io/apimachinery v0.37.0
-	k8s.io/client-go v0.37.0
+	k8s.io/api v0.37.1
+	k8s.io/apimachinery v0.37.1
+	k8s.io/client-go v0.37.1
 	k8s.io/utils v0.0.0-20260707023825-cf1189d6abe3
 	sigs.k8s.io/controller-runtime v0.25.2
 	sigs.k8s.io/yaml v1.6.0
