@@ -3,6 +3,8 @@ run:
   timeout: 5m
   tests: false
 issues:
+  exclude-dirs:
+    - pkg/mod
   exclude-rules:
     - path: pkg/mod
       linters:
