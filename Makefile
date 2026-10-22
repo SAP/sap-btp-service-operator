@@ -104,8 +104,7 @@ lint:
 	@echo "----------------------------------------"
 	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v$(LINT_VERSION)
 	golangci-lint version
-	golangci-lint migrate --skip-validation
-	#golangci-lint run
+	golangci-lint run
 
 lint-deps:
 
