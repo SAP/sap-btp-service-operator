@@ -100,7 +100,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	ctx = context.WithValue(ctx, logutils.CorrelationIDKey, correlationID)
 
 	serviceBinding := &v1.ServiceBinding{}
-	if err := r.Client.Get(ctx, req.NamespacedName, serviceBinding); err != nil {
+	if err := r.Get(ctx, req.NamespacedName, serviceBinding); err != nil {
 		if !apierrors.IsNotFound(err) {
 			log.Error(err, "unable to fetch ServiceBinding")
 		}
@@ -185,7 +185,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	if controllerutil.AddFinalizer(serviceBinding, common.FinalizerName) {
 		log.Info(fmt.Sprintf("added finalizer '%s' to service binding", common.FinalizerName))
-		if err := r.Client.Update(ctx, serviceBinding); err != nil {
+		if err := r.Update(ctx, serviceBinding); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
@@ -525,7 +525,7 @@ func (r *ServiceBindingReconciler) handleFailedAsyncBinding(ctx context.Context,
 	serviceBinding.Status.OperationURL = ""
 	serviceBinding.Status.OperationType = ""
 	serviceBinding.Status.BindingID = ""
-	if err := r.Client.Status().Update(ctx, serviceBinding); err != nil {
+	if err := r.Status().Update(ctx, serviceBinding); err != nil {
 		log.Error(err, "handleFailedAsyncBinding failed to update service binding status after deletion")
 		return ctrl.Result{}, err
 	}
@@ -622,7 +622,7 @@ func (r *ServiceBindingReconciler) getServiceInstanceForBinding(ctx context.Cont
 		namespace = binding.Spec.ServiceInstanceNamespace
 	}
 	log.Info(fmt.Sprintf("getting service instance named %s in namespace %s for binding %s in namespace %s", binding.Spec.ServiceInstanceName, namespace, binding.Name, binding.Namespace))
-	if err := r.Client.Get(ctx, types.NamespacedName{Name: binding.Spec.ServiceInstanceName, Namespace: namespace}, serviceInstance); err != nil {
+	if err := r.Get(ctx, types.NamespacedName{Name: binding.Spec.ServiceInstanceName, Namespace: namespace}, serviceInstance); err != nil {
 		return serviceInstance, err
 	}
 
@@ -851,7 +851,7 @@ func (r *ServiceBindingReconciler) deleteBindingSecret(ctx context.Context, bind
 	log := logutils.GetLogger(ctx)
 	log.Info("Deleting binding secret")
 	bindingSecret := &corev1.Secret{}
-	if err := r.Client.Get(ctx, types.NamespacedName{
+	if err := r.Get(ctx, types.NamespacedName{
 		Namespace: binding.Namespace,
 		Name:      binding.Spec.SecretName,
 	}, bindingSecret); err != nil {
@@ -866,7 +866,7 @@ func (r *ServiceBindingReconciler) deleteBindingSecret(ctx context.Context, bind
 	}
 	bindingSecret = bindingSecret.DeepCopy()
 
-	if err := r.Client.Delete(ctx, bindingSecret); err != nil {
+	if err := r.Delete(ctx, bindingSecret); err != nil {
 		log.Error(err, "Failed to delete binding secret")
 		return err
 	}
@@ -1012,7 +1012,7 @@ func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, bindin
 	}
 
 	bindings := &v1.ServiceBindingList{}
-	err := r.Client.List(ctx, bindings, client.MatchingLabels{common.StaleBindingIDLabel: binding.Status.BindingID}, client.InNamespace(binding.Namespace))
+	err := r.List(ctx, bindings, client.MatchingLabels{common.StaleBindingIDLabel: binding.Status.BindingID}, client.InNamespace(binding.Namespace))
 	if err != nil {
 		return false, err
 	}
@@ -1052,7 +1052,7 @@ func (r *ServiceBindingReconciler) removeForceRotateAnnotationIfNeeded(ctx conte
 		if _, ok := binding.Annotations[common.ForceRotateAnnotation]; ok {
 			log.Info("Credentials rotation - deleting force rotate annotation")
 			delete(binding.Annotations, common.ForceRotateAnnotation)
-			return r.Client.Update(ctx, binding)
+			return r.Update(ctx, binding)
 		}
 	}
 	return nil
@@ -1083,7 +1083,7 @@ func (r *ServiceBindingReconciler) createOldBinding(ctx context.Context, suffix 
 	spec.SecretName = spec.SecretName + suffix
 	spec.ExternalName = spec.ExternalName + suffix
 	oldBinding.Spec = *spec
-	return r.Client.Create(ctx, oldBinding)
+	return r.Create(ctx, oldBinding)
 }
 
 func (r *ServiceBindingReconciler) handleStaleServiceBinding(ctx context.Context, serviceBinding *v1.ServiceBinding) (ctrl.Result, error) {
@@ -1094,19 +1094,19 @@ func (r *ServiceBindingReconciler) handleStaleServiceBinding(ctx context.Context
 		//the stale binding should be deleted otherwise it will remain forever
 		if originalBindingName, ok = serviceBinding.Labels[common.StaleBindingRotationOfLabel]; !ok {
 			log.Info("missing rotationOf label/annotation, unable to fetch original binding, deleting stale")
-			return ctrl.Result{}, r.Client.Delete(ctx, serviceBinding)
+			return ctrl.Result{}, r.Delete(ctx, serviceBinding)
 		}
 	}
 	origBinding := &v1.ServiceBinding{}
-	if err := r.Client.Get(ctx, types.NamespacedName{Namespace: serviceBinding.Namespace, Name: originalBindingName}, origBinding); err != nil {
+	if err := r.Get(ctx, types.NamespacedName{Namespace: serviceBinding.Namespace, Name: originalBindingName}, origBinding); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Info("original binding not found, deleting stale binding")
-			return ctrl.Result{}, r.Client.Delete(ctx, serviceBinding)
+			return ctrl.Result{}, r.Delete(ctx, serviceBinding)
 		}
 		return ctrl.Result{}, err
 	}
 	if meta.IsStatusConditionTrue(origBinding.Status.Conditions, common.ConditionReady) {
-		return ctrl.Result{}, r.Client.Delete(ctx, serviceBinding)
+		return ctrl.Result{}, r.Delete(ctx, serviceBinding)
 	}
 
 	log.Info("not deleting stale binding since original binding is not ready")

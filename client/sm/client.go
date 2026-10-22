@@ -305,7 +305,7 @@ func (client *serviceManagerClient) RenameBinding(id, newName, newK8SName string
 
 func (client *serviceManagerClient) list(items interface{}, url string, q *Parameters) error {
 	itemsType := reflect.TypeOf(items)
-	if itemsType.Kind() != reflect.Ptr || itemsType.Elem().Kind() != reflect.Slice {
+	if itemsType.Kind() != reflect.Pointer || itemsType.Elem().Kind() != reflect.Slice {
 		return fmt.Errorf("items should be a pointer to a slice, but got %v", itemsType)
 	}
 
@@ -650,7 +650,7 @@ type listResponse struct {
 
 func (li *listIterator) nextPage(items interface{}, maxItems int) (more bool, count int64, err error) {
 	itemsType := reflect.TypeOf(items)
-	if itemsType != nil && (itemsType.Kind() != reflect.Ptr || itemsType.Elem().Kind() != reflect.Slice) {
+	if itemsType != nil && (itemsType.Kind() != reflect.Pointer || itemsType.Elem().Kind() != reflect.Slice) {
 		return false, -1, fmt.Errorf("items should be nil or a pointer to a slice, but got %v", itemsType)
 	}
 

@@ -48,11 +48,11 @@ func (si *ServiceInstance) ValidateUpdate(_ context.Context, _, _ *ServiceInstan
 }
 
 func (si *ServiceInstance) ValidateDelete(_ context.Context, obj *ServiceInstance) (warnings admission.Warnings, err error) {
-	serviceinstancelog.Info("validate delete", "name", obj.ObjectMeta.Name)
-	if obj.ObjectMeta.Annotations != nil {
-		preventDeletion, ok := obj.ObjectMeta.Annotations[common.PreventDeletion]
+	serviceinstancelog.Info("validate delete", "name", obj.Name)
+	if obj.Annotations != nil {
+		preventDeletion, ok := obj.Annotations[common.PreventDeletion]
 		if ok && strings.ToLower(preventDeletion) == "true" {
-			return nil, fmt.Errorf("service instance '%s' is marked with \"prevent deletion\"", obj.ObjectMeta.Name)
+			return nil, fmt.Errorf("service instance '%s' is marked with \"prevent deletion\"", obj.Name)
 		}
 	}
 	return nil, nil
