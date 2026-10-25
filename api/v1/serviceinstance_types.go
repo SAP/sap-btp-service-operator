@@ -190,11 +190,11 @@ func (si *ServiceInstance) SetReady(ready metav1.ConditionStatus) {
 	si.Status.Ready = ready
 }
 func (si *ServiceInstance) GetAnnotations() map[string]string {
-	return si.ObjectMeta.Annotations
+	return si.Annotations
 }
 
 func (si *ServiceInstance) SetAnnotations(annotations map[string]string) {
-	si.ObjectMeta.Annotations = annotations
+	si.Annotations = annotations
 }
 
 func (si *ServiceInstance) SetObservedGeneration(newObserved int64) {

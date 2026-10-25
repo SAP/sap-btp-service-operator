@@ -22,29 +22,32 @@ func InitConditions(ctx context.Context, k8sClient client.Client, obj common.SAP
 func GetConditionReason(opType smClientTypes.OperationCategory, state smClientTypes.OperationState) string {
 	switch state {
 	case smClientTypes.SUCCEEDED:
-		if opType == smClientTypes.CREATE {
+		switch opType {
+		case smClientTypes.CREATE:
 			return common.Created
-		} else if opType == smClientTypes.UPDATE {
+		case smClientTypes.UPDATE:
 			return common.Updated
-		} else if opType == smClientTypes.DELETE {
+		case smClientTypes.DELETE:
 			return common.Deleted
 		}
 		return common.Finished
 	case smClientTypes.INPROGRESS, smClientTypes.PENDING:
-		if opType == smClientTypes.CREATE {
+		switch opType {
+		case smClientTypes.CREATE:
 			return common.CreateInProgress
-		} else if opType == smClientTypes.UPDATE {
+		case smClientTypes.UPDATE:
 			return common.UpdateInProgress
-		} else if opType == smClientTypes.DELETE {
+		case smClientTypes.DELETE:
 			return common.DeleteInProgress
 		}
 		return common.InProgress
 	case smClientTypes.FAILED:
-		if opType == smClientTypes.CREATE {
+		switch opType {
+		case smClientTypes.CREATE:
 			return common.CreateFailed
-		} else if opType == smClientTypes.UPDATE {
+		case smClientTypes.UPDATE:
 			return common.UpdateFailed
-		} else if opType == smClientTypes.DELETE {
+		case smClientTypes.DELETE:
 			return common.DeleteFailed
 		}
 		return common.Failed
@@ -56,13 +59,14 @@ func GetConditionReason(opType smClientTypes.OperationCategory, state smClientTy
 func SetInProgressConditions(ctx context.Context, operationType smClientTypes.OperationCategory, message string, object common.SAPBTPResource, isAsyncOperation bool) {
 	log := logutils.GetLogger(ctx)
 	if len(message) == 0 {
-		if operationType == smClientTypes.CREATE {
+		switch operationType {
+		case smClientTypes.CREATE:
 			message = fmt.Sprintf("%s is being created", object.GetControllerName())
-		} else if operationType == smClientTypes.UPDATE {
+		case smClientTypes.UPDATE:
 			message = fmt.Sprintf("%s is being updated", object.GetControllerName())
-		} else if operationType == smClientTypes.DELETE {
+		case smClientTypes.DELETE:
 			message = fmt.Sprintf("%s is being deleted", object.GetControllerName())
-		} else {
+		default:
 			message = "Operation in progress"
 		}
 	}
@@ -91,11 +95,12 @@ func SetInProgressConditions(ctx context.Context, operationType smClientTypes.Op
 
 func SetSuccessConditions(operationType smClientTypes.OperationCategory, object common.SAPBTPResource, isAsyncOperation bool) {
 	var message string
-	if operationType == smClientTypes.CREATE {
+	switch operationType {
+	case smClientTypes.CREATE:
 		message = fmt.Sprintf("%s provisioned successfully", object.GetControllerName())
-	} else if operationType == smClientTypes.UPDATE {
+	case smClientTypes.UPDATE:
 		message = fmt.Sprintf("%s updated successfully", object.GetControllerName())
-	} else if operationType == smClientTypes.DELETE {
+	case smClientTypes.DELETE:
 		message = fmt.Sprintf("%s deleted successfully", object.GetControllerName())
 	}
 
@@ -146,11 +151,12 @@ func SetCredRotationInProgressConditions(reason, message string, object common.S
 
 func SetFailureConditions(operationType smClientTypes.OperationCategory, errorMessage string, object common.SAPBTPResource, isAsyncOperation bool) {
 	var message string
-	if operationType == smClientTypes.CREATE {
+	switch operationType {
+	case smClientTypes.CREATE:
 		message = fmt.Sprintf("%s create failed: %s", object.GetControllerName(), errorMessage)
-	} else if operationType == smClientTypes.UPDATE {
+	case smClientTypes.UPDATE:
 		message = fmt.Sprintf("%s update failed: %s", object.GetControllerName(), errorMessage)
-	} else if operationType == smClientTypes.DELETE {
+	case smClientTypes.DELETE:
 		message = fmt.Sprintf("%s deletion failed: %s", object.GetControllerName(), errorMessage)
 	}
 

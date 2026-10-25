@@ -1,15 +1,33 @@
+version: "2"
 run:
-  # Extend default timeout for running in single-core CI
-  timeout: 5m
   tests: false
-issues:
-  exclude-rules:
-    - path: pkg/mod
-      linters:
-        - '*'
 linters:
   enable:
-    # Default linters plus these:
     - revive
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - '*'
+        path: pkg/mod
+    paths:
+      - pkg/mod
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
     - gofmt
     - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - pkg/mod
+      - third_party$
+      - builtin$
+      - examples$

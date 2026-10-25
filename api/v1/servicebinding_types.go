@@ -195,11 +195,11 @@ func (sb *ServiceBinding) SetReady(ready metav1.ConditionStatus) {
 }
 
 func (sb *ServiceBinding) GetAnnotations() map[string]string {
-	return sb.ObjectMeta.Annotations
+	return sb.Annotations
 }
 
 func (sb *ServiceBinding) SetAnnotations(annotations map[string]string) {
-	sb.ObjectMeta.Annotations = annotations
+	sb.Annotations = annotations
 }
 
 func (sb *ServiceBinding) SetObservedGeneration(newObserved int64) {
