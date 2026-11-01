@@ -150,6 +150,12 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			log.Error(err, fmt.Sprintf("failed to get instance %s from SM", serviceInstance.Status.InstanceID))
 			return utils.HandleServiceManagerError(ctx, r.Client, serviceInstance, common.Unknown, err, false)
 		}
+		cond := meta.FindStatusCondition(serviceInstance.Status.Conditions, common.ConditionReady)
+		if cond != nil && cond.Reason == common.ResourceNotFound {
+			log.Info(fmt.Sprintf("instance %s status is 'NotFound', but exist in SM, recovering it", serviceInstance.Status.InstanceID))
+			serviceInstance.Status.InstanceID = ""
+			return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceInstance)
+		}
 	}
 
 	if len(serviceInstance.GetConditions()) == 0 {
