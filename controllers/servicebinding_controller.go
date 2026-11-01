@@ -181,6 +181,13 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			serviceBinding.Status.Ready = metav1.ConditionFalse
 			return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
 		}
+
+		cond := meta.FindStatusCondition(serviceBinding.Status.Conditions, common.ConditionReady)
+		if cond != nil && cond.Reason == common.ResourceNotFound {
+			log.Info(fmt.Sprintf("binding %s status is 'NotFound', but exist in SM, recovering it", serviceBinding.Status.BindingID))
+			serviceBinding.Status.BindingID = ""
+			return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
+		}
 	}
 
 	if controllerutil.AddFinalizer(serviceBinding, common.FinalizerName) {
