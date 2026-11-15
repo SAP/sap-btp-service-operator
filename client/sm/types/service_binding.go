@@ -20,7 +20,7 @@ import (
 	"encoding/json"
 )
 
-const ServiceBindingsURL = "/v1/service_bindings"
+const ServiceBindingsURL = "/v2/service_bindings"
 
 // ServiceBinding defines the data of a service instance.
 type ServiceBinding struct {

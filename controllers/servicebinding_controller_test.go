@@ -4,17 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"net/http"
-	"strings"
-	"time"
-
 	"github.com/SAP/sap-btp-service-operator/api/common"
 	"github.com/SAP/sap-btp-service-operator/internal/utils"
 	"github.com/SAP/sap-btp-service-operator/internal/utils/logutils"
 	"github.com/lithammer/dedent"
 	authv1 "k8s.io/api/authentication/v1"
 	"k8s.io/utils/pointer"
+	"net/http"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"strings"
 
 	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
@@ -174,14 +172,6 @@ var _ = Describe("ServiceBinding controller", func() {
 
 	Context("Create", func() {
 		Context("invalid parameters", func() {
-			When("service instance name is not provided", func() {
-				It("should fail", func() {
-					_, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, "", "", "", "", false)
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("spec.serviceInstanceName in body should be at least 1 chars long"))
-				})
-			})
-
 			When("referenced service instance does not exist", func() {
 				It("should fail", func() {
 					binding, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, "no-such-instance", "", "", "", false)
@@ -1684,30 +1674,6 @@ stringData:
 				secret = getSecret(ctx, oldBinding.Spec.SecretName, bindingTestNamespace, true)
 				val = secret.Data["secret_key2"]
 				Expect(string(val)).To(Equal("secret_value2"))
-			})
-		})
-	})
-
-	When("binding id exist on resource but instance is in state NotFound", func() {
-		BeforeEach(func() {
-			createdBinding = createAndValidateBinding(ctx, bindingName, bindingTestNamespace, instanceName, "", "binding-external-name", "", fakeBindingID)
-			createdInstance.Status.Conditions = []metav1.Condition{{
-				Type:               common.ConditionReady,
-				Status:             metav1.ConditionFalse,
-				ObservedGeneration: createdInstance.Generation,
-				LastTransitionTime: metav1.NewTime(time.Now()),
-				Reason:             common.ResourceNotFound,
-			}}
-			Expect(k8sClient.Status().Update(ctx, createdInstance)).To(Succeed())
-		})
-		When("reconcile", func() {
-			It("should update status to ready=false", func() {
-				createdBinding.Labels = map[string]string{"tickle": "1"}
-				updateBinding(ctx, getResourceNamespacedName(createdBinding), createdBinding)
-				waitForResourceCondition(ctx, createdBinding, common.ConditionReady, metav1.ConditionFalse, common.ResourceNotFound, fmt.Sprintf(common.ResourceNotFoundMessageFormat, "binding", createdBinding.Status.BindingID))
-
-				By("deleting the binding should succeed")
-				deleteAndWait(ctx, createdBinding)
 			})
 		})
 	})

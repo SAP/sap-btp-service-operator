@@ -84,6 +84,7 @@ spec:
                 type: string
               externalName:
                 description: The name of the instance in Service Manager
+                maxLength: 100
                 type: string
               parameters:
                 description: |-

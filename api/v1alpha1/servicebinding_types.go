@@ -34,7 +34,6 @@ type ServiceBindingSpec struct {
 
 	// The k8s name of the service instance to bind, should be in the namespace of the binding
 	// +required
-	// +kubebuilder:validation:MinLength=1
 	ServiceInstanceName string `json:"serviceInstanceName"`
 
 	// The name of the binding in Service Manager

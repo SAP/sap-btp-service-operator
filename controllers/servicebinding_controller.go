@@ -72,7 +72,7 @@ type ServiceBindingReconciler struct {
 	client.Client
 	Log         logr.Logger
 	Scheme      *runtime.Scheme
-	GetSMClient func(ctx context.Context, instance *v1.ServiceInstance) (sm.Client, error)
+	GetSMClient func(ctx context.Context, btpAccessSecretName, namespace string) (sm.Client, error)
 	Config      config.Config
 	Recorder    events.EventRecorder
 	Retries     *utils.RetryStore
@@ -118,36 +118,60 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 	}
 
-	serviceInstance, instanceErr := r.getServiceInstanceForBinding(ctx, serviceBinding)
-	if instanceErr != nil {
-		if !apierrors.IsNotFound(instanceErr) {
-			log.Error(instanceErr, "failed to get service instance for binding")
-			return ctrl.Result{}, instanceErr
-		}
-		if !utils.IsMarkedForDeletion(serviceBinding.ObjectMeta) {
-			//instance is not found and binding is not marked for deletion
-			return r.handleInstanceForBindingNotFound(ctx, serviceBinding)
-		}
-		if len(serviceBinding.Status.BindingID) == 0 {
-			log.Info("service instance not found, binding is marked for deletion and has no binding id, removing finalizer if exists")
-			if err := r.deleteBindingSecret(ctx, serviceBinding); err != nil {
-				return ctrl.Result{}, err
+	namespace := serviceBinding.Namespace
+	btpAccessCredentialsSecret := serviceBinding.Spec.BTPAccessCredentialsSecret
+	serviceInstanceID := serviceBinding.Spec.ServiceInstanceID
+	if len(serviceBinding.Spec.ServiceInstanceName) > 0 {
+		serviceInstance, instanceErr := r.getServiceInstanceForBinding(ctx, serviceBinding)
+		if instanceErr != nil {
+			if !apierrors.IsNotFound(instanceErr) {
+				log.Error(instanceErr, "failed to get service instance for binding")
+				return ctrl.Result{}, instanceErr
 			}
-			return ctrl.Result{}, utils.RemoveFinalizer(ctx, r.Client, serviceBinding, common.FinalizerName)
-		}
-	}
-
-	if len(serviceBinding.Status.BindingID) == 0 &&
-		(len(serviceBinding.Spec.ServiceInstanceNamespace) > 0 && serviceBinding.Spec.ServiceInstanceNamespace != serviceBinding.Namespace) {
-		if !crossNamespaceBindingAllowed(serviceInstance, serviceBinding) {
-			log.Error(errors.New("service instance does not allow cross binding"), fmt.Sprintf("unable to create binding %s", serviceBinding.Name))
 			if !utils.IsMarkedForDeletion(serviceBinding.ObjectMeta) {
+				//instance is not found and binding is not marked for deletion
 				return r.handleInstanceForBindingNotFound(ctx, serviceBinding)
 			}
+			if len(serviceBinding.Status.BindingID) == 0 {
+				log.Info("service instance not found, binding is marked for deletion and has no binding id, removing finalizer if exists")
+				if err := r.deleteBindingSecret(ctx, serviceBinding); err != nil {
+					return ctrl.Result{}, err
+				}
+				return ctrl.Result{}, utils.RemoveFinalizer(ctx, r.Client, serviceBinding, common.FinalizerName)
+			}
 		}
+
+		if len(serviceBinding.Status.BindingID) == 0 &&
+			(len(serviceBinding.Spec.ServiceInstanceNamespace) > 0 && serviceBinding.Spec.ServiceInstanceNamespace != serviceBinding.Namespace) {
+			if !crossNamespaceBindingAllowed(serviceInstance, serviceBinding) {
+				log.Error(errors.New("service instance does not allow cross binding"), fmt.Sprintf("unable to create binding %s", serviceBinding.Name))
+				if !utils.IsMarkedForDeletion(serviceBinding.ObjectMeta) {
+					return r.handleInstanceForBindingNotFound(ctx, serviceBinding)
+				}
+			}
+		}
+
+		if utils.IsMarkedForDeletion(serviceInstance.ObjectMeta) {
+			log.Info(fmt.Sprintf("service instance name: %s namespace: %s is marked for deletion, unable to create binding", serviceInstance.Name, serviceInstance.Namespace))
+			utils.SetBlockedCondition(ctx, "instance is in deletion process", serviceBinding)
+			return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
+		}
+
+		if !utils.IsMarkedForDeletion(serviceBinding.ObjectMeta) && !serviceInstanceReady(serviceInstance) {
+			log.Info(fmt.Sprintf("service instance name: %s namespace: %s is not ready, unable to create binding", serviceInstance.Name, serviceInstance.Namespace))
+			utils.SetBlockedCondition(ctx, "service instance is not ready", serviceBinding)
+			if err := utils.UpdateStatus(ctx, r.Client, serviceBinding); err != nil {
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{}, errors.New("ServiceInstance is not ready")
+		}
+
+		namespace = serviceInstance.Namespace
+		btpAccessCredentialsSecret = serviceInstance.Spec.BTPAccessCredentialsSecret
+		serviceInstanceID = serviceInstance.Status.InstanceID
 	}
 
-	smClient, err := r.GetSMClient(ctx, serviceInstance)
+	smClient, err := r.GetSMClient(ctx, btpAccessCredentialsSecret, namespace)
 	if err != nil {
 		return utils.HandleOperationFailure(ctx, r.Client, serviceBinding, common.Unknown, err)
 	}
@@ -164,7 +188,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	if len(serviceBinding.Status.BindingID) > 0 {
-		if bindingExist, err := isBindingExistInSM(smClient, serviceInstance, serviceBinding.Status.BindingID, log); err != nil {
+		if bindingExist, err := isBindingExistInSM(smClient, serviceBinding.Status.BindingID, log); err != nil {
 			log.Error(err, "failed to check if binding exist in sm due to unknown error")
 			return utils.HandleServiceManagerError(ctx, r.Client, serviceBinding, common.Unknown, err, false)
 		} else if !bindingExist {
@@ -197,25 +221,10 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 	}
 
-	if utils.IsMarkedForDeletion(serviceInstance.ObjectMeta) {
-		log.Info(fmt.Sprintf("service instance name: %s namespace: %s is marked for deletion, unable to create binding", serviceInstance.Name, serviceInstance.Namespace))
-		utils.SetBlockedCondition(ctx, "instance is in deletion process", serviceBinding)
-		return ctrl.Result{}, utils.UpdateStatus(ctx, r.Client, serviceBinding)
-	}
-
-	if !serviceInstanceReady(serviceInstance) {
-		log.Info(fmt.Sprintf("service instance name: %s namespace: %s is not ready, unable to create binding", serviceInstance.Name, serviceInstance.Namespace))
-		utils.SetBlockedCondition(ctx, "service instance is not ready", serviceBinding)
-		if err := utils.UpdateStatus(ctx, r.Client, serviceBinding); err != nil {
-			return ctrl.Result{}, err
-		}
-		return ctrl.Result{}, errors.New("ServiceInstance is not ready")
-	}
-
 	// should rotate creds
 	if meta.IsStatusConditionTrue(serviceBinding.Status.Conditions, common.ConditionCredRotationInProgress) {
 		log.Info("rotating credentials")
-		if shouldUpdateStatus, err := r.rotateCredentials(ctx, serviceBinding, serviceInstance); err != nil {
+		if shouldUpdateStatus, err := r.rotateCredentials(ctx, smClient, serviceBinding); err != nil {
 			if !shouldUpdateStatus {
 				log.Error(err, "internal error occurred during cred rotation, requeuing binding")
 				return ctrl.Result{}, err
@@ -256,7 +265,7 @@ func (r *ServiceBindingReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			return r.recover(ctx, serviceBinding, smBinding)
 		}
 
-		return r.createBinding(ctx, smClient, serviceInstance, serviceBinding)
+		return r.createBinding(ctx, smClient, serviceInstanceID, serviceBinding)
 	}
 
 	log.Info("nothing to do for this binding")
@@ -271,10 +280,10 @@ func (r *ServiceBindingReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient sm.Client, serviceInstance *v1.ServiceInstance, serviceBinding *v1.ServiceBinding) (ctrl.Result, error) {
+func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient sm.Client, serviceInstanceID string, serviceBinding *v1.ServiceBinding) (ctrl.Result, error) {
 	log := logutils.GetLogger(ctx)
 	log.Info("Creating smBinding in SM")
-	serviceBinding.Status.InstanceID = serviceInstance.Status.InstanceID
+	serviceBinding.Status.InstanceID = serviceInstanceID
 	bindingParameters, _, err := utils.BuildSMRequestParameters(serviceBinding.Namespace, serviceBinding.Spec.Parameters, serviceBinding.Spec.ParametersFrom)
 	if err != nil {
 		log.Error(err, "failed to parse smBinding parameters")
@@ -288,12 +297,12 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 			common.K8sNameLabel:   []string{serviceBinding.Name},
 			common.ClusterIDLabel: []string{r.Config.ClusterID},
 		},
-		ServiceInstanceID: serviceInstance.Status.InstanceID,
+		ServiceInstanceID: serviceInstanceID,
 		Parameters:        bindingParameters,
 	}, nil, utils.BuildUserInfo(ctx, serviceBinding.Spec.UserInfo))
 
 	if bindErr != nil {
-		log.Error(err, "failed to create service binding", "serviceInstanceID", serviceInstance.Status.InstanceID)
+		log.Error(err, "failed to create service binding", "serviceInstanceID", serviceInstanceID)
 		return utils.HandleServiceManagerError(ctx, r.Client, serviceBinding, smClientTypes.CREATE, bindErr, true)
 	}
 
@@ -546,9 +555,8 @@ func (r *ServiceBindingReconciler) getBindingForRecovery(ctx context.Context, sm
 	namespaceQuery := fmt.Sprintf("context/namespace eq '%s'", serviceBinding.Namespace)
 	k8sNameQuery := fmt.Sprintf("%s eq '%s'", common.K8sNameLabel, serviceBinding.Name)
 	parameters := sm.Parameters{
-		FieldQuery:    []string{nameQuery, clusterIDQuery, namespaceQuery},
-		LabelQuery:    []string{k8sNameQuery},
-		GeneralParams: []string{"attach_last_operations=true"},
+		FieldQuery: []string{nameQuery, clusterIDQuery, namespaceQuery},
+		LabelQuery: []string{k8sNameQuery},
 	}
 	log.Info(fmt.Sprintf("binding recovery query params: %s, %s, %s, %s", nameQuery, clusterIDQuery, namespaceQuery, k8sNameQuery))
 
@@ -994,7 +1002,7 @@ func (r *ServiceBindingReconciler) addInstanceInfo(ctx context.Context, binding 
 	return metadata, nil
 }
 
-func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, binding *v1.ServiceBinding, serviceInstance *v1.ServiceInstance) (bool, error) {
+func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, smClient sm.Client, binding *v1.ServiceBinding) (bool, error) {
 	log := logutils.GetLogger(ctx)
 	if err := r.removeForceRotateAnnotationIfNeeded(ctx, binding, log); err != nil {
 		log.Info("Credentials rotation - failed to delete force rotate annotation")
@@ -1025,12 +1033,6 @@ func (r *ServiceBindingReconciler) rotateCredentials(ctx context.Context, bindin
 	}
 
 	if len(bindings.Items) == 0 {
-		// create the backup binding
-		smClient, err := r.GetSMClient(ctx, serviceInstance)
-		if err != nil {
-			return false, err
-		}
-
 		// rename current binding
 		suffix := "-" + utils.RandStringRunes(6)
 		log.Info("Credentials rotation - renaming binding to old in SM", "current", binding.Spec.ExternalName)
@@ -1258,14 +1260,7 @@ func singleKeyMap(credentialsMap map[string][]byte, key string) (map[string][]by
 	}, nil
 }
 
-func isBindingExistInSM(smClient sm.Client, instance *v1.ServiceInstance, bindingID string, log logr.Logger) (bool, error) {
-	log.Info("checking if k8s instance status is NotFound")
-	instanceReadyCond := meta.FindStatusCondition(instance.GetConditions(), common.ConditionReady)
-	if instanceReadyCond != nil && instanceReadyCond.Reason == common.ResourceNotFound {
-		log.Info("k8s instance is in NotFound state -> invalid binding")
-		return false, nil
-	}
-
+func isBindingExistInSM(smClient sm.Client, bindingID string, log logr.Logger) (bool, error) {
 	log.Info(fmt.Sprintf("trying to get from SM binding with id %s", bindingID))
 	if _, err := smClient.GetBindingByID(bindingID, nil); err != nil {
 		var smError *sm.ServiceManagerError
