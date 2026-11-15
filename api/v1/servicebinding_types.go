@@ -28,9 +28,9 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // ServiceBindingSpec defines the desired state of ServiceBinding
-// +kubebuilder:validation:XValidation:rule=”has(self.serviceInstanceName) || has(self.serviceInstanceID)”,message=”at least one of serviceInstanceName or serviceInstanceID must be set”
-// +kubebuilder:validation:XValidation:rule=”!has(self.serviceInstanceNamespace) || has(self.serviceInstanceName)”,message=”serviceInstanceNamespace can only be set if serviceInstanceName is set”
-// +kubebuilder:validation:XValidation:rule=”!has(self.btpAccessCredentialsSecret) || has(self.serviceInstanceID)”,message=”btpAccessCredentialsSecret can only be set if serviceInstanceID is set”
+// +kubebuilder:validation:XValidation:rule="has(self.serviceInstanceName) || has(self.serviceInstanceID)",message="at least one of serviceInstanceName or serviceInstanceID must be set"
+// +kubebuilder:validation:XValidation:rule="!has(self.serviceInstanceNamespace) || has(self.serviceInstanceName)",message="serviceInstanceNamespace can only be set if serviceInstanceName is set"
+// +kubebuilder:validation:XValidation:rule="!has(self.btpAccessCredentialsSecret) || has(self.serviceInstanceID)",message="btpAccessCredentialsSecret can only be set if serviceInstanceID is set"
 type ServiceBindingSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
