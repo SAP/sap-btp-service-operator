@@ -9,4 +9,4 @@ spec:
   credentialsRotationPolicy:
     enabled: true
     rotatedBindingTTL: 48h
-    rotationFrequency: 10s
+    rotationFrequency: 168h

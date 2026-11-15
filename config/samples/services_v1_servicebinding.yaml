@@ -3,5 +3,4 @@ kind: ServiceBinding
 metadata:
   name: sample-binding-1
 spec:
-  parameters:
-    a: b
+  serviceInstanceName: sample-instance-1
