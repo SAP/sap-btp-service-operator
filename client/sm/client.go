@@ -350,6 +350,11 @@ func (client *serviceManagerClient) register(resource interface{}, url string, q
 		return "", err
 	}
 
+	if q == nil {
+		q = &Parameters{}
+	}
+	q.GeneralParams = append(q.GeneralParams, "async=true")
+
 	buffer := bytes.NewBuffer(requestBody)
 	response, err := client.callWithUser(http.MethodPost, url, buffer, q, user)
 	if err != nil {
