@@ -446,7 +446,7 @@ var _ = Describe("ServiceBinding controller", func() {
 
 		Context("async", func() {
 			BeforeEach(func() {
-				fakeClient.BindReturns(nil, fmt.Sprintf("/v1/service_bindings/%s/operations/an-operation-id", fakeBindingID), nil)
+				fakeClient.BindReturns(nil, fmt.Sprintf("/v2/service_bindings/%s/operations/an-operation-id", fakeBindingID), nil)
 			})
 
 			When("bind polling returns success", func() {
@@ -480,7 +480,7 @@ var _ = Describe("ServiceBinding controller", func() {
 					Expect(err).ToNot(HaveOccurred())
 					waitForResourceCondition(ctx, binding, common.ConditionSucceeded, metav1.ConditionFalse, "", errorMessage)
 
-					fakeClient.BindReturns(nil, fmt.Sprintf("/v1/service_bindings/%s/operations/an-operation-id", "successful-binding-id"), nil)
+					fakeClient.BindReturns(nil, fmt.Sprintf("/v2/service_bindings/%s/operations/an-operation-id", "successful-binding-id"), nil)
 					fakeClient.GetBindingByIDReturns(&smClientTypes.ServiceBinding{}, nil)
 					waitForResourceCondition(ctx, binding, common.ConditionReady, metav1.ConditionTrue, "", "")
 					Expect(binding.Status.BindingID).To(Equal("successful-binding-id"))

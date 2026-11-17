@@ -268,19 +268,18 @@ func (client *serviceManagerClient) UpdateInstance(id string, updatedInstance *t
 }
 
 func (client *serviceManagerClient) RenameBinding(id, newName, newK8SName string) (*types.ServiceBinding, error) {
-	const k8sNameLabel = "_k8sname"
 	renameRequest := map[string]interface{}{
 		"name": newName,
 		"labels": []*types.LabelChange{
 			{
-				Key:       k8sNameLabel,
+				Key:       common.K8sNameLabel,
 				Operation: types.RemoveLabelOperation,
 			},
 		},
 	}
 
 	var result *types.ServiceBinding
-	_, err := client.update(renameRequest, types.ServiceBindingsURL, id, nil, "", &result)
+	_, err := client.update(renameRequest, types.ServiceBindingsV1URL, id, nil, "", &result)
 	if err != nil {
 		return nil, err
 	}
@@ -290,13 +289,13 @@ func (client *serviceManagerClient) RenameBinding(id, newName, newK8SName string
 	addLabelRequest := map[string]interface{}{
 		"labels": []*types.LabelChange{
 			{
-				Key:       k8sNameLabel,
+				Key:       common.K8sNameLabel,
 				Operation: types.AddLabelOperation,
 				Values:    []string{newK8SName},
 			},
 		},
 	}
-	_, err = client.update(addLabelRequest, types.ServiceBindingsURL, id, nil, "", &result)
+	_, err = client.update(addLabelRequest, types.ServiceBindingsV1URL, id, nil, "", &result)
 	if err != nil {
 		return nil, err
 	}
@@ -594,7 +593,7 @@ func getSubaccountID(instance *types.ServiceInstance) string {
 }
 
 func ExtractBindingID(operationURL string) string {
-	r := regexp.MustCompile(`^/v1/service_bindings/(.*)/operations/.*$`)
+	r := regexp.MustCompile(`^/v2/service_bindings/(.*)/operations/.*$`)
 	matches := r.FindStringSubmatch(operationURL)
 	if len(matches) == 2 {
 		return matches[1]

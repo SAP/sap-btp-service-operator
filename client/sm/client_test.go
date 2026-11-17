@@ -582,7 +582,7 @@ var _ = Describe("Client test", func() {
 		})
 
 		It("validate binding id extraction from operation url", func() {
-			bid := ExtractBindingID("/v1/service_bindings/1234/operations/5678")
+			bid := ExtractBindingID("/v2/service_bindings/1234/operations/5678")
 			Expect(bid).To(Equal("1234"))
 		})
 

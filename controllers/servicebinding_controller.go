@@ -291,14 +291,14 @@ func (r *ServiceBindingReconciler) createBinding(ctx context.Context, smClient s
 	}
 
 	smBinding, operationURL, bindErr := smClient.Bind(&smClientTypes.ServiceBinding{
-		Name: serviceBinding.Spec.ExternalName,
-		Labels: smClientTypes.Labels{
-			common.NamespaceLabel: []string{serviceBinding.Namespace},
-			common.K8sNameLabel:   []string{serviceBinding.Name},
-			common.ClusterIDLabel: []string{r.Config.ClusterID},
-		},
+		Name:              serviceBinding.Spec.ExternalName,
 		ServiceInstanceID: serviceInstanceID,
-		Parameters:        bindingParameters,
+		Labels:            smClientTypes.Labels{common.K8sNameLabel: []string{serviceBinding.Name}},
+		KubernetesContext: &smClientTypes.KubernetesContext{
+			ClusterID: r.Config.ClusterID,
+			Namespace: serviceBinding.Namespace,
+		},
+		Parameters: bindingParameters,
 	}, nil, utils.BuildUserInfo(ctx, serviceBinding.Spec.UserInfo))
 
 	if bindErr != nil {
@@ -550,15 +550,13 @@ func (r *ServiceBindingReconciler) handleFailedAsyncBinding(ctx context.Context,
 
 func (r *ServiceBindingReconciler) getBindingForRecovery(ctx context.Context, smClient sm.Client, serviceBinding *v1.ServiceBinding) (*smClientTypes.ServiceBinding, error) {
 	log := logutils.GetLogger(ctx)
-	nameQuery := fmt.Sprintf("name eq '%s'", serviceBinding.Spec.ExternalName)
-	clusterIDQuery := fmt.Sprintf("context/clusterid eq '%s'", r.Config.ClusterID)
-	namespaceQuery := fmt.Sprintf("context/namespace eq '%s'", serviceBinding.Namespace)
-	k8sNameQuery := fmt.Sprintf("%s eq '%s'", common.K8sNameLabel, serviceBinding.Name)
 	parameters := sm.Parameters{
-		FieldQuery: []string{nameQuery, clusterIDQuery, namespaceQuery},
-		LabelQuery: []string{k8sNameQuery},
+		GeneralParams: []string{"name=" + serviceBinding.Spec.ExternalName,
+			"clusterid=" + r.Config.ClusterID,
+			"namespace=" + serviceBinding.Namespace,
+			fmt.Sprintf("labels=%s=%s", common.K8sNameLabel, serviceBinding.Name)},
 	}
-	log.Info(fmt.Sprintf("binding recovery query params: %s, %s, %s, %s", nameQuery, clusterIDQuery, namespaceQuery, k8sNameQuery))
+	log.Info(fmt.Sprintf("binding recovery query params: %v", parameters.GeneralParams))
 
 	bindings, err := smClient.ListBindings(&parameters)
 	if err != nil {
