@@ -969,7 +969,7 @@ TSTAhYWEQVZqRKYQMYGHpNlU
 			BeforeEach(func() {
 				responseBody, _ := json.Marshal(binding)
 				handlerDetails = []HandlerDetails{
-					{Method: http.MethodPatch, Path: types.ServiceBindingsURL + "/" + binding.ID, ResponseBody: responseBody, ResponseStatusCode: http.StatusOK},
+					{Method: http.MethodPatch, Path: types.ServiceBindingsV1URL + "/" + binding.ID, ResponseBody: responseBody, ResponseStatusCode: http.StatusOK},
 				}
 			})
 
