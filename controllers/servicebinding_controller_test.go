@@ -1205,25 +1205,27 @@ stringData:
 			fakeClient.RenameBindingReturns(nil, nil)
 			createdBinding = createAndValidateBinding(ctx, bindingName, bindingTestNamespace, instanceName, "", "binding-external-name", "", fakeBindingID)
 			fakeClient.ListBindingsStub = func(params *sm.Parameters) (*smClientTypes.ServiceBindings, error) {
-				if params == nil || params.FieldQuery == nil || len(params.FieldQuery) == 0 {
+				if params == nil || len(params.GeneralParams) == 0 {
 					return nil, nil
 				}
 
-				if strings.Contains(params.FieldQuery[0], "binding-external-name-") {
-					return &smClientTypes.ServiceBindings{
-						ServiceBindings: []smClientTypes.ServiceBinding{
-							{
-								ID:          fakeBindingID,
-								Ready:       true,
-								Credentials: json.RawMessage("{\"secret_key2\": \"secret_value2\"}"),
-								LastOperation: &smClientTypes.Operation{
-									Type:        smClientTypes.CREATE,
-									State:       smClientTypes.SUCCEEDED,
-									Description: "fake-description",
+				for _, p := range params.GeneralParams {
+					if strings.Contains(p, "binding-external-name-") {
+						return &smClientTypes.ServiceBindings{
+							ServiceBindings: []smClientTypes.ServiceBinding{
+								{
+									ID:          fakeBindingID,
+									Ready:       true,
+									Credentials: json.RawMessage("{\"secret_key2\": \"secret_value2\"}"),
+									LastOperation: &smClientTypes.Operation{
+										Type:        smClientTypes.CREATE,
+										State:       smClientTypes.SUCCEEDED,
+										Description: "fake-description",
+									},
 								},
 							},
-						},
-					}, nil
+						}, nil
+					}
 				}
 				return nil, nil
 			}
@@ -1385,25 +1387,27 @@ stringData:
 				binding = createAndValidateBinding(ctx, longBindingName, bindingTestNamespace, instanceName, "", longBindingName, "", bindingID)
 				fakeClient.GetBindingByIDReturns(&smClientTypes.ServiceBinding{ID: bindingID, Credentials: json.RawMessage(`{"secret_key": "secret_value"}`)}, nil)
 				fakeClient.ListBindingsStub = func(params *sm.Parameters) (*smClientTypes.ServiceBindings, error) {
-					if params == nil || params.FieldQuery == nil || len(params.FieldQuery) == 0 {
+					if params == nil || len(params.GeneralParams) == 0 {
 						return nil, nil
 					}
 
-					if strings.Contains(params.FieldQuery[0], longBindingName+"-") {
-						return &smClientTypes.ServiceBindings{
-							ServiceBindings: []smClientTypes.ServiceBinding{
-								{
-									ID:          fakeBindingID,
-									Ready:       true,
-									Credentials: json.RawMessage("{\"secret_key2\": \"secret_value2\"}"),
-									LastOperation: &smClientTypes.Operation{
-										Type:        smClientTypes.CREATE,
-										State:       smClientTypes.SUCCEEDED,
-										Description: "fake-description",
+					for _, p := range params.GeneralParams {
+						if strings.Contains(p, longBindingName+"-") {
+							return &smClientTypes.ServiceBindings{
+								ServiceBindings: []smClientTypes.ServiceBinding{
+									{
+										ID:          fakeBindingID,
+										Ready:       true,
+										Credentials: json.RawMessage("{\"secret_key2\": \"secret_value2\"}"),
+										LastOperation: &smClientTypes.Operation{
+											Type:        smClientTypes.CREATE,
+											State:       smClientTypes.SUCCEEDED,
+											Description: "fake-description",
+										},
 									},
 								},
-							},
-						}, nil
+							}, nil
+						}
 					}
 					return nil, nil
 				}
