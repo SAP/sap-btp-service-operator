@@ -60,6 +60,8 @@ spec:
           spec:
             description: ServiceBindingSpec defines the desired state of ServiceBinding
             properties:
+              btpAccessCredentialsSecret:
+                type: string
               credentialsRotationPolicy:
                 description: CredentialsRotationPolicy holds automatic credentials
                   rotation configuration.
@@ -148,10 +150,11 @@ spec:
                   For supported funcs see: https://pkg.go.dev/text/template#hdr-Functions, https://masterminds.github.io/sprig/
                 type: string
                 x-kubernetes-preserve-unknown-fields: true
+              serviceInstanceID:
+                type: string
               serviceInstanceName:
                 description: The k8s name of the service instance to bind, should
                   be in the namespace of the binding
-                minLength: 1
                 type: string
               serviceInstanceNamespace:
                 description: The namespace of the referenced instance, if empty Binding's
@@ -190,9 +193,17 @@ spec:
                       user among all active users.
                     type: string
                 type: object
-            required:
-            - serviceInstanceName
             type: object
+            x-kubernetes-validations:
+            - message: at least one of serviceInstanceName or serviceInstanceID must
+                be set
+              rule: has(self.serviceInstanceName) || has(self.serviceInstanceID)
+            - message: serviceInstanceNamespace can only be set if serviceInstanceName
+                is set
+              rule: '!has(self.serviceInstanceNamespace) || has(self.serviceInstanceName)'
+            - message: btpAccessCredentialsSecret can only be set if serviceInstanceID
+                is set
+              rule: '!has(self.btpAccessCredentialsSecret) || has(self.serviceInstanceID)'
           status:
             description: ServiceBindingStatus defines the observed state of ServiceBinding
             properties:
@@ -354,7 +365,6 @@ spec:
                 type: object
               externalName:
                 description: The name of the binding in Service Manager
-                maxLength: 100
                 type: string
               parameters:
                 description: |-
@@ -415,7 +425,6 @@ spec:
               serviceInstanceName:
                 description: The k8s name of the service instance to bind, should
                   be in the namespace of the binding
-                minLength: 1
                 type: string
               userInfo:
                 description: |-

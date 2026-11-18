@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
 	"github.com/SAP/sap-btp-service-operator/internal/utils/logutils"
 	corev1 "k8s.io/api/core/v1"
@@ -17,19 +16,19 @@ func (ic *InvalidCredentialsError) Error() string {
 	return "invalid Service-Manager credentials, contact your cluster administrator"
 }
 
-func GetSMClient(ctx context.Context, serviceInstance *v1.ServiceInstance) (sm.Client, error) {
+func GetSMClient(ctx context.Context, btpAccessSecretName, namespace string) (sm.Client, error) {
 	log := logutils.GetLogger(ctx)
 	var err error
 
 	var secret *corev1.Secret
-	if len(serviceInstance.Spec.BTPAccessCredentialsSecret) > 0 {
-		secret, err = GetSecretFromManagementNamespace(ctx, serviceInstance.Spec.BTPAccessCredentialsSecret)
+	if len(btpAccessSecretName) > 0 {
+		secret, err = GetSecretFromManagementNamespace(ctx, btpAccessSecretName)
 		if err != nil {
 			log.Error(err, "failed to get secret BTPAccessCredentialsSecret")
 			return nil, err
 		}
 	} else {
-		secret, err = GetSecretForResource(ctx, serviceInstance.Namespace, SAPBTPOperatorSecretName)
+		secret, err = GetSecretForResource(ctx, namespace, SAPBTPOperatorSecretName)
 		if err != nil {
 			log.Error(err, "failed to get secret for instance")
 			return nil, err
@@ -55,12 +54,12 @@ func GetSMClient(ctx context.Context, serviceInstance *v1.ServiceInstance) (sm.C
 
 	//backward compatibility (tls data in a dedicated secret)
 	if len(clientConfig.ClientSecret) == 0 && (len(clientConfig.TLSPrivateKey) == 0 || len(clientConfig.TLSCertKey) == 0) {
-		if len(serviceInstance.Spec.BTPAccessCredentialsSecret) > 0 && !clientConfig.IsValid() {
+		if len(btpAccessSecretName) > 0 && !clientConfig.IsValid() {
 			log.Info("btpAccess secret found but did not contain all the required data")
 			return nil, fmt.Errorf("invalid Service-Manager credentials, contact your cluster administrator")
 		}
 
-		tlsSecret, err := GetSecretForResource(ctx, serviceInstance.Namespace, SAPBTPOperatorTLSSecretName)
+		tlsSecret, err := GetSecretForResource(ctx, namespace, SAPBTPOperatorTLSSecretName)
 		if client.IgnoreNotFound(err) != nil {
 			return nil, err
 		}

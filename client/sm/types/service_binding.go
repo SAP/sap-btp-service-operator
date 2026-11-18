@@ -20,7 +20,8 @@ import (
 	"encoding/json"
 )
 
-const ServiceBindingsURL = "/v1/service_bindings"
+const ServiceBindingsURL = "/v2/service_bindings"
+const ServiceBindingsV1URL = "/v1/service_bindings"
 
 // ServiceBinding defines the data of a service instance.
 type ServiceBinding struct {
@@ -46,7 +47,8 @@ type ServiceBinding struct {
 
 	Ready bool `json:"ready,omitempty" yaml:"ready,omitempty"`
 
-	LastOperation *Operation `json:"last_operation,omitempty" yaml:"last_operation,omitempty"`
+	LastOperation     *Operation         `json:"last_operation,omitempty" yaml:"last_operation,omitempty"`
+	KubernetesContext *KubernetesContext `json:"k8s_context,omitempty" yaml:"k8s_context,omitempty"`
 }
 
 // ServiceBindings wraps an array of service bindings

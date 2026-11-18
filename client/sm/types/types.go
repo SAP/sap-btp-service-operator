@@ -27,3 +27,8 @@ const (
 	INPROGRESS OperationState = "in progress"
 	FAILED     OperationState = "failed"
 )
+
+type KubernetesContext struct {
+	ClusterID string `json:"clusterid"`
+	Namespace string `json:"namespace"`
+}

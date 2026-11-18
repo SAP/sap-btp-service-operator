@@ -28,18 +28,26 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // ServiceBindingSpec defines the desired state of ServiceBinding
+// +kubebuilder:validation:XValidation:rule="has(self.serviceInstanceName) || has(self.serviceInstanceID)",message="at least one of serviceInstanceName or serviceInstanceID must be set"
+// +kubebuilder:validation:XValidation:rule="!has(self.serviceInstanceNamespace) || has(self.serviceInstanceName)",message="serviceInstanceNamespace can only be set if serviceInstanceName is set"
+// +kubebuilder:validation:XValidation:rule="!has(self.btpAccessCredentialsSecret) || has(self.serviceInstanceID)",message="btpAccessCredentialsSecret can only be set if serviceInstanceID is set"
 type ServiceBindingSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// The k8s name of the service instance to bind, should be in the namespace of the binding
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	ServiceInstanceName string `json:"serviceInstanceName"`
+	// +optional
+	ServiceInstanceName string `json:"serviceInstanceName,omitempty"`
 
 	// The namespace of the referenced instance, if empty Binding's namespace will be used
 	// +optional
 	ServiceInstanceNamespace string `json:"serviceInstanceNamespace,omitempty"`
+
+	// +optional
+	ServiceInstanceID string `json:"serviceInstanceID,omitempty"`
+
+	// +optional
+	BTPAccessCredentialsSecret string `json:"btpAccessCredentialsSecret,omitempty"`
 
 	// The name of the binding in Service Manager
 	// +optional

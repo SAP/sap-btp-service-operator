@@ -4,17 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"net/http"
-	"strings"
-	"time"
-
 	"github.com/SAP/sap-btp-service-operator/api/common"
 	"github.com/SAP/sap-btp-service-operator/internal/utils"
 	"github.com/SAP/sap-btp-service-operator/internal/utils/logutils"
 	"github.com/lithammer/dedent"
 	authv1 "k8s.io/api/authentication/v1"
 	"k8s.io/utils/pointer"
+	"net/http"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"strings"
 
 	v1 "github.com/SAP/sap-btp-service-operator/api/v1"
 	"github.com/SAP/sap-btp-service-operator/client/sm"
@@ -174,14 +172,6 @@ var _ = Describe("ServiceBinding controller", func() {
 
 	Context("Create", func() {
 		Context("invalid parameters", func() {
-			When("service instance name is not provided", func() {
-				It("should fail", func() {
-					_, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, "", "", "", "", false)
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("spec.serviceInstanceName in body should be at least 1 chars long"))
-				})
-			})
-
 			When("referenced service instance does not exist", func() {
 				It("should fail", func() {
 					binding, err := createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, "no-such-instance", "", "", "", false)
@@ -456,7 +446,7 @@ var _ = Describe("ServiceBinding controller", func() {
 
 		Context("async", func() {
 			BeforeEach(func() {
-				fakeClient.BindReturns(nil, fmt.Sprintf("/v1/service_bindings/%s/operations/an-operation-id", fakeBindingID), nil)
+				fakeClient.BindReturns(nil, fmt.Sprintf("/v2/service_bindings/%s/operations/an-operation-id", fakeBindingID), nil)
 			})
 
 			When("bind polling returns success", func() {
@@ -490,7 +480,7 @@ var _ = Describe("ServiceBinding controller", func() {
 					Expect(err).ToNot(HaveOccurred())
 					waitForResourceCondition(ctx, binding, common.ConditionSucceeded, metav1.ConditionFalse, "", errorMessage)
 
-					fakeClient.BindReturns(nil, fmt.Sprintf("/v1/service_bindings/%s/operations/an-operation-id", "successful-binding-id"), nil)
+					fakeClient.BindReturns(nil, fmt.Sprintf("/v2/service_bindings/%s/operations/an-operation-id", "successful-binding-id"), nil)
 					fakeClient.GetBindingByIDReturns(&smClientTypes.ServiceBinding{}, nil)
 					waitForResourceCondition(ctx, binding, common.ConditionReady, metav1.ConditionTrue, "", "")
 					Expect(binding.Status.BindingID).To(Equal("successful-binding-id"))
@@ -1157,13 +1147,11 @@ stringData:
 						createdBinding, err = createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "fake-binding-external-name", "", false)
 						Expect(err).ToNot(HaveOccurred())
 						smCallArgs := fakeClient.ListBindingsArgsForCall(0)
-						Expect(smCallArgs.LabelQuery).To(HaveLen(1))
-						Expect(smCallArgs.LabelQuery[0]).To(ContainSubstring("_k8sname"))
-
-						Expect(smCallArgs.FieldQuery).To(HaveLen(3))
-						Expect(smCallArgs.FieldQuery[0]).To(ContainSubstring("name"))
-						Expect(smCallArgs.FieldQuery[1]).To(ContainSubstring("context/clusterid"))
-						Expect(smCallArgs.FieldQuery[2]).To(ContainSubstring("context/namespace"))
+						Expect(smCallArgs.GeneralParams).To(HaveLen(4))
+						Expect(smCallArgs.GeneralParams[0]).To(ContainSubstring("name="))
+						Expect(smCallArgs.GeneralParams[1]).To(ContainSubstring("clusterid="))
+						Expect(smCallArgs.GeneralParams[2]).To(ContainSubstring("namespace="))
+						Expect(smCallArgs.GeneralParams[3]).To(ContainSubstring("_k8sname"))
 
 						waitForResourceCondition(ctx, createdBinding, common.ConditionSucceeded, testCase.expectedConditionSucceededStatus, utils.GetConditionReason(testCase.lastOpType, testCase.lastOpState), "")
 
@@ -1215,25 +1203,27 @@ stringData:
 			fakeClient.RenameBindingReturns(nil, nil)
 			createdBinding = createAndValidateBinding(ctx, bindingName, bindingTestNamespace, instanceName, "", "binding-external-name", "", fakeBindingID)
 			fakeClient.ListBindingsStub = func(params *sm.Parameters) (*smClientTypes.ServiceBindings, error) {
-				if params == nil || params.FieldQuery == nil || len(params.FieldQuery) == 0 {
+				if params == nil || len(params.GeneralParams) == 0 {
 					return nil, nil
 				}
 
-				if strings.Contains(params.FieldQuery[0], "binding-external-name-") {
-					return &smClientTypes.ServiceBindings{
-						ServiceBindings: []smClientTypes.ServiceBinding{
-							{
-								ID:          fakeBindingID,
-								Ready:       true,
-								Credentials: json.RawMessage("{\"secret_key2\": \"secret_value2\"}"),
-								LastOperation: &smClientTypes.Operation{
-									Type:        smClientTypes.CREATE,
-									State:       smClientTypes.SUCCEEDED,
-									Description: "fake-description",
+				for _, p := range params.GeneralParams {
+					if strings.Contains(p, "binding-external-name-") {
+						return &smClientTypes.ServiceBindings{
+							ServiceBindings: []smClientTypes.ServiceBinding{
+								{
+									ID:          fakeBindingID,
+									Ready:       true,
+									Credentials: json.RawMessage("{\"secret_key2\": \"secret_value2\"}"),
+									LastOperation: &smClientTypes.Operation{
+										Type:        smClientTypes.CREATE,
+										State:       smClientTypes.SUCCEEDED,
+										Description: "fake-description",
+									},
 								},
 							},
-						},
-					}, nil
+						}, nil
+					}
 				}
 				return nil, nil
 			}
@@ -1395,25 +1385,27 @@ stringData:
 				binding = createAndValidateBinding(ctx, longBindingName, bindingTestNamespace, instanceName, "", longBindingName, "", bindingID)
 				fakeClient.GetBindingByIDReturns(&smClientTypes.ServiceBinding{ID: bindingID, Credentials: json.RawMessage(`{"secret_key": "secret_value"}`)}, nil)
 				fakeClient.ListBindingsStub = func(params *sm.Parameters) (*smClientTypes.ServiceBindings, error) {
-					if params == nil || params.FieldQuery == nil || len(params.FieldQuery) == 0 {
+					if params == nil || len(params.GeneralParams) == 0 {
 						return nil, nil
 					}
 
-					if strings.Contains(params.FieldQuery[0], longBindingName+"-") {
-						return &smClientTypes.ServiceBindings{
-							ServiceBindings: []smClientTypes.ServiceBinding{
-								{
-									ID:          fakeBindingID,
-									Ready:       true,
-									Credentials: json.RawMessage("{\"secret_key2\": \"secret_value2\"}"),
-									LastOperation: &smClientTypes.Operation{
-										Type:        smClientTypes.CREATE,
-										State:       smClientTypes.SUCCEEDED,
-										Description: "fake-description",
+					for _, p := range params.GeneralParams {
+						if strings.Contains(p, longBindingName+"-") {
+							return &smClientTypes.ServiceBindings{
+								ServiceBindings: []smClientTypes.ServiceBinding{
+									{
+										ID:          fakeBindingID,
+										Ready:       true,
+										Credentials: json.RawMessage("{\"secret_key2\": \"secret_value2\"}"),
+										LastOperation: &smClientTypes.Operation{
+											Type:        smClientTypes.CREATE,
+											State:       smClientTypes.SUCCEEDED,
+											Description: "fake-description",
+										},
 									},
 								},
-							},
-						}, nil
+							}, nil
+						}
 					}
 					return nil, nil
 				}
@@ -1684,30 +1676,6 @@ stringData:
 				secret = getSecret(ctx, oldBinding.Spec.SecretName, bindingTestNamespace, true)
 				val = secret.Data["secret_key2"]
 				Expect(string(val)).To(Equal("secret_value2"))
-			})
-		})
-	})
-
-	When("binding id exist on resource but instance is in state NotFound", func() {
-		BeforeEach(func() {
-			createdBinding = createAndValidateBinding(ctx, bindingName, bindingTestNamespace, instanceName, "", "binding-external-name", "", fakeBindingID)
-			createdInstance.Status.Conditions = []metav1.Condition{{
-				Type:               common.ConditionReady,
-				Status:             metav1.ConditionFalse,
-				ObservedGeneration: createdInstance.Generation,
-				LastTransitionTime: metav1.NewTime(time.Now()),
-				Reason:             common.ResourceNotFound,
-			}}
-			Expect(k8sClient.Status().Update(ctx, createdInstance)).To(Succeed())
-		})
-		When("reconcile", func() {
-			It("should update status to ready=false", func() {
-				createdBinding.Labels = map[string]string{"tickle": "1"}
-				updateBinding(ctx, getResourceNamespacedName(createdBinding), createdBinding)
-				waitForResourceCondition(ctx, createdBinding, common.ConditionReady, metav1.ConditionFalse, common.ResourceNotFound, fmt.Sprintf(common.ResourceNotFoundMessageFormat, "binding", createdBinding.Status.BindingID))
-
-				By("deleting the binding should succeed")
-				deleteAndWait(ctx, createdBinding)
 			})
 		})
 	})

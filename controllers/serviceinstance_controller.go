@@ -62,7 +62,7 @@ type ServiceInstanceReconciler struct {
 	client.Client
 	Log         logr.Logger
 	Scheme      *runtime.Scheme
-	GetSMClient func(ctx context.Context, serviceInstance *v1.ServiceInstance) (sm.Client, error)
+	GetSMClient func(ctx context.Context, btpAccessSecretName, namespace string) (sm.Client, error)
 	Config      config.Config
 	Recorder    events.EventRecorder
 	Retries     *utils.RetryStore
@@ -103,7 +103,7 @@ func (r *ServiceInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	serviceInstance = serviceInstance.DeepCopy()
 
 	log.Info(fmt.Sprintf("*** staring reconcile of ServiceInstance %s/%s ***", serviceInstance.Namespace, serviceInstance.Name))
-	smClient, err := r.GetSMClient(ctx, serviceInstance)
+	smClient, err := r.GetSMClient(ctx, serviceInstance.Spec.BTPAccessCredentialsSecret, serviceInstance.Namespace)
 	if err != nil {
 		log.Error(err, "failed to get sm client")
 		return utils.HandleOperationFailure(ctx, r.Client, serviceInstance, common.Unknown, err)

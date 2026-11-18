@@ -582,7 +582,7 @@ var _ = Describe("Client test", func() {
 		})
 
 		It("validate binding id extraction from operation url", func() {
-			bid := ExtractBindingID("/v1/service_bindings/1234/operations/5678")
+			bid := ExtractBindingID("/v2/service_bindings/1234/operations/5678")
 			Expect(bid).To(Equal("1234"))
 		})
 
@@ -969,7 +969,7 @@ TSTAhYWEQVZqRKYQMYGHpNlU
 			BeforeEach(func() {
 				responseBody, _ := json.Marshal(binding)
 				handlerDetails = []HandlerDetails{
-					{Method: http.MethodPatch, Path: types.ServiceBindingsURL + "/" + binding.ID, ResponseBody: responseBody, ResponseStatusCode: http.StatusOK},
+					{Method: http.MethodPatch, Path: types.ServiceBindingsV1URL + "/" + binding.ID, ResponseBody: responseBody, ResponseStatusCode: http.StatusOK},
 				}
 			})
 
