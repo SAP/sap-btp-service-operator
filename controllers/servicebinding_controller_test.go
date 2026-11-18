@@ -1147,13 +1147,11 @@ stringData:
 						createdBinding, err = createBindingWithoutAssertions(ctx, bindingName, bindingTestNamespace, instanceName, "", "fake-binding-external-name", "", false)
 						Expect(err).ToNot(HaveOccurred())
 						smCallArgs := fakeClient.ListBindingsArgsForCall(0)
-						Expect(smCallArgs.LabelQuery).To(HaveLen(1))
-						Expect(smCallArgs.LabelQuery[0]).To(ContainSubstring("_k8sname"))
-
-						Expect(smCallArgs.FieldQuery).To(HaveLen(3))
-						Expect(smCallArgs.FieldQuery[0]).To(ContainSubstring("name"))
-						Expect(smCallArgs.FieldQuery[1]).To(ContainSubstring("context/clusterid"))
-						Expect(smCallArgs.FieldQuery[2]).To(ContainSubstring("context/namespace"))
+						Expect(smCallArgs.GeneralParams).To(HaveLen(4))
+						Expect(smCallArgs.GeneralParams[0]).To(ContainSubstring("name="))
+						Expect(smCallArgs.GeneralParams[1]).To(ContainSubstring("clusterid="))
+						Expect(smCallArgs.GeneralParams[2]).To(ContainSubstring("namespace="))
+						Expect(smCallArgs.GeneralParams[3]).To(ContainSubstring("_k8sname"))
 
 						waitForResourceCondition(ctx, createdBinding, common.ConditionSucceeded, testCase.expectedConditionSucceededStatus, utils.GetConditionReason(testCase.lastOpType, testCase.lastOpState), "")
 
